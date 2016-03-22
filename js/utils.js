@@ -1,0 +1,228 @@
+var THREE = require('three');
+var slash = '/'.charCodeAt(0);
+
+// Your Client ID can be retrieved from your project in the Google
+// Developer Console, https://console.developers.google.com
+var CLIENT_ID = '671524571878.apps.googleusercontent.com';
+var SCOPES = ['https://www.googleapis.com/auth/drive.metadata.readonly'];
+
+/**
+* Check if current user has authorized this application.
+*/
+function checkAuth() {
+	console.log('checkAuth');
+	gapi.auth.authorize({
+		'client_id': CLIENT_ID,
+		'scope': SCOPES.join(' '),
+		'immediate': true
+	}, handleAuthResult);
+}
+
+window.checkAuth = checkAuth;
+
+/**
+* Handle response from authorization server.
+*
+* @param {Object} authResult Authorization result.
+*/
+function handleAuthResult(authResult) {
+	// console.log(handleAuthResult, authResult);
+	var authorizeDiv = document.getElementById('authorize-div');
+	if (authResult && !authResult.error) {
+		// Hide auth UI, then load client library.
+		authorizeDiv.style.display = 'none';
+		loadDriveApi();
+	} else {
+		// Show auth UI, allowing the user to initiate authorization by
+		// clicking authorize button.
+		authorizeDiv.style.display = 'inline';
+	}
+}
+
+/**
+* Initiate auth flow in response to user clicking authorize button.
+*
+* @param {Event} event Button click event.
+*/
+function handleAuthClick(event) {
+	gapi.auth.authorize({client_id: CLIENT_ID, scope: SCOPES, immediate: false}, handleAuthResult);
+	return false;
+}
+
+window.handleAuthClick = handleAuthClick;
+
+/**
+* Load Drive API client library.
+*/
+function loadDriveApi() {
+	window.GDriveCallback = window.GDriveCallback || function(files){
+		console.log(files);
+	};
+	var listFiles = function() {
+		var request = gapi.client.drive.files.list({
+			'pageSize': 1000,
+			'fields': "nextPageToken, files(id, name, parents)"
+		});
+
+		request.execute(function(resp) {
+			var files = resp.files;
+			var fileList = [];
+			if (files && files.length > 0) {
+				var fileIndex = {};
+				var fileTree = {name: "/", entries: {}, index: 0};
+
+				for (var i = 0; i < files.length; i++) {
+					var f = files[i];
+					f.entries = null;
+					fileIndex[f.id] = f;
+				}
+
+				for (var i = 0; i < files.length; i++) {
+					var f = files[i];
+					if (f.parents) {
+						for (var j=0; j<f.parents.length; j++) {
+							var p = fileIndex[f.parents[j]];
+							if (!p) {
+								p = fileTree;
+							}
+							if (!p.entries) {
+								p.entries = {};
+							}
+							p.entries[f.name] = f;
+						}
+					} else {
+						fileTree.entries[f.name] = f;
+					}
+				}
+			}
+			window.GDriveCallback({tree: fileTree, count: files.length});
+		});
+	}
+
+	gapi.client.load('drive', 'v3', listFiles);
+
+}
+
+
+var utils = module.exports = {
+	findObjectUnderEvent: function(ev, camera, objects) {
+
+		var style = getComputedStyle(ev.target);
+		var elementTransform = style.getPropertyValue('transform');
+		var elementTransformOrigin = style.getPropertyValue('transform-origin');
+
+		var xyz = elementTransformOrigin.replace(/px/g, '').split(" ");
+		xyz[0] = parseFloat(xyz[0]);
+		xyz[1] = parseFloat(xyz[1]);
+		xyz[2] = parseFloat(xyz[2] || 0);
+
+		var mat = new THREE.Matrix4();
+		mat.identity();
+		if (/^matrix\(/.test(elementTransform)) {
+			var elems = elementTransform.replace(/^matrix\(|\)$/g, '').split(' ');
+			mat.elements[0] = parseFloat(elems[0]);
+			mat.elements[1] = parseFloat(elems[1]);
+			mat.elements[4] = parseFloat(elems[2]);
+			mat.elements[5] = parseFloat(elems[3]);
+			mat.elements[12] = parseFloat(elems[4]);
+			mat.elements[13] = parseFloat(elems[5]);
+		} else if (/^matrix3d\(/i.test(elementTransform)) {
+			var elems = elementTransform.replace(/^matrix3d\(|\)$/ig, '').split(' ');
+			for (var i=0; i<16; i++) {
+				mat.elements[i] = parseFloat(elems[i]);
+			}
+		}
+
+		var mat2 = new THREE.Matrix4();
+		mat2.makeTranslation(xyz[0], xyz[1], xyz[2]);
+		mat2.multiply(mat);
+		mat.makeTranslation(-xyz[0], -xyz[1], -xyz[2]);
+		mat2.multiply(mat);
+
+		var vec = new THREE.Vector3(ev.layerX, ev.layerY, 0);
+		vec.applyMatrix4(mat2);
+
+		var width = parseFloat(style.getPropertyValue('width'));
+		var height = parseFloat(style.getPropertyValue('height'));
+
+		var mouse3D = new THREE.Vector3(
+			( vec.x / width ) * 2 - 1,
+			-( vec.y / height ) * 2 + 1,
+			0.5
+		);
+		mouse3D.unproject( camera );
+		mouse3D.sub( camera.position );
+		mouse3D.normalize();
+		var raycaster = new THREE.Raycaster( camera.position, mouse3D );
+		var intersects = raycaster.intersectObjects( objects );
+		if ( intersects.length > 0 ) {
+			var obj = intersects[ 0 ].object
+			return obj;
+		}
+	},
+
+	addFileTreeEntry: function(path, tree) {
+		var dir = false;
+		if (path.charCodeAt(path.length-1) === slash) {
+			dir = true;
+		}
+		var segments = path.split("/");
+		if (dir) {
+			segments.pop();
+		}
+		var branch = tree;
+		var parent;
+		for (var i=0; i<segments.length-1; i++) {
+			var segment = segments[i];
+			if (branch.entries === null) {
+				branch.entries = {};
+			}
+			if (typeof branch.entries[segment] !== 'object') {
+				branch.entries[segment] = {name: segment, entries: {}, index: 0};
+			}
+			branch = branch.entries[segment];
+		}
+		if (branch.entries === null) {
+			branch.entries = {};
+		}
+		if (typeof branch.entries[segments[i]] !== 'object') {
+			branch.entries[segments[i]] = {name: segments[i], entries: dir ? {} : null, index: 0};
+		}
+	},
+
+	parseFileList: function(fileString) {
+		// console.log("Parsing file string", fileString.length);
+		var fileTree = {name: "/", entries: {}, index: 0};
+		var name = "";
+		var startIndex = 0;
+		var fileCount = 0;
+		var first = true;
+		var skip = 0;
+		for (var i=0; i<fileString.length; i++) {
+			if (fileString.charCodeAt(i) === 10) {
+				if (first) {
+					var segs = fileString.substring(startIndex+skip, i).split("/");
+					name = segs[segs.length-2] + '/';
+					skip = i - name.length;
+					first = false;
+				} else {
+					name = fileString.substring(startIndex+skip, i);
+				}
+				startIndex = i+1;
+				utils.addFileTreeEntry(name, fileTree);
+				fileCount++;
+			}
+		}
+		// console.log("Parsed files", fileCount);
+		return {tree: fileTree, count: fileCount};
+	},
+
+	loadFiles: function(url, callback) {
+		var xhr = new XMLHttpRequest();
+		xhr.open('GET', url);
+		xhr.onload = function(ev) {
+			callback(utils.parseFileList(ev.target.responseText), ev.target.responseText);
+		};
+		xhr.send();
+	}
+};

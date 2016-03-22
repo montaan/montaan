@@ -1,0 +1,33 @@
+Project brief & estimates
+===
+
+What is this?
+---
+
+A file manager that makes complex projects easier to understand.
+
+In existing managers, project file paths are like street addresses & navigating the file system is like telling a taxi driver which way to go. This file manager is like a map.
+
+Flexible backends: Local disk, Dropbox, Google Drive. Add value with proprietary stuff that makes your projects easier to manage: organization, connectivity & look customizations.
+
+On Google Drive, show activity in the structure: who is editing what, where is that, what is shared with who.
+
+VR version for productivity in virtual reality.
+
+
+Think iOS Photos vs Finder. Photos makes your camera roll easier to understand and manage.
+
+
+
+
+1. Filesystem structure visualizer
+	- Build a model from list of files
+	- Render 1 Mtri geometry + screenful of text at different font sizes
+	- Color files and dirs based on user tags
+	- Show thumbnails for files
+	- Be able to zoom into the geometry / blow up parts of it
+
+	How?
+	- Raw geometry with vertex colors
+	- Glyph-based text renderer
+	- UI raycasting against the hierarchy.

@@ -120,27 +120,39 @@
 			new THREE.PlaneGeometry(1, height, 1, 1),
 			new THREE.MeshBasicMaterial({ color: color})
 		);
-		if (false && depth < 5) {
+		if (depth < 5) {
 			var canvas = document.createElement('canvas');
 			var ctx = canvas.getContext('2d');
-			ctx.font = ('Arial 16px');
+			ctx.font = '16px Arial';
 			ctx.fillStyle = 'white';
 			var txt = ctx.measureText(name);
 			canvas.width = 128; //Math.max(128, Math.pow(2, Math.ceil(Math.log2(txt.width + 4))));
-			canvas.height = 32;
-			ctx.font = ('Arial 16px');
+			canvas.height = 16;
+			ctx.fillStyle = 'rgba(255,255,255,0.1)';
+			ctx.fillRect(0, 0, canvas.width, canvas.height);
+			ctx.font = '14px Arial';
 			ctx.fillStyle = 'white';
-			ctx.fillText(name, 2, 30);
+			ctx.fillText(name, 2, 12);
 			// document.body.appendChild(canvas);
 			var h = canvas.height/canvas.width;
 			var nameModel = new THREE.Mesh(
-				new THREE.PlaneGeometry(1, canvas.height/canvas.width, 1, 1),
-				new THREE.MeshBasicMaterial({map: new THREE.Texture(canvas), transparent: true, depthWrite: false})
+				height < 1
+					? new THREE.PlaneGeometry(1, h, 1, 1)
+					: new THREE.PlaneGeometry(1, h, 1, 1),
+				new THREE.MeshBasicMaterial({map: new THREE.Texture(canvas), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending})
 			);
 			nameModel.material.side = THREE.DoubleSide;
 			nameModel.material.map.needsUpdate = true;
-			nameModel.position.z = 0.03;
-			nameModel.position.y = (height - 0.25) * 0.85;
+			nameModel.material.map.generateMipmap = false;
+			nameModel.position.x = -0.3;
+			nameModel.position.z = 0.0;
+			if (height < 1) {
+				nameModel.position.x = 0;
+				nameModel.position.y = 0;
+			} else {
+				nameModel.position.x = 0;
+				nameModel.position.y = h*0.5 + (height / 2);
+			}
 			nameModel.modelType = 'name';
 			model.add(nameModel);
 		}
@@ -148,7 +160,7 @@
 		model.material.side = THREE.DoubleSide;
 		model.position.x = 0.5;
 		model.position.y = height * 0.5;
-		model.position.z = -0.1;
+		model.position.z = -0.01;
 		return model;
 	};
 
@@ -174,110 +186,13 @@
 		return rootModel;
 	};
 
-	var makeQuad = function(verts, index, x, y, w, h) {
-		var i = index * 18;
-
-		verts[i] = x;
-		verts[i+1] = y;
-		verts[i+2] = 0;
-		verts[i+3] = x + w;
-		verts[i+4] = y;
-		verts[i+5] = 0;
-		verts[i+6] = x;
-		verts[i+7] = y + h;
-		verts[i+8] = 0;
-
-		verts[i+9] = x;
-		verts[i+10] = y + h;
-		verts[i+11] = 0;
-		verts[i+12] = x + w;
-		verts[i+13] = y;
-		verts[i+14] = 0;
-		verts[i+15] = x + w;
-		verts[i+16] = y + h;
-		verts[i+17] = 0;
-	};
-
-	var createFileTreeQuads = function(fileTree, fileIndex, verts, parentX, parentY, parentScale, depth) {
-		var dirs = [];
-		var files = [];
-		for (var i in fileTree) {
-			var obj = {entries: fileTree[i], x: 0, y: 0, scale: 0};
-			if (obj.entries === null) {
-				files.push(obj);
-			} else {
-				dirs.push(obj);
-			}
-		}
-
-		var dirCount = dirs.length + (files.length > 0 ? 1 : 0);
-		var squareSide = Math.ceil(Math.sqrt(dirCount));
-
-		for (var y=0; y<squareSide; y++) {
-			for (var x=0; x<squareSide; x++) {
-				var off = y * squareSide + x;
-				if (off >= dirCount) {
-					break;
-				}
-				var yOff = 1 - (y+1) * (1/squareSide);
-				var xOff = x * (1/squareSide);
-				if (off >= dirs.length) {
-					var subX = xOff + 0.05 / squareSide;
-					var subY = yOff + 0.05 / squareSide;
-					var squares = Math.ceil(files.length / 4);
-					var squareSidef = Math.ceil(Math.sqrt(squares));
-					var fileScale = parentScale * (0.9 / squareSide) ;
-					for (var xf=0; xf<squareSidef; xf++) {
-						for (var yf=0; yf<squareSidef*4; yf++) {
-							var fxOff = xf * (1/squareSidef);
-							var fyOff = 1 - ((yf+1)/4) * (1/squareSidef);
-							var foff = xf * squareSidef * 4 + yf;
-							if (foff >= files.length) {
-								break;
-							}
-							makeQuad(verts, fileIndex++,
-								parentX + parentScale * subX + fileScale * fxOff, 
-								parentY + parentScale * subY + fileScale * fyOff,
-								fileScale * (0.9/squareSidef),
-								fileScale * 0.25 * (0.9/squareSidef),
-								depth);
-						}
-					}
-				} else {
-					var dir = dirs[off];
-					var subX = xOff + 0.05 / squareSide;
-					var subY = yOff + 0.05 / squareSide;
-					dir.x = parentX + parentScale * subX;
-					dir.y = parentY + parentScale * subY;
-					dir.scale = parentScale * (0.9 / squareSide);
-					makeQuad(verts, fileIndex++, dir.x, dir.y, dir.scale, dir.scale, depth);
-				}
-			}
-		}
-		for (var j=0; j<dirs.length; j++) {
-			var dir = dirs[j];
-			createFileTreeQuads(dir.entries, fileIndex, verts, dir.x, dir.y, dir.scale, depth+1);
-		}
-	};
-
-	var createFileTreeModel = function(fileCount, a, b, fileTree) {
-		var geo = new THREE.BufferGeometry();
-		var verts = new Float32Array(fileCount * 3 * 6);
-		geo.addAttribute('position', new THREE.BufferAttribute(verts, 3));
-
-		var fileIndex = 0;
-
-		createFileTreeQuads(fileTree, fileIndex, verts, 0, 0, 1, 0);
-
-		return new THREE.Mesh(
-			geo,
-			new THREE.MeshBasicMaterial({ color: 0x222222, transparent: true, blending: THREE.AdditiveBlending })
-		);
-	};
-
 	var createFileTreeModel = function(fileCount, fullPath, dirName, fileTree, model, depth) {
+		var first = false;
 		if (!model) {
 			model = {dirCount: 0, fileCount: 0, bfsQueue: []};
+			first = true;
+		}
+		if (!depth) {
 			depth = 0;
 		}
 		if (fullPath === '/') {
@@ -285,12 +200,22 @@
 		}
 		var dirs = [];
 		var files = [];
+		var dotfiles = [];
+		var dotdirs = [];
 		for (var i in fileTree) {
 			var obj = {name: i || '/', fullPath: fullPath + '/' + i, entries: fileTree[i], depth: depth};
-			if (obj.entries === null) {
-				files.push(obj);
+			if (i.charAt(0) === '.') {
+				if (obj.entries === null) {
+					dotfiles.push(obj);
+				} else {
+					dotdirs.push(obj);
+				}
 			} else {
-				dirs.push(obj);
+				if (obj.entries === null) {
+					files.push(obj);
+				} else {
+					dirs.push(obj);
+				}
 			}
 		}
 		var threeModel = new THREE.Object3D();
@@ -305,18 +230,18 @@
 				if (off >= dirCount) {
 					break;
 				}
-				var yOff = 1 - (y+1) * (1/squareSide);
+				var yOff = 1 - (y+1) * (1.0/squareSide);
 				var xOff = x * (1/squareSide);
 				if (off >= dirs.length) {
-					fileModel.position.set(xOff+0.05/squareSide, yOff+0.05/squareSide, 0);
-					fileModel.scale.multiplyScalar(0.9/squareSide);
+					fileModel.position.set(xOff+0.1/squareSide, yOff+0.05/squareSide, 0);
+					fileModel.scale.multiplyScalar(0.8/squareSide);
 					fileModel.add(makeFileModel(files, depth));
 					threeModel.add(fileModel);
 				} else {
 					var dir = dirs[off];
 					var dirModel = new THREE.Object3D();
-					dirModel.position.set(xOff+0.05/squareSide, yOff+0.05/squareSide, 0);
-					dirModel.scale.multiplyScalar(0.9/squareSide);
+					dirModel.position.set(xOff+0.1/squareSide, yOff+0.05/squareSide, 0);
+					dirModel.scale.multiplyScalar(0.8/squareSide);
 					dirModel.add(makeSquareModel(dir.name, depth));
 					dirModel.isLeaf = false;
 					dir.model = dirModel;
@@ -333,63 +258,23 @@
 		}
 		threeModel.isLeaf = (dirs.length === 0);
 
-		if (depth === 0) {
+		if (first) {
 
 			console.time('build model');
 
-			var mat = new THREE.MeshBasicMaterial({ color: 0x222222, transparent: true, blending: THREE.AdditiveBlending })
-			var mergeds = [];
-			var lastCount = 0;
 			var queueIndex = 0;
-			while (queueIndex < model.bfsQueue.length) { // && (model.bfsQueue[0].depth === 0 || model.dirCount + model.fileCount < 1500)) {
+
+			while (queueIndex < model.bfsQueue.length && (model.bfsQueue[queueIndex].depth < 2 || model.dirCount + model.fileCount < 1500)) {
 				var dir = model.bfsQueue[queueIndex++];
 				dir.model.add( createFileTreeModel(fileCount, dir.fullPath, dir.name, dir.entries, model, dir.depth+1) );
-				if (queueIndex === model.bfsQueue.length || model.dirCount + model.fileCount > lastCount + 20000) {
+				if (queueIndex > 1000) {
 					model.bfsQueue.splice(0, queueIndex);
 					queueIndex = 0;
-					lastCount = model.dirCount + model.fileCount;
-					console.log(lastCount + ' / ' + fileCount);
-					var theEnd = lastCount === fileCount;
-					threeModel.position.set(-0.5, -0.5, 0.0);
-					threeModel.updateMatrixWorld(true);
-					var merged = new THREE.Geometry();
-					var removedGeos = 0;
-					var removedLeafs = 0;
-					var traversed = 0;
-					var toRemove = [];
-					console.log("At the end", theEnd);
-					threeModel.traverseBottomUp(function(m) {
-						traversed++;
-					});
-					console.log('Traversed', traversed);
-					threeModel.traverseBottomUp(function(m) {
-						if (m.geometry) {
-							if (m.modelType !== 'name') {
-								merged.merge(m.geometry, m.matrixWorld);
-							}
-							if (!theEnd) toRemove.push(m);
-							removedGeos++;
-						} else if (m.isLeaf) {
-							if (m.parent.children.every(c => c.isLeaf)) {
-								m.parent.isLeaf = true;
-							}
-							if (!theEnd) toRemove.push(m);
-							removedLeafs++;
-						}
-					});
-					toRemove.forEach(m => m.parent.remove(m));
-					console.log('Removing', removedGeos, 'geos', removedLeafs, 'leaves');
-					mergeds.push(new THREE.Mesh(merged, mat));
 				}
 			}
 
 			console.timeEnd('build model');
 
-			console.log(model.dirCount + model.fileCount);
-			var o = new THREE.Object3D();
-			mergeds.forEach(m => o.add(m));
-
-			return o;
 		}
 
 		return threeModel;
@@ -430,63 +315,152 @@
 
 	window.onresize();
 
+	// var navigateToGDrive = function(path) {
+	// 	loadGDriveFiles('https://www.googleapis.com/drive/v3/files?corpus=user&orderBy=folder&pageSize=1000&spaces=drive&key=', function(fileTree) {
+
+	// // 	});
+	// 	 // Your Client ID can be retrieved from your project in the Google
+	// 	      // Developer Console, https://console.developers.google.com
+	// 	      var CLIENT_ID = '671524571878.apps.googleusercontent.com';
+
+	// 	      var SCOPES = ['https://www.googleapis.com/auth/drive.metadata.readonly'];
+
+	// 	      /**
+	// 	       * Check if current user has authorized this application.
+	// 	       */
+	// 	      function checkAuth() {
+	// 	      	console.log('checkAuth');
+	// 	        gapi.auth.authorize(
+	// 	          {
+	// 	            'client_id': CLIENT_ID,
+	// 	            'scope': SCOPES.join(' '),
+	// 	            'immediate': true
+	// 	          }, handleAuthResult);
+	// 	      }
+
+	// 	      window.checkAuth = checkAuth;
+
+	// 	      /**
+	// 	       * Handle response from authorization server.
+	// 	       *
+	// 	       * @param {Object} authResult Authorization result.
+	// 	       */
+	// 	      function handleAuthResult(authResult) {
+	// 	      	console.log(handleAuthResult, authResult);
+	// 	        var authorizeDiv = document.getElementById('authorize-div');
+	// 	        if (authResult && !authResult.error) {
+	// 	          // Hide auth UI, then load client library.
+	// 	          authorizeDiv.style.display = 'none';
+	// 	          loadDriveApi();
+	// 	        } else {
+	// 	          // Show auth UI, allowing the user to initiate authorization by
+	// 	          // clicking authorize button.
+	// 	          authorizeDiv.style.display = 'inline';
+	// 	        }
+	// 	      }
+
+	// 	      /**
+	// 	       * Initiate auth flow in response to user clicking authorize button.
+	// 	       *
+	// 	       * @param {Event} event Button click event.
+	// 	       */
+	// 	      function handleAuthClick(event) {
+	// 	        gapi.auth.authorize(
+	// 	          {client_id: CLIENT_ID, scope: SCOPES, immediate: false},
+	// 	          handleAuthResult);
+	// 	        return false;
+	// 	      }
+
+	// 	      window.handleAuthClick = handleAuthClick;
+
+	// 	      /**
+	// 	       * Load Drive API client library.
+	// 	       */
+	// 	      function loadDriveApi() {
+	// 	        gapi.client.load('drive', 'v3', listFiles);
+	// 	      }
+
+	// 	      /**
+	// 	       * Print files.
+	// 	       */
+	// 	      function listFiles() {
+	// 	        var request = gapi.client.drive.files.list({
+	// 	            'pageSize': 1000,
+	// 	            'fields': "nextPageToken, files(id, name, parents)"
+	// 	          });
+
+	// 	          request.execute(function(resp) {
+	// 	            appendPre('Files ('+ resp.files.length +'):');
+	// 	            var files = resp.files;
+	// 	            if (files && files.length > 0) {
+	// 	              for (var i = 0; i < files.length; i++) {
+	// 	                var file = files[i];
+	// 	                appendPre((file.parents || '') + '/' + file.name + ' (' + file.id + ')');
+	// 	              }
+	// 	            } else {
+	// 	              appendPre('No files found.');
+	// 	            }
+	// 	          });
+	// 	      }
+
+	// 	      /**
+	// 	       * Append a pre element to the body containing the given message
+	// 	       * as its text node.
+	// 	       *
+	// 	       * @param {string} message Text to be placed in pre element.
+	// 	       */
+	// 	      function appendPre(message) {
+	// 	        var pre = document.getElementById('output');
+	// 	        var textContent = document.createTextNode(message + '\n');
+	// 	        pre.appendChild(textContent);
+	// 	      }
+	// // };
+
 	var navigateTo = function(path) {
-		loadFiles('http://localhost:8080'+encodeURI(path)+'?depth=10', function(fileTree) {
+		loadFiles('http://localhost:8080'+encodeURI(path)+'?depth=3', function(fileTree) {
 			window.FileTree = fileTree.tree;
-			var model = createFileTreeModel(fileTree.count, '', '', fileTree.tree);
-			//model.position.set(-0.5, -0.5, 0.0);
+			var model = createFileTreeModel(fileTree.count, '', '', fileTree.tree, null, -( path.split("/").length-1 ));
+			model.position.set(-0.5, -0.5, 0.0);
 			scene.add(model);
-
-			// model.updateMatrixWorld(true);
-			// var merged = new THREE.Geometry();
-			// model.traverse(function(m) {
-			// 	if (m.geometry && m.modelType !== 'name')
-			// 		merged.merge(m.geometry, m.matrixWorld);
-			// });
-
-			// scene.add(new THREE.Mesh(
-			// 	merged,
-			// 	new THREE.MeshBasicMaterial({ color: 0x222222, transparent: true, blending: THREE.AdditiveBlending })
-			// ));
 			console.log('ok');
 		});
 	};
 	navigateTo('/Users/ilmari');
 
-	var controls = new THREE.OrbitControls(camera, renderer.domElement);
-	//controls.addEventListener( 'change', render ); // add this only if there is no animation loop (requestAnimationFrame)
-	controls.enableDamping = true;
-	controls.dampingFactor = 0.25;
-	controls.enableZoom = true;
+	// var controls = new THREE.OrbitControls(camera, renderer.domElement);
+	// //controls.addEventListener( 'change', render ); // add this only if there is no animation loop (requestAnimationFrame)
+	// controls.enableDamping = true;
+	// controls.dampingFactor = 0.25;
+	// controls.enableZoom = true;
 
 	var down = false;
-	var downX, downY, startX, startY;
+	var previousX, previousY, startX, startY;
 	var theta = 0, alpha = 0;
 	var clickDisabled = false;
 	window.onmousedown = function(ev) {
 		ev.preventDefault();
 		down = true;
 		clickDisabled = false;
-		startX = downX = ev.clientX;
-		startY = downY = ev.clientY;
+		startX = previousX = ev.clientX;
+		startY = previousY = ev.clientY;
 	};
 	window.onmousemove = function(ev) {
 		if (down) {
 			ev.preventDefault();
-			var dx = ev.clientX - downX;
-			var dy = ev.clientY - downY;
+			var dx = ev.clientX - previousX;
+			var dy = ev.clientY - previousY;
+			previousX = ev.clientX;
+			previousY = ev.clientY;
 			if (Math.abs(ev.clientX - startX) > 5 || Math.abs(ev.clientY - startY) > 5) {
 				clickDisabled = true;
 			}
+			camera.position.x -= 0.0001*dx * camera.fov;
+			camera.position.y += 0.0001*dy * camera.fov;
 		}
 	};
 	window.onmouseup = function(ev) {
 		ev.preventDefault();
 		down = false;
-	};
-
-	window.onclick = function(ev) {
-		ev.preventDefault();
 		if (clickDisabled) {
 			return;
 		}
@@ -512,9 +486,27 @@
 					}
 				});
 				navigateTo(fsEntry.fullPath);
-				controls.reset();
+				camera.position.x = startCameraX;
+				camera.position.y = startCameraY;
+				camera.fov = startCameraFOV;
+				camera.updateProjectionMatrix();
 			}
 		}
+	};
+	var startCameraX = camera.position.x;
+	var startCameraY = camera.position.y;
+	var startCameraFOV = camera.fov;
+	var lastScroll = Date.now();
+	window.onmousewheel = function(ev) {
+		ev.preventDefault();
+		var cx = (ev.clientX - window.innerWidth / 2) * 0.0000575 * camera.fov;
+		var cy = (ev.clientY - window.innerHeight / 2) * 0.0000575 * camera.fov;
+		var zf = Math.pow(1.005, ev.wheelDelta);
+		camera.position.x += cx - cx * zf;
+		camera.position.y -= cy - cy * zf;
+		camera.fov *= zf;
+		camera.updateProjectionMatrix();
+		lastScroll = Date.now();
 	};
 
 	var tmpM4 = new THREE.Matrix4();
