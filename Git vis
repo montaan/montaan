@@ -1,0 +1,33 @@
+Source tree vis
+===
+
+
+Git vis
+---
+
+1. Display git repo source tree at given revision
+2. Display commits, grouped & sorted by date, or grouped by author
+3. Draw lines from commits to touched files
+4. Draw lines from people to commits & files
+5. Draw lines from issues to people & commits & files
+
+
+Dependency vis
+---
+
+1. Analyze requires / includes to draw dependency lines from one file to another
+2. Highlight unused requires (no symbols from dep used)
+
+
+Test vis
+---
+
+1. Color tests green / red based on test passing status
+2. Show test coverage by file
+3. Draw lines from tests to files & coverage
+
+
+Spotify vis
+===
+
+1. Get your playlists & songs with the Spotify API.
