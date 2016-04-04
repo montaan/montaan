@@ -1,0 +1,24 @@
+<!doctype html>
+<html>
+	<head>
+		<title>big geo</title>
+		<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+		<meta name="apple-mobile-web-app-capable" content="yes">
+		<meta name="mobile-web-app-capable" content="yes">
+		<link rel="stylesheet" href="css/main.css">
+	</head>
+
+	<body>
+		<div id="debug"></div>
+		<div id="fullscreen"></div>
+		<div id="authorize-div" style="display: none">
+			<span>Authorize access to Drive API</span>
+			<button id="authorize-button" onclick="handleAuthClick(event)">
+				Authorize
+			</button>
+		</div>
+
+ 		<script src="build/main_gdrive.js"></script>
+		<script src="https://apis.google.com/js/client.js?onload=checkAuth"></script>
+	</body>
+</html>
