@@ -8,6 +8,34 @@ body
 	overflow: hidden;
 }
 
+#git {
+	position: absolute;
+	left: 50%;
+	top: 20px;
+	width: 500px;
+	margin-left: -290px;
+	font-size: 20px;
+	z-index: 11;
+	border:0;
+	height: 32px;
+	box-sizing: border-box;
+	padding-left: 8px;
+	padding-right: 8px;
+}
+
+#gitshow {
+	position: absolute;
+	left: 50%;
+	top: 20px;
+	width: 80px;
+	height: 32px;
+	margin-left: 212px;
+	box-sizing: border-box;
+	font-size: 20px;
+	z-index: 11;
+	border:0;
+}
+
 #renderCanvas {
 	position: absolute;
 	left: 0;

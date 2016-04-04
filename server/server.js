@@ -35,9 +35,12 @@
 
 (() => {
 	const http = require('http');
+	const htRequest = require('request');
 	const fs = require('fs');
 	const URL = require('url');
-	const exec = require('child_process').exec;
+	const ChildProcess = require('child_process');
+	const exec = ChildProcess.exec;
+	const execFile = ChildProcess.execFile;
 
 
 	//Lets define a port we want to listen to
@@ -136,23 +139,36 @@
 		return;
 	}
 
-	//We need a function which handles requests and send response
-	function handleRequest(request, response){
-		response.setHeader("Access-Control-Allow-Origin", "http://localhost:9967")
+	var thumbnailCache = {};
 
-		var url = URL.parse(request.url, true);
-
-		var dir = decodeURIComponent(url.pathname).replace(/\/$/, '');
-		if (dir === '') {
-			dir = '/';
+	function handleThumbnailRequest(request, response, thumbnail) {
+		response.setHeader("Access-Control-Allow-Origin", "http://localhost:9009");
+		response.setHeader("Expires", new Date(Date.now() + 86400*1000*360).toUTCString());
+		if (thumbnailCache[thumbnail]) {
+			response.end(thumbnailCache[thumbnail]);
+		} else {
+			htRequest(thumbnail, {encoding: null}, function(err, res, body) {
+				thumbnailCache[thumbnail] = body;
+				response.end(body);
+			});
 		}
+	}
 
-		var depth = url.query.depth || 1;
-
-		if (url.query.processes) {
-			handleProcessRequest(request, response);
-			return;
+	function handleGitRequest(request, response, git) {
+		var segs = git.split("/");
+		var repoIdx = segs.length-1;
+		if (segs[repoIdx] === '.git') {
+			repoIdx--;
 		}
+		var repoName = segs[repoIdx];
+		execFile('/usr/bin/git', ['clone', '--depth', '1', git, 'repos/'+repoName], function(err, stdout, stderr) {
+			if (!err) {
+				sendDirTree('repos/'+repoName, 12, response);
+			}
+		});
+	}
+
+	function sendDirTree(dir, depth, response) {
 
 		try {
 			var isDir = fs.lstatSync(dir).isDirectory();
@@ -185,7 +201,33 @@
 			}
 		}
 
-		// console.log('It Works!! Path Hit: ' + dir);
+	}
+
+	//We need a function which handles requests and send response
+	function handleRequest(request, response){
+		response.setHeader("Access-Control-Allow-Origin", "http://localhost:9009")
+
+		var url = URL.parse(request.url, true);
+
+		var dir = decodeURIComponent(url.pathname).replace(/\/$/, '');
+		if (dir === '') {
+			dir = '/';
+		}
+
+		var depth = url.query.depth || 1;
+
+		if (url.query.processes) {
+			handleProcessRequest(request, response);
+			return;
+		} else if (url.query.thumbnail) {
+			handleThumbnailRequest(request, response, url.query.thumbnail);
+			return;
+		} else if (url.query.git) {
+			handleGitRequest(request, response, url.query.git);
+			return;
+		}
+
+		sendDirTree(dir, depth, response);
 	}
 
 	//Create a server

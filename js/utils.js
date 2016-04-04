@@ -4,7 +4,7 @@ var slash = '/'.charCodeAt(0);
 // Your Client ID can be retrieved from your project in the Google
 // Developer Console, https://console.developers.google.com
 var CLIENT_ID = '671524571878.apps.googleusercontent.com';
-var SCOPES = ['https://www.googleapis.com/auth/drive.metadata.readonly'];
+var SCOPES = ['https://www.googleapis.com/auth/drive.readonly'];
 
 /**
 * Check if current user has authorized this application.
@@ -61,19 +61,25 @@ function loadDriveApi() {
 	var listFiles = function() {
 		var request = gapi.client.drive.files.list({
 			'pageSize': 1000,
-			'fields': "nextPageToken, files(id, name, parents)"
+			'trashed': false,
+			'spaces': 'drive',
+			'orderBy': 'name',
+			'fields': "nextPageToken, files(id, name, parents, mimeType, thumbnailLink, iconLink)"
 		});
 
-		request.execute(function(resp) {
-			var files = resp.files;
-			var fileList = [];
+		var files = [];
+		var filesLoaded = function(files) {
 			if (files && files.length > 0) {
 				var fileIndex = {};
-				var fileTree = {name: "/", entries: {}, index: 0};
+				var fileTree = {name: "/", title: "Drive", entries: {}, index: 0};
+				var top = {name: "Drive", title: "Drive", entries: {}, index: 0};
+				fileTree.entries["Drive"] = top;
 
 				for (var i = 0; i < files.length; i++) {
 					var f = files[i];
 					f.entries = null;
+					f.title = f.name;
+					f.name = f.id;
 					fileIndex[f.id] = f;
 				}
 
@@ -83,7 +89,7 @@ function loadDriveApi() {
 						for (var j=0; j<f.parents.length; j++) {
 							var p = fileIndex[f.parents[j]];
 							if (!p) {
-								p = fileTree;
+								p = top;
 							}
 							if (!p.entries) {
 								p.entries = {};
@@ -91,12 +97,30 @@ function loadDriveApi() {
 							p.entries[f.name] = f;
 						}
 					} else {
-						fileTree.entries[f.name] = f;
+						top.entries[f.name] = f;
 					}
 				}
 			}
 			window.GDriveCallback({tree: fileTree, count: files.length});
-		});
+		};
+		var tick = function(resp) {
+			files = files.concat(resp.files || []);
+			var nextPageToken = resp.nextPageToken;
+			if (nextPageToken && files.length < 10000) {
+				var request = gapi.client.drive.files.list({
+					'pageSize': 1000,
+					'trashed': false,
+					'pageToken': nextPageToken,
+					'orderBy': 'name',
+					'fields': "nextPageToken, files(id, name, parents, mimeType, thumbnailLink, iconLink)"
+				});
+				request.execute(tick);
+				console.log(files.length);
+			} else {
+				filesLoaded(files);
+			}
+		}
+		request.execute(tick);
 	}
 
 	gapi.client.load('drive', 'v3', listFiles);
@@ -105,7 +129,8 @@ function loadDriveApi() {
 
 
 var utils = module.exports = {
-	findObjectUnderEvent: function(ev, camera, objects) {
+
+	findIntersectionsUnderEvent: function(ev, camera, objects) {
 
 		var style = getComputedStyle(ev.target);
 		var elementTransform = style.getPropertyValue('transform');
@@ -139,7 +164,8 @@ var utils = module.exports = {
 		mat.makeTranslation(-xyz[0], -xyz[1], -xyz[2]);
 		mat2.multiply(mat);
 
-		var vec = new THREE.Vector3(ev.layerX, ev.layerY, 0);
+		var bbox = ev.target.getBoundingClientRect();
+		var vec = new THREE.Vector3(ev.clientX-bbox.left, ev.clientY-bbox.top, 0);
 		vec.applyMatrix4(mat2);
 
 		var width = parseFloat(style.getPropertyValue('width'));
@@ -155,6 +181,11 @@ var utils = module.exports = {
 		mouse3D.normalize();
 		var raycaster = new THREE.Raycaster( camera.position, mouse3D );
 		var intersects = raycaster.intersectObjects( objects );
+		return intersects;
+	},
+
+	findObjectUnderEvent: function(ev, camera, objects) {
+		var intersects = this.findIntersectionsUnderEvent(ev, camera, objects);
 		if ( intersects.length > 0 ) {
 			var obj = intersects[ 0 ].object
 			return obj;
@@ -178,7 +209,7 @@ var utils = module.exports = {
 				branch.entries = {};
 			}
 			if (typeof branch.entries[segment] !== 'object') {
-				branch.entries[segment] = {name: segment, entries: {}, index: 0};
+				branch.entries[segment] = {name: segment, title: segment, entries: {}, index: 0};
 			}
 			branch = branch.entries[segment];
 		}
@@ -186,13 +217,13 @@ var utils = module.exports = {
 			branch.entries = {};
 		}
 		if (typeof branch.entries[segments[i]] !== 'object') {
-			branch.entries[segments[i]] = {name: segments[i], entries: dir ? {} : null, index: 0};
+			branch.entries[segments[i]] = {name: segments[i], title: segments[i], entries: dir ? {} : null, index: 0};
 		}
 	},
 
 	parseFileList: function(fileString) {
 		// console.log("Parsing file string", fileString.length);
-		var fileTree = {name: "/", entries: {}, index: 0};
+		var fileTree = {name: "/", title: "/", entries: {}, index: 0};
 		var name = "";
 		var startIndex = 0;
 		var fileCount = 0;

@@ -34,15 +34,15 @@ function start(font, texture) {
 		directoryF: [0.8,0.8,0.8,1],
 		musicF: [0.1,0.7,0.0,1],
 		imageF: [0.3,0.6,1,1],
-		documentF: [0.75,0.07,0.05,1],
+		documentF: [0.05,0.15,0.65,1],
 		archiveF: [0.7,0.5,0.05,1],
 		videoF: [0.0,0.7,0.4,1],
 		unknownF: [0.13,0.14,0.17,1],
 		hiddenF: [0.7,0.77,0.8,1],
 
 		musicRE: /\.(mp3|m4a|ogg|ogm|aac|flac)$/i,
-		imageRE: /\.(png|gif|psd|tga|webm|jpe?g)$/i,
-		documentRE: /\.(pdf|docx?|pptx?|txt|html?)$/i,
+		imageRE: /\.(ai|c4d|obj|png|gif|psd|tga|webm|jpe?g)$/i,
+		documentRE: /\.(pdf|mtl|docx?|pptx?|txt|html?)$/i,
 		archiveRE: /\.(zip|gz|bz2|tar|rar|7z)$/i,
 		videoRE: /\.(mp4|avi|mov|m4v|ogv|mpe?g|3gp)$/i,
 
@@ -53,7 +53,35 @@ function start(font, texture) {
 		videoDirRE: /^(videos|movies)$/i,
 		hiddenDirRE: /^\./,
 
-		getFileColor: function(name) {
+		getFileColor: function(file) {
+			var name = file.name;
+			var mimeType = file.mimeType;
+			if (mimeType) {
+				if (mimeType === 'application/vnd.google-apps.spreadsheet') {
+					return this.musicF;
+				} else if (mimeType === 'application/vnd.google-apps.document') {
+					return this.documentF;
+				} else if (mimeType === 'application/vnd.google-apps.map') {
+					return this.videoF;
+				} else if (mimeType === 'application/vnd.google-apps.photo') {
+					return this.imageF;
+				} else if (mimeType === 'application/vnd.google-apps.drawing') {
+					return this.imageF;
+				} else if (mimeType === 'application/vnd.google-apps.presentation') {
+					return this.archiveF;
+				} else if (mimeType === 'application/vnd.google-apps.script') {
+					return this.archiveF;
+				} else if (mimeType === 'application/vnd.google-apps.sites') {
+					return this.archiveF;
+				} else if (/^image/.test(mimeType)) {
+					return this.imageF;
+				} else if (/^audio/.test(mimeType)) {
+					return this.musicF;
+				} else if (/^video/.test(mimeType)) {
+					return this.videoF;
+				}
+			}
+
 			if (this.musicRE.test(name)) {
 				return this.musicF;
 			} else if (this.imageRE.test(name)) {
@@ -71,7 +99,8 @@ function start(font, texture) {
 			}
 		},
 
-		getDirectoryColor: function(name) {
+		getDirectoryColor: function(file) {
+			var name = file.name;
 			if (this.musicDirRE.test(name)) {
 				return this.music;
 			} else if (this.imageDirRE.test(name)) {
@@ -234,6 +263,7 @@ function start(font, texture) {
 		side: THREE.DoubleSide,
 		transparent: true,
 		color: 0xffffff,
+		depthTest: false,
 		depthWrite: false
 	}));
 
@@ -269,7 +299,8 @@ function start(font, texture) {
 		return visCount;
 	};
 
-	var createFileTreeQuads = function(fileTree, fileIndex, verts, colorVerts, parentX, parentY, parentZ, parentScale, depth, parentText) {
+	var thumbnailGeo = new THREE.PlaneBufferGeometry(1,1,1,1);
+	var createFileTreeQuads = function(fileTree, fileIndex, verts, colorVerts, parentX, parentY, parentZ, parentScale, depth, parentText, thumbnails, index) {
 		var dirs = [];
 		var files = [];
 		for (var i in fileTree.entries) {
@@ -311,27 +342,45 @@ function start(font, texture) {
 								break;
 							}
 							var file = files[foff];
-							var fileColor = Colors.getFileColor(file.name);
+							var fileColor = Colors.getFileColor(file);
 							file.x = parentX + parentScale * subX + fileScale * fxOff;
 							file.y = parentY + parentScale * subY + fileScale * fyOff;
-							file.z = parentZ + parentScale * 0.1;
 							file.scale = fileScale * (0.9/squareSidef);
+							file.z = parentZ + file.scale * 0.2;
 							file.index = fileIndex;
+							file.parent = fileTree;
+							index[fileIndex] = file;
 							setColor(colorVerts, file.index, fileColor, depth);
-							makeQuad(verts, file.index, file.x, file.y, file.scale, file.scale * 0.25, file.z);
+							makeQuad(verts, file.index, file.x, file.y, file.scale, file.scale*0.25, file.z);
+							// file.thumbnail = loadThumbnail(file);
+							// if (file.thumbnail) {
+							// 	file.thumbnailMesh = new THREE.Mesh(
+							// 		thumbnailGeo, 
+							// 		new THREE.MeshBasicMaterial({
+							// 			map: file.thumbnail,
+							// 			transparent: true,
+							// 			depthWrite: false
+							// 		})
+							// 	);
+							// 	file.thumbnailMesh.position.set(file.x+file.scale/2, file.y+file.scale/2, file.z+file.scale*0.01);
+							// 	file.thumbnailMesh.scale.multiplyScalar(file.scale);
+							// 	thumbnails.add(file.thumbnailMesh);
+							// }
 							fileIndex++;
 						}
 					}
 				} else {
 					var dir = dirs[off];
 					var subX = xOff + 0.1 / squareSide;
-					var subY = yOff + 0.1 / squareSide;
+					var subY = yOff; // + 0.1 / squareSide;
 					dir.x = parentX + parentScale * subX;
 					dir.y = parentY + parentScale * subY;
-					dir.z = parentZ + parentScale * 0.1;
 					dir.scale = parentScale * (0.8 / squareSide);
+					dir.z = parentZ + dir.scale * 0.2;
 					dir.index = fileIndex;
-					var dirColor = Colors.getDirectoryColor(dirs[off].name);
+					dir.parent = fileTree;
+					index[fileIndex] = dir;
+					var dirColor = Colors.getDirectoryColor(dirs[off]);
 					setColor(colorVerts, dir.index, dirColor, depth);
 					makeQuad(verts, dir.index, dir.x, dir.y, dir.scale, dir.scale, dir.z);
 					fileIndex++;
@@ -341,14 +390,17 @@ function start(font, texture) {
 
 		if (true || depth < 4) {
 			for (var i in fileTree.entries) {
-				var textGeometry = createText({text: i, font: font});
-				var text = new THREE.Mesh(textGeometry, textMaterial);
 				var obj = fileTree.entries[i];
-				text.position.x = obj.x;
-				text.position.y = obj.y + (obj.entries ? obj.scale*1.05 : 0); // + (obj.entries ? obj.scale : 0.0);
-				text.position.z = obj.z + 0.15*obj.scale;
-				//text.rotation.x = obj.entries ? 1 : 0;
-				text.scale.multiplyScalar(obj.scale*0.004*(250/Math.max(textGeometry.layout.width, 200)));
+				var textGeometry = createText({text: obj.title, font: font});
+				var text = new THREE.Mesh(textGeometry, textMaterial);
+				var textScaleW = (220/Math.max(textGeometry.layout.width, 220));
+				var textScaleH = 0.25 * textScaleW;
+				if (i === 'README.txt') console.log(textGeometry.layout);
+				text.position.x = obj.x + (obj.entries ? 0 : (obj.scale * 0.02));
+				text.position.y = obj.y + (obj.entries ? obj.scale*1.01 : (obj.scale * (0.125-textScaleH*0.175))); // + (obj.entries ? obj.scale : 0.0);
+				text.position.z = obj.z;// + 0.15*obj.scale;
+				// text.rotation.x = obj.entries ? 1 : 0;
+				text.scale.multiplyScalar(obj.scale*0.004*textScaleW*24/22);
 				text.scale.y *= -1;
 				var arr = textGeometry.attributes.position.array;
 				for (var j=0; j<arr.length; j+=4) {
@@ -371,7 +423,7 @@ function start(font, texture) {
 
 		for (var j=0; j<dirs.length; j++) {
 			var dir = dirs[j];
-			fileIndex = createFileTreeQuads(dir, fileIndex, verts, colorVerts, dir.x, dir.y, dir.z, dir.scale, depth+1, dir.text);
+			fileIndex = createFileTreeQuads(dir, fileIndex, verts, colorVerts, dir.x, dir.y, dir.z, dir.scale, depth+1, dir.text, thumbnails, index);
 		}
 		return fileIndex;
 	};
@@ -394,8 +446,11 @@ function start(font, texture) {
 
 		var fileIndex = 0;
 
+		fileTree.index = [fileTree];
+
 		var labels = new THREE.Object3D();
-		createFileTreeQuads(fileTree, fileIndex, verts, colorVerts, 0, 0, 0, 1, 0, labels);
+		var thumbnails = new THREE.Object3D();
+		createFileTreeQuads(fileTree, fileIndex, verts, colorVerts, 0, 0, 0, 1, 0, labels, thumbnails, fileTree.index);
 
 		var bigGeo = createText({text:'', font: font});
 		var vertCount = 0;
@@ -421,8 +476,10 @@ function start(font, texture) {
 			geo,
 			new THREE.MeshBasicMaterial({ color: 0xffffff, vertexColors: THREE.VertexColors })
 		);
+		mesh.fileTree = fileTree;
 		mesh.material.side = THREE.DoubleSide;
 		mesh.add(bigMesh);
+		mesh.add(thumbnails);
 		// mesh.castShadow = true;
 		// mesh.receiveShadow = true;
 		return mesh;
@@ -431,7 +488,7 @@ function start(font, texture) {
 	var renderer = new THREE.WebGLRenderer({antialias: true, alpha: false});
 	renderer.domElement.id = 'renderCanvas';
 	renderer.setPixelRatio( window.devicePixelRatio || 1 );
-	// renderer.setClearColor(0xffffff, 1);
+	renderer.setClearColor(0x000000, 1);
 	// renderer.shadowMap.enabled = true;
 	// renderer.shadowMap.type = THREE.BasicShadowMap;
 	document.body.appendChild(renderer.domElement);
@@ -534,39 +591,71 @@ function start(font, texture) {
 		});
 	};
 
-	var navigateTo = function(path) {
-		utils.loadFiles('artoolkit5.txt', function(fileTree) { // http://localhost:8080'+encodeURI(path)+'?depth=12', function(fileTree) {
-			changed = true;
-			window.FileTree = fileTree.tree;
-			model = createFileTreeModel(fileTree.count, fileTree.tree);
-			model.position.set(-0.5, -0.5, 0.0);
-			model.rotation.x = -0.5;
-			model.rotation.z = 0;
-			// model.scale.multiplyScalar(100);
-			scene.add(model);
-			
-			// console.log('ok');
+	var modelTop = new THREE.Object3D();
+	modelTop.position.set(-0.5, -0.5, 0.0);
+	var modelPivot = new THREE.Object3D();
+	modelPivot.rotation.x = -0.5;
+	modelPivot.rotation.z = 0;
+	modelPivot.position.set(0.5, 0.5, 0.0);
+	scene.add(modelTop);
+	modelTop.add(modelPivot);
 
-			// processTick();
-
-		});
-	};
-	// navigateTo('/Users/ilmari/code/artoolkit5');
-	window.GDriveCallback = function(fileTree) { // http://localhost:8080'+encodeURI(path)+'?depth=12', function(fileTree) {
+	var showFileTree = function(fileTree) {
 		changed = true;
+		if (model) {
+			model.parent.remove(model);
+			model.traverse(function(m) {
+				if (m.geometry) {
+					m.geometry.dispose();
+				}
+			});
+		}
 		window.FileTree = fileTree.tree;
 		model = createFileTreeModel(fileTree.count, fileTree.tree);
 		model.position.set(-0.5, -0.5, 0.0);
-		model.rotation.x = -0.5;
-		model.rotation.z = 0;
-		// model.scale.multiplyScalar(100);
-		scene.add(model);
-		
-		// console.log('ok');
-
+		modelPivot.add(model);
 		// processTick();
-
 	};
+
+	var navigateTo = function(url) {
+		utils.loadFiles(url, showFileTree);
+	};
+
+	if (!document.body.classList.contains('gdrive')) {
+		navigateTo('artoolkit5.txt');
+		var ghInput = document.getElementById('git');
+		var ghButton = document.getElementById('gitshow');
+		ghButton.onclick = function(ev) {
+			var repoURL = ghInput.value;
+			var match = repoURL.match(/^(((https?|git):\/*)?(git\.|www\.)?github.com\/)?([^\/]+)\/([^\/]+)/i);
+			var repoName = match[5] + '/' + match[6];
+			var gitHubRepoURL = ('https://github.com/' + repoName + '.git');
+			var gitHubAPIURL = 'https://api.github.com/repos/' + repoName + '/git/trees/master?recursive=1';
+			var xhr = new XMLHttpRequest();
+			xhr.open('GET', gitHubAPIURL);
+			xhr.onload = function() {
+				var json = JSON.parse(xhr.responseText);
+				console.log(json);
+				var paths = json.tree.map(file => '/' + repoName + '/' + file.path + (file.type === 'tree' ? '/' : ''))
+				console.log(paths);
+				showFileTree(utils.parseFileList('/' + match[5] + '/\n/' + repoName + '/\n' + paths.join("\n") + '\n'));
+				camera.targetPosition.x = 0;
+				camera.targetPosition.y = 0;
+				camera.targetFOV = 50;
+			};
+			xhr.send();
+		};
+		ghInput.addEventListener('keydown', function(ev) {
+			if (ev.keyCode === 13) {
+				ev.preventDefault();
+				ghButton.onclick(ev);
+			}
+		}, false);
+		ghInput.addEventListener('input', function(ev) {
+
+		}, false);
+	}
+	window.GDriveCallback = showFileTree;
 
 	// var controls = new THREE.OrbitControls(camera, renderer.domElement);
 	// //controls.addEventListener( 'change', render ); // add this only if there is no animation loop (requestAnimationFrame)
@@ -583,7 +672,9 @@ function start(font, texture) {
 
 	var inGesture = false;
 
-	window.addEventListener('touchstart', function(ev) {
+	renderer.domElement.addEventListener('touchstart', function(ev) {
+		if (window.DocFrame) return;
+		ev.preventDefault();
 		if (ev.touches.length === 1) {
 			window.onmousedown(ev.touches[0]);
 		} else if (ev.touches.length === 2) {
@@ -598,7 +689,9 @@ function start(font, texture) {
 			window.onmousedown(pinchMid);
 		}
 	}, false);
-	window.addEventListener('touchmove', function(ev) {
+	renderer.domElement.addEventListener('touchmove', function(ev) {
+		if (window.DocFrame) return;
+		ev.preventDefault();
 		if (ev.touches.length === 1) {
 			if (!inGesture) {
 				window.onmousemove(ev.touches[0], 0.0000525);
@@ -618,7 +711,9 @@ function start(font, texture) {
 			window.onmousemove(pinchMid);
 		}
 	}, false);
-	window.addEventListener('touchend', function(ev) {
+	renderer.domElement.addEventListener('touchend', function(ev) {
+		if (window.DocFrame) return;
+		ev.preventDefault();
 		if (ev.touches.length === 0) {
 			if (!inGesture) {
 				window.onmouseup(ev.changedTouches[0]);
@@ -629,7 +724,9 @@ function start(font, texture) {
 		} else if (ev.touches.length === 1) {
 		}
 	}, false);
-	window.addEventListener('touchcancel', function(ev) {
+	renderer.domElement.addEventListener('touchcancel', function(ev) {
+		if (window.DocFrame) return;
+		ev.preventDefault();
 		if (ev.touches.length === 0) {
 			if (!inGesture) {
 				window.onmouseup(ev.changedTouches[0]);
@@ -641,7 +738,8 @@ function start(font, texture) {
 
 		}
 	}, false);
-	window.onmousedown = function(ev) {
+	renderer.domElement.onmousedown = function(ev) {
+		if (window.DocFrame) return;
 		if (ev.preventDefault) ev.preventDefault();
 		down = true;
 		clickDisabled = false;
@@ -649,6 +747,7 @@ function start(font, texture) {
 		startY = previousY = ev.clientY;
 	};
 	window.onmousemove = function(ev, factor) {
+		if (window.DocFrame) return;
 		if (down) {
 			if (!factor) {
 				factor = 0.0001;
@@ -659,16 +758,18 @@ function start(font, texture) {
 			var dy = ev.clientY - previousY;
 			previousX = ev.clientX;
 			previousY = ev.clientY;
-			if (Math.abs(ev.clientX - startX) > 5 || Math.abs(ev.clientY - startY) > 5) {
+			if (Math.abs(ev.clientX - startX) > 10 || Math.abs(ev.clientY - startY) > 10) {
 				clickDisabled = true;
 			}
-			camera.position.x -= factor*dx * camera.fov;
-			camera.position.y += factor*dy * camera.fov;
+			if (ev.shiftKey) {
+				modelPivot.rotation.z += dx*0.01;
+				modelPivot.rotation.x += dy*0.01;
+			} else {
+				camera.position.x -= factor*dx * camera.fov;
+				camera.position.y += factor*dy * camera.fov;
+				camera.targetPosition.copy(camera.position);
+			}
 		}
-	};
-	window.onmouseup = function(ev) {
-		if (ev.preventDefault) ev.preventDefault();
-		down = false;
 	};
 	var lastScroll = Date.now();
 	var zoomCamera = function(zf, cx, cy) {
@@ -677,12 +778,15 @@ function start(font, texture) {
 			camera.position.y -= cy - cy * zf;
 			camera.fov *= zf;
 			if (camera.fov > 120) camera.fov = 120;
+			camera.targetFOV = camera.fov;
+			camera.targetPosition.copy(camera.position);
 			camera.updateProjectionMatrix();
 			changed = true;
 		}
 	};
 	var prevD = 0;
-	window.onmousewheel = function(ev) {
+	renderer.domElement.onmousewheel = function(ev) {
+		if (window.DocFrame) return;
 		ev.preventDefault();
 		var cx = (ev.clientX - window.innerWidth / 2) * 0.0000575 * camera.fov;
 		var cy = (ev.clientY - window.innerHeight / 2) * 0.0000575 * camera.fov;
@@ -701,35 +805,172 @@ function start(font, texture) {
 		lastScroll = Date.now();
 	};
 
-	window.onclick = function(ev) {
-		ev.preventDefault();
+	var loadThumbnail = function(fsEntry) {
+		if (fsEntry.id) { // Google Drive file.
+			var cachedTimeStamp = 1458296109305;
+			// https://drive.google.com/thumbnail?id=0B71mO-nIPBuNOGM4Z2hZREdQeHc&authuser=0&v=1458296109305&sz=w128-h128-p-k-nu
+			var img = new Image();
+			var canvas = document.createElement('canvas');
+			canvas.width = 128;
+			canvas.height = 128;
+
+			img.crossOrigin = "Anonymous";
+			var retried = false;
+			img.onload = function() {
+				console.log(img);
+				if (!img.complete) {
+					if (retried) return;
+					retried = true;
+					console.log('failed image request', thumbnailLink);
+					img.src = 'http://localhost:8080?thumbnail=' + encodeURIComponent(iconLink);
+				} else {
+					canvas.getContext('2d').drawImage(this, (canvas.width-this.width) / 2, 0, this.width, this.height);
+					img.texture.needsUpdate = true;
+					changed = true;
+				}
+			};
+			img.onerror = function() {
+				if (retried) return;
+				retried = true;
+				img.src = 'http://localhost:8080?thumbnail=' + encodeURIComponent(iconLink);
+			};
+			img.texture = new THREE.Texture();
+			img.texture.image = canvas;
+			img.texture.needsUpdate = true;
+			// utils.getGDriveThumbnailURL(fsEntry.id, function(thumbnailURL) {
+			// 	img.src = thumbnailURL;
+			// });
+			var iconLink = (fsEntry.iconLink || "").replace(
+				/^https:\/\/ssl\.gstatic\.com\/docs\/doclist\/images\/icon_[\d]+_([^_]+)_list\.png$/,
+				"https://ssl.gstatic.com/docs/doclist/images/mediatype/icon_1_$1_x128.png"
+			);
+			var thumbnailLink = (fsEntry.thumbnailLink || "").replace(/s220$/, 'w128-h128');
+			var thumbnailURL = thumbnailLink || iconLink || 'https://drive.google.com/thumbnail?id='+fsEntry.id+'&authuser=1&v='+cachedTimeStamp+"&sz=w128-h128";
+			img.src = 'http://localhost:8080?thumbnail=' + encodeURIComponent(thumbnailURL);
+			return img.texture;
+		}
+	};
+
+	var openIFrame = function(url) {
+		var iframe = document.createElement('iframe');
+		iframe.style.width = window.innerWidth + 'px';
+		iframe.style.height = window.innerHeight - 60 + 'px';
+		iframe.style.position = 'absolute';
+		iframe.style.top = '0px';
+		iframe.style.transform = 'translateY(-'+iframe.style.height+')';
+		iframe.style.transition = '0.5s';
+		iframe.style.left = '0px';
+		iframe.style.zIndex = 10;
+		iframe.style.border = '0';
+		iframe.style.background = 'white';
+		window.DocFrame = iframe;
+		document.body.appendChild(iframe);
+		setTimeout(function() { iframe.style.transform = 'translateY(0px)'; }, 30);
+		iframe.src = url;
+	};
+
+	var getFullPath = function(fsEntry) {
+		if (!fsEntry.parent) return '';
+		return getFullPath(fsEntry.parent) + '/' + fsEntry.name;
+	};
+
+	var openFile = function(fsEntry) {
+		if (fsEntry.id) { // Google Drive file.
+			var url = 'https://drive.google.com/file/d/' + fsEntry.id + '/preview';
+			openIFrame(url);
+		} else {
+			// console.log(fsEntry);
+			var fullPath = getFullPath(fsEntry);
+			// console.log(fullPath);
+			var segs = fullPath.split("/");
+			var url = 'https://github.com/' + segs.slice(1,3).join("/") + '/blob/master/' + segs.slice(3).join("/");
+			// console.log(url);
+			window.open(url, '_blank');
+		}
+	};
+
+	var highlighted = null;
+	window.onmouseup = function(ev) {
+		if (ev.preventDefault) ev.preventDefault();
 		if (clickDisabled) {
+			down = false;
 			return;
 		}
-		return;
-		var target = utils.findObjectUnderEvent(ev, camera, models);
-		if (target) {
-			var fsEntry = (target.fsEntry || target.parent.fsEntry);
-			// console.log(fsEntry.fullPath);
-			if (fsEntry.entries === null) {
-				window.open('http://localhost:8080'+encodeURI(fsEntry.fullPath))
-			} else {
-				var oldModel = scene.children[1];
-				scene.remove(oldModel);
-				models = [];
-				oldModel.traverse(function(m) {
-					if (m.material) {
-						if (m.material.map) {
-							m.material.map.dispose();
+		if (window.DocFrame) {
+			window.DocFrame.style.transform = 'translateY(-'+window.DocFrame.style.height+')';
+			var iframe = window.DocFrame;
+			setTimeout(function() {
+				iframe.parentNode.removeChild(iframe);
+			}, 500);
+			window.DocFrame = null;
+			down = false;
+			return;
+		}
+		if (down) {
+			down = false;
+			var intersections = utils.findIntersectionsUnderEvent(ev, camera, [model]);
+			if (intersections.length > 0) {
+				var faceIndex = intersections[0].faceIndex;
+				var fsEntry = model.fileTree.index[Math.floor(faceIndex / 12)];
+				while (fsEntry && fsEntry.scale * camera.projectionMatrix.elements[0] < 0.2) {
+					if (fsEntry.parent === highlighted) {
+						break;
+					}
+					fsEntry = fsEntry.parent;
+				}
+				var off = fsEntry.index * 18 * 3;
+				var ca = model.geometry.attributes.color;
+				if (highlighted) {
+					// setColor(ca.array, highlighted.index, Colors[highlighted.entries === null ? 'getFileColor' : 'getDirectoryColor'](highlighted), 0);
+				}
+				if (highlighted !== fsEntry) {
+					// setColor(ca.array, fsEntry.index, [0.1,0.25,0.5], 0);
+					highlighted = fsEntry;
+					var targetFOV = fsEntry.scale * 50;
+					window.debug.textContent = (targetFOV / camera.fov);
+					if (targetFOV / camera.fov <= 1.1 && targetFOV / camera.fov > 0.3 && highlighted.entries === null) {
+						if (highlighted.entries === null) {
+							// File, let's open it.
+							openFile(highlighted);
 						}
-						m.material.dispose();
+					} else {
+						var fsPoint = new THREE.Vector3(fsEntry.x + fsEntry.scale/2, fsEntry.y + fsEntry.scale/2, fsEntry.z);
+						fsPoint.applyMatrix4(model.matrixWorld);
+						camera.targetPosition.copy(fsPoint);
+						camera.targetFOV = fsEntry.scale * 50;
 					}
-					if (m.geometry) {
-						m.geometry.dispose();
+				} else {
+					if (highlighted.entries === null) {
+						// File, let's open it.
+						openFile(highlighted);
 					}
-				});
-				navigateTo(fsEntry.fullPath);
-				controls.reset();
+					highlighted = null;
+				}
+				ca.needsUpdate = true;
+				changed = true;
+				// console.log(fsEntry, fsEntry.scale * camera.projectionMatrix.elements[0]);
+				return;
+				// console.log(fsEntry.fullPath);
+				if (fsEntry.entries === null) {
+					window.open('http://localhost:8080'+encodeURI(fsEntry.fullPath))
+				} else {
+					var oldModel = scene.children[1];
+					scene.remove(oldModel);
+					models = [];
+					oldModel.traverse(function(m) {
+						if (m.material) {
+							if (m.material.map) {
+								m.material.map.dispose();
+							}
+							m.material.dispose();
+						}
+						if (m.geometry) {
+							m.geometry.dispose();
+						}
+					});
+					navigateTo(fsEntry.fullPath);
+					controls.reset();
+				}
 			}
 		}
 	};
@@ -765,7 +1006,33 @@ function start(font, texture) {
 
 	var changed = true;
 
+	camera.targetPosition = new THREE.Vector3().copy(camera.position);
+	camera.targetFOV = camera.fov;
+	var previousFrameTime = performance.now();
 	var tick = function() {
+		var currentFrameTime = performance.now();
+		var dt = currentFrameTime - previousFrameTime;
+		previousFrameTime += dt;
+		if (dt < 16) {
+			dt = 16;
+		}
+
+		if (camera.targetPosition.x !== camera.position.x || camera.targetPosition.y !== camera.position.y || camera.fov !== camera.targetFOV) {
+			camera.position.x += (camera.targetPosition.x - camera.position.x) * (1-Math.pow(0.95, dt/16));
+			camera.position.y += (camera.targetPosition.y - camera.position.y) * (1-Math.pow(0.95, dt/16));
+			if (Math.abs(camera.position.x - camera.targetPosition.x) < camera.fov*0.00001) {
+				camera.position.x = camera.targetPosition.x;
+			}
+			if (Math.abs(camera.position.y - camera.targetPosition.y) < camera.fov*0.00001) {
+				camera.position.y = camera.targetPosition.y;
+			}
+			camera.fov += (camera.targetFOV - camera.fov) * (1-Math.pow(0.95, dt/16));
+			if (Math.abs(camera.fov - camera.targetFOV) < camera.targetFOV / 1000) {
+				camera.fov = camera.targetFOV;
+			}
+			camera.updateProjectionMatrix();
+			changed = true;
+		}
 		if (changed) render();
 		changed = false;
 		window.requestAnimationFrame(tick);
