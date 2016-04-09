@@ -22,36 +22,44 @@ loadFontImage({
 function start(font, texture) {
 
 	Colors = {
-		directory: [0.8,0.8,0.8],
-		music: [0.1,0.7,0.0],
-		image: [0.3,0.6,1],
-		document: [0.75,0.07,0.05],
-		archive: [0.7,0.5,0.05],
-		video: [0.0,0.7,0.4],
+		music: [0.13,0.34,0.17],
+		image: [0.13,0.34,0.25],
+		document: [0.13,0.14,0.37,1],
+		archive: [0.28,0.24,0.2],
+		video: [0.13,0.34,0.3],
+		exe: [0.28,0.14,0.17],
 		unknown: [0.13,0.14,0.17],
-		hidden: [0.7,0.77,0.8],
+		hidden: [0.63,0.64,0.67],
 
-		directoryF: [0.8,0.8,0.8,1],
-		musicF: [0.1,0.7,0.0,1],
-		imageF: [0.3,0.6,1,1],
-		documentF: [0.05,0.15,0.65,1],
-		archiveF: [0.7,0.5,0.05,1],
-		videoF: [0.0,0.7,0.4,1],
-		unknownF: [0.13,0.14,0.17,1],
-		hiddenF: [0.7,0.77,0.8,1],
+		musicF: [0.13,0.14,0.27],
+		imageF: [0.23,0.44,0.57],
+		documentF: [0.13,0.14,0.57],
+		archiveF: [0.13,0.24,0.27],
+		headerF: [0.13,0.44,0.37],
+		exeF: [0.43,0.34,0.17],
+		objectF: [0.13,0.14,0.17],
+		legalF: [0.13,0.14,0.47],
+		videoF: [0.13,1.0,0.8],
+		unknownF: [0.13,0.14,0.17],
+		hiddenF: [0.53,0.54,0.57],
 
-		musicRE: /\.(mp3|m4a|ogg|ogm|aac|flac)$/i,
-		imageRE: /\.(ai|c4d|obj|png|gif|psd|tga|webm|jpe?g)$/i,
-		documentRE: /\.(pdf|mtl|docx?|pptx?|txt|html?)$/i,
-		archiveRE: /\.(zip|gz|bz2|tar|rar|7z)$/i,
+		musicRE: /(^(makefile.*|configure|cmake.*|InfoPlist)|\.(gyp.?|pyt|isolate|json|xcscheme|projitems|shproj|gradle|properties|mp3|m4a|ogg|ogm|aac|flac|mk|xml|cfg|conf|vcxproj|xcconfig|plist|config|in)$)/i,
+		imageRE: /\.(ai|c4d|obj|png|gif|psd|tga|webm|jpe?g|svg)$/i,
+		documentRE: /(^(Doxyfile|readme))|(\.(pdf|mtl|docx?|pptx?|xaml|txt|html?|pages|dox|md)$)/i,
+		archiveRE: /\.(zip|gz|bz2|tar|rar|7z|js|c|cpp|rb|py|pl|php\d?|java|vbs|cs|mm?|hlsl|glsl|vert|frag|vs|fs|cc|ts)$/i,
+		objectRE: /\.(a|jar|dylib|lib|pri|so|aar)$/i,
+		headerRE: /\.(h|hpp|css|sass|less|scss|d\.ts)$/i,
+		exeRE: /\.(sh|exe|bsh|bat)$/i,
+		legalRE: /^(OWNERS|LICENSE.*)$/i,
 		videoRE: /\.(mp4|avi|mov|m4v|ogv|mpe?g|3gp)$/i,
 
 		musicDirRE: /^music$/i,
 		imageDirRE: /^(pictures|photos|images|screenshots|img)$/i,
-		documentDirRE: /^(documents|html|css|js)$/i,
-		archiveDirRE: /^(downloads|dropbox|public|\.git|applications|system|library|src)$/i,
-		videoDirRE: /^(videos|movies)$/i,
-		hiddenDirRE: /^\./,
+		documentDirRE: /^(docs?|documentation|html|static)$/i,
+		exeDirRE: /^(bin)$/i,
+		archiveDirRE: /^(\.git|src)$/i,
+		videoDirRE: /^(videos?|movies?)$/i,
+		hiddenDirRE: /^\./i,
 
 		getFileColor: function(file) {
 			var name = file.name;
@@ -84,12 +92,20 @@ function start(font, texture) {
 
 			if (this.musicRE.test(name)) {
 				return this.musicF;
+			} else if (this.legalRE.test(name)) {
+				return this.legalF;
 			} else if (this.imageRE.test(name)) {
 				return this.imageF;
+			} else if (this.headerRE.test(name)) {
+				return this.headerF;
 			} else if (this.documentRE.test(name)) {
 				return this.documentF;
 			} else if (this.archiveRE.test(name)) {
 				return this.archiveF;
+			} else if (this.exeRE.test(name)) {
+				return this.exeF;
+			} else if (this.objectRE.test(name)) {
+				return this.objectF;
 			} else if (this.videoRE.test(name)) {
 				return this.videoF;
 			} else if (this.hiddenDirRE.test(name)) {
@@ -101,16 +117,19 @@ function start(font, texture) {
 
 		getDirectoryColor: function(file) {
 			var name = file.name;
-			if (this.musicDirRE.test(name)) {
-				return this.music;
-			} else if (this.imageDirRE.test(name)) {
-				return this.image;
-			} else if (this.documentDirRE.test(name)) {
+			// if (this.musicDirRE.test(name)) {
+			// 	return this.music;
+			// } else if (this.imageDirRE.test(name)) {
+			// 	return this.image;
+			// } else 
+			if (this.documentDirRE.test(name)) {
 				return this.document;
 			} else if (this.archiveDirRE.test(name)) {
 				return this.archive;
-			} else if (this.videoDirRE.test(name)) {
-				return this.video;
+			// } else if (this.videoDirRE.test(name)) {
+			// 	return this.video;
+			} else if (this.exeDirRE.test(name)) {
+				return this.exe;
 			} else if (this.hiddenDirRE.test(name)) {
 				return this.hidden;
 			} else {
@@ -391,11 +410,16 @@ function start(font, texture) {
 		if (true || depth < 4) {
 			for (var i in fileTree.entries) {
 				var obj = fileTree.entries[i];
-				var textGeometry = createText({text: obj.title, font: font});
+				var title = obj.title;
+				if (title.length > 16) {
+					var breakPoint = Math.max(16, Math.floor(title.length / 2));
+					title = title.substring(0, breakPoint) + '\n' + title.substring(breakPoint);
+				}
+
+				var textGeometry = createText({text: title, font: font});
 				var text = new THREE.Mesh(textGeometry, textMaterial);
 				var textScaleW = (220/Math.max(textGeometry.layout.width, 220));
-				var textScaleH = 0.25 * textScaleW;
-				if (i === 'README.txt') console.log(textGeometry.layout);
+				var textScaleH = 0.25 * (textScaleW * textGeometry.layout.height/30);
 				text.position.x = obj.x + (obj.entries ? 0 : (obj.scale * 0.02));
 				text.position.y = obj.y + (obj.entries ? obj.scale*1.01 : (obj.scale * (0.125-textScaleH*0.175))); // + (obj.entries ? obj.scale : 0.0);
 				text.position.z = obj.z;// + 0.15*obj.scale;
@@ -517,7 +541,7 @@ function start(font, texture) {
 
 	// scene.add(light);
 
-	var camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 3);
+	var camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1.2, 2.2);
 
 	camera.position.z = 2;
 
@@ -618,32 +642,52 @@ function start(font, texture) {
 	};
 
 	var navigateTo = function(url) {
-		utils.loadFiles(url, showFileTree);
+		utils.loadFiles(url, function(fileTree) {
+			document.body.classList.add('loaded');
+			showFileTree(fileTree);
+		});
 	};
 
+	var ghInput;
+	var currentRepoName = null;
 	if (!document.body.classList.contains('gdrive')) {
 		navigateTo('artoolkit5.txt');
-		var ghInput = document.getElementById('git');
+		ghInput = document.getElementById('git');
 		var ghButton = document.getElementById('gitshow');
 		ghButton.onclick = function(ev) {
 			var repoURL = ghInput.value;
 			var match = repoURL.match(/^(((https?|git):\/*)?(git\.|www\.)?github.com\/)?([^\/]+)\/([^\/]+)/i);
-			var repoName = match[5] + '/' + match[6];
-			var gitHubRepoURL = ('https://github.com/' + repoName + '.git');
-			var gitHubAPIURL = 'https://api.github.com/repos/' + repoName + '/git/trees/master?recursive=1';
-			var xhr = new XMLHttpRequest();
-			xhr.open('GET', gitHubAPIURL);
-			xhr.onload = function() {
-				var json = JSON.parse(xhr.responseText);
-				console.log(json);
-				var paths = json.tree.map(file => '/' + repoName + '/' + file.path + (file.type === 'tree' ? '/' : ''))
-				console.log(paths);
-				showFileTree(utils.parseFileList('/' + match[5] + '/\n/' + repoName + '/\n' + paths.join("\n") + '\n'));
-				camera.targetPosition.x = 0;
-				camera.targetPosition.y = 0;
-				camera.targetFOV = 50;
-			};
-			xhr.send();
+			if (match) {
+				var repoName = match[5] + '/' + match[6];
+
+				if (repoName === currentRepoName) {
+					return;
+				}
+
+				document.body.classList.remove('loaded');
+				currentRepoName = repoName;
+				var gitHubRepoURL = ('https://github.com/' + repoName + '.git');
+				var gitHubAPIURL = 'https://api.github.com/repos/' + repoName + '/git/trees/master?recursive=1';
+				var xhr = new XMLHttpRequest();
+				xhr.open('GET', gitHubAPIURL);
+				xhr.onload = function() {
+					document.body.classList.add('loaded');
+					var json = JSON.parse(xhr.responseText);
+					// console.log(json);
+					var paths = json.tree.map(function(file) { return '/' + repoName + '/' + file.path + (file.type === 'tree' ? '/' : ''); });
+					// console.log(paths);
+					showFileTree(utils.parseFileList('/' + match[5] + '/\n/' + repoName + '/\n' + paths.join("\n") + '\n'));
+					camera.targetPosition.x = 0;
+					camera.targetPosition.y = 0;
+					camera.targetFOV = 50;
+				};
+				xhr.onerror = function() {
+					document.body.classList.add('loaded');
+				};
+				xhr.send();
+				ghInput.blur();
+				searchInput.blur();
+			}
 		};
 		ghInput.addEventListener('keydown', function(ev) {
 			if (ev.keyCode === 13) {
@@ -673,10 +717,16 @@ function start(font, texture) {
 	var inGesture = false;
 
 	renderer.domElement.addEventListener('touchstart', function(ev) {
+		if (ghInput) {
+			ghInput.blur();
+		}
+		if (window.searchInput) {
+			searchInput.blur();
+		}
 		if (window.DocFrame) return;
 		ev.preventDefault();
 		if (ev.touches.length === 1) {
-			window.onmousedown(ev.touches[0]);
+			renderer.domElement.onmousedown(ev.touches[0]);
 		} else if (ev.touches.length === 2) {
 			inGesture = true;
 			var dx = ev.touches[0].clientX - ev.touches[1].clientX;
@@ -686,7 +736,7 @@ function start(font, texture) {
 				clientX: ev.touches[1].clientX + dx/2,
 				clientY: ev.touches[1].clientY + dy/2,
 			};
-			window.onmousedown(pinchMid);
+			renderer.domElement.onmousedown(pinchMid);
 		}
 	}, false);
 	renderer.domElement.addEventListener('touchmove', function(ev) {
@@ -739,6 +789,12 @@ function start(font, texture) {
 		}
 	}, false);
 	renderer.domElement.onmousedown = function(ev) {
+		if (ghInput) {
+			ghInput.blur();
+		}
+		if (window.searchInput) {
+			searchInput.blur();
+		}
 		if (window.DocFrame) return;
 		if (ev.preventDefault) ev.preventDefault();
 		down = true;
@@ -889,6 +945,13 @@ function start(font, texture) {
 		}
 	};
 
+	var goToFSEntry = function(fsEntry) {
+		var fsPoint = new THREE.Vector3(fsEntry.x + fsEntry.scale/2, fsEntry.y + fsEntry.scale/2, fsEntry.z);
+		fsPoint.applyMatrix4(model.matrixWorld);
+		camera.targetPosition.copy(fsPoint);
+		camera.targetFOV = fsEntry.scale * 50;
+	};
+
 	var highlighted = null;
 	window.onmouseup = function(ev) {
 		if (ev.preventDefault) ev.preventDefault();
@@ -934,10 +997,7 @@ function start(font, texture) {
 							openFile(highlighted);
 						}
 					} else {
-						var fsPoint = new THREE.Vector3(fsEntry.x + fsEntry.scale/2, fsEntry.y + fsEntry.scale/2, fsEntry.z);
-						fsPoint.applyMatrix4(model.matrixWorld);
-						camera.targetPosition.copy(fsPoint);
-						camera.targetFOV = fsEntry.scale * 50;
+						goToFSEntry(fsEntry);
 					}
 				} else {
 					if (highlighted.entries === null) {
@@ -946,7 +1006,7 @@ function start(font, texture) {
 					}
 					highlighted = null;
 				}
-				ca.needsUpdate = true;
+				// ca.needsUpdate = true;
 				changed = true;
 				// console.log(fsEntry, fsEntry.scale * camera.projectionMatrix.elements[0]);
 				return;
@@ -981,6 +1041,145 @@ function start(font, texture) {
 			this.children[i].tick();
 		}
 	}
+
+	window.searchTree = function(query, fileTree, results) {
+		if (query.every(function(re) { return re.test(fileTree.title); })) {
+			results.push(fileTree);
+		}
+		for (var i in fileTree.entries) {
+			searchTree(query, fileTree.entries[i], results);
+		}
+		return results;
+	};
+
+	var highlightedResults = [];
+	window.highlightResults = function(results) {
+		var ca = model.geometry.attributes.color;
+		highlightedResults.forEach(function(highlighted) {
+			setColor(ca.array, highlighted.index, Colors[highlighted.entries === null ? 'getFileColor' : 'getDirectoryColor'](highlighted), 0);
+		});
+		for (var i = 0; i < results.length; i++) {
+			var fsEntry = results[i];
+			setColor(ca.array, fsEntry.index, [1,0,0], 0);
+		}
+		highlightedResults = results;
+		ca.needsUpdate = true;
+		changed = true;
+	};
+
+	var searchResultsTimeout;
+	window.search = function(query) {
+		window.highlightResults(window.searchTree(query, window.FileTree, []));
+		window.searchResults.innerHTML = '';
+		clearSearchLine();
+		clearTimeout(searchResultsTimeout);
+		searchResultsTimeout = setTimeout(populateSearchResults, 500);
+	};
+
+	var screenPlane = new THREE.Mesh(new THREE.PlaneBufferGeometry(2000,2000), new THREE.MeshBasicMaterial({ color: 0xff00ff }));
+	screenPlane.visible = false;
+	screenPlane.position.z = 0.75;
+	scene.add(screenPlane);
+
+	var addScreenLine = function(geo, fsEntry, bbox, index) {
+		var a = new THREE.Vector3(fsEntry.x, fsEntry.y, fsEntry.z);
+		a.applyMatrix4(model.matrixWorld);
+
+		screenPlane.visible = true;
+		var intersections = utils.findIntersectionsUnderEvent({clientX: bbox.left, clientY: bbox.top+24, target: renderer.domElement}, camera, [screenPlane]);
+		screenPlane.visible = false;
+		var b = intersections[0].point;
+
+		var av = new THREE.Vector3(a.x, a.y, a.z);
+		var bv = new THREE.Vector3(b.x, b.y, b.z);
+		var aUp = new THREE.Vector3(av.x, av.y, av.z + 0.3);
+		var bUp = new THREE.Vector3(bv.x, bv.y, bv.z);
+
+		var off = index * 6;
+
+		geo.vertices[off++].copy(av);
+		geo.vertices[off++].copy(aUp);
+		geo.vertices[off++].copy(aUp);
+		geo.vertices[off++].copy(bUp);
+		geo.vertices[off++].copy(bUp);
+		geo.vertices[off++].copy(bv);
+	};
+	var searchLine = new THREE.LineSegments(new THREE.Geometry(), new THREE.LineBasicMaterial({ color: 0xff0000, opacity: 0.5, transparent: true }));
+	searchLine.frustumCulled = false;
+	searchLine.geometry.vertices.push(new THREE.Vector3());
+	searchLine.geometry.vertices.push(new THREE.Vector3());
+	for (var i=0; i<1000; i++) {
+		searchLine.geometry.vertices.push(new THREE.Vector3(
+			0.5 - Math.random(),
+			0.5 - Math.random(),
+			0.5 - Math.random()
+		));
+	}
+	var updateSearchLines = function() {
+		clearSearchLine();
+		// searchLine.geometry.vertices.forEach(function(v) { v.x = v.y = v.z = -100; });
+		for (var i=0, l=window.searchResults.childNodes.length; i<l; i++) {
+			var li = window.searchResults.childNodes[i];
+			addScreenLine(searchLine.geometry, li.fsEntry, li.getBoundingClientRect(), i);
+		}
+		if (i > 0 || i !== searchLine.lastUpdate) {
+			searchLine.geometry.verticesNeedUpdate = true;
+			changed = true;
+			searchLine.lastUpdate = i;
+		}
+	};
+	searchLine.ontick = function() {
+		updateSearchLines();
+	};
+	scene.add(searchLine);
+
+	var clearSearchLine = function() {
+		var geo = searchLine.geometry;
+		var verts = geo.vertices;
+		for (var i=0; i<verts.length; i++){ 
+			var v = verts[i];
+			v.x = v.y = v.z = 0;
+		}
+		geo.verticesNeedUpdate = true;
+		changed = true;
+	};
+
+	var populateSearchResults = function() {
+		window.searchResults.innerHTML = '';
+		for (var i=0; i<Math.min(highlightedResults.length, 100); i++) {
+			var fsEntry = highlightedResults[i];
+			var li = document.createElement('li');
+			var title = document.createElement('div');
+			title.className = 'searchTitle';
+			title.textContent = fsEntry.title;
+			var fullPath = document.createElement('div');
+			fullPath.className = 'searchFullPath';
+			fullPath.textContent = getFullPath(fsEntry).replace(/^\/[^\/]*\/[^\/]*\//, '/');
+			li.fsEntry = fsEntry;
+			li.onclick = function(ev) {
+				ev.preventDefault();
+				goToFSEntry(this.fsEntry);
+			};
+			li.appendChild(title);
+			li.appendChild(fullPath);
+			window.searchResults.appendChild(li);
+		}
+		updateSearchLines();
+	};
+	window.searchResults.onscroll = function() {
+		changed = true;
+	};
+
+	window.searchInput.oninput = function() {
+		if (this.value === '' && highlightedResults.length > 0) {
+			window.highlightResults([]);
+		} else if (this.value === '') {
+		} else {
+			var segs = this.value.split(/\s+/);
+			var re = segs.map(function(r) { return new RegExp(r, "i"); });
+			window.search(re);
+		}
+	};
 
 	var tmpM4 = new THREE.Matrix4();
 	var render = function() {
