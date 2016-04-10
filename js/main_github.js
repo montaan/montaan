@@ -1091,7 +1091,7 @@ function start(font, texture) {
 		var off = index * 4;
 		if (!bbox || bbox.bottom < 0 || bbox.top > window.innerHeight) {
 			var bv = new THREE.Vector3(b.x, b.y, b.z);
-			var aUp = new THREE.Vector3(av.x, av.y + 0.05/3, av.z + 0.15/3);
+			var aUp = new THREE.Vector3(av.x, av.y + 0.05/10, av.z + 0.15/10);
 			// geo.vertices[off++].set(-100,-100,-100);
 			// geo.vertices[off++].set(-100,-100,-100);
 			// geo.vertices[off++].set(-100,-100,-100);
@@ -1105,7 +1105,7 @@ function start(font, texture) {
 			screenPlane.visible = false;
 			var b = intersections[0].point;
 			var bv = new THREE.Vector3(b.x, b.y, b.z);
-			var aUp = new THREE.Vector3(av.x, av.y + 0.05, av.z + 0.15);
+			var aUp = new THREE.Vector3(av.x, av.y + 0.05/3, av.z + 0.15/3);
 		}
 
 		geo.vertices[off++].copy(av);
@@ -1113,7 +1113,13 @@ function start(font, texture) {
 		geo.vertices[off++].copy(aUp);
 		geo.vertices[off++].copy(bv);
 	};
-	var searchLine = new THREE.LineSegments(new THREE.Geometry(), new THREE.LineBasicMaterial({ color: 0xff0000, opacity: 0.5, transparent: true }));
+	var searchLine = new THREE.LineSegments(new THREE.Geometry(), new THREE.LineBasicMaterial({
+		color: 0xff0000,
+		opacity: 0.5,
+		transparent: true,
+		depthCheck: false,
+		depthWrite: false
+	}));
 	searchLine.frustumCulled = false;
 	searchLine.geometry.vertices.push(new THREE.Vector3());
 	searchLine.geometry.vertices.push(new THREE.Vector3());
@@ -1144,7 +1150,6 @@ function start(font, texture) {
 	searchLine.ontick = function() {
 		updateSearchLines();
 	};
-	scene.add(searchLine);
 
 	var clearSearchLine = function() {
 		var geo = searchLine.geometry;
@@ -1205,6 +1210,8 @@ function start(font, texture) {
 	var tmpM4 = new THREE.Matrix4();
 	var render = function() {
 		var visCount = 0;
+		scene.remove(searchLine);
+		scene.add(searchLine);
 		scene.updateMatrixWorld(true);
 		scene.tick();
 		// scene.traverse(function(m) {
