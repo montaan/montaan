@@ -1084,31 +1084,40 @@ function start(font, texture) {
 	var addScreenLine = function(geo, fsEntry, bbox, index) {
 		var a = new THREE.Vector3(fsEntry.x, fsEntry.y, fsEntry.z);
 		a.applyMatrix4(model.matrixWorld);
-
-		screenPlane.visible = true;
-		var intersections = utils.findIntersectionsUnderEvent({clientX: bbox.left, clientY: bbox.top+24, target: renderer.domElement}, camera, [screenPlane]);
-		screenPlane.visible = false;
-		var b = intersections[0].point;
+		var b = a;
 
 		var av = new THREE.Vector3(a.x, a.y, a.z);
-		var bv = new THREE.Vector3(b.x, b.y, b.z);
-		var aUp = new THREE.Vector3(av.x, av.y, av.z + 0.3);
-		var bUp = new THREE.Vector3(bv.x, bv.y, bv.z);
 
-		var off = index * 6;
+		var off = index * 4;
+		if (!bbox || bbox.bottom < 0 || bbox.top > window.innerHeight) {
+			var bv = new THREE.Vector3(b.x, b.y, b.z);
+			var aUp = new THREE.Vector3(av.x, av.y + 0.05/3, av.z + 0.15/3);
+			// geo.vertices[off++].set(-100,-100,-100);
+			// geo.vertices[off++].set(-100,-100,-100);
+			// geo.vertices[off++].set(-100,-100,-100);
+			// geo.vertices[off++].set(-100,-100,-100);
+			// geo.vertices[off++].set(-100,-100,-100);
+			// geo.vertices[off++].set(-100,-100,-100);
+			// return;
+		} else {
+			screenPlane.visible = true;
+			var intersections = utils.findIntersectionsUnderEvent({clientX: bbox.left, clientY: bbox.top+24, target: renderer.domElement}, camera, [screenPlane]);
+			screenPlane.visible = false;
+			var b = intersections[0].point;
+			var bv = new THREE.Vector3(b.x, b.y, b.z);
+			var aUp = new THREE.Vector3(av.x, av.y + 0.05, av.z + 0.15);
+		}
 
 		geo.vertices[off++].copy(av);
 		geo.vertices[off++].copy(aUp);
 		geo.vertices[off++].copy(aUp);
-		geo.vertices[off++].copy(bUp);
-		geo.vertices[off++].copy(bUp);
 		geo.vertices[off++].copy(bv);
 	};
 	var searchLine = new THREE.LineSegments(new THREE.Geometry(), new THREE.LineBasicMaterial({ color: 0xff0000, opacity: 0.5, transparent: true }));
 	searchLine.frustumCulled = false;
 	searchLine.geometry.vertices.push(new THREE.Vector3());
 	searchLine.geometry.vertices.push(new THREE.Vector3());
-	for (var i=0; i<1000; i++) {
+	for (var i=0; i<40000; i++) {
 		searchLine.geometry.vertices.push(new THREE.Vector3(
 			0.5 - Math.random(),
 			0.5 - Math.random(),
@@ -1118,9 +1127,13 @@ function start(font, texture) {
 	var updateSearchLines = function() {
 		clearSearchLine();
 		// searchLine.geometry.vertices.forEach(function(v) { v.x = v.y = v.z = -100; });
-		for (var i=0, l=window.searchResults.childNodes.length; i<l; i++) {
+		for (var i=0, l=highlightedResults.length; i<l; i++) {
+			var bbox = null;
 			var li = window.searchResults.childNodes[i];
-			addScreenLine(searchLine.geometry, li.fsEntry, li.getBoundingClientRect(), i);
+			if (li && li.classList.contains('hover')) {
+				bbox = li.getBoundingClientRect();
+			}
+			addScreenLine(searchLine.geometry, highlightedResults[i], bbox, i);
 		}
 		if (i > 0 || i !== searchLine.lastUpdate) {
 			searchLine.geometry.verticesNeedUpdate = true;
@@ -1156,6 +1169,14 @@ function start(font, texture) {
 			fullPath.className = 'searchFullPath';
 			fullPath.textContent = getFullPath(fsEntry).replace(/^\/[^\/]*\/[^\/]*\//, '/');
 			li.fsEntry = fsEntry;
+			li.addEventListener('mouseover', function() {
+				this.classList.add('hover');
+				changed = true;
+			}, false);
+			li.addEventListener('mouseout', function() {
+				this.classList.remove('hover');
+				changed = true;
+			}, false);
 			li.onclick = function(ev) {
 				ev.preventDefault();
 				goToFSEntry(this.fsEntry);
