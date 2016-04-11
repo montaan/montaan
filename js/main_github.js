@@ -641,9 +641,23 @@ function start(font, texture) {
 		// processTick();
 	};
 
+	var setLoaded = function(loaded) {
+		if (loaded) {
+			document.body.classList.add('loaded');
+			setTimeout(function() {
+				if (document.body.classList.contains('loaded')) {
+					document.getElementById('loader').style.display = 'none';
+				}
+			}, 1000);
+		} else {
+			document.getElementById('loader').style.display = 'block';
+			document.body.classList.remove('loaded');
+		}
+	};
+
 	var navigateTo = function(url) {
 		utils.loadFiles(url, function(fileTree) {
-			document.body.classList.add('loaded');
+			setLoaded(true);
 			showFileTree(fileTree);
 		});
 	};
@@ -664,14 +678,14 @@ function start(font, texture) {
 					return;
 				}
 
-				document.body.classList.remove('loaded');
+				setLoaded(false);
 				currentRepoName = repoName;
 				var gitHubRepoURL = ('https://github.com/' + repoName + '.git');
 				var gitHubAPIURL = 'https://api.github.com/repos/' + repoName + '/git/trees/master?recursive=1';
 				var xhr = new XMLHttpRequest();
 				xhr.open('GET', gitHubAPIURL);
 				xhr.onload = function() {
-					document.body.classList.add('loaded');
+					setLoaded(true);
 					var json = JSON.parse(xhr.responseText);
 					// console.log(json);
 					var paths = json.tree.map(function(file) { return '/' + repoName + '/' + file.path + (file.type === 'tree' ? '/' : ''); });
@@ -682,7 +696,7 @@ function start(font, texture) {
 					camera.targetFOV = 50;
 				};
 				xhr.onerror = function() {
-					document.body.classList.add('loaded');
+					setLoaded(true);
 				};
 				xhr.send();
 				ghInput.blur();
@@ -1070,8 +1084,8 @@ function start(font, texture) {
 	var searchResultsTimeout;
 	window.search = function(query) {
 		window.highlightResults(window.searchTree(query, window.FileTree, []));
+		updateSearchLines();
 		window.searchResults.innerHTML = '';
-		clearSearchLine();
 		clearTimeout(searchResultsTimeout);
 		searchResultsTimeout = setTimeout(populateSearchResults, 500);
 	};
@@ -1105,7 +1119,7 @@ function start(font, texture) {
 			screenPlane.visible = false;
 			var b = intersections[0].point;
 			var bv = new THREE.Vector3(b.x, b.y, b.z);
-			var aUp = new THREE.Vector3(av.x, av.y + 0.05/3, av.z + 0.15/3);
+			var aUp = new THREE.Vector3(av.x, av.y, av.z);
 		}
 
 		geo.vertices[off++].copy(av);
@@ -1117,7 +1131,7 @@ function start(font, texture) {
 		color: 0xff0000,
 		opacity: 0.5,
 		transparent: true,
-		depthCheck: false,
+		depthTest: false,
 		depthWrite: false
 	}));
 	searchLine.frustumCulled = false;
@@ -1125,9 +1139,7 @@ function start(font, texture) {
 	searchLine.geometry.vertices.push(new THREE.Vector3());
 	for (var i=0; i<40000; i++) {
 		searchLine.geometry.vertices.push(new THREE.Vector3(
-			0.5 - Math.random(),
-			0.5 - Math.random(),
-			0.5 - Math.random()
+			-100,-100,-100
 		));
 	}
 	var updateSearchLines = function() {
@@ -1137,6 +1149,7 @@ function start(font, texture) {
 			var bbox = null;
 			var li = window.searchResults.childNodes[i];
 			if (li && li.classList.contains('hover')) {
+				searchLine.hovered = true;
 				bbox = li.getBoundingClientRect();
 			}
 			addScreenLine(searchLine.geometry, highlightedResults[i], bbox, i);
@@ -1147,8 +1160,11 @@ function start(font, texture) {
 			searchLine.lastUpdate = i;
 		}
 	};
+	searchLine.hovered = false;
 	searchLine.ontick = function() {
-		updateSearchLines();
+		if (window.searchResults.querySelector('.hover') || searchLine.hovered) {
+			updateSearchLines();
+		}
 	};
 
 	var clearSearchLine = function() {
@@ -1164,31 +1180,33 @@ function start(font, texture) {
 
 	var populateSearchResults = function() {
 		window.searchResults.innerHTML = '';
-		for (var i=0; i<Math.min(highlightedResults.length, 100); i++) {
-			var fsEntry = highlightedResults[i];
-			var li = document.createElement('li');
-			var title = document.createElement('div');
-			title.className = 'searchTitle';
-			title.textContent = fsEntry.title;
-			var fullPath = document.createElement('div');
-			fullPath.className = 'searchFullPath';
-			fullPath.textContent = getFullPath(fsEntry).replace(/^\/[^\/]*\/[^\/]*\//, '/');
-			li.fsEntry = fsEntry;
-			li.addEventListener('mouseover', function() {
-				this.classList.add('hover');
-				changed = true;
-			}, false);
-			li.addEventListener('mouseout', function() {
-				this.classList.remove('hover');
-				changed = true;
-			}, false);
-			li.onclick = function(ev) {
-				ev.preventDefault();
-				goToFSEntry(this.fsEntry);
-			};
-			li.appendChild(title);
-			li.appendChild(fullPath);
-			window.searchResults.appendChild(li);
+		if (window.innerWidth > 800) {
+			for (var i=0; i<Math.min(highlightedResults.length, 100); i++) {
+				var fsEntry = highlightedResults[i];
+				var li = document.createElement('li');
+				var title = document.createElement('div');
+				title.className = 'searchTitle';
+				title.textContent = fsEntry.title;
+				var fullPath = document.createElement('div');
+				fullPath.className = 'searchFullPath';
+				fullPath.textContent = getFullPath(fsEntry).replace(/^\/[^\/]*\/[^\/]*\//, '/');
+				li.fsEntry = fsEntry;
+				li.addEventListener('mouseover', function() {
+					this.classList.add('hover');
+					changed = true;
+				}, false);
+				li.addEventListener('mouseout', function() {
+					this.classList.remove('hover');
+					changed = true;
+				}, false);
+				li.onclick = function(ev) {
+					ev.preventDefault();
+					goToFSEntry(this.fsEntry);
+				};
+				li.appendChild(title);
+				li.appendChild(fullPath);
+				window.searchResults.appendChild(li);
+			}
 		}
 		updateSearchLines();
 	};
