@@ -663,6 +663,8 @@ function start(font, texture) {
 		}, onFailure);
 	};
 
+	var inGitHubRepo = true;
+
 	var ghInput;
 	var currentRepoName = null;
 	var ghNavTarget = '';
@@ -693,6 +695,9 @@ function start(font, texture) {
 					var paths = json.tree.map(function(file) { return '/' + repoName + '/' + file.path + (file.type === 'tree' ? '/' : ''); });
 					// console.log(paths);
 					showFileTree(utils.parseFileList('/' + match[5] + '/\n/' + repoName + '/\n' + paths.join("\n") + '\n'));
+
+					inGitHubRepo = true;
+
 					camera.targetPosition.x = 0;
 					camera.targetPosition.y = 0;
 					camera.targetFOV = 50;
@@ -722,6 +727,7 @@ function start(font, texture) {
 			} else {
 				setLoaded(false);
 				navigateTo(repoURL, function() {
+					inGitHubRepo = false;
 					setLoaded(true);
 					camera.targetPosition.x = 0;
 					camera.targetPosition.y = 0;
@@ -1009,7 +1015,7 @@ function start(font, texture) {
 		if (fsEntry.id) { // Google Drive file.
 			var url = 'https://drive.google.com/file/d/' + fsEntry.id + '/preview';
 			openIFrame(url);
-		} else {
+		} else if (inGitHubRepo) {
 			// console.log(fsEntry);
 			var fullPath = getFullPath(fsEntry);
 			// console.log(fullPath);
