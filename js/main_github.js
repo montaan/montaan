@@ -655,17 +655,19 @@ function start(font, texture) {
 		}
 	};
 
-	var navigateTo = function(url) {
+	var navigateTo = function(url, onSuccess, onFailure) {
 		utils.loadFiles(url, function(fileTree) {
 			setLoaded(true);
 			showFileTree(fileTree);
-		});
+			if (onSuccess) onSuccess();
+		}, onFailure);
 	};
 
 	var ghInput;
 	var currentRepoName = null;
+	var ghNavTarget = '';
+	var ghNavQuery = '';
 	if (!document.body.classList.contains('gdrive')) {
-		navigateTo('artoolkit5.txt');
 		ghInput = document.getElementById('git');
 		var ghButton = document.getElementById('gitshow');
 		ghButton.onclick = function(ev) {
@@ -694,11 +696,48 @@ function start(font, texture) {
 					camera.targetPosition.x = 0;
 					camera.targetPosition.y = 0;
 					camera.targetFOV = 50;
+					if (ghNavTarget) {
+						var fsEntry = getPathEntry(window.FileTree, ghNavTarget);
+						if (fsEntry) {
+							// console.log("navigating to", fsEntry);
+							goToFSEntry(fsEntry);
+						}
+					}
+					window.searchInput.value = ghNavQuery;
+					window.searchInput.oninput();
+					ghNavTarget = '';
+					ghNavQuery = '';
+					if (window.history && window.history.replaceState) {
+						history.replaceState({}, "", "?github/"+encodeURIComponent(ghInput.value));
+					} else {
+						location = '#github/'+encodeURIComponent(ghInput.value);
+					}
 				};
 				xhr.onerror = function() {
 					setLoaded(true);
 				};
 				xhr.send();
+				ghInput.blur();
+				searchInput.blur();
+			} else {
+				setLoaded(false);
+				navigateTo(repoURL, function() {
+					setLoaded(true);
+					camera.targetPosition.x = 0;
+					camera.targetPosition.y = 0;
+					camera.targetFOV = 50;
+					window.searchInput.value = ghNavQuery;
+					window.searchInput.oninput();
+					ghNavTarget = '';
+					ghNavQuery = '';
+					if (window.history && window.history.replaceState) {
+						history.replaceState({}, "", "?find/"+encodeURIComponent(ghInput.value));
+					} else {
+						location = '#find/'+encodeURIComponent(ghInput.value);
+					}
+				}, function() {
+					setLoaded(true);
+				});
 				ghInput.blur();
 				searchInput.blur();
 			}
@@ -712,6 +751,28 @@ function start(font, texture) {
 		ghInput.addEventListener('input', function(ev) {
 
 		}, false);
+		var hash = document.location.hash.replace(/^#/,'');
+		if (hash.length === 0) {
+			hash = document.location.search.replace(/^\?/,'');
+		}
+		if (hash.length > 0) {
+			var pathQuery = hash.split("&");
+			var query = pathQuery[1];
+			var ghPath = decodeURIComponent(pathQuery[0].replace(/^(github|find)\//, ''));
+			if (pathQuery[0].match(/^github/)) {
+				var ghRepo = ghPath.split("/").slice(0,2).join("/");
+				ghNavTarget = ghPath;
+			} else {
+				var ghRepo = ghPath;
+				ghNavTarget = '';				
+			}
+			ghNavQuery = (query || '').replace(/^q\=/,'');
+			window.searchInput.value = ghNavQuery;
+			ghInput.value = ghRepo;
+			ghButton.click();
+		} else {
+			navigateTo('artoolkit5.txt');
+		}
 	}
 	window.GDriveCallback = showFileTree;
 
@@ -871,7 +932,7 @@ function start(font, texture) {
 			d = 0;
 		}
 		prevD = d;
-		zoomCamera(Math.pow(1.005, d), cx, cy);
+		zoomCamera(Math.pow(1.003, d), cx, cy);
 		lastScroll = Date.now();
 	};
 
@@ -960,6 +1021,7 @@ function start(font, texture) {
 	};
 
 	var goToFSEntry = function(fsEntry) {
+		scene.updateMatrixWorld();
 		var fsPoint = new THREE.Vector3(fsEntry.x + fsEntry.scale/2, fsEntry.y + fsEntry.scale/2, fsEntry.z);
 		fsPoint.applyMatrix4(model.matrixWorld);
 		camera.targetPosition.copy(fsPoint);
@@ -1074,7 +1136,7 @@ function start(font, texture) {
 		});
 		for (var i = 0; i < results.length; i++) {
 			var fsEntry = results[i];
-			setColor(ca.array, fsEntry.index, [1,0,0], 0);
+			setColor(ca.array, fsEntry.index, fsEntry.entries === null ? [1,0,0] : [0.6, 0, 0], 0);
 		}
 		highlightedResults = results;
 		ca.needsUpdate = true;
@@ -1087,7 +1149,7 @@ function start(font, texture) {
 		updateSearchLines();
 		window.searchResults.innerHTML = '';
 		clearTimeout(searchResultsTimeout);
-		searchResultsTimeout = setTimeout(populateSearchResults, 500);
+		searchResultsTimeout = setTimeout(populateSearchResults, 200);
 	};
 
 	var screenPlane = new THREE.Mesh(new THREE.PlaneBufferGeometry(2000,2000), new THREE.MeshBasicMaterial({ color: 0xff00ff }));
@@ -1145,14 +1207,16 @@ function start(font, texture) {
 	var updateSearchLines = function() {
 		clearSearchLine();
 		// searchLine.geometry.vertices.forEach(function(v) { v.x = v.y = v.z = -100; });
-		for (var i=0, l=highlightedResults.length; i<l; i++) {
-			var bbox = null;
-			var li = window.searchResults.childNodes[i];
-			if (li && li.classList.contains('hover')) {
-				searchLine.hovered = true;
-				bbox = li.getBoundingClientRect();
+		if (highlightedResults.length <= searchLine.geometry.vertices.length/4) {
+			for (var i=0, l=highlightedResults.length; i<l; i++) {
+				var bbox = null;
+				var li = window.searchResults.childNodes[i];
+				if (li && li.classList.contains('hover')) {
+					searchLine.hovered = true;
+					bbox = li.getBoundingClientRect();
+				}
+				addScreenLine(searchLine.geometry, highlightedResults[i], bbox, i);
 			}
-			addScreenLine(searchLine.geometry, highlightedResults[i], bbox, i);
 		}
 		if (i > 0 || i !== searchLine.lastUpdate) {
 			searchLine.geometry.verticesNeedUpdate = true;
@@ -1216,8 +1280,12 @@ function start(font, texture) {
 
 	window.searchInput.oninput = function() {
 		if (this.value === '' && highlightedResults.length > 0) {
+			window.searchResults.innerHTML = '';
 			window.highlightResults([]);
+			updateSearchLines();
 		} else if (this.value === '') {
+			window.searchResults.innerHTML = '';
+			updateSearchLines();
 		} else {
 			var segs = this.value.split(/\s+/);
 			var re = segs.map(function(r) { return new RegExp(r, "i"); });
@@ -1302,4 +1370,5 @@ function start(font, texture) {
 	} else if (fullscreenButton) {
 		fullscreenButton.style.opacity = '0';
 	}
+	window.git.focus();
 }

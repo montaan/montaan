@@ -6,30 +6,6 @@ body
 	width: 100%;
 	height: 100%;
 	overflow: hidden;
-	background: black;
-	font-family: sans-serif;
-}
-
-.investors {
-	display: none;
-}
-.jobs {
-	display: none;
-}
-.about {
-	display: none;
-}
-.footer {
-	position: absolute;
-	left: 4px;
-	bottom: 4px;
-	z-index: 8;
-	color: #444;
-	font-size: x-small;
-}
-.footer a {
-	color: #666;
-	margin-left: 4px;
 }
 
 #git, #searchInput {

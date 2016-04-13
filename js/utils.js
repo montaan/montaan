@@ -248,12 +248,13 @@ var utils = module.exports = {
 		return {tree: fileTree, count: fileCount};
 	},
 
-	loadFiles: function(url, callback) {
+	loadFiles: function(url, onSuccess, onError) {
 		var xhr = new XMLHttpRequest();
 		xhr.open('GET', url);
 		xhr.onload = function(ev) {
-			callback(utils.parseFileList(ev.target.responseText), ev.target.responseText);
+			onSuccess(utils.parseFileList(ev.target.responseText), ev.target.responseText);
 		};
+		xhr.onerror = onError;
 		xhr.send();
 	}
 };
