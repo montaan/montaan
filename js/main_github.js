@@ -1,3 +1,7 @@
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/service-worker.js');
+}
+
 global.THREE = require('three')
 var utils = require('./utils.js');
 var createText = require('three-bmfont-text')
@@ -663,6 +667,14 @@ function start(font, texture) {
 		}, onFailure);
 	};
 
+	var navigateToList = function(text, onSuccess, onFailure) {
+		utils.loadFromText(text, function(fileTree) {
+			setLoaded(true);
+			showFileTree(fileTree);
+			if (onSuccess) onSuccess();
+		}, onFailure);
+	};
+
 	var inGitHubRepo = true;
 
 	var ghInput;
@@ -781,6 +793,80 @@ function start(font, texture) {
 		}
 	}
 	window.GDriveCallback = showFileTree;
+
+	var caseInsensitiveCmp = function(a, b) {
+		return a.toLowerCase().localeCompare(b.toLowerCase());
+	};
+	var localFileLoad = function() {
+		inGitHubRepo = false;
+		setLoaded(true);
+		camera.targetPosition.x = 0;
+		camera.targetPosition.y = 0;
+		camera.targetFOV = 50;
+		window.searchInput.value = ghNavQuery;
+		window.searchInput.oninput();
+		ghNavTarget = '';
+		ghNavQuery = '';
+		if (window.history && window.history.replaceState) {
+			history.replaceState({}, "", "?find/"+encodeURIComponent(ghInput.value));
+		} else {
+			location = '#find/'+encodeURIComponent(ghInput.value);
+		}
+	};
+
+	window.fileInput.onchange = function() {
+		if (this.files.length === 0) {
+			return;
+		}
+		setLoaded(false);
+
+		var file = this.files[0];
+		this.value = '';
+		setTimeout(function() {
+			var reader = new FileReader();
+			reader.onload = function(res) {
+				navigateToList(reader.result, localFileLoad);
+				setLoaded(true);
+			};
+			reader.readAsText(file);
+		}, 500);
+	};
+
+	if (
+		(window.directoryInput.webkitdirectory === undefined && window.directoryInput.directory === undefined)
+		|| (/mobile/i).test(window.navigator.userAgent)
+	) {
+		document.body.classList.add('no-directory');
+	}
+	if ((/mobile/i).test(window.navigator.userAgent)) {
+		document.body.classList.add('mobile');
+	}
+
+	window.directoryInput.onchange = function() {
+		if (this.files.length > 0) {
+			setLoaded(false);
+
+			var files = [].map.call(this.files, function(f) { return '/'+f.webkitRelativePath; });
+			this.value = '';
+			setTimeout(function() {
+				var dirs = {};
+				files.forEach(function(f) {
+					var path = f.substring(0, f.lastIndexOf('/'));
+					var segs = path.split("/");
+					for (var i=1; i<=segs.length; i++) {
+						var prefix = segs.slice(0, i).join("/");
+						dirs[prefix] = 1;
+					}
+				});
+				var prefixes = [];
+				for (var i in dirs) {
+					prefixes.push(i + '/');
+				}
+				navigateToList(prefixes.sort(caseInsensitiveCmp).concat(files).join("\n")+"\n", localFileLoad);
+				setLoaded(true);
+			}, 500);
+		}
+	};
 
 	// var controls = new THREE.OrbitControls(camera, renderer.domElement);
 	// //controls.addEventListener( 'change', render ); // add this only if there is no animation loop (requestAnimationFrame)
@@ -922,7 +1008,7 @@ function start(font, texture) {
 		}
 	};
 	var prevD = 0;
-	renderer.domElement.onmousewheel = function(ev) {
+	renderer.domElement.onwheel = function(ev) {
 		if (window.DocFrame) return;
 		ev.preventDefault();
 		var cx = (ev.clientX - window.innerWidth / 2) * 0.0000575 * camera.fov;
@@ -1012,7 +1098,9 @@ function start(font, texture) {
 	};
 
 	var openFile = function(fsEntry) {
-		if (fsEntry.id) { // Google Drive file.
+		if (fsEntry.href) {
+			window.open(fsEntry.href, '_blank');
+		} else if (fsEntry.id) { // Google Drive file.
 			var url = 'https://drive.google.com/file/d/' + fsEntry.id + '/preview';
 			openIFrame(url);
 		} else if (inGitHubRepo) {

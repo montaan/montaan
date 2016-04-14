@@ -221,7 +221,116 @@ var utils = module.exports = {
 		}
 	},
 
-	parseFileList: function(fileString) {
+	convertXMLToTree: function(node, uid) {
+		var obj = {name: uid.value++, title: node.tagName || 'document', index: 0, entries: {}};
+		var files = [];
+		if (node.attributes) {
+			for (var i=0; i<node.attributes.length; i++) {
+				var attr = node.attributes[i];
+				files.push({name: uid.value++, title: attr.name + '=' + attr.value, index: 0, entries: null});
+			}
+		}
+		var file;
+		for (var i=0, l=node.childNodes.length; i<l; i++) {
+			var c = node.childNodes[i];
+			if (c.tagName) {
+				file = this.convertXMLToTree(c, uid);
+				obj.entries[file.name] = file;
+			} else {
+				if (c.textContent && /\S/.test(c.textContent)) {
+					files.push({name: uid.value++, title: c.textContent, index: 0, entries: null});
+				}
+			}
+		}
+		for (var i=0; i<files.length; i++) {
+			file = files[i];
+			obj.entries[file.name] = file;
+		}
+		return obj;
+	},
+
+	convertBookmarksToTree: function(node, uid) {
+		if (node.tagName === 'A') {
+			// Bookmark
+			return {name: uid.value++, title: node.textContent, index: 0, entries: null, href: node.href};
+		} else if (node.tagName === 'DL') {
+			// List of bookmarks
+			var titleEl = node.parentNode.querySelector("H1,H2,H3,H4,H5,H6");
+			var title = '';
+			if (titleEl) {
+				title = titleEl.textContent;
+			}
+			var obj = {name: uid.value++, title: title, index: 0, entries: {}};
+			var file;
+			var files = [];
+			for (var i=0, l=node.childNodes.length; i<l; i++) {
+				var c = node.childNodes[i];
+				file = this.convertBookmarksToTree(c, uid);
+				if (file) {
+					if (file.entries) {
+						obj.entries[file.name] = file;
+					} else {
+						files.push(file);
+					}
+				}
+			}
+			for (var i=0; i<files.length; i++) {
+				file = files[i];
+				obj.entries[file.name] = file;
+			}
+			return obj;
+		} else {
+			for (var i=0, l=node.childNodes.length; i<l; i++) {
+				var file = this.convertBookmarksToTree(node.childNodes[i], uid);
+				if (file) {
+					return file;
+				}
+			}
+		}
+	},
+
+	parseFileList: function(fileString, xhr) {
+		var xml = xhr && xhr.responseXML;
+		if (!xml) {
+			var parser = new DOMParser();
+			var type = undefined;
+			if (/^\s*<\!DOCTYPE /i.test(fileString)) {
+				type = 'text/html';
+			} else if (/^\s*<\?xml /.test(fileString)) {
+				type = 'application/xml';
+			} else if (/^\s*<html/i.test(fileString)) {
+				type = 'text/html';
+			}
+			if (type) {
+				xml = parser.parseFromString(fileString, type);
+				if (xml.querySelector('parsererror')) {
+					xml = undefined;
+				}
+			}
+		}
+
+		if (xml) {
+			// This is some XML here.
+			if (/^\s*\<\!DOCTYPE NETSCAPE-Bookmark-file-1>/.test(fileString)) {
+				// Bookmarks! Let's parse them!
+				var uid = {value: 0};
+				var tree = this.convertBookmarksToTree(xml, uid);
+				return {tree: {name: -1, title: '', index: 0, entries: {'Bookmarks': tree}}, count: uid.value+1};
+			} else {
+				// XML visualization is go.
+				var uid = {value: 0};
+				window.xml =xml;
+				var tree = this.convertXMLToTree(xml, uid);
+				return {tree: {name: -1, title: '', index: 0, entries: {'XML': tree}}, count: uid.value+1};
+			}
+		} else {
+			try {
+				var list = JSON.parse(fileString);
+				// Hey it's JSON, let's check for GitHub API & Google Drive API & Dropbox API formats.
+			} catch(e) {
+				// Not JSON.
+			}
+		}
 		// console.log("Parsing file string", fileString.length);
 		var fileTree = {name: "/", title: "/", entries: {}, index: 0};
 		var name = "";
@@ -248,11 +357,19 @@ var utils = module.exports = {
 		return {tree: fileTree, count: fileCount};
 	},
 
+	loadFromText: function(text, onSuccess, onError) {
+		try {
+			onSuccess(utils.parseFileList(text, {}), text);
+		} catch (e) {
+			if (onError) onError(e);
+		}
+	},
+
 	loadFiles: function(url, onSuccess, onError) {
 		var xhr = new XMLHttpRequest();
 		xhr.open('GET', url);
 		xhr.onload = function(ev) {
-			onSuccess(utils.parseFileList(ev.target.responseText), ev.target.responseText);
+			onSuccess(utils.parseFileList(ev.target.responseText, ev.target), ev.target.responseText);
 		};
 		xhr.onerror = onError;
 		xhr.send();
