@@ -136,9 +136,47 @@ module.exports = {
 			for (var i in fileTree.entries) {
 				var obj = fileTree.entries[i];
 				var title = obj.title;
-				if (title.indexOf('\n') === -1 && title.length > 16) {
-					var breakPoint = Math.max(16, Math.floor(title.length / 2));
-					title = title.substring(0, breakPoint) + '\n' + title.substring(breakPoint);
+				if (obj.entries == null) {
+					if (title.indexOf('\n') === -1 && title.length > 16) {
+						var breakPoint = Math.max(16, Math.floor(title.length / 2));
+						title = title.substring(0, breakPoint) + '\n' + title.substring(breakPoint);
+					}
+				} else if (title.indexOf('\n') === -1 && title.length > 26) {
+					var words = title.split(/ /);
+					var lineLength = 0;
+					var s = "";
+					var lineBreakLength = 26;
+					if (title.length < 52) {
+						lineBreakLength = 26
+					} else if (title.length < 107) {
+						lineBreakLength = 39;
+					} else if (title.length < 208) {
+						lineBreakLength = 52;
+					} else {
+						lineBreakLength = title.length+10;
+					}
+					var re = new RegExp(".{"+lineBreakLength+"}|.+$", 'g');
+					for (var i=0; i<words.length; i++) {
+						var w = words[i];
+						if (lineLength + w.length >= lineBreakLength) {
+							if (w.length >= lineBreakLength) {
+								var prefix = w.substring(0, lineBreakLength-lineLength);
+								s += prefix + '\n';
+								var suffix = w.substring(lineBreakLength-lineLength);
+								var bits = suffix.match(re);
+								s += bits.slice(0, -1).join("\n") + "\n";
+								s += bits[bits.length-1] + ' ';
+								lineLength = bits[bits.length-1].length + 1;
+							} else {
+								s += '\n' + w + ' ';
+								lineLength = w.length + 1;
+							}
+						} else {
+							s += w + ' ';
+							lineLength += w.length + 1;
+						}
+					}
+					title = s;
 				}
 
 				var textGeometry = createText({text: title, font: this.font});

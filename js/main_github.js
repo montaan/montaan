@@ -581,12 +581,34 @@ function start(font, texture) {
 						var commitsFSEntry = {name: "Commits", title: "Commits", index: 0, entries: {}};
 						var commitsRoot = {name:"/", title: "/", index:0, entries:{"Commits": commitsFSEntry}};
 
+						var mkfile = function(filename) {
+							return {
+								name: filename, title: filename, index: 0, entries: null
+							};
+						};
+
+						var mkdir = function(dirname, files) {
+							var entries = {};
+							files.forEach(f => entries[f] = mkfile(f));
+							return {
+								name: dirname, title: dirname, index: 0, entries: entries
+							};
+						};
+
 						var commitsFSCount = 2;
 						commits.forEach(function(c) {
+							var fileTree = utils.parseFileList_(c.files.map(f => f.path).join("\n")+'\n', true);
+							var entries = {
+								Author: mkfile(c.author.name),
+								SHA: mkfile(c.sha),
+								Date: mkfile(c.date.toString()),
+								Files: fileTree.tree
+							}
+							fileTree.tree.title = fileTree.tree.name = 'Files';
 							commitsFSEntry.entries[c.sha] = {
-								name: c.sha, title: c.message.match(/^\S+.*/)[0], index: 0, entries: null
+								name: c.sha, title: c.message.match(/^\S+.*/)[0], index: 0, entries: entries
 							};
-							commitsFSCount++;
+							commitsFSCount += 5 + fileTree.count;
 						})
 
 						window.CommitTree = {tree: commitsRoot, count: commitsFSCount};

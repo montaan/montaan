@@ -203,6 +203,7 @@ var utils = module.exports = {
 		}
 		var branch = tree;
 		var parent;
+		var addCount = 0;
 		for (var i=0; i<segments.length-1; i++) {
 			var segment = segments[i];
 			if (branch.entries === null) {
@@ -210,6 +211,7 @@ var utils = module.exports = {
 			}
 			if (typeof branch.entries[segment] !== 'object') {
 				branch.entries[segment] = {name: segment, title: segment, entries: {}, index: 0};
+				addCount++;
 			}
 			branch = branch.entries[segment];
 		}
@@ -218,7 +220,9 @@ var utils = module.exports = {
 		}
 		if (typeof branch.entries[segments[i]] !== 'object') {
 			branch.entries[segments[i]] = {name: segments[i], title: segments[i], entries: dir ? {} : null, index: 0};
+			addCount++;
 		}
+		return addCount;
 	},
 
 	convertXMLToTree: function(node, uid) {
@@ -289,7 +293,7 @@ var utils = module.exports = {
 		}
 	},
 
-	parseFileList: function(fileString, xhr) {
+	parseFileList: function(fileString, xhr, includePrefix) {
 		var xml = xhr && xhr.responseXML;
 		if (!xml) {
 			var parser = new DOMParser();
@@ -338,16 +342,16 @@ var utils = module.exports = {
 				// Not JSON.
 			}
 		}
-		return this.parseFileList_(fileString);
+		return this.parseFileList_(fileString, includePrefix);
 	},
 
-	parseFileList_: function(fileString) {
+	parseFileList_: function(fileString, includePrefix) {
 		// console.log("Parsing file string", fileString.length);
 		var fileTree = {name: "/", title: "/", entries: {}, index: 0};
 		var name = "";
 		var startIndex = 0;
 		var fileCount = 0;
-		var first = true;
+		var first = includePrefix ? false : true;
 		var skip = 0;
 		for (var i=0; i<fileString.length; i++) {
 			if (fileString.charCodeAt(i) === 10) {
@@ -360,8 +364,7 @@ var utils = module.exports = {
 					name = fileString.substring(startIndex+skip, i);
 				}
 				startIndex = i+1;
-				utils.addFileTreeEntry(name, fileTree);
-				fileCount++;
+				fileCount += utils.addFileTreeEntry(name, fileTree);
 			}
 		}
 		// console.log("Parsed files", fileCount);
