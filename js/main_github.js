@@ -589,7 +589,7 @@ function start(font, texture) {
 
 						var mkdir = function(dirname, files) {
 							var entries = {};
-							files.forEach(f => entries[f] = mkfile(f));
+							files.forEach(function(f) { entries[f] = mkfile(f) });
 							return {
 								name: dirname, title: dirname, index: 0, entries: entries
 							};
@@ -597,7 +597,7 @@ function start(font, texture) {
 
 						var commitsFSCount = 2;
 						commits.forEach(function(c) {
-							var fileTree = utils.parseFileList_(c.files.map(f => f.path).join("\n")+'\n', true);
+							var fileTree = utils.parseFileList_(c.files.map(function(f) { return f.path }).join("\n")+'\n', true);
 							var entries = {
 								Author: mkfile(c.author.name),
 								SHA: mkfile(c.sha),
