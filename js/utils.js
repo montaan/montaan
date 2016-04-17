@@ -327,10 +327,21 @@ var utils = module.exports = {
 			try {
 				var list = JSON.parse(fileString);
 				// Hey it's JSON, let's check for GitHub API & Google Drive API & Dropbox API formats.
+				if (list && list.sha && list.url && /\/git\//.test(list.url) && list.tree) {
+					return this.parseGitHubTree(list);
+				} else if (list && list.instanceOf(Array)) {
+					if (list.every(function(it) { return typeof it === 'string'; })) {
+						fileString = list.join("\n") + "\n";
+					}
+				}
 			} catch(e) {
 				// Not JSON.
 			}
 		}
+		return this.parseFileList_(fileString);
+	},
+
+	parseFileList_: function(fileString) {
 		// console.log("Parsing file string", fileString.length);
 		var fileTree = {name: "/", title: "/", entries: {}, index: 0};
 		var name = "";
@@ -357,15 +368,29 @@ var utils = module.exports = {
 		return {tree: fileTree, count: fileCount};
 	},
 
+	parseGitHubTree: function(githubResult) {
+		var repoName = githubResult.url.match(/^https:\/\/api\.github\.com\/repos\/([^\/]+)\/([^\/]+)/);
+		var userName = "";
+		if (repoName) {
+			userName = repoName[1];
+			repoName = repoName[1] + "/" + repoName[2];
+		} else {
+			return parseFileList_("");
+		}
+		var paths = githubResult.tree.map(function(file) { return '/' + repoName + '/' + file.path + (file.type === 'tree' ? '/' : ''); });
+		return this.parseFileList_('/' + userName + '/\n/' + repoName + '/\n' + paths.join("\n") + '\n');
+	},
+
 	loadFromText: function(text, onSuccess, onError) {
 		try {
-			onSuccess(utils.parseFileList(text, {}), text);
+			onSuccess(this.parseFileList(text, {}), text);
 		} catch (e) {
 			if (onError) onError(e);
 		}
 	},
 
 	loadFiles: function(url, onSuccess, onError) {
+		var utils = this;
 		var xhr = new XMLHttpRequest();
 		xhr.open('GET', url);
 		xhr.onload = function(ev) {

@@ -29,6 +29,15 @@
 	</head>
 
 	<body>
+		<script>
+			if ((window.directoryInput.webkitdirectory === undefined && window.directoryInput.directory === undefined)) {
+				document.body.classList.add('no-directory');
+			}
+			if ((/mobile/i).test(window.navigator.userAgent)) {
+				document.body.classList.add('no-directory');
+				document.body.classList.add('mobile');
+			}
+		</script>
 		<div id="debug"></div>
 		<div id="fullscreen"></div>
 		<div id="loader"></div>

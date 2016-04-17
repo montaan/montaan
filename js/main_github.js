@@ -2,11 +2,14 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/service-worker.js');
 }
 
-global.THREE = require('three')
+global.THREE = require('three');
 var utils = require('./utils.js');
-var createText = require('three-bmfont-text')
-var SDFShader = require('three-bmfont-text/shaders/sdf')
-var loadFont = require('load-bmfont')
+var Geometry = require('./Geometry.js');
+var Colors = require('./Colors.js');
+var Layout = require('./Layout.js');
+var createText = require('three-bmfont-text');
+var SDFShader = require('three-bmfont-text/shaders/sdf');
+var loadFont = require('load-bmfont');
 
 var loadFontImage = function (opt, cb) {
   loadFont(opt.font, function (err, font) {
@@ -25,246 +28,7 @@ loadFontImage({
 
 function start(font, texture) {
 
-	Colors = {
-		music: [0.13,0.34,0.17],
-		image: [0.13,0.34,0.25],
-		document: [0.13,0.14,0.37,1],
-		archive: [0.28,0.24,0.2],
-		video: [0.13,0.34,0.3],
-		exe: [0.28,0.14,0.17],
-		unknown: [0.13,0.14,0.17],
-		hidden: [0.63,0.64,0.67],
-
-		musicF: [0.13,0.14,0.27],
-		imageF: [0.23,0.44,0.57],
-		documentF: [0.13,0.14,0.57],
-		archiveF: [0.13,0.24,0.27],
-		headerF: [0.13,0.44,0.37],
-		exeF: [0.43,0.34,0.17],
-		objectF: [0.13,0.14,0.17],
-		legalF: [0.13,0.14,0.47],
-		videoF: [0.13,1.0,0.8],
-		unknownF: [0.13,0.14,0.17],
-		hiddenF: [0.53,0.54,0.57],
-
-		musicRE: /(^(makefile.*|configure|cmake.*|InfoPlist)|\.(gyp.?|pyt|isolate|json|xcscheme|projitems|shproj|gradle|properties|mp3|m4a|ogg|ogm|aac|flac|mk|xml|cfg|conf|vcxproj|xcconfig|plist|config|in)$)/i,
-		imageRE: /\.(ai|c4d|obj|png|gif|psd|tga|webm|jpe?g|svg)$/i,
-		documentRE: /(^(Doxyfile|readme))|(\.(pdf|mtl|docx?|pptx?|xaml|txt|html?|pages|dox|md)$)/i,
-		archiveRE: /\.(zip|gz|bz2|tar|rar|7z|js|c|cpp|rb|py|pl|php\d?|java|vbs|cs|mm?|hlsl|glsl|vert|frag|vs|fs|cc|ts)$/i,
-		objectRE: /\.(a|jar|dylib|lib|pri|so|aar)$/i,
-		headerRE: /\.(h|hpp|css|sass|less|scss|d\.ts)$/i,
-		exeRE: /\.(sh|exe|bsh|bat)$/i,
-		legalRE: /^(OWNERS|LICENSE.*)$/i,
-		videoRE: /\.(mp4|avi|mov|m4v|ogv|mpe?g|3gp)$/i,
-
-		musicDirRE: /^music$/i,
-		imageDirRE: /^(pictures|photos|images|screenshots|img)$/i,
-		documentDirRE: /^(docs?|documentation|html|static)$/i,
-		exeDirRE: /^(bin)$/i,
-		archiveDirRE: /^(\.git|src)$/i,
-		videoDirRE: /^(videos?|movies?)$/i,
-		hiddenDirRE: /^\./i,
-
-		getFileColor: function(file) {
-			var name = file.name;
-			var mimeType = file.mimeType;
-			if (mimeType) {
-				if (mimeType === 'application/vnd.google-apps.spreadsheet') {
-					return this.musicF;
-				} else if (mimeType === 'application/vnd.google-apps.document') {
-					return this.documentF;
-				} else if (mimeType === 'application/vnd.google-apps.map') {
-					return this.videoF;
-				} else if (mimeType === 'application/vnd.google-apps.photo') {
-					return this.imageF;
-				} else if (mimeType === 'application/vnd.google-apps.drawing') {
-					return this.imageF;
-				} else if (mimeType === 'application/vnd.google-apps.presentation') {
-					return this.archiveF;
-				} else if (mimeType === 'application/vnd.google-apps.script') {
-					return this.archiveF;
-				} else if (mimeType === 'application/vnd.google-apps.sites') {
-					return this.archiveF;
-				} else if (/^image/.test(mimeType)) {
-					return this.imageF;
-				} else if (/^audio/.test(mimeType)) {
-					return this.musicF;
-				} else if (/^video/.test(mimeType)) {
-					return this.videoF;
-				}
-			}
-
-			if (this.musicRE.test(name)) {
-				return this.musicF;
-			} else if (this.legalRE.test(name)) {
-				return this.legalF;
-			} else if (this.imageRE.test(name)) {
-				return this.imageF;
-			} else if (this.headerRE.test(name)) {
-				return this.headerF;
-			} else if (this.documentRE.test(name)) {
-				return this.documentF;
-			} else if (this.archiveRE.test(name)) {
-				return this.archiveF;
-			} else if (this.exeRE.test(name)) {
-				return this.exeF;
-			} else if (this.objectRE.test(name)) {
-				return this.objectF;
-			} else if (this.videoRE.test(name)) {
-				return this.videoF;
-			} else if (this.hiddenDirRE.test(name)) {
-				return this.hiddenF;
-			} else {
-				return this.unknownF;
-			}
-		},
-
-		getDirectoryColor: function(file) {
-			var name = file.name;
-			// if (this.musicDirRE.test(name)) {
-			// 	return this.music;
-			// } else if (this.imageDirRE.test(name)) {
-			// 	return this.image;
-			// } else 
-			if (this.documentDirRE.test(name)) {
-				return this.document;
-			} else if (this.archiveDirRE.test(name)) {
-				return this.archive;
-			// } else if (this.videoDirRE.test(name)) {
-			// 	return this.video;
-			} else if (this.exeDirRE.test(name)) {
-				return this.exe;
-			} else if (this.hiddenDirRE.test(name)) {
-				return this.hidden;
-			} else {
-				return this.unknown;
-			}
-		},
-	};
-
-	var setColor = function(verts, index, color, depth) {
-		var i = index * 36; //(index * 2 + 1) * 18;
-		var dx = color[0], dy = color[1], dz = color[2];
-		var f = 1; //((2 + (depth+3) % 8) / 16);
-		dx *= f;
-		dy *= f;
-		dz *= f;
-		var x = dx, y = dy, z = dz;
-		if (color.length === 3) {
-			x = dx * 1.77, y = dy * 1.88, z = dz * 1.85;
-		}
-
-
-		verts[i++] = dx;
-		verts[i++] = dy;
-		verts[i++] = dz;
-		verts[i++] = dx;
-		verts[i++] = dy;
-		verts[i++] = dz;
-		verts[i++] = x;
-		verts[i++] = y;
-		verts[i++] = z;
-
-		verts[i++] = x;
-		verts[i++] = y;
-		verts[i++] = z;
-		verts[i++] = dx;
-		verts[i++] = dy;
-		verts[i++] = dz;
-		verts[i++] = x;
-		verts[i++] = y;
-		verts[i++] = z;
-
-		verts[i++] = dx*0.5;
-		verts[i++] = dy*0.5;
-		verts[i++] = dz*0.5;
-		verts[i++] = dx*0.5;
-		verts[i++] = dy*0.5;
-		verts[i++] = dz*0.5;
-		verts[i++] = dx*0.73;
-		verts[i++] = dy*0.73;
-		verts[i++] = dz*0.73;
-
-		verts[i++] = dx*0.73;
-		verts[i++] = dy*0.73;
-		verts[i++] = dz*0.73;
-		verts[i++] = dx*0.5;
-		verts[i++] = dy*0.5;
-		verts[i++] = dz*0.5;
-		verts[i++] = dx*0.73;
-		verts[i++] = dy*0.73;
-		verts[i++] = dz*0.73;
-	};
-
-	var makeQuad = function(verts, index, x, y, w, h, z) {
-//		makeVertQuad(verts, index*2, x, y, w, 0.05, z-0.05);
-
-		var i = index * 36; //(index * 2 + 1) * 18;
-
-		verts[i++] = x;
-		verts[i++] = y;
-		verts[i++] = z;
-		verts[i++] = x + w;
-		verts[i++] = y;
-		verts[i++] = z;
-		verts[i++] = x;
-		verts[i++] = y + h;
-		verts[i++] = z;
-
-		verts[i++] = x;
-		verts[i++] = y + h;
-		verts[i++] = z;
-		verts[i++] = x + w;
-		verts[i++] = y;
-		verts[i++] = z;
-		verts[i++] = x + w;
-		verts[i++] = y + h;
-		verts[i++] = z;
-
-		verts[i++] = x + w*0.1;
-		verts[i++] = y;
-		verts[i++] = z-h*0.2;
-		verts[i++] = x + w*0.9;
-		verts[i++] = y;
-		verts[i++] = z-h*0.2;
-		verts[i++] = x;
-		verts[i++] = y;
-		verts[i++] = z;
-
-		verts[i++] = x;
-		verts[i++] = y;
-		verts[i++] = z;
-		verts[i++] = x + w*0.9;
-		verts[i++] = y;
-		verts[i++] = z-h*0.2;
-		verts[i++] = x + w;
-		verts[i++] = y;
-		verts[i++] = z;
-	};
-
-	var makeVertQuad = function(verts, index, x, y, w, h, z) {
-		var i = index * 18;
-
-		verts[i] = x;
-		verts[i+1] = y;
-		verts[i+2] = z;
-		verts[i+3] = x + w;
-		verts[i+4] = y;
-		verts[i+5] = z;
-		verts[i+6] = x;
-		verts[i+7] = y;
-		verts[i+8] = z + h;
-
-		verts[i+9] = x;
-		verts[i+10] = y;
-		verts[i+11] = z + h;
-		verts[i+12] = x + w;
-		verts[i+13] = y;
-		verts[i+14] = z;
-		verts[i+15] = x + w;
-		verts[i+16] = y;
-		verts[i+17] = z + h;
-	};
+	Layout.font = font;
 
 	var getPathEntry = function(fileTree, path) {
 		path = path.replace(/\/+$/, '');
@@ -286,6 +50,9 @@ function start(font, texture) {
 		side: THREE.DoubleSide,
 		transparent: true,
 		color: 0xffffff,
+		// polygonOffset: true,
+		// polygonOffsetFactor: -0.2,
+		// polygonOffsetUnits: 0.1,
 		depthTest: false,
 		depthWrite: false
 	}));
@@ -322,155 +89,9 @@ function start(font, texture) {
 		return visCount;
 	};
 
-	var thumbnailGeo = new THREE.PlaneBufferGeometry(1,1,1,1);
-	var createFileTreeQuads = function(fileTree, fileIndex, verts, colorVerts, parentX, parentY, parentZ, parentScale, depth, parentText, thumbnails, index) {
-		var dirs = [];
-		var files = [];
-		for (var i in fileTree.entries) {
-			var obj = fileTree.entries[i];
-			obj.x = 0;
-			obj.y = 0;
-			obj.z = 0;
-			obj.scale = 0;
-			if (obj.entries === null) {
-				files.push(obj);
-			} else {
-				dirs.push(obj);
-			}
-		}
-
-		var dirCount = dirs.length + (files.length > 0 ? 1 : 0);
-		var squareSide = Math.ceil(Math.sqrt(dirCount));
-
-		for (var y=0; y<squareSide; y++) {
-			for (var x=0; x<squareSide; x++) {
-				var off = y * squareSide + x;
-				if (off >= dirCount) {
-					break;
-				}
-				var yOff = 1 - (y+1) * (1/squareSide);
-				var xOff = x * (1/squareSide);
-				if (off >= dirs.length) {
-					var subX = xOff + 0.1 / squareSide;
-					var subY = yOff + 0.1 / squareSide;
-					var squares = Math.ceil(files.length / 4);
-					var squareSidef = Math.ceil(Math.sqrt(squares));
-					var fileScale = parentScale * (0.8 / squareSide) ;
-					for (var xf=0; xf<squareSidef; xf++) {
-						for (var yf=0; yf<squareSidef*4; yf++) {
-							var fxOff = xf * (1/squareSidef);
-							var fyOff = 1 - ((yf+1)/4) * (1/squareSidef);
-							var foff = xf * squareSidef * 4 + yf;
-							if (foff >= files.length) {
-								break;
-							}
-							var file = files[foff];
-							var fileColor = Colors.getFileColor(file);
-							file.x = parentX + parentScale * subX + fileScale * fxOff;
-							file.y = parentY + parentScale * subY + fileScale * fyOff;
-							file.scale = fileScale * (0.9/squareSidef);
-							file.z = parentZ + file.scale * 0.2;
-							file.index = fileIndex;
-							file.parent = fileTree;
-							index[fileIndex] = file;
-							setColor(colorVerts, file.index, fileColor, depth);
-							makeQuad(verts, file.index, file.x, file.y, file.scale, file.scale*0.25, file.z);
-							// file.thumbnail = loadThumbnail(file);
-							// if (file.thumbnail) {
-							// 	file.thumbnailMesh = new THREE.Mesh(
-							// 		thumbnailGeo, 
-							// 		new THREE.MeshBasicMaterial({
-							// 			map: file.thumbnail,
-							// 			transparent: true,
-							// 			depthWrite: false
-							// 		})
-							// 	);
-							// 	file.thumbnailMesh.position.set(file.x+file.scale/2, file.y+file.scale/2, file.z+file.scale*0.01);
-							// 	file.thumbnailMesh.scale.multiplyScalar(file.scale);
-							// 	thumbnails.add(file.thumbnailMesh);
-							// }
-							fileIndex++;
-						}
-					}
-				} else {
-					var dir = dirs[off];
-					var subX = xOff + 0.1 / squareSide;
-					var subY = yOff; // + 0.1 / squareSide;
-					dir.x = parentX + parentScale * subX;
-					dir.y = parentY + parentScale * subY;
-					dir.scale = parentScale * (0.8 / squareSide);
-					dir.z = parentZ + dir.scale * 0.2;
-					dir.index = fileIndex;
-					dir.parent = fileTree;
-					index[fileIndex] = dir;
-					var dirColor = Colors.getDirectoryColor(dirs[off]);
-					setColor(colorVerts, dir.index, dirColor, depth);
-					makeQuad(verts, dir.index, dir.x, dir.y, dir.scale, dir.scale, dir.z);
-					fileIndex++;
-				}
-			}
-		}
-
-		if (true || depth < 4) {
-			for (var i in fileTree.entries) {
-				var obj = fileTree.entries[i];
-				var title = obj.title;
-				if (title.length > 16) {
-					var breakPoint = Math.max(16, Math.floor(title.length / 2));
-					title = title.substring(0, breakPoint) + '\n' + title.substring(breakPoint);
-				}
-
-				var textGeometry = createText({text: title, font: font});
-				var text = new THREE.Mesh(textGeometry, textMaterial);
-				var textScaleW = (220/Math.max(textGeometry.layout.width, 220));
-				var textScaleH = 0.25 * (textScaleW * textGeometry.layout.height/30);
-				text.position.x = obj.x + (obj.entries ? 0 : (obj.scale * 0.02));
-				text.position.y = obj.y + (obj.entries ? obj.scale*1.01 : (obj.scale * (0.125-textScaleH*0.175))); // + (obj.entries ? obj.scale : 0.0);
-				text.position.z = obj.z;// + 0.15*obj.scale;
-				// text.rotation.x = obj.entries ? 1 : 0;
-				text.scale.multiplyScalar(obj.scale*0.004*textScaleW*24/22);
-				text.scale.y *= -1;
-				var arr = textGeometry.attributes.position.array;
-				for (var j=0; j<arr.length; j+=4) {
-					arr[j] = arr[j] * text.scale.x + text.position.x;
-					arr[j+1] = arr[j+1] * text.scale.y + text.position.y;
-					arr[j+2] = arr[j+2] * text.scale.z + text.position.z;
-				}
-				text.position.set(0,0,0);
-				text.scale.set(1,1,1);
-				var o = new THREE.Object3D();
-				if (parentText.children.length === 0) o.isFirst = true;
-				o.tick = textTick;
-				o.add(text);
-				parentText.add(o);
-				obj.text = o;
-			}
-		} else {
-			// return;
-		}
-
-		for (var j=0; j<dirs.length; j++) {
-			var dir = dirs[j];
-			fileIndex = createFileTreeQuads(dir, fileIndex, verts, colorVerts, dir.x, dir.y, dir.z, dir.scale, depth+1, dir.text, thumbnails, index);
-		}
-		return fileIndex;
-	};
 
 	var createFileTreeModel = function(fileCount, fileTree) {
-		var geo = new THREE.BufferGeometry();
-		var verts = new Float32Array(fileCount * 3 * 6 * 2); //* 2);
-		var normalVerts = new Float32Array(fileCount * 3 * 6 * 2); //* 2);
-		var colorVerts = new Float32Array(fileCount * 3 * 6 * 2); //* 2);
-		geo.addAttribute('position', new THREE.BufferAttribute(verts, 3));
-		geo.addAttribute('normal', new THREE.BufferAttribute(normalVerts, 3));
-		geo.addAttribute('color', new THREE.BufferAttribute(colorVerts, 3));
-		// geo.addAttribute('position', new THREE.BufferAttribute(verts, 3));
-
-		for (var i=0; i<normalVerts.length; i+=3) {
-			normalVerts[i] = 0;
-			normalVerts[i+1] = 0;
-			normalVerts[i+2] = -1;
-		};
+		var geo = Geometry.makeGeometry(fileCount);
 
 		var fileIndex = 0;
 
@@ -478,7 +99,7 @@ function start(font, texture) {
 
 		var labels = new THREE.Object3D();
 		var thumbnails = new THREE.Object3D();
-		createFileTreeQuads(fileTree, fileIndex, verts, colorVerts, 0, 0, 0, 1, 0, labels, thumbnails, fileTree.index);
+		Layout.createFileTreeQuads(fileTree, fileIndex, geo.attributes.position.array, geo.attributes.color.array, 0, 0, 0, 1, 0, labels, thumbnails, fileTree.index);
 
 		var bigGeo = createText({text:'', font: font});
 		var vertCount = 0;
@@ -545,7 +166,7 @@ function start(font, texture) {
 
 	// scene.add(light);
 
-	var camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1.2, 2.2);
+	var camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1.0, 2.5);
 
 	camera.position.z = 2;
 
@@ -629,6 +250,9 @@ function start(font, texture) {
 	modelTop.add(modelPivot);
 
 	var showFileTree = function(fileTree) {
+		if (processXHR) {
+			processXHR.onload = undefined;
+		}
 		changed = true;
 		if (model) {
 			model.parent.remove(model);
@@ -637,6 +261,16 @@ function start(font, texture) {
 					m.geometry.dispose();
 				}
 			});
+			model = null;
+		}
+		if (processModel) {
+			processModel.parent.remove(processModel);
+			processModel.traverse(function(m) {
+				if (m.geometry) {
+					m.geometry.dispose();
+				}
+			});
+			processModel = null;
 		}
 		window.FileTree = fileTree.tree;
 		model = createFileTreeModel(fileTree.count, fileTree.tree);
@@ -660,6 +294,21 @@ function start(font, texture) {
 	};
 
 	var navigateTo = function(url, onSuccess, onFailure) {
+		// var fileTree = {
+		// 	count: 5,
+		// 	tree: {name:"/", title:"/", index: 0, entries: {
+		// 		"a": {name:"a", title:"axes\nbaxes\ntraxes\nfaxes\n\nYo!\n\nWhat is this?", index: 0, entries: {
+		// 			"b": {name:"b", title:"axes\nbaxes\na\nb\n\n\n\ntraxes\nfaxes\n\nYo!\n\n\nHey man what's up?", index: 0, entries: null}
+		// 		}},
+		// 		"c": {name:"c", title:"axes baxes", index: 0, entries: {
+		// 			"b": {name:"b", title:"axes baxes naxes tralaxes faranges tralanges trafalgar phalanx", index: 0, entries: null}
+		// 		}}
+		// 	}}
+		// };
+		// showFileTree(fileTree);
+		// setLoaded(true);
+		// if (onSuccess) onSuccess();
+		// return;
 		utils.loadFiles(url, function(fileTree) {
 			setLoaded(true);
 			showFileTree(fileTree);
@@ -681,6 +330,8 @@ function start(font, texture) {
 	var currentRepoName = null;
 	var ghNavTarget = '';
 	var ghNavQuery = '';
+	var authorModel;
+	var processXHR;
 	if (!document.body.classList.contains('gdrive')) {
 		ghInput = document.getElementById('git');
 		var ghButton = document.getElementById('gitshow');
@@ -698,16 +349,8 @@ function start(font, texture) {
 				currentRepoName = repoName;
 				var gitHubRepoURL = ('https://github.com/' + repoName + '.git');
 				var gitHubAPIURL = 'https://api.github.com/repos/' + repoName + '/git/trees/master?recursive=1';
-				var xhr = new XMLHttpRequest();
-				xhr.open('GET', gitHubAPIURL);
-				xhr.onload = function() {
-					setLoaded(true);
-					var json = JSON.parse(xhr.responseText);
-					// console.log(json);
-					var paths = json.tree.map(function(file) { return '/' + repoName + '/' + file.path + (file.type === 'tree' ? '/' : ''); });
-					// console.log(paths);
-					showFileTree(utils.parseFileList('/' + match[5] + '/\n/' + repoName + '/\n' + paths.join("\n") + '\n'));
-
+				var commitsURL = 'https://api.github.com/repos/' + repoName + '/commits';
+				navigateTo(gitHubAPIURL, function() {
 					inGitHubRepo = true;
 
 					camera.targetPosition.x = 0;
@@ -725,15 +368,108 @@ function start(font, texture) {
 					ghNavTarget = '';
 					ghNavQuery = '';
 					if (window.history && window.history.replaceState) {
-						history.replaceState({}, "", "?github/"+encodeURIComponent(ghInput.value));
+						history.pushState({}, "", "?github/"+encodeURIComponent(ghInput.value));
 					} else {
 						location = '#github/'+encodeURIComponent(ghInput.value);
 					}
-				};
-				xhr.onerror = function() {
+
+					processXHR = new XMLHttpRequest();
+					processXHR.open('GET', commitsURL);
+					processXHR.onload = function(ev) {
+						var commits = JSON.parse(ev.target.responseText);
+						var authors = {};
+
+						var byDate = {name: "By date", title: "By date", index: 0, entries: {}};
+						var byAuthor = {name: "By author", title: "By author", index: 0, entries: {}};
+
+						var commitsFSEntry = {name: "Commits", title: "Commits", index: 0, entries: {
+							"By date": byDate,
+							"By author": byAuthor
+						}};
+						var commitsRoot = {name:"/", title: "/", index:0, entries:{"Commits": commitsFSEntry}};
+
+						var commitsFSCount = 4;
+						for (var i=0; i<commits.length; i++) {
+							var c = commits[i];
+							var lines = c.commit.message.split("\n");
+							var title = c.sha;
+							for (var j=0; j<lines.length; j++) {
+								if (!/^\s*$/.test(lines[j])) {
+									title = lines[j];
+									break;
+								}
+							}
+							var commitFSEntry = ({
+								name: c.sha,
+								title: title,
+								index: 0,
+								url: c.html_url,
+								color: Colors.document,
+								entries: {
+									message: {name:'message', title:c.commit.message, url:c.html_url, index:0, entries: null},
+									author: {name:'author', title:c.commit.author.name + ' <'+c.commit.author.email+'>', url:'mailto:'+c.commit.author.email, index:0, entries: null},
+									date: {name:'date', title: c.commit.author.date, url:c.html_url, entries: null},
+									sha: {name:'sha', title:c.sha, url:c.html_url, index:0, entries: null}
+								}
+							});
+							var commitFSEntry2 = ({
+								name: c.sha,
+								title: title,
+								index: 0,
+								url: c.html_url,
+								color: Colors.document,
+								entries: {
+									message: {name:'message', title:c.commit.message, url:c.html_url, index:0, entries: null},
+									author: {name:'author', title:c.commit.author.name + ' <'+c.commit.author.email+'>', url:'mailto:'+c.commit.author.email, index:0, entries: null},
+									date: {name:'date', title: c.commit.author.date, url:c.html_url, entries: null},
+									sha: {name:'sha', title:c.sha, url:c.html_url, index:0, entries: null}
+								}
+							});
+							var key = c.commit.author.name;
+							var author = authors[key]
+							if (!author) {
+								author = authors[key] = {authors: [], commits: []};
+								byAuthor.entries[key] = {name: key, title: c.commit.author.name, index: 0, entries: {}};
+								commitsFSCount++;
+							}
+							byAuthor.entries[key].entries[c.sha] = commitFSEntry2;
+							commitsFSCount+=5;
+							author.authors.push(c.commit.author);
+							author.commits.push(c);
+							var date = new Date(c.commit.author.date);
+							var year = date.getFullYear().toString();
+							var month = (date.getMonth() + 1).toString();
+							var day = date.getDate().toString();
+							var year = c.commit.author.date.split("T")[0];
+							var yearFSEntry = byDate.entries[year];
+							if (!yearFSEntry) {
+								yearFSEntry = byDate.entries[year] = {name: year, title: year, index: 0, entries: {}};
+								commitsFSCount++;
+							}
+							// var monthFSEntry = yearFSEntry.entries[month];
+							// if (!monthFSEntry) {
+							// 	monthFSEntry = yearFSEntry.entries[month] = {name: month, title: month, index: 0, entries: {}};
+							// 	commitsFSCount++;
+							// }
+							// var dayFSEntry = monthFSEntry.entries[day];
+							// if (!dayFSEntry) {
+							// 	dayFSEntry = monthFSEntry.entries[day] = {name: day, title: day, index: 0, entries: {}};
+							// 	commitsFSCount++;
+							// }
+							yearFSEntry.entries[c.sha] = commitFSEntry;
+							commitsFSCount+=5;
+						}
+
+						window.CommitTree = {tree: commitsRoot, count: commitsFSCount};
+						processModel = createFileTreeModel(window.CommitTree.count, window.CommitTree.tree);
+						processModel.position.set(0.5, -0.5, 0.0);
+						modelPivot.add(processModel);
+						changed = true;
+					};
+					processXHR.send();
+				}, function() {
 					setLoaded(true);
-				};
-				xhr.send();
+				});
 				ghInput.blur();
 				searchInput.blur();
 			} else {
@@ -749,7 +485,7 @@ function start(font, texture) {
 					ghNavTarget = '';
 					ghNavQuery = '';
 					if (window.history && window.history.replaceState) {
-						history.replaceState({}, "", "?find/"+encodeURIComponent(ghInput.value));
+						history.pushState({}, "", "?find/"+encodeURIComponent(ghInput.value));
 					} else {
 						location = '#find/'+encodeURIComponent(ghInput.value);
 					}
@@ -789,7 +525,80 @@ function start(font, texture) {
 			ghInput.value = ghRepo;
 			ghButton.click();
 		} else {
-			navigateTo('artoolkit5.txt');
+			navigateTo('artoolkit5.txt', function() {
+				var xhr = new XMLHttpRequest();
+				xhr.open('GET', 'artoolkit_log.txt');
+				xhr.onload = function(ev) {
+					var log = ev.target.responseText;
+					var commits = log.split(/^commit /m);
+					var commitIndex = {};
+					commits.shift();
+					commits = commits.map(function(c) {
+						var lines = c.split("\n");
+						var hash = lines[0];
+						var idx = 0;
+						while (lines[idx] && !/^Author:/.test(lines[idx])) {
+							idx++;
+						}
+						var author = lines[idx++].substring(8);
+						var email = author.match(/<([^>]+)>/)[1];
+						var authorName = author.substring(0, author.length - email.length - 3);
+						var date = lines[idx++].substring(6);
+						var message = lines.slice(idx+1).map(function(line) {
+							return line.replace(/^    /, '');
+						}).join("\n");
+						var commit = {
+							sha: hash,
+							author: {
+								name: authorName,
+								email: email
+							},
+							message: message,
+							date: new Date(date),
+							files: []
+						};
+						commitIndex[commit.sha] = commit;
+						return commit;
+					});
+					var xhr = new XMLHttpRequest();
+					xhr.open('GET', 'artoolkit_changes.txt');
+					xhr.onload = function(ev) {
+						var changes = ev.target.responseText;
+						changes = changes.split('\n\n');
+						changes.forEach(function(c) {
+							if (c) {
+								var lines = c.split("\n");
+								var hash = lines[0];
+								commitIndex[hash].files = lines.slice(1).map(function(fs) {
+									var fileChange = {
+										path: fs.substring(2),
+										action: fs.charAt(0)
+									};
+									return fileChange;
+								});
+							}
+						});
+						var commitsFSEntry = {name: "Commits", title: "Commits", index: 0, entries: {}};
+						var commitsRoot = {name:"/", title: "/", index:0, entries:{"Commits": commitsFSEntry}};
+
+						var commitsFSCount = 2;
+						commits.forEach(function(c) {
+							commitsFSEntry.entries[c.sha] = {
+								name: c.sha, title: c.message.match(/^\S+.*/)[0], index: 0, entries: null
+							};
+							commitsFSCount++;
+						})
+
+						window.CommitTree = {tree: commitsRoot, count: commitsFSCount};
+						processModel = createFileTreeModel(window.CommitTree.count, window.CommitTree.tree);
+						processModel.position.set(0.5, -0.5, 0.0);
+						modelPivot.add(processModel);
+						changed = true;
+					};
+					xhr.send();
+				};
+				xhr.send();
+			});
 		}
 	}
 	window.GDriveCallback = showFileTree;
@@ -808,9 +617,9 @@ function start(font, texture) {
 		ghNavTarget = '';
 		ghNavQuery = '';
 		if (window.history && window.history.replaceState) {
-			history.replaceState({}, "", "?find/"+encodeURIComponent(ghInput.value));
+			history.pushState({}, "", "");
 		} else {
-			location = '#find/'+encodeURIComponent(ghInput.value);
+			location = '#';
 		}
 	};
 
@@ -1141,17 +950,8 @@ function start(font, texture) {
 		}
 		if (down) {
 			down = false;
-			var intersections = utils.findIntersectionsUnderEvent(ev, camera, [model]);
-			if (intersections.length > 0) {
-				var faceIndex = intersections[0].faceIndex;
-				var fsEntry = model.fileTree.index[Math.floor(faceIndex / 12)];
-				while (fsEntry && fsEntry.scale * camera.projectionMatrix.elements[0] < 0.2) {
-					if (fsEntry.parent === highlighted) {
-						break;
-					}
-					fsEntry = fsEntry.parent;
-				}
-				var off = fsEntry.index * 18 * 3;
+			var fsEntry = Geometry.findFSEntry(ev, camera, model);
+			if (fsEntry) {
 				var ca = model.geometry.attributes.color;
 				if (highlighted) {
 					// setColor(ca.array, highlighted.index, Colors[highlighted.entries === null ? 'getFileColor' : 'getDirectoryColor'](highlighted), 0);
@@ -1160,7 +960,6 @@ function start(font, texture) {
 					// setColor(ca.array, fsEntry.index, [0.1,0.25,0.5], 0);
 					highlighted = fsEntry;
 					var targetFOV = fsEntry.scale * 50;
-					window.debug.textContent = (targetFOV / camera.fov);
 					if (targetFOV / camera.fov <= 1.1 && targetFOV / camera.fov > 0.3 && highlighted.entries === null) {
 						if (highlighted.entries === null) {
 							// File, let's open it.
@@ -1179,28 +978,31 @@ function start(font, texture) {
 				// ca.needsUpdate = true;
 				changed = true;
 				// console.log(fsEntry, fsEntry.scale * camera.projectionMatrix.elements[0]);
+
 				return;
+
+
 				// console.log(fsEntry.fullPath);
-				if (fsEntry.entries === null) {
-					window.open('http://localhost:8080'+encodeURI(fsEntry.fullPath))
-				} else {
-					var oldModel = scene.children[1];
-					scene.remove(oldModel);
-					models = [];
-					oldModel.traverse(function(m) {
-						if (m.material) {
-							if (m.material.map) {
-								m.material.map.dispose();
-							}
-							m.material.dispose();
-						}
-						if (m.geometry) {
-							m.geometry.dispose();
-						}
-					});
-					navigateTo(fsEntry.fullPath);
-					controls.reset();
-				}
+				// if (fsEntry.entries === null) {
+				// 	window.open('http://localhost:8080'+encodeURI(fsEntry.fullPath))
+				// } else {
+				// 	var oldModel = scene.children[1];
+				// 	scene.remove(oldModel);
+				// 	models = [];
+				// 	oldModel.traverse(function(m) {
+				// 		if (m.material) {
+				// 			if (m.material.map) {
+				// 				m.material.map.dispose();
+				// 			}
+				// 			m.material.dispose();
+				// 		}
+				// 		if (m.geometry) {
+				// 			m.geometry.dispose();
+				// 		}
+				// 	});
+				// 	navigateTo(fsEntry.fullPath);
+				// 	controls.reset();
+				// }
 			}
 		}
 	};
