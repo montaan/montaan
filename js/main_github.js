@@ -33,6 +33,9 @@ function start(font, texture) {
 	var getPathEntry = function(fileTree, path) {
 		path = path.replace(/\/+$/, '');
 		var segments = path.split("/");
+		while (segments[0] === "") {
+			segments.shift();
+		}
 		var branch = fileTree;
 		var parent;
 		for (var i=0; i<segments.length; i++) {
@@ -166,7 +169,7 @@ function start(font, texture) {
 
 	// scene.add(light);
 
-	var camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1.0, 2.5);
+	var camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.5, 5);
 
 	camera.position.z = 2;
 
@@ -203,6 +206,27 @@ function start(font, texture) {
 			geo.vertices.push(bUp);
 			geo.vertices.push(bv);
 		}
+	};
+
+	var addLineBetweenEntries = function(geo, modelA, entryA, modelB, entryB) {
+		var a = entryA;
+		var b = entryB;
+		
+		var av = new THREE.Vector3(a.x, a.y, a.z);
+		av.applyMatrix4(modelA.matrix);
+
+		var bv = new THREE.Vector3(b.x, b.y, b.z);
+		bv.applyMatrix4(modelB.matrix);
+
+		var aUp = new THREE.Vector3(av.x, av.y, Math.max(av.z, bv.z) + 0.1);
+		var bUp = new THREE.Vector3(bv.x, bv.y, Math.max(av.z, bv.z) + 0.1);
+
+		geo.vertices.push(av);
+		geo.vertices.push(aUp);
+		geo.vertices.push(aUp);
+		geo.vertices.push(bUp);
+		geo.vertices.push(bUp);
+		geo.vertices.push(bv);
 	};
 
 	var model;
@@ -525,102 +549,144 @@ function start(font, texture) {
 			ghInput.value = ghRepo;
 			ghButton.click();
 		} else {
-			navigateTo('artoolkit5.txt', function() {
-				var xhr = new XMLHttpRequest();
-				xhr.open('GET', 'artoolkit_log.txt');
-				xhr.onload = function(ev) {
-					var log = ev.target.responseText;
-					var commits = log.split(/^commit /m);
-					var commitIndex = {};
-					commits.shift();
-					commits = commits.map(function(c) {
+			var commitLog, commitChanges;
+			var treeLoaded = false;
+			
+			var loadTick = function() {
+				if (!commitLog || !commitChanges || !treeLoaded) {
+					return;
+				}
+				setLoaded(true);
+				var commits = commitLog.split(/^commit /m);
+				var commitIndex = {};
+				commits.shift();
+				commits = commits.map(function(c) {
+					var lines = c.split("\n");
+					var hash = lines[0];
+					var idx = 0;
+					while (lines[idx] && !/^Author:/.test(lines[idx])) {
+						idx++;
+					}
+					var author = lines[idx++].substring(8);
+					var email = author.match(/<([^>]+)>/)[1];
+					var authorName = author.substring(0, author.length - email.length - 3);
+					var date = lines[idx++].substring(6);
+					var message = lines.slice(idx+1).map(function(line) {
+						return line.replace(/^    /, '');
+					}).join("\n");
+					var commit = {
+						sha: hash,
+						author: {
+							name: authorName,
+							email: email
+						},
+						message: message,
+						date: new Date(date),
+						files: []
+					};
+					commitIndex[commit.sha] = commit;
+					return commit;
+				});
+				var changes = commitChanges.split('\n\n');
+				changes.forEach(function(c) {
+					if (c) {
 						var lines = c.split("\n");
 						var hash = lines[0];
-						var idx = 0;
-						while (lines[idx] && !/^Author:/.test(lines[idx])) {
-							idx++;
-						}
-						var author = lines[idx++].substring(8);
-						var email = author.match(/<([^>]+)>/)[1];
-						var authorName = author.substring(0, author.length - email.length - 3);
-						var date = lines[idx++].substring(6);
-						var message = lines.slice(idx+1).map(function(line) {
-							return line.replace(/^    /, '');
-						}).join("\n");
-						var commit = {
-							sha: hash,
-							author: {
-								name: authorName,
-								email: email
-							},
-							message: message,
-							date: new Date(date),
-							files: []
-						};
-						commitIndex[commit.sha] = commit;
-						return commit;
-					});
-					var xhr = new XMLHttpRequest();
-					xhr.open('GET', 'artoolkit_changes.txt');
-					xhr.onload = function(ev) {
-						var changes = ev.target.responseText;
-						changes = changes.split('\n\n');
-						changes.forEach(function(c) {
-							if (c) {
-								var lines = c.split("\n");
-								var hash = lines[0];
-								commitIndex[hash].files = lines.slice(1).map(function(fs) {
-									var fileChange = {
-										path: fs.substring(2),
-										action: fs.charAt(0)
-									};
-									return fileChange;
-								});
-							}
+						commitIndex[hash].files = lines.slice(1).map(function(fs) {
+							var fileChange = {
+								path: fs.substring(2),
+								action: fs.charAt(0)
+							};
+							return fileChange;
 						});
-						var commitsFSEntry = {name: "Commits", title: "Commits", index: 0, entries: {}};
-						var commitsRoot = {name:"/", title: "/", index:0, entries:{"Commits": commitsFSEntry}};
+					}
+				});
+				var commitsFSEntry = {name: "Commits", title: "Commits", index: 0, entries: {}};
+				var commitsRoot = {name:"", title: "", index:0, entries:{"Commits": commitsFSEntry}};
 
-						var mkfile = function(filename) {
-							return {
-								name: filename, title: filename, index: 0, entries: null
-							};
-						};
-
-						var mkdir = function(dirname, files) {
-							var entries = {};
-							files.forEach(function(f) { entries[f] = mkfile(f) });
-							return {
-								name: dirname, title: dirname, index: 0, entries: entries
-							};
-						};
-
-						var commitsFSCount = 2;
-						commits.forEach(function(c) {
-							var fileTree = utils.parseFileList_(c.files.map(function(f) { return f.path }).join("\n")+'\n', true);
-							var entries = {
-								Author: mkfile(c.author.name),
-								SHA: mkfile(c.sha),
-								Date: mkfile(c.date.toString()),
-								Files: fileTree.tree
-							}
-							fileTree.tree.title = fileTree.tree.name = 'Files';
-							commitsFSEntry.entries[c.sha] = {
-								name: c.sha, title: c.message.match(/^\S+.*/)[0], index: 0, entries: entries
-							};
-							commitsFSCount += 5 + fileTree.count;
-						})
-
-						window.CommitTree = {tree: commitsRoot, count: commitsFSCount};
-						processModel = createFileTreeModel(window.CommitTree.count, window.CommitTree.tree);
-						processModel.position.set(0.5, -0.5, 0.0);
-						modelPivot.add(processModel);
-						changed = true;
+				var mkfile = function(filename) {
+					return {
+						name: filename, title: filename, index: 0, entries: null
 					};
-					xhr.send();
 				};
-				xhr.send();
+
+				var mkdir = function(dirname, files) {
+					var entries = {};
+					files.forEach(function(f) { entries[f] = mkfile(f) });
+					return {
+						name: dirname, title: dirname, index: 0, entries: entries
+					};
+				};
+
+				var commitsFSCount = 2;
+				var commitToFile
+				commits.forEach(function(c) {
+					var entries = {
+						Author: mkfile(c.author.name),
+						SHA: mkfile(c.sha),
+						Date: mkfile(c.date.toString()),
+						Message: mkfile(c.message)
+					}
+					if (c.files.length > 0 && c.files[0]) {
+						var fileTree = utils.parseFileList_(c.files.map(function(f) { return f.path }).join("\n")+'\n', true);
+						fileTree.tree.title = fileTree.tree.name = 'Files';
+						entries.Files = fileTree.tree;
+						commitsFSCount += 1 + fileTree.count;
+					}
+					commitsFSEntry.entries[c.sha] = {
+						name: c.sha, title: c.message.match(/^\S+.*/)[0], index: 0, entries: entries
+					};
+					commitsFSCount += 5;
+				})
+
+				window.CommitTree = {tree: commitsRoot, count: commitsFSCount};
+				processModel = createFileTreeModel(window.CommitTree.count, window.CommitTree.tree);
+				processModel.position.set(0.5, -0.5, 0.0);
+				modelPivot.add(processModel);
+				var lineGeo = new THREE.Geometry();
+				model.updateMatrix();
+				processModel.updateMatrix();
+				utils.traverseTree(window.CommitTree, function(fsEntry, fullPath) {
+					if (/^\/Commits\/.{40}\/Files\//.test(fullPath) && fsEntry.entries === null) {
+						// Files entry \ ^_^ /
+						var path = fullPath.substring(55);
+						var filePath = '/artoolkit/artoolkit5' + path;
+						var fileEntry = getPathEntry(window.FileTree, filePath);
+						if (fileEntry) {
+							addLineBetweenEntries(lineGeo, model, fileEntry, processModel, fsEntry);
+						}
+					}
+				});
+				var lineModel = new THREE.LineSegments(lineGeo, new THREE.LineBasicMaterial({
+					color: 0x44ccff, opacity: 0.05, transparent: true, depthWrite: false,
+					blending: THREE.AdditiveBlending
+				}))
+				modelPivot.add(lineModel);
+				changed = true;
+			};
+
+			var xhr = new XMLHttpRequest();
+			xhr.open('GET', 'artoolkit_log.txt');
+			xhr.onload = function(ev) {
+				commitLog = ev.target.responseText;
+				loadTick();
+			};
+			xhr.send();
+
+			var xhr = new XMLHttpRequest();
+			xhr.open('GET', 'artoolkit_changes.txt');
+			xhr.onload = function(ev) {
+				commitChanges = ev.target.responseText;
+				loadTick();
+			};
+			xhr.send();
+
+			navigateTo('artoolkit5.txt', function() {
+				setLoaded(false);
+				treeLoaded = true;
+				loadTick();
 			});
+
 		}
 	}
 	window.GDriveCallback = showFileTree;

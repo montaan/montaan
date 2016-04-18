@@ -225,6 +225,22 @@ var utils = module.exports = {
 		return addCount;
 	},
 
+	traverseTree: function(tree, callback) {
+		var entry = tree.tree;
+		this.traverseFSEntry(entry, callback, "");
+	},
+
+	traverseFSEntry: function(fsEntry, callback, fullPath) {
+		var path = fullPath + fsEntry.name;
+		callback(fsEntry, path);
+		if (fsEntry.entries) {
+			var dirName = path + '/';
+			for (var i in fsEntry.entries) {
+				this.traverseFSEntry(fsEntry.entries[i], callback, dirName);
+			}
+		}
+	},
+
 	convertXMLToTree: function(node, uid) {
 		var obj = {name: uid.value++, title: node.tagName || 'document', index: 0, entries: {}};
 		var files = [];
@@ -347,7 +363,7 @@ var utils = module.exports = {
 
 	parseFileList_: function(fileString, includePrefix) {
 		// console.log("Parsing file string", fileString.length);
-		var fileTree = {name: "/", title: "/", entries: {}, index: 0};
+		var fileTree = {name: "", title: "", entries: {}, index: 0};
 		var name = "";
 		var startIndex = 0;
 		var fileCount = 0;
