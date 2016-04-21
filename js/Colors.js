@@ -5,7 +5,7 @@ module.exports = {
 	archive: [0.28,0.24,0.2],
 	video: [0.13,0.34,0.3],
 	exe: [0.28,0.14,0.17],
-	unknown: [0.13,0.14,0.17],
+	unknown: [0.53,0.54,0.57],
 	hidden: [0.63,0.64,0.67],
 
 	musicF: [0.13,0.34,0.17],
@@ -18,7 +18,7 @@ module.exports = {
 	objectF: [0.13,0.14,0.17],
 	legalF: [0.13,0.14,0.47],
 	videoF: [0.13,1.0,0.8],
-	unknownF: [0.13,0.14,0.17],
+	unknownF: [0.33,0.34,0.37],
 	hiddenF: [0.53,0.54,0.57],
 
 	musicRE: /\.(mp3|m4a|ogg|ogm|wav|aac|flac)$/i,
@@ -117,4 +117,27 @@ module.exports = {
 			return this.unknown;
 		}
 	},
+
+	threeColors: {},
+	getThreeColor: function(fsEntry) {
+		var color = this.getColor(fsEntry);
+		var key = color.join(",");
+		var threeColor = this.threeColors[key];
+		if (!threeColor) {
+			threeColor = this.threeColors[key] = new THREE.Color(color[0], color[1], color[2]);
+		}
+		return threeColor;
+	},
+
+	getColor: function(fsEntry) {
+		if (fsEntry.entries !== null) {
+			return this.getDirectoryColor(fsEntry);
+		}
+		return this.getFileColor(fsEntry);
+	}
 };
+for (var i in module.exports) {
+	if (module.exports[i] instanceof Array) {
+		module.exports[i] = module.exports[i].map(function(c) { return Math.min(1, (c+0.3)); });
+	}
+}

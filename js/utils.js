@@ -349,7 +349,7 @@ var utils = module.exports = {
 				// Hey it's JSON, let's check for GitHub API & Google Drive API & Dropbox API formats.
 				if (list && list.sha && list.url && /\/git\//.test(list.url) && list.tree) {
 					return this.parseGitHubTree(list);
-				} else if (list && list.instanceOf(Array)) {
+				} else if (list && list instanceof Array) {
 					if (list.every(function(it) { return typeof it === 'string'; })) {
 						fileString = list.join("\n") + "\n";
 					}

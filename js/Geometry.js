@@ -4,19 +4,58 @@ module.exports = {
 
 	quadCount: 2,
 
-	findFSEntry: function(ev, camera, model) {
-		var intersections = utils.findIntersectionsUnderEvent(ev, camera, [model]);
+	findFSEntry: function(ev, camera, models, highlighted) {
+		var intersections = utils.findIntersectionsUnderEvent(ev, camera, (models instanceof Array) ? models : [models]);
 		if (intersections.length > 0) {
 			var faceIndex = intersections[0].faceIndex;
-			var fsEntry = model.fileTree.index[Math.floor(faceIndex / (6 * this.quadCount))];
+			var fsEntry = intersections[0].object.fileTree.index[Math.floor(faceIndex / (6 * this.quadCount))];
 			while (fsEntry && fsEntry.scale * camera.projectionMatrix.elements[0] < 0.2) {
 				if (fsEntry.parent === highlighted) {
 					break;
 				}
 				fsEntry = fsEntry.parent;
 			}
-			return fsEntry;
+			intersections[0].fsEntry = fsEntry;
+			return intersections[0];
 		}
+	},
+
+	qTmp1: new THREE.Vector3(),
+	qTmp2: new THREE.Vector3(),
+	qTmp3: new THREE.Vector3(),
+	qTmp4: new THREE.Vector3(),
+	quadInsideFrustum: function(quadIndex, model, camera) {
+		var vertexOff = quadIndex * 6 * this.quadCount;
+		var a = this.qTmp1;
+		var b = this.qTmp2;
+		var c = this.qTmp3;
+		var d = this.qTmp4;
+		this.projectVertexToFrustum(a, vertexOff, model, camera);
+		this.projectVertexToFrustum(b, vertexOff+1, model, camera);
+		this.projectVertexToFrustum(c, vertexOff+2, model, camera);
+		this.projectVertexToFrustum(d, vertexOff+5, model, camera);
+		var minX = Math.min(a.x, b.x, c.x, d.x);
+		var maxX = Math.max(a.x, b.x, c.x, d.x);
+		var minY = Math.min(a.y, b.y, c.y, d.y);
+		var maxY = Math.max(a.y, b.y, c.y, d.y);
+		return (maxX > -1 && minX < 1 && maxY > -1 && minY < 1);
+	},
+
+	projectVertexToFrustum: function(u, vertexIndex, model, camera) {
+		var off = vertexIndex * 3;
+		var v = model.geometry.attributes.position.array;
+		u.set(v[off + 0], v[off + 1], v[off + 2]);
+		u.applyMatrix4(model.modelViewMatrix);
+		u.applyMatrix4(camera.projectionMatrix);
+		u.multiplyScalar(1/1.62);
+	},
+
+	vertexInsideFrustumTmp: new THREE.Vector3(),
+	vertexInsideFrustum: function(vertexIndex, model, camera) {
+		var u = this.vertexInsideFrustumTmp;
+		this.projectVertexToFrustum(u, vertexIndex, model, camera);
+		// window.debug.textContent = ([u.x, u.y, u.z]).join(", ");
+		return (u.x < 1 && u.x > -1 && u.y < 1 && u.y > -1 && u.z < 1 && u.z > -1);
 	},
 
 	makeGeometry: function(fileCount) {
@@ -46,7 +85,7 @@ module.exports = {
 		dz *= f;
 		var x = dx, y = dy, z = dz;
 		if (color.length === 3) {
-			x = dx * 1.77, y = dy * 1.88, z = dz * 1.85;
+			x = Math.pow(dx, 0.3), y = Math.pow(dy, 0.3), z = Math.pow(dz, 0.3);
 		}
 
 
@@ -117,10 +156,10 @@ module.exports = {
 		verts[i++] = y + h;
 		verts[i++] = z;
 
-		verts[i++] = x;
+		verts[i++] = x + w*0.1;
 		verts[i++] = y;
 		verts[i++] = z-h*0.2;
-		verts[i++] = x + w;
+		verts[i++] = x + w*0.9;
 		verts[i++] = y;
 		verts[i++] = z-h*0.2;
 		verts[i++] = x;
@@ -130,7 +169,7 @@ module.exports = {
 		verts[i++] = x;
 		verts[i++] = y;
 		verts[i++] = z;
-		verts[i++] = x + w;
+		verts[i++] = x + w*0.9;
 		verts[i++] = y;
 		verts[i++] = z-h*0.2;
 		verts[i++] = x + w;

@@ -10,6 +10,42 @@ body
 	font-family: sans-serif;
 }
 
+#subscribe {
+	display: none;
+	background: rgba(255,255,255,1);
+	border-radius: 16px;
+	width: 320px;
+	height: 320px;
+	left: 50%;
+	top: 50%;
+	box-sizing: border-box;
+	margin-left: -160px;
+	margin-top: -160px;
+	padding: 16px;
+	color: black;
+	position: absolute;
+	z-index: 100;
+	font-size: smaller;
+}
+#subscribe p,
+#subscribe h3
+{
+	margin-top: 4px;
+	text-align: center;
+}
+#subscribe input,
+#subscribe textarea
+{
+	width: 100%;
+	box-sizing: border-box;
+	margin-bottom: 1em;
+}
+
+#subscribe textarea
+{
+	height: 60px;
+}
+
 .investors {
 	display: none;
 }
@@ -178,12 +214,12 @@ label {
 #debug {
 	position: absolute;
 	left: 10px;
-	top: 10px;
+	top: 120px;
 	color: white;
 	background: black;
 	width: 200px;
 	z-index: 10;
-	display: none;
+	/*display: none;*/
 }
 
 #authorize-div {
