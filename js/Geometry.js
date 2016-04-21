@@ -24,6 +24,7 @@ module.exports = {
 	qTmp2: new THREE.Vector3(),
 	qTmp3: new THREE.Vector3(),
 	qTmp4: new THREE.Vector3(),
+	mTmp4: new THREE.Matrix4(),
 	quadInsideFrustum: function(quadIndex, model, camera) {
 		var vertexOff = quadIndex * 6 * this.quadCount;
 		var a = this.qTmp1;
@@ -46,8 +47,7 @@ module.exports = {
 		var v = model.geometry.attributes.position.array;
 		u.set(v[off + 0], v[off + 1], v[off + 2]);
 		u.applyMatrix4(model.modelViewMatrix);
-		u.applyMatrix4(camera.projectionMatrix);
-		u.multiplyScalar(1/1.62);
+		u.applyProjection(camera.projectionMatrix);
 	},
 
 	vertexInsideFrustumTmp: new THREE.Vector3(),
