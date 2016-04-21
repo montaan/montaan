@@ -52,7 +52,7 @@ function start(font, texture) {
 		map: texture,
 		side: THREE.DoubleSide,
 		transparent: true,
-		color: 0x000000,
+		color: 0xffffff,
 		// polygonOffset: true,
 		// polygonOffsetFactor: -0.2,
 		// polygonOffsetUnits: 0.1,
@@ -169,18 +169,22 @@ function start(font, texture) {
 								xhr.obj = obj3;
 								xhr.fsEntry = o;
 								xhr.onload = function() {
-									if (this.responseText.length < 1e6 && this.obj.parent) {
+									if (this.responseText.length < 2e5 && this.obj.parent) {
 										var contents = this.responseText;
 										var text = this.obj;
 										text.visible = true;
 										text.geometry = createText({font: Layout.font, text: contents}),
 										text.material = textMaterial;
-										var scale = this.fsEntry.scale / Math.max(text.geometry.layout.width, text.geometry.layout.height/0.75);
+										var textScale = 1 / Math.max(text.geometry.layout.width+60, (text.geometry.layout.height+30)/0.75);
+										var scale = this.fsEntry.scale * textScale;
+										var vAspect = Math.min(1, ((text.geometry.layout.height+30)/0.75) / (text.geometry.layout.width+60));
 										text.scale.multiplyScalar(scale);
 										text.scale.y *= -1;
 										text.position.copy(this.fsEntry);
 										text.fsEntry = this.fsEntry;
-										text.position.y += this.fsEntry.scale*0.25;
+										text.position.x += this.fsEntry.scale * textScale * 30;
+										text.position.y -= this.fsEntry.scale * textScale * 7.5;
+										text.position.y += this.fsEntry.scale * 0.25 + this.fsEntry.scale * 0.75 * (1-vAspect);
 									}
 								};
 								xhr.send();
@@ -248,7 +252,7 @@ function start(font, texture) {
 	var renderer = new THREE.WebGLRenderer({antialias: true, alpha: false});
 	renderer.domElement.id = 'renderCanvas';
 	renderer.setPixelRatio( window.devicePixelRatio || 1 );
-	renderer.setClearColor(0xffffff, 1);
+	renderer.setClearColor(0x03060C, 1);
 	// renderer.shadowMap.enabled = true;
 	// renderer.shadowMap.type = THREE.BasicShadowMap;
 	document.body.appendChild(renderer.domElement);
@@ -816,7 +820,7 @@ function start(font, texture) {
 					}
 				}
 
-				var repoPrefix = '/Microsoft/vscode';
+				var repoPrefix = '/v8/v8';
 
 				utils.traverseTree(window.CommitTree, function(fsEntry, fullPath) {
 					if (/^\/Commits\/.{40}\/Files\//.test(fullPath) && fsEntry.entries === null) {
@@ -864,7 +868,7 @@ function start(font, texture) {
 			// };
 			// xhr.send();
 
-			navigateTo('vscode.txt', function() {
+			navigateTo('v8.txt', function() {
 				// setLoaded(false);
 				// treeLoaded = true;
 				// loadTick();

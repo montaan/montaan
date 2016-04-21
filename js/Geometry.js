@@ -85,7 +85,7 @@ module.exports = {
 		dz *= f;
 		var x = dx, y = dy, z = dz;
 		if (color.length === 3) {
-			x = Math.pow(dx, 0.3), y = Math.pow(dy, 0.3), z = Math.pow(dz, 0.3);
+			x = dx * 1.77, y = dy * 1.88, z = dz * 1.85;
 		}
 
 
