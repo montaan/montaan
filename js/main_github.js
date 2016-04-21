@@ -139,6 +139,11 @@ function start(font, texture) {
 				var c = visibleFiles.children[i];
 				var fsEntry = c.fsEntry;
 				if (!Geometry.quadInsideFrustum(fsEntry.index, this, camera) || fsEntry.scale * 50 / camera.fov < 0.3) {
+					if (!c.geometry.layout) {
+						if (c.material && c.material.map) {
+							c.material.map.dispose();
+						}
+					}
 					if (c.geometry) {
 						c.geometry.dispose();
 					}
@@ -159,35 +164,66 @@ function start(font, texture) {
 						if (o.entries === null) {
 							var fullPath = getFullPath(o);
 							if (visibleFiles.children.length < 20 && !visibleFiles.visibleSet[fullPath]) {
-								var obj3 = new THREE.Mesh();
-								obj3.visible = false;
-								obj3.fsEntry = o;
-								visibleFiles.visibleSet[fullPath] = true;
-								visibleFiles.add(obj3);
-								var xhr = new XMLHttpRequest();
-								xhr.open('GET', fullPath);
-								xhr.obj = obj3;
-								xhr.fsEntry = o;
-								xhr.onload = function() {
-									if (this.responseText.length < 2e5 && this.obj.parent) {
-										var contents = this.responseText;
-										var text = this.obj;
-										text.visible = true;
-										text.geometry = createText({font: Layout.font, text: contents}),
-										text.material = textMaterial;
-										var textScale = 1 / Math.max(text.geometry.layout.width+60, (text.geometry.layout.height+30)/0.75);
-										var scale = this.fsEntry.scale * textScale;
-										var vAspect = Math.min(1, ((text.geometry.layout.height+30)/0.75) / (text.geometry.layout.width+60));
-										text.scale.multiplyScalar(scale);
-										text.scale.y *= -1;
-										text.position.copy(this.fsEntry);
-										text.fsEntry = this.fsEntry;
-										text.position.x += this.fsEntry.scale * textScale * 30;
-										text.position.y -= this.fsEntry.scale * textScale * 7.5;
-										text.position.y += this.fsEntry.scale * 0.25 + this.fsEntry.scale * 0.75 * (1-vAspect);
-									}
-								};
-								xhr.send();
+								if (Colors.imageRE.test(fullPath)) {
+									var obj3 = new THREE.Mesh();
+									obj3.visible = false;
+									obj3.fsEntry = o;
+									visibleFiles.visibleSet[fullPath] = true;
+									visibleFiles.add(obj3);
+									obj3.geometry = new THREE.PlaneBufferGeometry(1,1);
+									obj3.scale.multiplyScalar(o.scale);
+									obj3.position.set(o.x+o.scale*0.5, o.y+o.scale*0.5, o.z);
+									obj3.visible = false;
+									window.imageObj = obj3;
+									var img = new Image();
+									img.src = fullPath;
+									img.obj = obj3;
+									img.onload = function() {
+										if (this.obj.parent) {
+											var canvas = document.createElement('canvas');
+											var maxD = Math.max(this.width, this.height);
+											this.obj.scale.x *= this.width/maxD;
+											this.obj.scale.y *= this.height/maxD;
+											this.obj.material = new THREE.MeshBasicMaterial({
+												map: new THREE.Texture(this),
+												depthTest: false,
+												depthWrite: false
+											});
+											this.obj.material.map.needsUpdate = true;
+											this.obj.visible = true;
+										}
+									};
+								} else {
+									var obj3 = new THREE.Mesh();
+									obj3.visible = false;
+									obj3.fsEntry = o;
+									visibleFiles.visibleSet[fullPath] = true;
+									visibleFiles.add(obj3);
+									var xhr = new XMLHttpRequest();
+									xhr.open('GET', fullPath);
+									xhr.obj = obj3;
+									xhr.fsEntry = o;
+									xhr.onload = function() {
+										if (this.responseText.length < 2e5 && this.obj.parent) {
+											var contents = this.responseText;
+											var text = this.obj;
+											text.visible = true;
+											text.geometry = createText({font: Layout.font, text: contents}),
+											text.material = textMaterial;
+											var textScale = 1 / Math.max(text.geometry.layout.width+60, (text.geometry.layout.height+30)/0.75);
+											var scale = this.fsEntry.scale * textScale;
+											var vAspect = Math.min(1, ((text.geometry.layout.height+30)/0.75) / (text.geometry.layout.width+60));
+											text.scale.multiplyScalar(scale);
+											text.scale.y *= -1;
+											text.position.copy(this.fsEntry);
+											text.fsEntry = this.fsEntry;
+											text.position.x += this.fsEntry.scale * textScale * 30;
+											text.position.y -= this.fsEntry.scale * textScale * 7.5;
+											text.position.y += this.fsEntry.scale * 0.25 + this.fsEntry.scale * 0.75 * (1-vAspect);
+										}
+									};
+									xhr.send();
+								}
 							}
 						} else {
 							stack.push(o);
