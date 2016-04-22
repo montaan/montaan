@@ -138,7 +138,7 @@ function start(font, texture) {
 			for (var i=0; i<visibleFiles.children.length; i++) {
 				var c = visibleFiles.children[i];
 				var fsEntry = c.fsEntry;
-				if (!Geometry.quadInsideFrustum(fsEntry.index, this, camera) || fsEntry.scale * 50 / camera.fov < 0.3) {
+				if (!Geometry.quadInsideFrustum(fsEntry.index, this, camera) || fsEntry.scale * 50 / Math.max(camera.fov, camera.targetFOV) < 0.3) {
 					if (!c.geometry.layout) {
 						if (c.material && c.material.map) {
 							c.material.map.dispose();
@@ -160,7 +160,7 @@ function start(font, texture) {
 					var o = obj.entries[name];
 					var idx = o.index;
 					if (!Geometry.quadInsideFrustum(idx, this, camera)) {
-					} else if (o.scale * 50 / camera.fov > 0.3) {
+					} else if (o.scale * 50 / Math.max(camera.fov, camera.targetFOV) > 0.3) {
 						if (o.entries === null) {
 							var fullPath = getFullPath(o);
 							if (visibleFiles.children.length < 20 && !visibleFiles.visibleSet[fullPath]) {
@@ -1075,6 +1075,32 @@ function start(font, texture) {
 
 		}
 	}, false);
+	window.onkeydown = function(ev) {
+		if (!ev.target || ev.target.tagName !== 'INPUT') {
+			var factor = 0.0001;
+			var dx = 0, dy = 0;
+			switch (ev.keyCode) {
+				case 39:
+					dx = -50;
+				break;
+
+				case 40:
+					dy = -50;
+				break;
+				
+				case 37:
+					dx = 50;
+				break;
+
+				case 38:
+					dy = 50;
+				break;
+
+			}
+			camera.targetPosition.x -= factor*dx * camera.fov;
+			camera.targetPosition.y += factor*dy * camera.fov;
+		}
+	};
 	renderer.domElement.onmousedown = function(ev) {
 		if (ghInput) {
 			ghInput.blur();
@@ -1111,6 +1137,7 @@ function start(font, texture) {
 				camera.position.x -= factor*dx * camera.fov;
 				camera.position.y += factor*dy * camera.fov;
 				camera.targetPosition.copy(camera.position);
+				camera.targetFOV = camera.fov;
 			}
 		}
 	};
