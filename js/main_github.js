@@ -904,7 +904,7 @@ function start(font, texture) {
 			// };
 			// xhr.send();
 
-			navigateTo('v8.txt', function() {
+			navigateTo('artoolkit5.txt', function() {
 				// setLoaded(false);
 				// treeLoaded = true;
 				// loadTick();
