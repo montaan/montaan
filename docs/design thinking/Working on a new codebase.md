@@ -15,3 +15,5 @@ The way I work on a new codebase is by:
 	3. Change something small. See if it compiles.
 
 	4. *Focused full reading of a file* to gain a fuller understanding of the things surrounding the modified bit.
+
+	
