@@ -10,6 +10,8 @@ var Layout = require('./Layout.js');
 var createText = require('three-bmfont-text');
 var SDFShader = require('three-bmfont-text/shaders/sdf');
 var loadFont = require('load-bmfont');
+var lunr = require('lunr');
+
 
 var loadFontImage = function (opt, cb) {
   loadFont(opt.font, function (err, font) {
@@ -26,7 +28,7 @@ loadFontImage({
   image: 'fnt/DejaVu-sdf.png'
 }, start)
 
-function start(font, texture) {
+function start(font, fontTexture) {
 
 	Layout.font = font;
 
@@ -48,17 +50,25 @@ function start(font, texture) {
 		return branch;
 	};
 
-	var textMaterial = new THREE.RawShaderMaterial(SDFShader({
-		map: texture,
-		side: THREE.DoubleSide,
-		transparent: true,
-		color: 0xffffff,
-		// polygonOffset: true,
-		// polygonOffsetFactor: -0.2,
-		// polygonOffsetUnits: 0.1,
-		depthTest: false,
-		depthWrite: false
-	}));
+	var makeTextMaterial = function() {
+		return new THREE.RawShaderMaterial(SDFShader({
+			map: fontTexture,
+			side: THREE.DoubleSide,
+			transparent: true,
+			color: 0xffffff,
+			// polygonOffset: true,
+			// polygonOffsetFactor: -0.2,
+			// polygonOffsetUnits: 0.1,
+			depthTest: false,
+			depthWrite: false
+		}));
+	};
+
+	var textMaterial = makeTextMaterial();
+	textMaterial.uniforms.palette = {type: 'v3v', value: [
+		new THREE.Vector3(1,1,1),
+		new THREE.Vector3(1,1,1)
+	]};
 
 	var minScale = 1000, maxScale = 0;
 	var textTick = function(t,dt) {
@@ -205,11 +215,61 @@ function start(font, texture) {
 									xhr.fsEntry = o;
 									xhr.onload = function() {
 										if (this.responseText.length < 2e5 && this.obj.parent) {
+											
 											var contents = this.responseText;
+											var result = hljs.highlightAuto(contents);
+											var doc = document.createElement('pre');
+											doc.className = 'hljs ' + result.language;
+											doc.innerHTML = result.value;
+											document.body.appendChild(doc);
+											// console.log(doc, result);
+											var paletteIndex = {};
+											var palette = [];
+											var txt = [];
+											var color = getComputedStyle(doc).color;
+											paletteIndex[color] = palette.length;
+											var c = new THREE.Color(color);
+											palette.push(new THREE.Vector3(c.r, c.g, c.b));
+											for (var i=0; i<doc.childNodes.length; i++) {
+												var cc = doc.childNodes[i];
+												if (cc.tagName) {
+													var color = getComputedStyle(cc).color;
+													if (!paletteIndex[color]) {
+														paletteIndex[color] = palette.length;
+														var c = new THREE.Color(color);
+														palette.push(new THREE.Vector3(c.r, c.g, c.b));
+													}
+													txt.push({
+														color: paletteIndex[color],
+														text: cc.textContent
+													});
+												} else {
+													txt.push({
+														color: 0,
+														text: cc.textContent
+													})
+												}
+											}
+											document.body.removeChild(doc);
+											// console.log(txt);
+
 											var text = this.obj;
 											text.visible = true;
-											text.geometry = createText({font: Layout.font, text: contents}),
-											text.material = textMaterial;
+											text.geometry = createText({font: Layout.font, text: contents});
+											var verts = text.geometry.attributes.position.array;
+											for (var i=0, off=3; i<txt.length; i++) {
+												var t = txt[i];
+												for (var j=0; j<t.text.length; j++) {
+													var c = t.text.charCodeAt(j);
+													if (c === 10 || c === 32 || c === 9 || c === 13) continue;
+													for (var k=0; k<6; k++) {
+														verts[off] = t.color;
+														off += 4;
+													}
+												}
+											}
+											text.material = makeTextMaterial();
+											text.material.uniforms.palette = {type: 'v3v', value: palette.slice(0,8)};
 											var textScale = 1 / Math.max(text.geometry.layout.width+60, (text.geometry.layout.height+30)/0.75);
 											var scale = this.fsEntry.scale * textScale;
 											var vAspect = Math.min(1, ((text.geometry.layout.height+30)/0.75) / (text.geometry.layout.width+60));
@@ -480,6 +540,7 @@ function start(font, texture) {
 	};
 
 	var navigateTo = function(url, onSuccess, onFailure) {
+		window.SearchIndex = null;
 		// var fileTree = {
 		// 	count: 5,
 		// 	tree: {name:"/", title:"/", index: 0, entries: {
@@ -904,7 +965,107 @@ function start(font, texture) {
 			// };
 			// xhr.send();
 
-			navigateTo('artoolkit5.txt', function() {
+			navigateTo('v8.txt', function() {
+				var xhr = new XMLHttpRequest;
+				xhr.open('GET', 'v8.lunr.json');
+				xhr.onload = function() {
+
+					var filterByTrigrams = function(trigramIndex, token, smallestTrigram) {
+						if (smallestTrigram === []) {
+							return smallestTrigram;
+						}
+						if (token.length < 3) {
+							return [];
+						} else {
+							for (var j=0; j<token.length-2; j++) {
+								var trigram = token.substring(j, j+3);
+								var tokens = trigramIndex[trigram];
+								if (!tokens) {
+									return [];
+								} else if (smallestTrigram === null || tokens.length < smallestTrigram.length) {
+									smallestTrigram = tokens;
+								}
+							}
+						}
+						return smallestTrigram;
+					};
+
+					var idx = window.SearchIndex = JSON.parse(this.responseText);
+					idx.tokenizer = lunr.tokenizer.load(idx.tokenizer);
+					idx.pipeline = lunr.Pipeline.load(idx.pipeline);
+					var trigramIndex = idx.trigramIndex = {};
+					for (var i=0; i<idx.tokens.length; i++) {
+						var token = idx.tokens[i][0];
+						for (var j=0; j<token.length-2; j++) {
+							var trigram = token.substring(j, j+3);
+							if (!trigramIndex[trigram]) {
+								trigramIndex[trigram] = [];
+							}
+							trigramIndex[trigram].push(idx.tokens[i]);
+						}
+						idx.tokens[i][1] = lunr.Index.deltaUnpack(idx.tokens[i][1]);
+					};
+
+					window.SearchIndex.searchByToken = function(queryToken) {
+						var filteredTokens = filterByTrigrams(this.trigramIndex, queryToken, this.tokens);
+						var hits = [];
+						var hitIndex = {};
+						for (var i=0; i<filteredTokens.length; i++) {
+							var tokenDocTFs = filteredTokens[i];
+							var token = tokenDocTFs[0];
+							var docs = tokenDocTFs[1];
+							var tfs = tokenDocTFs[2];
+							var matchScore = 0;
+							if (token.includes(queryToken)) {
+								matchScore = Math.max(matchScore, 1 - (token.length - queryToken.length) / token.length);
+							}
+							if (matchScore > 0) {
+								for (var j=0; j<docs.length; j++) {
+									var doc = docs[j];
+									if (!hitIndex[doc]) {
+										hitIndex[doc] = {id: doc, ref: this.docs[doc], score: 0};
+										hits.push(hitIndex[doc]);
+									}
+									hitIndex[doc].score += matchScore * tfs[j];
+								}
+							}
+						}
+						hits.sort(function(a,b) { return a.id - b.id; });
+						return hits;
+					};
+
+					window.SearchIndex.mergeHits = function(a, b) {
+						var hits = [];
+						for (var i=0, j=0; i<a.length && j<b.length;) {
+							if (a[i].id === b[j].id) {
+								a[i].score += b[j].score;
+								hits.push(a[i]);
+								i++;
+								j++;
+							} else if (a[i].id < b[j].id) {
+								i++;
+							} else {
+								j++;
+							}
+						}
+						return hits;
+					};
+
+					window.SearchIndex.search = function(query) {
+						var queryTokens = this.pipeline.run(this.tokenizer(query));
+						queryTokens = queryTokens.filter(function(q) { return q.length >= 3; });
+						if (queryTokens.length === 0) {
+							return [];
+						}
+						var hits = this.searchByToken(queryTokens[0]);
+						for (var j=1; j<queryTokens.length; j++) {
+							hits = this.mergeHits(hits, this.searchByToken(queryTokens[j]));
+						}
+						hits.sort(function(a,b) { return b.score - a.score; });
+						return hits;
+					}
+				};
+				xhr.send();
 				// setLoaded(false);
 				// treeLoaded = true;
 				// loadTick();
@@ -1375,12 +1536,12 @@ function start(font, texture) {
 	var highlightedResults = [];
 	window.highlightResults = function(results) {
 		var ca = model.geometry.attributes.color;
-		highlightedResults.forEach(function(highlighted) {
-			Geometry.setColor(ca.array, highlighted.index, Colors[highlighted.entries === null ? 'getFileColor' : 'getDirectoryColor'](highlighted), 0);
-		});
+		// highlightedResults.forEach(function(highlighted) {
+		// 	Geometry.setColor(ca.array, highlighted.index, Colors[highlighted.entries === null ? 'getFileColor' : 'getDirectoryColor'](highlighted), 0);
+		// });
 		for (var i = 0; i < results.length; i++) {
 			var fsEntry = results[i];
-			Geometry.setColor(ca.array, fsEntry.index, fsEntry.entries === null ? [1,0,0] : [0.6, 0, 0], 0);
+			// Geometry.setColor(ca.array, fsEntry.index, fsEntry.entries === null ? [1,0,0] : [0.6, 0, 0], 0);
 		}
 		highlightedResults = results;
 		ca.needsUpdate = true;
@@ -1388,8 +1549,17 @@ function start(font, texture) {
 	};
 
 	var searchResultsTimeout;
-	window.search = function(query) {
-		window.highlightResults(window.searchTree(query, window.FileTree, []));
+	window.search = function(query, rawQuery) {
+		var lunrResults = [];
+		if (window.SearchIndex) {
+			// console.time('token search');
+			lunrResults = window.SearchIndex.search(rawQuery);
+			lunrResults = lunrResults.map(function(r) {
+				return getPathEntry(window.FileTree, '/v8/v8/' + r.ref);
+			});
+			// console.timeEnd('token search');
+		}
+		window.highlightResults(window.searchTree(query, window.FileTree, lunrResults));
 		updateSearchLines();
 		window.searchResults.innerHTML = '';
 		clearTimeout(searchResultsTimeout);
@@ -1406,12 +1576,12 @@ function start(font, texture) {
 		a.applyMatrix4(model.matrixWorld);
 		var b = a;
 
-		var av = new THREE.Vector3(a.x, a.y, a.z);
+		var av = new THREE.Vector3(a.x + 0.05 * fsEntry.scale, a.y + 0.05 * fsEntry.scale, a.z);
 
 		var off = index * 4;
 		if (!bbox || bbox.bottom < 0 || bbox.top > window.innerHeight) {
-			var bv = new THREE.Vector3(b.x, b.y, b.z);
-			var aUp = new THREE.Vector3(av.x, av.y + 0.05/10, av.z + 0.15/10);
+			var bv = new THREE.Vector3(b.x - fsEntry.scale*0.25, av.y + 3.15*fsEntry.scale, av.z + 3.45*fsEntry.scale);
+			var aUp = new THREE.Vector3(av.x - fsEntry.scale*0.075, av.y + 0.05*fsEntry.scale, av.z + 0.15*fsEntry.scale);
 			// geo.vertices[off++].set(-100,-100,-100);
 			// geo.vertices[off++].set(-100,-100,-100);
 			// geo.vertices[off++].set(-100,-100,-100);
@@ -1438,7 +1608,8 @@ function start(font, texture) {
 		opacity: 0.5,
 		transparent: true,
 		depthTest: false,
-		depthWrite: false
+		depthWrite: false,
+		linewidth: 2
 	}));
 	searchLine.frustumCulled = false;
 	searchLine.geometry.vertices.push(new THREE.Vector3());
@@ -1536,7 +1707,7 @@ function start(font, texture) {
 		} else {
 			var segs = this.value.split(/\s+/);
 			var re = segs.map(function(r) { return new RegExp(r, "i"); });
-			window.search(re);
+			window.search(re, this.value);
 		}
 	};
 

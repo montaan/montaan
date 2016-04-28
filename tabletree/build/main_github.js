@@ -12,15 +12,15 @@ global.THREE=require("three");var Geometry=require("./Geometry.js"),Colors=requi
 
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./Colors.js":1,"./Geometry.js":2,"three":33,"three-bmfont-text":28}],4:[function(require,module,exports){
+},{"./Colors.js":1,"./Geometry.js":2,"three":34,"three-bmfont-text":29}],4:[function(require,module,exports){
 (function (global){
-function start(e,t){Layout.font=e;var n=function(e,t){t=t.replace(/\/+$/,"");for(var n=t.split("/");""===n[0];)n.shift();for(var i=e,o=0;o<n.length;o++){var r=n[o];if(i=i.entries[r],!i)return null}return i},i=new THREE.RawShaderMaterial(SDFShader({map:t,side:THREE.DoubleSide,transparent:!0,color:16777215,depthTest:!1,depthWrite:!1})),o=function(t,n){var o=Geometry.makeGeometry(t),r=0;n.index=[n];var a=new THREE.Object3D,l=new THREE.Object3D;Layout.createFileTreeQuads(n,r,o.attributes.position.array,o.attributes.color.array,0,0,0,1,0,a,l,n.index);var c=createText({text:"",font:e}),u=0;a.traverse(function(e){e.geometry&&(u+=e.geometry.attributes.position.array.length)});var d=c.attributes.position.array=new Float32Array(u),h=c.attributes.uv.array=new Float32Array(u/2),m=0;a.traverse(function(e){e.geometry&&(d.set(e.geometry.attributes.position.array,m),h.set(e.geometry.attributes.uv.array,m/2),m+=e.geometry.attributes.position.array.length)});var w=new THREE.Mesh(c,i),f=new THREE.Mesh(o,new THREE.MeshBasicMaterial({color:16777215,vertexColors:THREE.VertexColors})),v=new THREE.Object3D;return window.VF=v,f.add(v),v.visibleSet={},f.ontick=function(e,t){for(var n=0;n<v.children.length;n++){var o=v.children[n],r=o.fsEntry;if(!Geometry.quadInsideFrustum(r.index,this,s)||50*r.scale/Math.max(s.fov,s.targetFOV)<.3){o.geometry.layout||o.material&&o.material.map&&o.material.map.dispose(),o.geometry&&o.geometry.dispose();var a=U(r);v.visibleSet[a]=!1,v.remove(o),n--}}for(var l=[this.fileTree];l.length>0;){var c=l.pop();for(var u in c.entries){var d=c.entries[u],h=d.index;if(Geometry.quadInsideFrustum(h,this,s)){if(50*d.scale/Math.max(s.fov,s.targetFOV)>.3)if(null===d.entries){var a=U(d);if(v.children.length<20&&!v.visibleSet[a])if(Colors.imageRE.test(a)){var m=new THREE.Mesh;m.visible=!1,m.fsEntry=d,v.visibleSet[a]=!0,v.add(m),m.geometry=new THREE.PlaneBufferGeometry(1,1),m.scale.multiplyScalar(d.scale),m.position.set(d.x+.5*d.scale,d.y+.5*d.scale,d.z),m.visible=!1,window.imageObj=m;var w=new Image;w.src=a,w.obj=m,w.onload=function(){if(this.obj.parent){var e=(document.createElement("canvas"),Math.max(this.width,this.height));this.obj.scale.x*=this.width/e,this.obj.scale.y*=this.height/e,this.obj.material=new THREE.MeshBasicMaterial({map:new THREE.Texture(this),depthTest:!1,depthWrite:!1}),this.obj.material.map.needsUpdate=!0,this.obj.visible=!0}}}else{var m=new THREE.Mesh;m.visible=!1,m.fsEntry=d,v.visibleSet[a]=!0,v.add(m);var f=new XMLHttpRequest;f.open("GET",a),f.obj=m,f.fsEntry=d,f.onload=function(){if(this.responseText.length<2e5&&this.obj.parent){var e=this.responseText,t=this.obj;t.visible=!0,t.geometry=createText({font:Layout.font,text:e}),t.material=i;var n=1/Math.max(t.geometry.layout.width+60,(t.geometry.layout.height+30)/.75),o=this.fsEntry.scale*n,r=Math.min(1,(t.geometry.layout.height+30)/.75/(t.geometry.layout.width+60));t.scale.multiplyScalar(o),t.scale.y*=-1,t.position.copy(this.fsEntry),t.fsEntry=this.fsEntry,t.position.x+=this.fsEntry.scale*n*30,t.position.y-=this.fsEntry.scale*n*7.5,t.position.y+=.25*this.fsEntry.scale+.75*this.fsEntry.scale*(1-r)}},f.send()}}else l.push(d)}else;}}},f.fileTree=n,f.material.side=THREE.DoubleSide,f.add(w),f.add(l),f},r=new THREE.WebGLRenderer({antialias:!0,alpha:!1});r.domElement.id="renderCanvas",r.setPixelRatio(window.devicePixelRatio||1),r.setClearColor(198156,1),document.body.appendChild(r.domElement);var a=new THREE.Scene,s=new THREE.PerspectiveCamera(45,window.innerWidth/window.innerHeight,.5,5);s.position.z=2,a.add(s),window.onresize=function(){s.aspect=window.innerWidth/window.innerHeight,s.updateProjectionMatrix(),r.setSize(window.innerWidth,window.innerHeight),re=!0},window.onresize();var l,c,u=new THREE.Object3D;u.position.set(-.5,-.5,0);var d=new THREE.Object3D;d.rotation.x=-.5,d.position.set(.5,.5,0),a.add(u),u.add(d);var h,m,w,f,v=function(e){f&&(f.onload=void 0),re=!0,l&&(l.parent.remove(l),l.traverse(function(e){e.geometry&&e.geometry.dispose()}),l=null),c&&(c.parent.remove(c),c.traverse(function(e){e.geometry&&e.geometry.dispose()}),c=null),m&&(m.visible=!1,m.parent.remove(m),m=null),w&&(w.visible=!1,w.parent.remove(w),w=null),window.FileTree=e.tree,l=o(e.count,e.tree),l.position.set(-.5,-.5,0),d.add(l)},p=function(e){e?(document.body.classList.add("loaded"),setTimeout(function(){document.body.classList.contains("loaded")&&(document.getElementById("loader").style.display="none")},1e3)):(document.getElementById("loader").style.display="block",document.body.classList.remove("loaded"))},y=function(e,t,n){utils.loadFiles(e,function(e){p(!0),v(e),t&&t()},n)},g=function(e,t,n){utils.loadFromText(e,function(e){p(!0),v(e),t&&t()},n)},E=!0,b=null,x="",T="";if(!document.body.classList.contains("gdrive")){h=document.getElementById("git");var R=document.getElementById("gitshow");R.onclick=function(e){var t=h.value,i=t.match(/^(((https?|git):\/*)?(git\.|www\.)?github.com\/)?([^\/]+)\/([^\/]+)/i);if(i){var r=i[5]+"/"+i[6];if(r===b)return;p(!1),b=r;var a="https://api.github.com/repos/"+r+"/git/trees/master?recursive=1",u="https://api.github.com/repos/"+r+"/commits";y(a,function(){if(E=!0,s.targetPosition.x=0,s.targetPosition.y=0,s.targetFOV=50,x){var e=n(window.FileTree,x);e&&N(e,l)}window.searchInput.value=T,window.searchInput.oninput(),x="",T="",window.history&&window.history.replaceState?history.pushState({},"","?github/"+encodeURIComponent(h.value)):location="#github/"+encodeURIComponent(h.value),f=new XMLHttpRequest,f.open("GET",u),f.onload=function(e){for(var t=JSON.parse(e.target.responseText),n={},i={name:"By date",title:"By date",index:0,entries:{}},r={name:"By author",title:"By author",index:0,entries:{}},a={name:"Commits",title:"Commits",index:0,entries:{"By date":i,"By author":r}},s={name:"/",title:"/",index:0,entries:{Commits:a}},l=4,u=0;u<t.length;u++){for(var h=t[u],m=h.commit.message.split("\n"),w=h.sha,f=0;f<m.length;f++)if(!/^\s*$/.test(m[f])){w=m[f];break}var v={name:h.sha,title:w,index:0,href:h.html_url,color:Colors.document,entries:{message:{name:"message",title:h.commit.message,href:h.html_url,index:0,entries:null},author:{name:"author",title:h.commit.author.name,href:h.html_url,index:0,entries:null},date:{name:"date",title:h.commit.author.date,href:h.html_url,entries:null},sha:{name:"sha",title:h.sha,href:h.html_url,index:0,entries:null}}},p={name:h.sha,title:w,index:0,href:h.html_url,color:Colors.document,entries:{message:{name:"message",title:h.commit.message,href:h.html_url,index:0,entries:null},author:{name:"author",title:h.commit.author.name,href:h.html_url,index:0,entries:null},date:{name:"date",title:h.commit.author.date,href:h.html_url,entries:null},sha:{name:"sha",title:h.sha,href:h.html_url,index:0,entries:null}}},y=h.commit.author.name,g=n[y];g||(g=n[y]={authors:[],commits:[]},r.entries[y]={name:y,title:h.commit.author.name,index:0,entries:{}},l++),r.entries[y].entries[h.sha]=p,l+=5,g.authors.push(h.commit.author),g.commits.push(h);var E=new Date(h.commit.author.date),b=E.getFullYear().toString(),b=((E.getMonth()+1).toString(),E.getDate().toString(),h.commit.author.date.split("T")[0]),x=i.entries[b];x||(x=i.entries[b]={name:b,title:b,index:0,entries:{}},l++),x.entries[h.sha]=v,l+=5}window.CommitTree={tree:s,count:l},c=o(window.CommitTree.count,window.CommitTree.tree),c.position.set(.5,-.5,0),d.add(c),re=!0},f.send()},function(){p(!0)}),h.blur(),searchInput.blur()}else p(!1),y(t,function(){E=!1,p(!0),s.targetPosition.x=0,s.targetPosition.y=0,s.targetFOV=50,window.searchInput.value=T,window.searchInput.oninput(),x="",T="",window.history&&window.history.replaceState?history.pushState({},"","?find/"+encodeURIComponent(h.value)):location="#find/"+encodeURIComponent(h.value)},function(){p(!0)}),h.blur(),searchInput.blur()},h.addEventListener("keydown",function(e){13===e.keyCode&&(e.preventDefault(),R.onclick(e))},!1),h.addEventListener("input",function(e){},!1);var F=document.location.hash.replace(/^#/,"");if(0===F.length&&(F=document.location.search.replace(/^\?/,"")),F.length>0){var H=F.split("&"),M=H[1],D=decodeURIComponent(H[0].replace(/^(github|find)\//,""));if(H[0].match(/^github/)){var C=D.split("/").slice(0,2).join("/");x=D}else{var C=D;x=""}T=(M||"").replace(/^q\=/,""),window.searchInput.value=T,h.value=C,R.click()}else{y("v8.txt",function(){})}}window.GDriveCallback=v;var k=function(e,t){return e.toLowerCase().localeCompare(t.toLowerCase())},I=function(){E=!1,p(!0),s.targetPosition.x=0,s.targetPosition.y=0,s.targetFOV=50,window.searchInput.value=T,window.searchInput.oninput(),x="",T="",window.history&&window.history.replaceState?history.pushState({},"",""):location="#"};window.fileInput.onchange=function(){if(0!==this.files.length){p(!1);var e=this.files[0];this.value="",setTimeout(function(){var t=new FileReader;t.onload=function(e){g(t.result,I),p(!0)},t.readAsText(e)},500)}},(void 0===window.directoryInput.webkitdirectory&&void 0===window.directoryInput.directory||/mobile/i.test(window.navigator.userAgent))&&document.body.classList.add("no-directory"),/mobile/i.test(window.navigator.userAgent)&&document.body.classList.add("mobile"),window.directoryInput.onchange=function(){if(this.files.length>0){p(!1);var e=[].map.call(this.files,function(e){return"/"+e.webkitRelativePath});this.value="",setTimeout(function(){var t={};e.forEach(function(e){for(var n=e.substring(0,e.lastIndexOf("/")),i=n.split("/"),o=1;o<=i.length;o++){var r=i.slice(0,o).join("/");t[r]=1}});var n=[];for(var i in t)n.push(i+"/");g(n.sort(k).concat(e).join("\n")+"\n",I),p(!0)},500)}};var S,j,L,P,V,q,O=!1,Y=!1,z=!1;r.domElement.addEventListener("touchstart",function(e){if(h&&h.blur(),window.searchInput&&searchInput.blur(),!window.DocFrame)if(e.preventDefault(),1===e.touches.length)r.domElement.onmousedown(e.touches[0]);else if(2===e.touches.length){z=!0;var t=e.touches[0].clientX-e.touches[1].clientX,n=e.touches[0].clientY-e.touches[1].clientY;V=Math.sqrt(t*t+n*n),q={clientX:e.touches[1].clientX+t/2,clientY:e.touches[1].clientY+n/2},r.domElement.onmousedown(q)}},!1),r.domElement.addEventListener("touchmove",function(e){if(!window.DocFrame)if(e.preventDefault(),1===e.touches.length)z||window.onmousemove(e.touches[0],525e-7);else if(2===e.touches.length){var t=e.touches[0].clientX-e.touches[1].clientX,n=e.touches[0].clientY-e.touches[1].clientY,i=V/Math.sqrt(t*t+n*n);V=Math.sqrt(t*t+n*n),q={clientX:e.touches[1].clientX+t/2,clientY:e.touches[1].clientY+n/2};var o=575e-7*(q.clientX-window.innerWidth/2)*s.fov,r=575e-7*(q.clientY-window.innerHeight/2)*s.fov;X(i,o,r),window.onmousemove(q)}},!1),r.domElement.addEventListener("touchend",function(e){window.DocFrame||(e.preventDefault(),0===e.touches.length?z?(z=!1,window.onmouseup(q)):window.onmouseup(e.changedTouches[0]):1===e.touches.length)},!1),r.domElement.addEventListener("touchcancel",function(e){window.DocFrame||(e.preventDefault(),0===e.touches.length?z?(z=!1,window.onmouseup(q)):window.onmouseup(e.changedTouches[0]):1===e.touches.length)},!1),window.onkeydown=function(e){if(!e.target||"INPUT"!==e.target.tagName){var t=1e-4,n=0,i=0;switch(e.keyCode){case 39:n=-50;break;case 40:i=-50;break;case 37:n=50;break;case 38:i=50}s.targetPosition.x-=t*n*s.fov,s.targetPosition.y+=t*i*s.fov}},r.domElement.onmousedown=function(e){h&&h.blur(),window.searchInput&&searchInput.blur(),window.DocFrame||(e.preventDefault&&e.preventDefault(),O=!0,Y=!1,L=S=e.clientX,P=j=e.clientY)},window.onmousemove=function(e,t){if(!window.DocFrame&&O){t||(t=1e-4),re=!0,e.preventDefault&&e.preventDefault();var n=e.clientX-S,i=e.clientY-j;S=e.clientX,j=e.clientY,(Math.abs(e.clientX-L)>10||Math.abs(e.clientY-P)>10)&&(Y=!0),e.shiftKey?(d.rotation.z+=.01*n,d.rotation.x+=.01*i):(s.position.x-=t*n*s.fov,s.position.y+=t*i*s.fov,s.targetPosition.copy(s.position),s.targetFOV=s.fov)}};var B=Date.now(),X=function(e,t,n){(1>e||s.fov<120)&&(s.position.x+=t-t*e,s.position.y-=n-n*e,s.fov*=e,s.fov>120&&(s.fov=120),s.targetFOV=s.fov,s.targetPosition.copy(s.position),s.updateProjectionMatrix(),re=!0)},G=0;r.domElement.onwheel=function(e){if(!window.DocFrame){e.preventDefault();var t=575e-7*(e.clientX-window.innerWidth/2)*s.fov,n=575e-7*(e.clientY-window.innerHeight/2)*s.fov,i=void 0!==e.deltaY?3*e.deltaY:e.wheelDelta;Date.now()-B>500&&(G=i),(i>20||-20>i)&&(i=20*i/Math.abs(i)),(0>i&&G>0||i>0&&0>G)&&(i=0),G=i,X(Math.pow(1.003,i),t,n),B=Date.now()}};var W=function(e){var t=document.createElement("iframe");t.style.width=window.innerWidth+"px",t.style.height=window.innerHeight-60+"px",t.style.position="absolute",t.style.top="0px",t.style.transform="translateY(-"+t.style.height+")",t.style.transition="0.5s",t.style.left="0px",t.style.zIndex=10,t.style.border="0",t.style.background="white",window.DocFrame=t,document.body.appendChild(t),setTimeout(function(){t.style.transform="translateY(0px)"},30),t.src=e},U=function(e){return e.parent?U(e.parent)+"/"+e.name:""},_=function(e){if(e.href)window.open(e.href,"_blank");else if(e.id){var t="https://drive.google.com/file/d/"+e.id+"/preview";W(t)}else if(E){var n=U(e),i=n.split("/");""===i[0]&&i.shift();var t="https://github.com/"+i.slice(0,2).join("/")+"/blob/master/"+i.slice(2).join("/");window.open(t,"_blank")}},N=function(e,t){a.updateMatrixWorld();var n=new THREE.Vector3(e.x+e.scale/2,e.y+e.scale/2,e.z);n.applyMatrix4(t.matrixWorld),s.targetPosition.copy(n),s.targetFOV=50*e.scale},A=null;window.onmouseup=function(e){if(e.preventDefault&&e.preventDefault(),Y)return void(O=!1);if(window.DocFrame){window.DocFrame.style.transform="translateY(-"+window.DocFrame.style.height+")";var t=window.DocFrame;return setTimeout(function(){t.parentNode.removeChild(t)},500),window.DocFrame=null,void(O=!1)}if(O){O=!1;var n=[l];c&&n.push(c),m&&n.push(m);var i=Geometry.findFSEntry(e,s,n,A);if(i){fsEntry=i.fsEntry;i.object.geometry.attributes.color;if(A!==fsEntry){A=fsEntry;var o=50*fsEntry.scale;o/s.fov>.3&&null===A.entries?null===A.entries&&_(A):N(fsEntry,i.object)}else null===A.entries&&_(A),A=null;return void(re=!0)}}},THREE.Object3D.prototype.tick=function(){this.ontick&&this.ontick();for(var e=0;e<this.children.length;e++)this.children[e].tick()},window.searchTree=function(e,t,n){e.every(function(e){return e.test(t.title)})&&n.push(t);for(var i in t.entries)searchTree(e,t.entries[i],n);return n};var $=[];window.highlightResults=function(e){var t=l.geometry.attributes.color;$.forEach(function(e){Geometry.setColor(t.array,e.index,Colors[null===e.entries?"getFileColor":"getDirectoryColor"](e),0)});for(var n=0;n<e.length;n++){var i=e[n];Geometry.setColor(t.array,i.index,null===i.entries?[1,0,0]:[.6,0,0],0)}$=e,t.needsUpdate=!0,re=!0};var J;window.search=function(e){window.highlightResults(window.searchTree(e,window.FileTree,[])),te(),window.searchResults.innerHTML="",clearTimeout(J),J=setTimeout(ie,200)};var K=new THREE.Mesh(new THREE.PlaneBufferGeometry(2e3,2e3),new THREE.MeshBasicMaterial({color:16711935}));K.visible=!1,K.position.z=.75,a.add(K);var Q=function(e,t,n,i){var o=new THREE.Vector3(t.x,t.y,t.z);o.applyMatrix4(l.matrixWorld);var a=o,c=new THREE.Vector3(o.x,o.y,o.z),u=4*i;if(!n||n.bottom<0||n.top>window.innerHeight)var d=new THREE.Vector3(a.x,a.y,a.z),h=new THREE.Vector3(c.x,c.y+.005,c.z+.015);else{K.visible=!0;var m=utils.findIntersectionsUnderEvent({clientX:n.left,clientY:n.top+24,target:r.domElement},s,[K]);K.visible=!1;var a=m[0].point,d=new THREE.Vector3(a.x,a.y,a.z),h=new THREE.Vector3(c.x,c.y,c.z)}e.vertices[u++].copy(c),e.vertices[u++].copy(h),e.vertices[u++].copy(h),e.vertices[u++].copy(d)},Z=new THREE.LineSegments(new THREE.Geometry,new THREE.LineBasicMaterial({color:16711680,opacity:.5,transparent:!0,depthTest:!1,depthWrite:!1}));Z.frustumCulled=!1,Z.geometry.vertices.push(new THREE.Vector3),Z.geometry.vertices.push(new THREE.Vector3);for(var ee=0;4e4>ee;ee++)Z.geometry.vertices.push(new THREE.Vector3(-100,-100,-100));var te=function(){if(ne(),$.length<=Z.geometry.vertices.length/4)for(var e=0,t=$.length;t>e;e++){var n=null,i=window.searchResults.childNodes[e];i&&i.classList.contains("hover")&&(Z.hovered=!0,n=i.getBoundingClientRect()),Q(Z.geometry,$[e],n,e)}(e>0||e!==Z.lastUpdate)&&(Z.geometry.verticesNeedUpdate=!0,re=!0,Z.lastUpdate=e),window.LineModel&&(window.LineModel.visible=0===$.length)};Z.hovered=!1,Z.ontick=function(){(window.searchResults.querySelector(".hover")||Z.hovered)&&te()};var ne=function(){for(var e=Z.geometry,t=e.vertices,n=0;n<t.length;n++){var i=t[n];i.x=i.y=i.z=0}e.verticesNeedUpdate=!0,re=!0},ie=function(){window.searchResults.innerHTML="";te()};window.searchResults.onscroll=function(){re=!0},window.searchInput.oninput=function(){if(""===this.value&&$.length>0)window.searchResults.innerHTML="",window.highlightResults([]),te();else if(""===this.value)window.searchResults.innerHTML="",te();else{var e=this.value.split(/\s+/),t=e.map(function(e){return new RegExp(e,"i")});window.search(t)}};var oe=(new THREE.Matrix4,function(){a.remove(Z),a.add(Z),a.updateMatrixWorld(!0),a.tick(),r.render(a,s)}),re=!0;s.targetPosition=(new THREE.Vector3).copy(s.position),s.targetFOV=s.fov;var ae=performance.now(),se=function(){var e=performance.now(),t=e-ae;ae+=t,16>t&&(t=16),s.targetPosition.x===s.position.x&&s.targetPosition.y===s.position.y&&s.fov===s.targetFOV||(s.position.x+=(s.targetPosition.x-s.position.x)*(1-Math.pow(.95,t/16)),s.position.y+=(s.targetPosition.y-s.position.y)*(1-Math.pow(.95,t/16)),Math.abs(s.position.x-s.targetPosition.x)<1e-5*s.fov&&(s.position.x=s.targetPosition.x),Math.abs(s.position.y-s.targetPosition.y)<1e-5*s.fov&&(s.position.y=s.targetPosition.y),s.fov+=(s.targetFOV-s.fov)*(1-Math.pow(.95,t/16)),Math.abs(s.fov-s.targetFOV)<s.targetFOV/1e3&&(s.fov=s.targetFOV),s.updateProjectionMatrix(),re=!0),re&&oe(),re=!1,window.requestAnimationFrame(se)};se();var le=document.getElementById("fullscreen");le&&(document.exitFullscreen||document.webkitExitFullscreen||document.webkitExitFullScreen||document.mozCancelFullScreen||document.msExitFullscreen)?(le.onclick=function(){var e=document;if(e.fullscreenElement||e.webkitFullscreenElement||e.webkitFullScreenElement||e.mozFullScreenElement||e.msFullscreenElement)(e.exitFullscreen||e.webkitExitFullscreen||e.webkitExitFullScreen||e.mozCancelFullScreen||e.msExitFullscreen).call(e);else{var t=document.body;(t.requestFullscreen||t.webkitRequestFullscreen||t.webkitRequestFullScreen||t.mozRequestFullScreen||t.msRequestFullscreen).call(t)}},window.navigator.standalone===!0&&(le.style.opacity="0")):le&&(le.style.opacity="0"),window.git.focus()}"serviceWorker"in navigator&&navigator.serviceWorker.register("/service-worker.js"),global.THREE=require("three");var utils=require("./utils.js"),Geometry=require("./Geometry.js"),Colors=require("./Colors.js"),Layout=require("./Layout.js"),createText=require("three-bmfont-text"),SDFShader=require("three-bmfont-text/shaders/sdf"),loadFont=require("load-bmfont"),loadFontImage=function(e,t){loadFont(e.font,function(n,i){if(n)throw n;(new THREE.TextureLoader).load(e.image,function(e){t(i,e)})})};loadFontImage({font:"fnt/DejaVu-sdf.fnt",image:"fnt/DejaVu-sdf.png"},start);
+function start(e,t){Layout.font=e;var n=function(e,t){t=t.replace(/\/+$/,"");for(var n=t.split("/");""===n[0];)n.shift();for(var i=e,o=0;o<n.length;o++){var r=n[o];if(i=i.entries[r],!i)return null}return i},i=new THREE.RawShaderMaterial(SDFShader({map:t,side:THREE.DoubleSide,transparent:!0,color:16777215,depthTest:!1,depthWrite:!1})),o=function(t,n){var o=Geometry.makeGeometry(t),r=0;n.index=[n];var a=new THREE.Object3D,l=new THREE.Object3D;Layout.createFileTreeQuads(n,r,o.attributes.position.array,o.attributes.color.array,0,0,0,1,0,a,l,n.index);var c=createText({text:"",font:e}),u=0;a.traverse(function(e){e.geometry&&(u+=e.geometry.attributes.position.array.length)});var d=c.attributes.position.array=new Float32Array(u),h=c.attributes.uv.array=new Float32Array(u/2),m=0;a.traverse(function(e){e.geometry&&(d.set(e.geometry.attributes.position.array,m),h.set(e.geometry.attributes.uv.array,m/2),m+=e.geometry.attributes.position.array.length)});var w=new THREE.Mesh(c,i),f=new THREE.Mesh(o,new THREE.MeshBasicMaterial({color:16777215,vertexColors:THREE.VertexColors})),v=new THREE.Object3D;return window.VF=v,f.add(v),v.visibleSet={},f.ontick=function(e,t){for(var n=0;n<v.children.length;n++){var o=v.children[n],r=o.fsEntry;if(!Geometry.quadInsideFrustum(r.index,this,s)||50*r.scale/Math.max(s.fov,s.targetFOV)<.3){o.geometry.layout||o.material&&o.material.map&&o.material.map.dispose(),o.geometry&&o.geometry.dispose();var a=U(r);v.visibleSet[a]=!1,v.remove(o),n--}}for(var l=[this.fileTree];l.length>0;){var c=l.pop();for(var u in c.entries){var d=c.entries[u],h=d.index;if(Geometry.quadInsideFrustum(h,this,s)){if(50*d.scale/Math.max(s.fov,s.targetFOV)>.3)if(null===d.entries){var a=U(d);if(v.children.length<20&&!v.visibleSet[a])if(Colors.imageRE.test(a)){var m=new THREE.Mesh;m.visible=!1,m.fsEntry=d,v.visibleSet[a]=!0,v.add(m),m.geometry=new THREE.PlaneBufferGeometry(1,1),m.scale.multiplyScalar(d.scale),m.position.set(d.x+.5*d.scale,d.y+.5*d.scale,d.z),m.visible=!1,window.imageObj=m;var w=new Image;w.src=a,w.obj=m,w.onload=function(){if(this.obj.parent){var e=(document.createElement("canvas"),Math.max(this.width,this.height));this.obj.scale.x*=this.width/e,this.obj.scale.y*=this.height/e,this.obj.material=new THREE.MeshBasicMaterial({map:new THREE.Texture(this),depthTest:!1,depthWrite:!1}),this.obj.material.map.needsUpdate=!0,this.obj.visible=!0}}}else{var m=new THREE.Mesh;m.visible=!1,m.fsEntry=d,v.visibleSet[a]=!0,v.add(m);var f=new XMLHttpRequest;f.open("GET",a),f.obj=m,f.fsEntry=d,f.onload=function(){if(this.responseText.length<2e5&&this.obj.parent){var e=this.responseText,t=this.obj;t.visible=!0,t.geometry=createText({font:Layout.font,text:e}),t.material=i;var n=1/Math.max(t.geometry.layout.width+60,(t.geometry.layout.height+30)/.75),o=this.fsEntry.scale*n,r=Math.min(1,(t.geometry.layout.height+30)/.75/(t.geometry.layout.width+60));t.scale.multiplyScalar(o),t.scale.y*=-1,t.position.copy(this.fsEntry),t.fsEntry=this.fsEntry,t.position.x+=this.fsEntry.scale*n*30,t.position.y-=this.fsEntry.scale*n*7.5,t.position.y+=.25*this.fsEntry.scale+.75*this.fsEntry.scale*(1-r)}},f.send()}}else l.push(d)}else;}}},f.fileTree=n,f.material.side=THREE.DoubleSide,f.add(w),f.add(l),f},r=new THREE.WebGLRenderer({antialias:!0,alpha:!1});r.domElement.id="renderCanvas",r.setPixelRatio(window.devicePixelRatio||1),r.setClearColor(198156,1),document.body.appendChild(r.domElement);var a=new THREE.Scene,s=new THREE.PerspectiveCamera(45,window.innerWidth/window.innerHeight,.5,5);s.position.z=2,a.add(s),window.onresize=function(){s.aspect=window.innerWidth/window.innerHeight,s.updateProjectionMatrix(),r.setSize(window.innerWidth,window.innerHeight),re=!0},window.onresize();var l,c,u=new THREE.Object3D;u.position.set(-.5,-.5,0);var d=new THREE.Object3D;d.rotation.x=-.5,d.position.set(.5,.5,0),a.add(u),u.add(d);var h,m,w,f,v=function(e){f&&(f.onload=void 0),re=!0,l&&(l.parent.remove(l),l.traverse(function(e){e.geometry&&e.geometry.dispose()}),l=null),c&&(c.parent.remove(c),c.traverse(function(e){e.geometry&&e.geometry.dispose()}),c=null),m&&(m.visible=!1,m.parent.remove(m),m=null),w&&(w.visible=!1,w.parent.remove(w),w=null),window.FileTree=e.tree,l=o(e.count,e.tree),l.position.set(-.5,-.5,0),d.add(l)},p=function(e){e?(document.body.classList.add("loaded"),setTimeout(function(){document.body.classList.contains("loaded")&&(document.getElementById("loader").style.display="none")},1e3)):(document.getElementById("loader").style.display="block",document.body.classList.remove("loaded"))},g=function(e,t,n){window.SearchIndex=null,utils.loadFiles(e,function(e){p(!0),v(e),t&&t()},n)},y=function(e,t,n){utils.loadFromText(e,function(e){p(!0),v(e),t&&t()},n)},E=!0,b=null,x="",T="";if(!document.body.classList.contains("gdrive")){h=document.getElementById("git");var R=document.getElementById("gitshow");R.onclick=function(e){var t=h.value,i=t.match(/^(((https?|git):\/*)?(git\.|www\.)?github.com\/)?([^\/]+)\/([^\/]+)/i);if(i){var r=i[5]+"/"+i[6];if(r===b)return;p(!1),b=r;var a="https://api.github.com/repos/"+r+"/git/trees/master?recursive=1",u="https://api.github.com/repos/"+r+"/commits";g(a,function(){if(E=!0,s.targetPosition.x=0,s.targetPosition.y=0,s.targetFOV=50,x){var e=n(window.FileTree,x);e&&N(e,l)}window.searchInput.value=T,window.searchInput.oninput(),x="",T="",window.history&&window.history.replaceState?history.pushState({},"","?github/"+encodeURIComponent(h.value)):location="#github/"+encodeURIComponent(h.value),f=new XMLHttpRequest,f.open("GET",u),f.onload=function(e){for(var t=JSON.parse(e.target.responseText),n={},i={name:"By date",title:"By date",index:0,entries:{}},r={name:"By author",title:"By author",index:0,entries:{}},a={name:"Commits",title:"Commits",index:0,entries:{"By date":i,"By author":r}},s={name:"/",title:"/",index:0,entries:{Commits:a}},l=4,u=0;u<t.length;u++){for(var h=t[u],m=h.commit.message.split("\n"),w=h.sha,f=0;f<m.length;f++)if(!/^\s*$/.test(m[f])){w=m[f];break}var v={name:h.sha,title:w,index:0,href:h.html_url,color:Colors.document,entries:{message:{name:"message",title:h.commit.message,href:h.html_url,index:0,entries:null},author:{name:"author",title:h.commit.author.name,href:h.html_url,index:0,entries:null},date:{name:"date",title:h.commit.author.date,href:h.html_url,entries:null},sha:{name:"sha",title:h.sha,href:h.html_url,index:0,entries:null}}},p={name:h.sha,title:w,index:0,href:h.html_url,color:Colors.document,entries:{message:{name:"message",title:h.commit.message,href:h.html_url,index:0,entries:null},author:{name:"author",title:h.commit.author.name,href:h.html_url,index:0,entries:null},date:{name:"date",title:h.commit.author.date,href:h.html_url,entries:null},sha:{name:"sha",title:h.sha,href:h.html_url,index:0,entries:null}}},g=h.commit.author.name,y=n[g];y||(y=n[g]={authors:[],commits:[]},r.entries[g]={name:g,title:h.commit.author.name,index:0,entries:{}},l++),r.entries[g].entries[h.sha]=p,l+=5,y.authors.push(h.commit.author),y.commits.push(h);var E=new Date(h.commit.author.date),b=E.getFullYear().toString(),b=((E.getMonth()+1).toString(),E.getDate().toString(),h.commit.author.date.split("T")[0]),x=i.entries[b];x||(x=i.entries[b]={name:b,title:b,index:0,entries:{}},l++),x.entries[h.sha]=v,l+=5}window.CommitTree={tree:s,count:l},c=o(window.CommitTree.count,window.CommitTree.tree),c.position.set(.5,-.5,0),d.add(c),re=!0},f.send()},function(){p(!0)}),h.blur(),searchInput.blur()}else p(!1),g(t,function(){E=!1,p(!0),s.targetPosition.x=0,s.targetPosition.y=0,s.targetFOV=50,window.searchInput.value=T,window.searchInput.oninput(),x="",T="",window.history&&window.history.replaceState?history.pushState({},"","?find/"+encodeURIComponent(h.value)):location="#find/"+encodeURIComponent(h.value)},function(){p(!0)}),h.blur(),searchInput.blur()},h.addEventListener("keydown",function(e){13===e.keyCode&&(e.preventDefault(),R.onclick(e))},!1),h.addEventListener("input",function(e){},!1);var F=document.location.hash.replace(/^#/,"");if(0===F.length&&(F=document.location.search.replace(/^\?/,"")),F.length>0){var H=F.split("&"),k=H[1],M=decodeURIComponent(H[0].replace(/^(github|find)\//,""));if(H[0].match(/^github/)){var I=M.split("/").slice(0,2).join("/");x=M}else{var I=M;x=""}T=(k||"").replace(/^q\=/,""),window.searchInput.value=T,h.value=I,R.click()}else{g("v8.txt",function(){var e=new XMLHttpRequest;e.open("GET","v8.lunr.json"),e.onload=function(){var e=function(e,t,n){if(n===[])return n;if(t.length<3)return[];for(var i=0;i<t.length-2;i++){var o=t.substring(i,i+3),r=e[o];if(!r)return[];(null===n||r.length<n.length)&&(n=r)}return n},t=window.SearchIndex=JSON.parse(this.responseText);t.tokenizer=lunr.tokenizer.load(t.tokenizer),t.pipeline=lunr.Pipeline.load(t.pipeline);for(var n=t.trigramIndex={},i=0;i<t.tokens.length;i++){for(var o=t.tokens[i][0],r=0;r<o.length-2;r++){var a=o.substring(r,r+3);n[a]||(n[a]=[]),n[a].push(t.tokens[i])}t.tokens[i][1]=lunr.Index.deltaUnpack(t.tokens[i][1])}window.SearchIndex.searchByToken=function(t){for(var n=e(this.trigramIndex,t,this.tokens),i=[],o={},r=0;r<n.length;r++){var a=n[r],s=a[0],l=a[1],c=a[2],u=0;if(s.includes(t)&&(u=Math.max(u,1-(s.length-t.length)/s.length)),u>0)for(var d=0;d<l.length;d++){var h=l[d];o[h]||(o[h]={id:h,ref:this.docs[h],score:0},i.push(o[h])),o[h].score+=u*c[d]}}return i.sort(function(e,t){return e.id-t.id}),i},window.SearchIndex.mergeHits=function(e,t){for(var n=[],i=0,o=0;i<e.length&&o<t.length;)e[i].id===t[o].id?(e[i].score+=t[o].score,n.push(e[i]),i++,o++):e[i].id<t[o].id?i++:o++;return n},window.SearchIndex.search=function(e){var t=this.pipeline.run(this.tokenizer(e));if(t=t.filter(function(e){return e.length>=3}),0===t.length)return[];for(var n=this.searchByToken(t[0]),i=1;i<t.length;i++)n=this.mergeHits(n,this.searchByToken(t[i]));return n.sort(function(e,t){return t.score-e.score}),n}},e.send()})}}window.GDriveCallback=v;var D=function(e,t){return e.toLowerCase().localeCompare(t.toLowerCase())},S=function(){E=!1,p(!0),s.targetPosition.x=0,s.targetPosition.y=0,s.targetFOV=50,window.searchInput.value=T,window.searchInput.oninput(),x="",T="",window.history&&window.history.replaceState?history.pushState({},"",""):location="#"};window.fileInput.onchange=function(){if(0!==this.files.length){p(!1);var e=this.files[0];this.value="",setTimeout(function(){var t=new FileReader;t.onload=function(e){y(t.result,S),p(!0)},t.readAsText(e)},500)}},(void 0===window.directoryInput.webkitdirectory&&void 0===window.directoryInput.directory||/mobile/i.test(window.navigator.userAgent))&&document.body.classList.add("no-directory"),/mobile/i.test(window.navigator.userAgent)&&document.body.classList.add("mobile"),window.directoryInput.onchange=function(){if(this.files.length>0){p(!1);var e=[].map.call(this.files,function(e){return"/"+e.webkitRelativePath});this.value="",setTimeout(function(){var t={};e.forEach(function(e){for(var n=e.substring(0,e.lastIndexOf("/")),i=n.split("/"),o=1;o<=i.length;o++){var r=i.slice(0,o).join("/");t[r]=1}});var n=[];for(var i in t)n.push(i+"/");y(n.sort(D).concat(e).join("\n")+"\n",S),p(!0)},500)}};var C,j,L,P,V,q,z=!1,O=!1,B=!1;r.domElement.addEventListener("touchstart",function(e){if(h&&h.blur(),window.searchInput&&searchInput.blur(),!window.DocFrame)if(e.preventDefault(),1===e.touches.length)r.domElement.onmousedown(e.touches[0]);else if(2===e.touches.length){B=!0;var t=e.touches[0].clientX-e.touches[1].clientX,n=e.touches[0].clientY-e.touches[1].clientY;V=Math.sqrt(t*t+n*n),q={clientX:e.touches[1].clientX+t/2,clientY:e.touches[1].clientY+n/2},r.domElement.onmousedown(q)}},!1),r.domElement.addEventListener("touchmove",function(e){if(!window.DocFrame)if(e.preventDefault(),1===e.touches.length)B||window.onmousemove(e.touches[0],525e-7);else if(2===e.touches.length){var t=e.touches[0].clientX-e.touches[1].clientX,n=e.touches[0].clientY-e.touches[1].clientY,i=V/Math.sqrt(t*t+n*n);V=Math.sqrt(t*t+n*n),q={clientX:e.touches[1].clientX+t/2,clientY:e.touches[1].clientY+n/2};var o=575e-7*(q.clientX-window.innerWidth/2)*s.fov,r=575e-7*(q.clientY-window.innerHeight/2)*s.fov;X(i,o,r),window.onmousemove(q)}},!1),r.domElement.addEventListener("touchend",function(e){window.DocFrame||(e.preventDefault(),0===e.touches.length?B?(B=!1,window.onmouseup(q)):window.onmouseup(e.changedTouches[0]):1===e.touches.length)},!1),r.domElement.addEventListener("touchcancel",function(e){window.DocFrame||(e.preventDefault(),0===e.touches.length?B?(B=!1,window.onmouseup(q)):window.onmouseup(e.changedTouches[0]):1===e.touches.length)},!1),window.onkeydown=function(e){if(!e.target||"INPUT"!==e.target.tagName){var t=1e-4,n=0,i=0;switch(e.keyCode){case 39:n=-50;break;case 40:i=-50;break;case 37:n=50;break;case 38:i=50}s.targetPosition.x-=t*n*s.fov,s.targetPosition.y+=t*i*s.fov}},r.domElement.onmousedown=function(e){h&&h.blur(),window.searchInput&&searchInput.blur(),window.DocFrame||(e.preventDefault&&e.preventDefault(),z=!0,O=!1,L=C=e.clientX,P=j=e.clientY)},window.onmousemove=function(e,t){if(!window.DocFrame&&z){t||(t=1e-4),re=!0,e.preventDefault&&e.preventDefault();var n=e.clientX-C,i=e.clientY-j;C=e.clientX,j=e.clientY,(Math.abs(e.clientX-L)>10||Math.abs(e.clientY-P)>10)&&(O=!0),e.shiftKey?(d.rotation.z+=.01*n,d.rotation.x+=.01*i):(s.position.x-=t*n*s.fov,s.position.y+=t*i*s.fov,s.targetPosition.copy(s.position),s.targetFOV=s.fov)}};var Y=Date.now(),X=function(e,t,n){(1>e||s.fov<120)&&(s.position.x+=t-t*e,s.position.y-=n-n*e,s.fov*=e,s.fov>120&&(s.fov=120),s.targetFOV=s.fov,s.targetPosition.copy(s.position),s.updateProjectionMatrix(),re=!0)},G=0;r.domElement.onwheel=function(e){if(!window.DocFrame){e.preventDefault();var t=575e-7*(e.clientX-window.innerWidth/2)*s.fov,n=575e-7*(e.clientY-window.innerHeight/2)*s.fov,i=void 0!==e.deltaY?3*e.deltaY:e.wheelDelta;Date.now()-Y>500&&(G=i),(i>20||-20>i)&&(i=20*i/Math.abs(i)),(0>i&&G>0||i>0&&0>G)&&(i=0),G=i,X(Math.pow(1.003,i),t,n),Y=Date.now()}};var W=function(e){var t=document.createElement("iframe");t.style.width=window.innerWidth+"px",t.style.height=window.innerHeight-60+"px",t.style.position="absolute",t.style.top="0px",t.style.transform="translateY(-"+t.style.height+")",t.style.transition="0.5s",t.style.left="0px",t.style.zIndex=10,t.style.border="0",t.style.background="white",window.DocFrame=t,document.body.appendChild(t),setTimeout(function(){t.style.transform="translateY(0px)"},30),t.src=e},U=function(e){return e.parent?U(e.parent)+"/"+e.name:""},_=function(e){if(e.href)window.open(e.href,"_blank");else if(e.id){var t="https://drive.google.com/file/d/"+e.id+"/preview";W(t)}else if(E){var n=U(e),i=n.split("/");""===i[0]&&i.shift();var t="https://github.com/"+i.slice(0,2).join("/")+"/blob/master/"+i.slice(2).join("/");window.open(t,"_blank")}},N=function(e,t){a.updateMatrixWorld();var n=new THREE.Vector3(e.x+e.scale/2,e.y+e.scale/2,e.z);n.applyMatrix4(t.matrixWorld),s.targetPosition.copy(n),s.targetFOV=50*e.scale},A=null;window.onmouseup=function(e){if(e.preventDefault&&e.preventDefault(),O)return void(z=!1);if(window.DocFrame){window.DocFrame.style.transform="translateY(-"+window.DocFrame.style.height+")";var t=window.DocFrame;return setTimeout(function(){t.parentNode.removeChild(t)},500),window.DocFrame=null,void(z=!1)}if(z){z=!1;var n=[l];c&&n.push(c),m&&n.push(m);var i=Geometry.findFSEntry(e,s,n,A);if(i){fsEntry=i.fsEntry;i.object.geometry.attributes.color;if(A!==fsEntry){A=fsEntry;var o=50*fsEntry.scale;o/s.fov>.3&&null===A.entries?null===A.entries&&_(A):N(fsEntry,i.object)}else null===A.entries&&_(A),A=null;return void(re=!0)}}},THREE.Object3D.prototype.tick=function(){this.ontick&&this.ontick();for(var e=0;e<this.children.length;e++)this.children[e].tick()},window.searchTree=function(e,t,n){e.every(function(e){return e.test(t.title)})&&n.push(t);for(var i in t.entries)searchTree(e,t.entries[i],n);return n};var J=[];window.highlightResults=function(e){var t=l.geometry.attributes.color;J.forEach(function(e){Geometry.setColor(t.array,e.index,Colors[null===e.entries?"getFileColor":"getDirectoryColor"](e),0)});for(var n=0;n<e.length;n++){var i=e[n];Geometry.setColor(t.array,i.index,null===i.entries?[1,0,0]:[.6,0,0],0)}J=e,t.needsUpdate=!0,re=!0};var $;window.search=function(e,t){var i=[];window.SearchIndex&&(i=window.SearchIndex.search(t),i=i.map(function(e){return n(window.FileTree,"/v8/v8/"+e.ref)})),window.highlightResults(window.searchTree(e,window.FileTree,i)),te(),window.searchResults.innerHTML="",clearTimeout($),$=setTimeout(ie,200)};var K=new THREE.Mesh(new THREE.PlaneBufferGeometry(2e3,2e3),new THREE.MeshBasicMaterial({color:16711935}));K.visible=!1,K.position.z=.75,a.add(K);var Q=function(e,t,n,i){var o=new THREE.Vector3(t.x,t.y,t.z);o.applyMatrix4(l.matrixWorld);var a=o,c=new THREE.Vector3(o.x,o.y,o.z),u=4*i;if(!n||n.bottom<0||n.top>window.innerHeight)var d=new THREE.Vector3(a.x,a.y,a.z),h=new THREE.Vector3(c.x,c.y+.005,c.z+.015);else{K.visible=!0;var m=utils.findIntersectionsUnderEvent({clientX:n.left,clientY:n.top+24,target:r.domElement},s,[K]);K.visible=!1;var a=m[0].point,d=new THREE.Vector3(a.x,a.y,a.z),h=new THREE.Vector3(c.x,c.y,c.z)}e.vertices[u++].copy(c),e.vertices[u++].copy(h),e.vertices[u++].copy(h),e.vertices[u++].copy(d)},Z=new THREE.LineSegments(new THREE.Geometry,new THREE.LineBasicMaterial({color:16711680,opacity:.5,transparent:!0,depthTest:!1,depthWrite:!1}));Z.frustumCulled=!1,Z.geometry.vertices.push(new THREE.Vector3),Z.geometry.vertices.push(new THREE.Vector3);for(var ee=0;4e4>ee;ee++)Z.geometry.vertices.push(new THREE.Vector3(-100,-100,-100));var te=function(){if(ne(),J.length<=Z.geometry.vertices.length/4)for(var e=0,t=J.length;t>e;e++){var n=null,i=window.searchResults.childNodes[e];i&&i.classList.contains("hover")&&(Z.hovered=!0,n=i.getBoundingClientRect()),Q(Z.geometry,J[e],n,e)}(e>0||e!==Z.lastUpdate)&&(Z.geometry.verticesNeedUpdate=!0,re=!0,Z.lastUpdate=e),window.LineModel&&(window.LineModel.visible=0===J.length)};Z.hovered=!1,Z.ontick=function(){(window.searchResults.querySelector(".hover")||Z.hovered)&&te()};var ne=function(){for(var e=Z.geometry,t=e.vertices,n=0;n<t.length;n++){var i=t[n];i.x=i.y=i.z=0}e.verticesNeedUpdate=!0,re=!0},ie=function(){window.searchResults.innerHTML="";te()};window.searchResults.onscroll=function(){re=!0},window.searchInput.oninput=function(){if(""===this.value&&J.length>0)window.searchResults.innerHTML="",window.highlightResults([]),te();else if(""===this.value)window.searchResults.innerHTML="",te();else{var e=this.value.split(/\s+/),t=e.map(function(e){return new RegExp(e,"i")});window.search(t,this.value)}};var oe=(new THREE.Matrix4,function(){a.remove(Z),a.add(Z),a.updateMatrixWorld(!0),a.tick(),r.render(a,s)}),re=!0;s.targetPosition=(new THREE.Vector3).copy(s.position),s.targetFOV=s.fov;var ae=performance.now(),se=function(){var e=performance.now(),t=e-ae;ae+=t,16>t&&(t=16),s.targetPosition.x===s.position.x&&s.targetPosition.y===s.position.y&&s.fov===s.targetFOV||(s.position.x+=(s.targetPosition.x-s.position.x)*(1-Math.pow(.95,t/16)),s.position.y+=(s.targetPosition.y-s.position.y)*(1-Math.pow(.95,t/16)),Math.abs(s.position.x-s.targetPosition.x)<1e-5*s.fov&&(s.position.x=s.targetPosition.x),Math.abs(s.position.y-s.targetPosition.y)<1e-5*s.fov&&(s.position.y=s.targetPosition.y),s.fov+=(s.targetFOV-s.fov)*(1-Math.pow(.95,t/16)),Math.abs(s.fov-s.targetFOV)<s.targetFOV/1e3&&(s.fov=s.targetFOV),s.updateProjectionMatrix(),re=!0),re&&oe(),re=!1,window.requestAnimationFrame(se)};se();var le=document.getElementById("fullscreen");le&&(document.exitFullscreen||document.webkitExitFullscreen||document.webkitExitFullScreen||document.mozCancelFullScreen||document.msExitFullscreen)?(le.onclick=function(){var e=document;if(e.fullscreenElement||e.webkitFullscreenElement||e.webkitFullScreenElement||e.mozFullScreenElement||e.msFullscreenElement)(e.exitFullscreen||e.webkitExitFullscreen||e.webkitExitFullScreen||e.mozCancelFullScreen||e.msExitFullscreen).call(e);else{var t=document.body;(t.requestFullscreen||t.webkitRequestFullscreen||t.webkitRequestFullScreen||t.mozRequestFullScreen||t.msRequestFullscreen).call(t)}},window.navigator.standalone===!0&&(le.style.opacity="0")):le&&(le.style.opacity="0"),window.git.focus()}"serviceWorker"in navigator&&navigator.serviceWorker.register("/service-worker.js"),global.THREE=require("three");var utils=require("./utils.js"),Geometry=require("./Geometry.js"),Colors=require("./Colors.js"),Layout=require("./Layout.js"),createText=require("three-bmfont-text"),SDFShader=require("three-bmfont-text/shaders/sdf"),loadFont=require("load-bmfont"),lunr=require("lunr"),loadFontImage=function(e,t){loadFont(e.font,function(n,i){if(n)throw n;(new THREE.TextureLoader).load(e.image,function(e){t(i,e)})})};loadFontImage({font:"fnt/DejaVu-sdf.fnt",image:"fnt/DejaVu-sdf.png"},start);
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./Colors.js":1,"./Geometry.js":2,"./Layout.js":3,"./utils.js":5,"load-bmfont":18,"three":33,"three-bmfont-text":28,"three-bmfont-text/shaders/sdf":31}],5:[function(require,module,exports){
+},{"./Colors.js":1,"./Geometry.js":2,"./Layout.js":3,"./utils.js":5,"load-bmfont":18,"lunr":20,"three":34,"three-bmfont-text":29,"three-bmfont-text/shaders/sdf":32}],5:[function(require,module,exports){
 function checkAuth(){console.log("checkAuth"),gapi.auth.authorize({client_id:CLIENT_ID,scope:SCOPES.join(" "),immediate:!0},handleAuthResult)}function handleAuthResult(e){var t=document.getElementById("authorize-div");e&&!e.error?(t.style.display="none",loadDriveApi()):t.style.display="inline"}function handleAuthClick(e){return gapi.auth.authorize({client_id:CLIENT_ID,scope:SCOPES,immediate:!1},handleAuthResult),!1}function loadDriveApi(){window.GDriveCallback=window.GDriveCallback||function(e){console.log(e)};var e=function(){var e=gapi.client.drive.files.list({pageSize:1e3,trashed:!1,spaces:"drive",orderBy:"name",fields:"nextPageToken, files(id, name, parents, mimeType, thumbnailLink, iconLink)"}),t=[],r=function(e){if(e&&e.length>0){var t={},r={name:"/",title:"Drive",entries:{},index:0},n={name:"Drive",title:"Drive",entries:{},index:0};r.entries.Drive=n;for(var i=0;i<e.length;i++){var a=e[i];a.entries=null,a.title=a.name,a.name=a.id,t[a.id]=a}for(var i=0;i<e.length;i++){var a=e[i];if(a.parents)for(var s=0;s<a.parents.length;s++){var l=t[a.parents[s]];l||(l=n),l.entries||(l.entries={}),l.entries[a.name]=a}else n.entries[a.name]=a}}window.GDriveCallback({tree:r,count:e.length})},n=function(e){t=t.concat(e.files||[]);var i=e.nextPageToken;if(i&&t.length<1e4){var a=gapi.client.drive.files.list({pageSize:1e3,trashed:!1,pageToken:i,orderBy:"name",fields:"nextPageToken, files(id, name, parents, mimeType, thumbnailLink, iconLink)"});a.execute(n),console.log(t.length)}else r(t)};e.execute(n)};gapi.client.load("drive","v3",e)}var THREE=require("three"),slash="/".charCodeAt(0),CLIENT_ID="671524571878.apps.googleusercontent.com",SCOPES=["https://www.googleapis.com/auth/drive.readonly"];window.checkAuth=checkAuth,window.handleAuthClick=handleAuthClick;var utils=module.exports={findIntersectionsUnderEvent:function(e,t,r){var n=getComputedStyle(e.target),i=n.getPropertyValue("transform"),a=n.getPropertyValue("transform-origin"),s=a.replace(/px/g,"").split(" ");s[0]=parseFloat(s[0]),s[1]=parseFloat(s[1]),s[2]=parseFloat(s[2]||0);var l=new THREE.Matrix4;if(l.identity(),/^matrix\(/.test(i)){var o=i.replace(/^matrix\(|\)$/g,"").split(" ");l.elements[0]=parseFloat(o[0]),l.elements[1]=parseFloat(o[1]),l.elements[4]=parseFloat(o[2]),l.elements[5]=parseFloat(o[3]),l.elements[12]=parseFloat(o[4]),l.elements[13]=parseFloat(o[5])}else if(/^matrix3d\(/i.test(i))for(var o=i.replace(/^matrix3d\(|\)$/gi,"").split(" "),u=0;16>u;u++)l.elements[u]=parseFloat(o[u]);var c=new THREE.Matrix4;c.makeTranslation(s[0],s[1],s[2]),c.multiply(l),l.makeTranslation(-s[0],-s[1],-s[2]),c.multiply(l);var v=e.target.getBoundingClientRect(),p=new THREE.Vector3(e.clientX-v.left,e.clientY-v.top,0);p.applyMatrix4(c);var h=parseFloat(n.getPropertyValue("width")),d=parseFloat(n.getPropertyValue("height")),m=new THREE.Vector3(p.x/h*2-1,2*-(p.y/d)+1,.5);m.unproject(t),m.sub(t.position),m.normalize();var f=new THREE.Raycaster(t.position,m),g=f.intersectObjects(r);return g},findObjectUnderEvent:function(e,t,r){var n=this.findIntersectionsUnderEvent(e,t,r);if(n.length>0){var i=n[0].object;return i}},addFileTreeEntry:function(e,t){var r=!1;e.charCodeAt(e.length-1)===slash&&(r=!0);var n=e.split("/");r&&n.pop();for(var i=t,a=0,s=0;s<n.length-1;s++){var l=n[s];null===i.entries&&(i.entries={}),"object"!=typeof i.entries[l]&&(i.entries[l]={name:l,title:l,entries:{},index:0},a++),i=i.entries[l]}return null===i.entries&&(i.entries={}),"object"!=typeof i.entries[n[s]]&&(i.entries[n[s]]={name:n[s],title:n[s],entries:r?{}:null,index:0},a++),a},traverseTree:function(e,t){var r=e.tree;this.traverseFSEntry(r,t,"")},traverseFSEntry:function(e,t,r){var n=r+e.name;if(t(e,n),e.entries){var i=n+"/";for(var a in e.entries)this.traverseFSEntry(e.entries[a],t,i)}},convertXMLToTree:function(e,t){var r={name:t.value++,title:e.tagName||"document",index:0,entries:{}},n=[];if(e.attributes)for(var i=0;i<e.attributes.length;i++){var a=e.attributes[i];n.push({name:t.value++,title:a.name+"="+a.value,index:0,entries:null})}for(var s,i=0,l=e.childNodes.length;l>i;i++){var o=e.childNodes[i];o.tagName?(s=this.convertXMLToTree(o,t),r.entries[s.name]=s):o.textContent&&/\S/.test(o.textContent)&&n.push({name:t.value++,title:o.textContent,index:0,entries:null})}for(var i=0;i<n.length;i++)s=n[i],r.entries[s.name]=s;return r},convertBookmarksToTree:function(e,t){if("A"===e.tagName)return{name:t.value++,title:e.textContent,index:0,entries:null,href:e.href};if("DL"===e.tagName){var r=e.parentNode.querySelector("H1,H2,H3,H4,H5,H6"),n="";r&&(n=r.textContent);for(var i,a={name:t.value++,title:n,index:0,entries:{}},s=[],l=0,o=e.childNodes.length;o>l;l++){var u=e.childNodes[l];i=this.convertBookmarksToTree(u,t),i&&(i.entries?a.entries[i.name]=i:s.push(i))}for(var l=0;l<s.length;l++)i=s[l],a.entries[i.name]=i;return a}for(var l=0,o=e.childNodes.length;o>l;l++){var i=this.convertBookmarksToTree(e.childNodes[l],t);if(i)return i}},parseFileList:function(e,t,r){var n=t&&t.responseXML;if(!n){var i=new DOMParser,a=void 0;/^\s*<\!DOCTYPE /i.test(e)?a="text/html":/^\s*<\?xml /.test(e)?a="application/xml":/^\s*<html/i.test(e)&&(a="text/html"),a&&(n=i.parseFromString(e,a),n.querySelector("parsererror")&&(n=void 0))}if(n){if(/^\s*\<\!DOCTYPE NETSCAPE-Bookmark-file-1>/.test(e)){var s={value:0},l=this.convertBookmarksToTree(n,s);return{tree:{name:-1,title:"",index:0,entries:{Bookmarks:l}},count:s.value+1}}var s={value:0};window.xml=n;var l=this.convertXMLToTree(n,s);return{tree:{name:-1,title:"",index:0,entries:{XML:l}},count:s.value+1}}try{var o=JSON.parse(e);if(o&&o.sha&&o.url&&/\/git\//.test(o.url)&&o.tree)return this.parseGitHubTree(o);o&&o instanceof Array&&o.every(function(e){return"string"==typeof e})&&(e=o.join("\n")+"\n")}catch(u){}return this.parseFileList_(e,r)},parseFileList_:function(e,t){for(var r={name:"",title:"",entries:{},index:0},n="",i=0,a=0,s=!t,l=0,o=0;o<e.length;o++)if(10===e.charCodeAt(o)){if(s){var u=e.substring(i+l,o).split("/");n=u[u.length-2]+"/",l=o-n.length,s=!1}else n=e.substring(i+l,o);i=o+1,a+=utils.addFileTreeEntry(n,r)}return{tree:r,count:a}},parseGitHubTree:function(e){var t=e.url.match(/^https:\/\/api\.github\.com\/repos\/([^\/]+)\/([^\/]+)/),r="";if(!t)return parseFileList_("");r=t[1],t=t[1]+"/"+t[2];var n=e.tree.map(function(e){return"/"+t+"/"+e.path+("tree"===e.type?"/":"")});return this.parseFileList_("/"+r+"/\n/"+t+"/\n"+n.join("\n")+"\n")},loadFromText:function(e,t,r){try{t(this.parseFileList(e,{}),e)}catch(n){r&&r(n)}},loadFiles:function(e,t,r){var n=this,i=new XMLHttpRequest;i.open("GET",e),i.onload=function(e){t(n.parseFileList(e.target.responseText,e.target),e.target.responseText)},i.onerror=r,i.send()}};
 
 
-},{"three":33}],6:[function(require,module,exports){
+},{"three":34}],6:[function(require,module,exports){
 var str = Object.prototype.toString
 
 module.exports = anArray
@@ -55,7 +55,7 @@ module.exports = function (a, b) {
     return true;
 };
 
-},{"buffer":39}],9:[function(require,module,exports){
+},{"buffer":40}],9:[function(require,module,exports){
 module.exports = function(dtype) {
   switch (dtype) {
     case 'int8':
@@ -554,7 +554,7 @@ function getAlignType(align) {
     return ALIGN_RIGHT
   return ALIGN_LEFT
 }
-},{"as-number":7,"indexof-property":13,"word-wrapper":35,"xtend":38}],18:[function(require,module,exports){
+},{"as-number":7,"indexof-property":13,"word-wrapper":36,"xtend":39}],18:[function(require,module,exports){
 (function (Buffer){
 var xhr = require('xhr')
 var noop = function(){}
@@ -654,7 +654,7 @@ function getBinaryOpts(opt) {
   }, opt)
 }
 }).call(this,require("buffer").Buffer)
-},{"./lib/is-binary":19,"buffer":39,"parse-bmfont-ascii":22,"parse-bmfont-binary":23,"parse-bmfont-xml":24,"xhr":36,"xtend":38}],19:[function(require,module,exports){
+},{"./lib/is-binary":19,"buffer":40,"parse-bmfont-ascii":23,"parse-bmfont-binary":24,"parse-bmfont-xml":25,"xhr":37,"xtend":39}],19:[function(require,module,exports){
 (function (Buffer){
 var equal = require('buffer-equal')
 var HEADER = new Buffer([66, 77, 70, 3])
@@ -665,7 +665,2217 @@ module.exports = function(buf) {
   return buf.length > 4 && equal(buf.slice(0, 4), HEADER)
 }
 }).call(this,require("buffer").Buffer)
-},{"buffer":39,"buffer-equal":8}],20:[function(require,module,exports){
+},{"buffer":40,"buffer-equal":8}],20:[function(require,module,exports){
+/**
+ * lunr - http://lunrjs.com - A bit like Solr, but much smaller and not as bright - 0.7.0
+ * Copyright (C) 2016 Oliver Nightingale
+ * MIT Licensed
+ * @license
+ */
+
+;(function(){
+
+/**
+ * Convenience function for instantiating a new lunr index and configuring it
+ * with the default pipeline functions and the passed config function.
+ *
+ * When using this convenience function a new index will be created with the
+ * following functions already in the pipeline:
+ *
+ * lunr.StopWordFilter - filters out any stop words before they enter the
+ * index
+ *
+ * lunr.stemmer - stems the tokens before entering the index.
+ *
+ * Example:
+ *
+ *     var idx = lunr(function () {
+ *       this.field('title', 10)
+ *       this.field('tags', 100)
+ *       this.field('body')
+ *       
+ *       this.ref('cid')
+ *       
+ *       this.pipeline.add(function () {
+ *         // some custom pipeline function
+ *       })
+ *       
+ *     })
+ *
+ * @param {Function} config A function that will be called with the new instance
+ * of the lunr.Index as both its context and first parameter. It can be used to
+ * customize the instance of new lunr.Index.
+ * @namespace
+ * @module
+ * @returns {lunr.Index}
+ *
+ */
+var lunr = function (config) {
+  var idx = new lunr.Index
+
+  idx.pipeline.add(
+    lunr.trimmer,
+    lunr.stopWordFilter,
+    lunr.stemmer
+  )
+
+  if (config) config.call(idx, idx)
+
+  return idx
+}
+
+lunr.version = "0.7.0"
+/*!
+ * lunr.utils
+ * Copyright (C) 2016 Oliver Nightingale
+ */
+
+/**
+ * A namespace containing utils for the rest of the lunr library
+ */
+lunr.utils = {}
+
+/**
+ * Print a warning message to the console.
+ *
+ * @param {String} message The message to be printed.
+ * @memberOf Utils
+ */
+lunr.utils.warn = (function (global) {
+  return function (message) {
+    if (global.console && console.warn) {
+      console.warn(message)
+    }
+  }
+})(this)
+
+/**
+ * Convert an object to a string.
+ *
+ * In the case of `null` and `undefined` the function returns
+ * the empty string, in all other cases the result of calling
+ * `toString` on the passed object is returned.
+ *
+ * @param {Any} obj The object to convert to a string.
+ * @return {String} string representation of the passed object.
+ * @memberOf Utils
+ */
+lunr.utils.asString = function (obj) {
+  if (obj === void 0 || obj === null) {
+    return ""
+  } else {
+    return obj.toString()
+  }
+}
+/*!
+ * lunr.EventEmitter
+ * Copyright (C) 2016 Oliver Nightingale
+ */
+
+/**
+ * lunr.EventEmitter is an event emitter for lunr. It manages adding and removing event handlers and triggering events and their handlers.
+ *
+ * @constructor
+ */
+lunr.EventEmitter = function () {
+  this.events = {}
+}
+
+/**
+ * Binds a handler function to a specific event(s).
+ *
+ * Can bind a single function to many different events in one call.
+ *
+ * @param {String} [eventName] The name(s) of events to bind this function to.
+ * @param {Function} fn The function to call when an event is fired.
+ * @memberOf EventEmitter
+ */
+lunr.EventEmitter.prototype.addListener = function () {
+  var args = Array.prototype.slice.call(arguments),
+      fn = args.pop(),
+      names = args
+
+  if (typeof fn !== "function") throw new TypeError ("last argument must be a function")
+
+  names.forEach(function (name) {
+    if (!this.hasHandler(name)) this.events[name] = []
+    this.events[name].push(fn)
+  }, this)
+}
+
+/**
+ * Removes a handler function from a specific event.
+ *
+ * @param {String} eventName The name of the event to remove this function from.
+ * @param {Function} fn The function to remove from an event.
+ * @memberOf EventEmitter
+ */
+lunr.EventEmitter.prototype.removeListener = function (name, fn) {
+  if (!this.hasHandler(name)) return
+
+  var fnIndex = this.events[name].indexOf(fn)
+  this.events[name].splice(fnIndex, 1)
+
+  if (!this.events[name].length) delete this.events[name]
+}
+
+/**
+ * Calls all functions bound to the given event.
+ *
+ * Additional data can be passed to the event handler as arguments to `emit`
+ * after the event name.
+ *
+ * @param {String} eventName The name of the event to emit.
+ * @memberOf EventEmitter
+ */
+lunr.EventEmitter.prototype.emit = function (name) {
+  if (!this.hasHandler(name)) return
+
+  var args = Array.prototype.slice.call(arguments, 1)
+
+  this.events[name].forEach(function (fn) {
+    fn.apply(undefined, args)
+  })
+}
+
+/**
+ * Checks whether a handler has ever been stored against an event.
+ *
+ * @param {String} eventName The name of the event to check.
+ * @private
+ * @memberOf EventEmitter
+ */
+lunr.EventEmitter.prototype.hasHandler = function (name) {
+  return name in this.events
+}
+
+/*!
+ * lunr.tokenizer
+ * Copyright (C) 2016 Oliver Nightingale
+ */
+
+/**
+ * A function for splitting a string into tokens ready to be inserted into
+ * the search index. Uses `lunr.tokenizer.seperator` to split strings, change
+ * the value of this property to change how strings are split into tokens.
+ *
+ * @module
+ * @param {String} obj The string to convert into tokens
+ * @see lunr.tokenizer.seperator
+ * @returns {Array}
+ */
+lunr.tokenizer = function (obj) {
+  if (!arguments.length || obj == null || obj == undefined) return []
+  if (Array.isArray(obj)) return obj.map(function (t) { return lunr.utils.asString(t).toLowerCase() })
+
+  return obj.toString().trim().toLowerCase().split(lunr.tokenizer.seperator)
+}
+
+/**
+ * The sperator used to split a string into tokens. Override this property to change the behaviour of
+ * `lunr.tokenizer` behaviour when tokenizing strings. By default this splits on whitespace and hyphens.
+ *
+ * @static
+ * @see lunr.tokenizer
+ */
+lunr.tokenizer.seperator = /[\s\-]+/
+
+/**
+ * Loads a previously serialised tokenizer.
+ *
+ * A tokenizer function to be loaded must already be registered with lunr.tokenizer.
+ * If the serialised tokenizer has not been registered then an error will be thrown.
+ *
+ * @param {String} label The label of the serialised tokenizer.
+ * @returns {Function}
+ * @memberOf tokenizer
+ */
+lunr.tokenizer.load = function (label) {
+  var fn = this.registeredFunctions[label]
+
+  if (!fn) {
+    throw new Error('Cannot load un-registered function: ' + label)
+  }
+
+  return fn
+}
+
+lunr.tokenizer.label = 'default'
+
+lunr.tokenizer.registeredFunctions = {
+  'default': lunr.tokenizer
+}
+
+/**
+ * Register a tokenizer function.
+ *
+ * Functions that are used as tokenizers should be registered if they are to be used with a serialised index.
+ *
+ * Registering a function does not add it to an index, functions must still be associated with a specific index for them to be used when indexing and searching documents.
+ *
+ * @param {Function} fn The function to register.
+ * @param {String} label The label to register this function with
+ * @memberOf tokenizer
+ */
+lunr.tokenizer.registerFunction = function (fn, label) {
+  if (label in this.registeredFunctions) {
+    lunr.utils.warn('Overwriting existing tokenizer: ' + label)
+  }
+
+  fn.label = label
+  this.registeredFunctions[label] = fn
+}
+/*!
+ * lunr.Pipeline
+ * Copyright (C) 2016 Oliver Nightingale
+ */
+
+/**
+ * lunr.Pipelines maintain an ordered list of functions to be applied to all
+ * tokens in documents entering the search index and queries being ran against
+ * the index.
+ *
+ * An instance of lunr.Index created with the lunr shortcut will contain a
+ * pipeline with a stop word filter and an English language stemmer. Extra
+ * functions can be added before or after either of these functions or these
+ * default functions can be removed.
+ *
+ * When run the pipeline will call each function in turn, passing a token, the
+ * index of that token in the original list of all tokens and finally a list of
+ * all the original tokens.
+ *
+ * The output of functions in the pipeline will be passed to the next function
+ * in the pipeline. To exclude a token from entering the index the function
+ * should return undefined, the rest of the pipeline will not be called with
+ * this token.
+ *
+ * For serialisation of pipelines to work, all functions used in an instance of
+ * a pipeline should be registered with lunr.Pipeline. Registered functions can
+ * then be loaded. If trying to load a serialised pipeline that uses functions
+ * that are not registered an error will be thrown.
+ *
+ * If not planning on serialising the pipeline then registering pipeline functions
+ * is not necessary.
+ *
+ * @constructor
+ */
+lunr.Pipeline = function () {
+  this._stack = []
+}
+
+lunr.Pipeline.registeredFunctions = {}
+
+/**
+ * Register a function with the pipeline.
+ *
+ * Functions that are used in the pipeline should be registered if the pipeline
+ * needs to be serialised, or a serialised pipeline needs to be loaded.
+ *
+ * Registering a function does not add it to a pipeline, functions must still be
+ * added to instances of the pipeline for them to be used when running a pipeline.
+ *
+ * @param {Function} fn The function to check for.
+ * @param {String} label The label to register this function with
+ * @memberOf Pipeline
+ */
+lunr.Pipeline.registerFunction = function (fn, label) {
+  if (label in this.registeredFunctions) {
+    lunr.utils.warn('Overwriting existing registered function: ' + label)
+  }
+
+  fn.label = label
+  lunr.Pipeline.registeredFunctions[fn.label] = fn
+}
+
+/**
+ * Warns if the function is not registered as a Pipeline function.
+ *
+ * @param {Function} fn The function to check for.
+ * @private
+ * @memberOf Pipeline
+ */
+lunr.Pipeline.warnIfFunctionNotRegistered = function (fn) {
+  var isRegistered = fn.label && (fn.label in this.registeredFunctions)
+
+  if (!isRegistered) {
+    lunr.utils.warn('Function is not registered with pipeline. This may cause problems when serialising the index.\n', fn)
+  }
+}
+
+/**
+ * Loads a previously serialised pipeline.
+ *
+ * All functions to be loaded must already be registered with lunr.Pipeline.
+ * If any function from the serialised data has not been registered then an
+ * error will be thrown.
+ *
+ * @param {Object} serialised The serialised pipeline to load.
+ * @returns {lunr.Pipeline}
+ * @memberOf Pipeline
+ */
+lunr.Pipeline.load = function (serialised) {
+  var pipeline = new lunr.Pipeline
+
+  serialised.forEach(function (fnName) {
+    var fn = lunr.Pipeline.registeredFunctions[fnName]
+
+    if (fn) {
+      pipeline.add(fn)
+    } else {
+      throw new Error('Cannot load un-registered function: ' + fnName)
+    }
+  })
+
+  return pipeline
+}
+
+/**
+ * Adds new functions to the end of the pipeline.
+ *
+ * Logs a warning if the function has not been registered.
+ *
+ * @param {Function} functions Any number of functions to add to the pipeline.
+ * @memberOf Pipeline
+ */
+lunr.Pipeline.prototype.add = function () {
+  var fns = Array.prototype.slice.call(arguments)
+
+  fns.forEach(function (fn) {
+    lunr.Pipeline.warnIfFunctionNotRegistered(fn)
+    this._stack.push(fn)
+  }, this)
+}
+
+/**
+ * Adds a single function after a function that already exists in the
+ * pipeline.
+ *
+ * Logs a warning if the function has not been registered.
+ *
+ * @param {Function} existingFn A function that already exists in the pipeline.
+ * @param {Function} newFn The new function to add to the pipeline.
+ * @memberOf Pipeline
+ */
+lunr.Pipeline.prototype.after = function (existingFn, newFn) {
+  lunr.Pipeline.warnIfFunctionNotRegistered(newFn)
+
+  var pos = this._stack.indexOf(existingFn)
+  if (pos == -1) {
+    throw new Error('Cannot find existingFn')
+  }
+
+  pos = pos + 1
+  this._stack.splice(pos, 0, newFn)
+}
+
+/**
+ * Adds a single function before a function that already exists in the
+ * pipeline.
+ *
+ * Logs a warning if the function has not been registered.
+ *
+ * @param {Function} existingFn A function that already exists in the pipeline.
+ * @param {Function} newFn The new function to add to the pipeline.
+ * @memberOf Pipeline
+ */
+lunr.Pipeline.prototype.before = function (existingFn, newFn) {
+  lunr.Pipeline.warnIfFunctionNotRegistered(newFn)
+
+  var pos = this._stack.indexOf(existingFn)
+  if (pos == -1) {
+    throw new Error('Cannot find existingFn')
+  }
+
+  this._stack.splice(pos, 0, newFn)
+}
+
+/**
+ * Removes a function from the pipeline.
+ *
+ * @param {Function} fn The function to remove from the pipeline.
+ * @memberOf Pipeline
+ */
+lunr.Pipeline.prototype.remove = function (fn) {
+  var pos = this._stack.indexOf(fn)
+  if (pos == -1) {
+    return
+  }
+
+  this._stack.splice(pos, 1)
+}
+
+/**
+ * Runs the current list of functions that make up the pipeline against the
+ * passed tokens.
+ *
+ * @param {Array} tokens The tokens to run through the pipeline.
+ * @returns {Array}
+ * @memberOf Pipeline
+ */
+lunr.Pipeline.prototype.run = function (tokens) {
+  var out = [],
+      tokenLength = tokens.length,
+      stackLength = this._stack.length
+
+  for (var i = 0; i < tokenLength; i++) {
+    var token = tokens[i]
+
+    for (var j = 0; j < stackLength; j++) {
+      token = this._stack[j](token, i, tokens)
+      if (token === void 0 || token === '') break
+    };
+
+    if (token !== void 0 && token !== '') out.push(token)
+  };
+
+  return out
+}
+
+/**
+ * Resets the pipeline by removing any existing processors.
+ *
+ * @memberOf Pipeline
+ */
+lunr.Pipeline.prototype.reset = function () {
+  this._stack = []
+}
+
+/**
+ * Returns a representation of the pipeline ready for serialisation.
+ *
+ * Logs a warning if the function has not been registered.
+ *
+ * @returns {Array}
+ * @memberOf Pipeline
+ */
+lunr.Pipeline.prototype.toJSON = function () {
+  return this._stack.map(function (fn) {
+    lunr.Pipeline.warnIfFunctionNotRegistered(fn)
+
+    return fn.label
+  })
+}
+/*!
+ * lunr.Vector
+ * Copyright (C) 2016 Oliver Nightingale
+ */
+
+/**
+ * lunr.Vectors implement vector related operations for
+ * a series of elements.
+ *
+ * @constructor
+ */
+lunr.Vector = function () {
+  this._magnitude = null
+  this.list = undefined
+  this.length = 0
+}
+
+/**
+ * lunr.Vector.Node is a simple struct for each node
+ * in a lunr.Vector.
+ *
+ * @private
+ * @param {Number} The index of the node in the vector.
+ * @param {Object} The data at this node in the vector.
+ * @param {lunr.Vector.Node} The node directly after this node in the vector.
+ * @constructor
+ * @memberOf Vector
+ */
+lunr.Vector.Node = function (idx, val, next) {
+  this.idx = idx
+  this.val = val
+  this.next = next
+}
+
+/**
+ * Inserts a new value at a position in a vector.
+ *
+ * @param {Number} The index at which to insert a value.
+ * @param {Object} The object to insert in the vector.
+ * @memberOf Vector.
+ */
+lunr.Vector.prototype.insert = function (idx, val) {
+  this._magnitude = undefined;
+  var list = this.list
+
+  if (!list) {
+    this.list = new lunr.Vector.Node (idx, val, list)
+    return this.length++
+  }
+
+  if (idx < list.idx) {
+    this.list = new lunr.Vector.Node (idx, val, list)
+    return this.length++
+  }
+
+  var prev = list,
+      next = list.next
+
+  while (next != undefined) {
+    if (idx < next.idx) {
+      prev.next = new lunr.Vector.Node (idx, val, next)
+      return this.length++
+    }
+
+    prev = next, next = next.next
+  }
+
+  prev.next = new lunr.Vector.Node (idx, val, next)
+  return this.length++
+}
+
+/**
+ * Calculates the magnitude of this vector.
+ *
+ * @returns {Number}
+ * @memberOf Vector
+ */
+lunr.Vector.prototype.magnitude = function () {
+  if (this._magnitude) return this._magnitude
+  var node = this.list,
+      sumOfSquares = 0,
+      val
+
+  while (node) {
+    val = node.val
+    sumOfSquares += val * val
+    node = node.next
+  }
+
+  return this._magnitude = Math.sqrt(sumOfSquares)
+}
+
+/**
+ * Calculates the dot product of this vector and another vector.
+ *
+ * @param {lunr.Vector} otherVector The vector to compute the dot product with.
+ * @returns {Number}
+ * @memberOf Vector
+ */
+lunr.Vector.prototype.dot = function (otherVector) {
+  var node = this.list,
+      otherNode = otherVector.list,
+      dotProduct = 0
+
+  while (node && otherNode) {
+    if (node.idx < otherNode.idx) {
+      node = node.next
+    } else if (node.idx > otherNode.idx) {
+      otherNode = otherNode.next
+    } else {
+      dotProduct += node.val * otherNode.val
+      node = node.next
+      otherNode = otherNode.next
+    }
+  }
+
+  return dotProduct
+}
+
+/**
+ * Calculates the cosine similarity between this vector and another
+ * vector.
+ *
+ * @param {lunr.Vector} otherVector The other vector to calculate the
+ * similarity with.
+ * @returns {Number}
+ * @memberOf Vector
+ */
+lunr.Vector.prototype.similarity = function (otherVector) {
+  return this.dot(otherVector) / (this.magnitude() * otherVector.magnitude())
+}
+/*!
+ * lunr.SortedSet
+ * Copyright (C) 2016 Oliver Nightingale
+ */
+
+/**
+ * lunr.SortedSets are used to maintain an array of uniq values in a sorted
+ * order.
+ *
+ * @constructor
+ */
+lunr.SortedSet = function () {
+  this.length = 0
+  this.elements = []
+}
+
+/**
+ * Loads a previously serialised sorted set.
+ *
+ * @param {Array} serialisedData The serialised set to load.
+ * @returns {lunr.SortedSet}
+ * @memberOf SortedSet
+ */
+lunr.SortedSet.load = function (serialisedData) {
+  var set = new this
+
+  set.elements = serialisedData
+  set.length = serialisedData.length
+
+  return set
+}
+
+/**
+ * Inserts new items into the set in the correct position to maintain the
+ * order.
+ *
+ * @param {Object} The objects to add to this set.
+ * @memberOf SortedSet
+ */
+lunr.SortedSet.prototype.add = function () {
+  var i, element
+
+  for (i = 0; i < arguments.length; i++) {
+    element = arguments[i]
+    if (~this.indexOf(element)) continue
+    this.elements.splice(this.locationFor(element), 0, element)
+  }
+
+  this.length = this.elements.length
+}
+
+/**
+ * Converts this sorted set into an array.
+ *
+ * @returns {Array}
+ * @memberOf SortedSet
+ */
+lunr.SortedSet.prototype.toArray = function () {
+  return this.elements.slice()
+}
+
+/**
+ * Creates a new array with the results of calling a provided function on every
+ * element in this sorted set.
+ *
+ * Delegates to Array.prototype.map and has the same signature.
+ *
+ * @param {Function} fn The function that is called on each element of the
+ * set.
+ * @param {Object} ctx An optional object that can be used as the context
+ * for the function fn.
+ * @returns {Array}
+ * @memberOf SortedSet
+ */
+lunr.SortedSet.prototype.map = function (fn, ctx) {
+  return this.elements.map(fn, ctx)
+}
+
+/**
+ * Executes a provided function once per sorted set element.
+ *
+ * Delegates to Array.prototype.forEach and has the same signature.
+ *
+ * @param {Function} fn The function that is called on each element of the
+ * set.
+ * @param {Object} ctx An optional object that can be used as the context
+ * @memberOf SortedSet
+ * for the function fn.
+ */
+lunr.SortedSet.prototype.forEach = function (fn, ctx) {
+  return this.elements.forEach(fn, ctx)
+}
+
+/**
+ * Returns the index at which a given element can be found in the
+ * sorted set, or -1 if it is not present.
+ *
+ * @param {Object} elem The object to locate in the sorted set.
+ * @returns {Number}
+ * @memberOf SortedSet
+ */
+lunr.SortedSet.prototype.indexOf = function (elem) {
+  var start = 0,
+      end = this.elements.length,
+      sectionLength = end - start,
+      pivot = start + Math.floor(sectionLength / 2),
+      pivotElem = this.elements[pivot]
+
+  while (sectionLength > 1) {
+    if (pivotElem === elem) return pivot
+
+    if (pivotElem < elem) start = pivot
+    if (pivotElem > elem) end = pivot
+
+    sectionLength = end - start
+    pivot = start + Math.floor(sectionLength / 2)
+    pivotElem = this.elements[pivot]
+  }
+
+  if (pivotElem === elem) return pivot
+
+  return -1
+}
+
+/**
+ * Returns the position within the sorted set that an element should be
+ * inserted at to maintain the current order of the set.
+ *
+ * This function assumes that the element to search for does not already exist
+ * in the sorted set.
+ *
+ * @param {Object} elem The elem to find the position for in the set
+ * @returns {Number}
+ * @memberOf SortedSet
+ */
+lunr.SortedSet.prototype.locationFor = function (elem) {
+  var start = 0,
+      end = this.elements.length,
+      sectionLength = end - start,
+      pivot = start + Math.floor(sectionLength / 2),
+      pivotElem = this.elements[pivot]
+
+  while (sectionLength > 1) {
+    if (pivotElem < elem) start = pivot
+    if (pivotElem > elem) end = pivot
+
+    sectionLength = end - start
+    pivot = start + Math.floor(sectionLength / 2)
+    pivotElem = this.elements[pivot]
+  }
+
+  if (pivotElem > elem) return pivot
+  if (pivotElem < elem) return pivot + 1
+}
+
+/**
+ * Creates a new lunr.SortedSet that contains the elements in the intersection
+ * of this set and the passed set.
+ *
+ * @param {lunr.SortedSet} otherSet The set to intersect with this set.
+ * @returns {lunr.SortedSet}
+ * @memberOf SortedSet
+ */
+lunr.SortedSet.prototype.intersect = function (otherSet) {
+  var intersectSet = new lunr.SortedSet,
+      i = 0, j = 0,
+      a_len = this.length, b_len = otherSet.length,
+      a = this.elements, b = otherSet.elements
+
+  while (true) {
+    if (i > a_len - 1 || j > b_len - 1) break
+
+    if (a[i] === b[j]) {
+      intersectSet.add(a[i])
+      i++, j++
+      continue
+    }
+
+    if (a[i] < b[j]) {
+      i++
+      continue
+    }
+
+    if (a[i] > b[j]) {
+      j++
+      continue
+    }
+  };
+
+  return intersectSet
+}
+
+/**
+ * Makes a copy of this set
+ *
+ * @returns {lunr.SortedSet}
+ * @memberOf SortedSet
+ */
+lunr.SortedSet.prototype.clone = function () {
+  var clone = new lunr.SortedSet
+
+  clone.elements = this.toArray()
+  clone.length = clone.elements.length
+
+  return clone
+}
+
+/**
+ * Creates a new lunr.SortedSet that contains the elements in the union
+ * of this set and the passed set.
+ *
+ * @param {lunr.SortedSet} otherSet The set to union with this set.
+ * @returns {lunr.SortedSet}
+ * @memberOf SortedSet
+ */
+lunr.SortedSet.prototype.union = function (otherSet) {
+  var longSet, shortSet, unionSet
+
+  if (this.length >= otherSet.length) {
+    longSet = this, shortSet = otherSet
+  } else {
+    longSet = otherSet, shortSet = this
+  }
+
+  unionSet = longSet.clone()
+
+  for(var i = 0, shortSetElements = shortSet.toArray(); i < shortSetElements.length; i++){
+    unionSet.add(shortSetElements[i])
+  }
+
+  return unionSet
+}
+
+/**
+ * Returns a representation of the sorted set ready for serialisation.
+ *
+ * @returns {Array}
+ * @memberOf SortedSet
+ */
+lunr.SortedSet.prototype.toJSON = function () {
+  return this.toArray()
+}
+/*!
+ * lunr.Index
+ * Copyright (C) 2016 Oliver Nightingale
+ */
+
+/**
+ * lunr.Index is object that manages a search index.  It contains the indexes
+ * and stores all the tokens and document lookups.  It also provides the main
+ * user facing API for the library.
+ *
+ * @constructor
+ */
+lunr.Index = function () {
+  this._fields = []
+  this._ref = 'id'
+  this.pipeline = new lunr.Pipeline
+  this.documentStore = new lunr.Store
+  this.tokenStore = new lunr.TokenStore
+  this.corpusTokens = new lunr.SortedSet
+  this.eventEmitter =  new lunr.EventEmitter
+  this.tokenizerFn = lunr.tokenizer
+
+  this._idfCache = {}
+
+  this.on('add', 'remove', 'update', (function () {
+    this._idfCache = {}
+  }).bind(this))
+}
+
+/**
+ * Bind a handler to events being emitted by the index.
+ *
+ * The handler can be bound to many events at the same time.
+ *
+ * @param {String} [eventName] The name(s) of events to bind the function to.
+ * @param {Function} fn The serialised set to load.
+ * @memberOf Index
+ */
+lunr.Index.prototype.on = function () {
+  var args = Array.prototype.slice.call(arguments)
+  return this.eventEmitter.addListener.apply(this.eventEmitter, args)
+}
+
+/**
+ * Removes a handler from an event being emitted by the index.
+ *
+ * @param {String} eventName The name of events to remove the function from.
+ * @param {Function} fn The serialised set to load.
+ * @memberOf Index
+ */
+lunr.Index.prototype.off = function (name, fn) {
+  return this.eventEmitter.removeListener(name, fn)
+}
+
+/**
+ * Loads a previously serialised index.
+ *
+ * Issues a warning if the index being imported was serialised
+ * by a different version of lunr.
+ *
+ * @param {Object} serialisedData The serialised set to load.
+ * @returns {lunr.Index}
+ * @memberOf Index
+ */
+lunr.Index.load = function (serialisedData) {
+  if (serialisedData.version !== lunr.version) {
+    lunr.utils.warn('version mismatch: current ' + lunr.version + ' importing ' + serialisedData.version)
+  }
+
+
+  if (serialisedData.packed) {
+    return this.loadPacked(serialisedData);
+  }
+
+  var idx = new this
+
+  idx._fields = serialisedData.fields
+  idx._ref = serialisedData.ref
+
+  idx.tokenizer = lunr.tokenizer.load(serialisedData.tokenizer)
+  idx.documentStore = lunr.Store.load(serialisedData.documentStore)
+  idx.tokenStore = lunr.TokenStore.load(serialisedData.tokenStore)
+  idx.corpusTokens = lunr.SortedSet.load(serialisedData.corpusTokens)
+  idx.pipeline = lunr.Pipeline.load(serialisedData.pipeline)
+
+  return idx
+}
+
+/**
+ * Loads a packed JSON object created by lunr.Index.prototype.toPackedJSON
+ * and creates a new lunr.Index object from it.
+
+ * @param {Object} serialisedData The packed serialised set to load.
+ * @returns {lunr.Index}
+ * @memberOf Index
+ */
+lunr.Index.loadPacked = function(serialisedData) {
+  var idx = new this
+
+  idx._fields = serialisedData.fields
+  idx._ref = serialisedData.ref
+  idx.tokenizer = lunr.tokenizer.load(serialisedData.tokenizer)
+  idx.pipeline = lunr.Pipeline.load(serialisedData.pipeline)
+  idx.tokenStore = new lunr.TokenStore
+
+  var tfQuantisationFactor = 1 / (serialisedData.tfQuantisationFactor || 1);
+
+  var docs = serialisedData.docs
+  var docTokens = {store: {}, length: 0};
+
+  var corpusTokens = []
+
+  var packedTokens = serialisedData.tokens
+
+  for (var i=0; i<packedTokens.length; i++) {
+    var tokenDocsTFs = packedTokens[i]
+    var token = tokenDocsTFs[0]
+    var docIds = this.deltaUnpack(tokenDocsTFs[1])
+    var tfs = tokenDocsTFs[2]
+    for (var j=0; j<docIds.length; j++) {
+      var docName = docs[docIds[j]]
+      idx.tokenStore.add(token, {ref: docName, tf: tfs[j] * tfQuantisationFactor});
+      if (!docTokens.store[docName]) {
+        docTokens.store[docName] = [];
+        docTokens.length++;
+      }
+      docTokens.store[docName].push(token);
+    }
+    corpusTokens.push(token)
+  }
+
+  idx.documentStore = lunr.Store.load(docTokens)
+  idx.corpusTokens = lunr.SortedSet.load(corpusTokens)
+
+  return idx
+}
+
+/**
+ * Delta packs an array of positive increasing integers.
+ * Unpack the packed array using lunr.Index.deltaUnpack.
+ *
+ * Delta packing helps compression by mapping sequences of numbers into a smaller and more repetitive alphabet.
+ */
+lunr.Index.deltaPack = function(array) {
+  if (array.length === 0) {
+    return [];
+  }
+  var packed = [array[0]];
+  for (var i=1; i<array.length; i++) {
+    var delta = array[i] - array[i-1];
+    if (delta < 256) {
+      packed.push(delta);
+    } else {
+      packed.push(array[i]);
+    }
+  }
+  return packed;
+}
+
+/**
+ * Unpacks a delta packed array of integers.
+ */
+lunr.Index.deltaUnpack = function(array) {
+  if (array.length === 0) {
+    return [];
+  }
+  var unpacked = [array[0]];
+  for (var i=1; i<array.length; i++) {
+    var delta = array[i];
+    if (delta < 256) {
+      unpacked.push(unpacked[i-1] + delta);
+    } else {
+      unpacked.push(delta);
+    }
+  }
+  return unpacked;
+}
+
+/**
+ * Adds a field to the list of fields that will be searchable within documents
+ * in the index.
+ *
+ * An optional boost param can be passed to affect how much tokens in this field
+ * rank in search results, by default the boost value is 1.
+ *
+ * Fields should be added before any documents are added to the index, fields
+ * that are added after documents are added to the index will only apply to new
+ * documents added to the index.
+ *
+ * @param {String} fieldName The name of the field within the document that
+ * should be indexed
+ * @param {Number} boost An optional boost that can be applied to terms in this
+ * field.
+ * @returns {lunr.Index}
+ * @memberOf Index
+ */
+lunr.Index.prototype.field = function (fieldName, opts) {
+  var opts = opts || {},
+      field = { name: fieldName, boost: opts.boost || 1 }
+
+  this._fields.push(field)
+  return this
+}
+
+/**
+ * Sets the property used to uniquely identify documents added to the index,
+ * by default this property is 'id'.
+ *
+ * This should only be changed before adding documents to the index, changing
+ * the ref property without resetting the index can lead to unexpected results.
+ *
+ * The value of ref can be of any type but it _must_ be stably comparable and
+ * orderable.
+ *
+ * @param {String} refName The property to use to uniquely identify the
+ * documents in the index.
+ * @param {Boolean} emitEvent Whether to emit add events, defaults to true
+ * @returns {lunr.Index}
+ * @memberOf Index
+ */
+lunr.Index.prototype.ref = function (refName) {
+  this._ref = refName
+  return this
+}
+
+/**
+ * Sets the tokenizer used for this index.
+ *
+ * By default the index will use the default tokenizer, lunr.tokenizer. The tokenizer
+ * should only be changed before adding documents to the index. Changing the tokenizer
+ * without re-building the index can lead to unexpected results.
+ *
+ * @param {Function} fn The function to use as a tokenizer.
+ * @returns {lunr.Index}
+ * @memberOf Index
+ */
+lunr.Index.prototype.tokenizer = function (fn) {
+  var isRegistered = fn.label && (fn.label in lunr.tokenizer.registeredFunctions)
+
+  if (!isRegistered) {
+    lunr.utils.warn('Function is not a registered tokenizer. This may cause problems when serialising the index')
+  }
+
+  this.tokenizerFn = fn
+  return this
+}
+
+/**
+ * Add a document to the index.
+ *
+ * This is the way new documents enter the index, this function will run the
+ * fields from the document through the index's pipeline and then add it to
+ * the index, it will then show up in search results.
+ *
+ * An 'add' event is emitted with the document that has been added and the index
+ * the document has been added to. This event can be silenced by passing false
+ * as the second argument to add.
+ *
+ * @param {Object} doc The document to add to the index.
+ * @param {Boolean} emitEvent Whether or not to emit events, default true.
+ * @memberOf Index
+ */
+lunr.Index.prototype.add = function (doc, emitEvent) {
+  var docTokens = {},
+      allDocumentTokens = new lunr.SortedSet,
+      docRef = doc[this._ref],
+      emitEvent = emitEvent === undefined ? true : emitEvent
+
+  this._fields.forEach(function (field) {
+    var fieldTokens = this.pipeline.run(this.tokenizerFn(doc[field.name]))
+
+    docTokens[field.name] = fieldTokens
+
+    for (var i = 0; i < fieldTokens.length; i++) {
+      var token = fieldTokens[i]
+      allDocumentTokens.add(token)
+      this.corpusTokens.add(token)
+    }
+  }, this)
+
+  this.documentStore.set(docRef, allDocumentTokens)
+
+  for (var i = 0; i < allDocumentTokens.length; i++) {
+    var token = allDocumentTokens.elements[i]
+    var tf = 0;
+
+    for (var j = 0; j < this._fields.length; j++){
+      var field = this._fields[j]
+      var fieldTokens = docTokens[field.name]
+      var fieldLength = fieldTokens.length
+
+      if (!fieldLength) continue
+
+      var tokenCount = 0
+      for (var k = 0; k < fieldLength; k++){
+        if (fieldTokens[k] === token){
+          tokenCount++
+        }
+      }
+
+      tf += (tokenCount / fieldLength * field.boost)
+    }
+
+    this.tokenStore.add(token, { ref: docRef, tf: tf })
+  };
+
+  if (emitEvent) this.eventEmitter.emit('add', doc, this)
+}
+
+/**
+ * Removes a document from the index.
+ *
+ * To make sure documents no longer show up in search results they can be
+ * removed from the index using this method.
+ *
+ * The document passed only needs to have the same ref property value as the
+ * document that was added to the index, they could be completely different
+ * objects.
+ *
+ * A 'remove' event is emitted with the document that has been removed and the index
+ * the document has been removed from. This event can be silenced by passing false
+ * as the second argument to remove.
+ *
+ * @param {Object} doc The document to remove from the index.
+ * @param {Boolean} emitEvent Whether to emit remove events, defaults to true
+ * @memberOf Index
+ */
+lunr.Index.prototype.remove = function (doc, emitEvent) {
+  var docRef = doc[this._ref],
+      emitEvent = emitEvent === undefined ? true : emitEvent
+
+  if (!this.documentStore.has(docRef)) return
+
+  var docTokens = this.documentStore.get(docRef)
+
+  this.documentStore.remove(docRef)
+
+  docTokens.forEach(function (token) {
+    this.tokenStore.remove(token, docRef)
+  }, this)
+
+  if (emitEvent) this.eventEmitter.emit('remove', doc, this)
+}
+
+/**
+ * Updates a document in the index.
+ *
+ * When a document contained within the index gets updated, fields changed,
+ * added or removed, to make sure it correctly matched against search queries,
+ * it should be updated in the index.
+ *
+ * This method is just a wrapper around `remove` and `add`
+ *
+ * An 'update' event is emitted with the document that has been updated and the index.
+ * This event can be silenced by passing false as the second argument to update. Only
+ * an update event will be fired, the 'add' and 'remove' events of the underlying calls
+ * are silenced.
+ *
+ * @param {Object} doc The document to update in the index.
+ * @param {Boolean} emitEvent Whether to emit update events, defaults to true
+ * @see Index.prototype.remove
+ * @see Index.prototype.add
+ * @memberOf Index
+ */
+lunr.Index.prototype.update = function (doc, emitEvent) {
+  var emitEvent = emitEvent === undefined ? true : emitEvent
+
+  this.remove(doc, false)
+  this.add(doc, false)
+
+  if (emitEvent) this.eventEmitter.emit('update', doc, this)
+}
+
+/**
+ * Calculates the inverse document frequency for a token within the index.
+ *
+ * @param {String} token The token to calculate the idf of.
+ * @see Index.prototype.idf
+ * @private
+ * @memberOf Index
+ */
+lunr.Index.prototype.idf = function (term) {
+  var cacheKey = "@" + term
+  if (Object.prototype.hasOwnProperty.call(this._idfCache, cacheKey)) return this._idfCache[cacheKey]
+
+  var documentFrequency = this.tokenStore.count(term),
+      idf = 1
+
+  if (documentFrequency > 0) {
+    idf = 1 + Math.log(this.documentStore.length / documentFrequency)
+  }
+
+  return this._idfCache[cacheKey] = idf
+}
+
+/**
+ * Searches the index using the passed query.
+ *
+ * Queries should be a string, multiple words are allowed and will lead to an
+ * AND based query, e.g. `idx.search('foo bar')` will run a search for
+ * documents containing both 'foo' and 'bar'.
+ *
+ * All query tokens are passed through the same pipeline that document tokens
+ * are passed through, so any language processing involved will be run on every
+ * query term.
+ *
+ * Each query term is expanded, so that the term 'he' might be expanded to
+ * 'hello' and 'help' if those terms were already included in the index.
+ *
+ * Matching documents are returned as an array of objects, each object contains
+ * the matching document ref, as set for this index, and the similarity score
+ * for this document against the query.
+ *
+ * @param {String} query The query to search the index with.
+ * @returns {Object}
+ * @see Index.prototype.idf
+ * @see Index.prototype.documentVector
+ * @memberOf Index
+ */
+lunr.Index.prototype.search = function (query) {
+  var queryTokens = this.pipeline.run(this.tokenizerFn(query)),
+      queryVector = new lunr.Vector,
+      documentSets = [],
+      fieldBoosts = this._fields.reduce(function (memo, f) { return memo + f.boost }, 0)
+
+  var hasSomeToken = queryTokens.some(function (token) {
+    return this.tokenStore.has(token)
+  }, this)
+
+  if (!hasSomeToken) return []
+
+  queryTokens
+    .forEach(function (token, i, tokens) {
+      var tf = 1 / tokens.length * this._fields.length * fieldBoosts,
+          self = this
+
+      var set = this.tokenStore.expand(token).reduce(function (memo, key) {
+        var pos = self.corpusTokens.indexOf(key),
+            idf = self.idf(key),
+            similarityBoost = 1,
+            set = new lunr.SortedSet
+
+        // if the expanded key is not an exact match to the token then
+        // penalise the score for this key by how different the key is
+        // to the token.
+        if (key !== token) {
+          var diff = Math.max(3, key.length - token.length)
+          similarityBoost = 1 / Math.log(diff)
+        }
+
+        // calculate the query tf-idf score for this token
+        // applying an similarityBoost to ensure exact matches
+        // these rank higher than expanded terms
+        if (pos > -1) queryVector.insert(pos, tf * idf * similarityBoost)
+
+        // add all the documents that have this key into a set
+        // ensuring that the type of key is preserved
+        var matchingDocuments = self.tokenStore.get(key),
+            refs = Object.keys(matchingDocuments),
+            refsLen = refs.length
+
+        for (var i = 0; i < refsLen; i++) {
+          set.add(matchingDocuments[refs[i]].ref)
+        }
+
+        return memo.union(set)
+      }, new lunr.SortedSet)
+
+      documentSets.push(set)
+    }, this)
+
+  var documentSet = documentSets.reduce(function (memo, set) {
+    return memo.intersect(set)
+  })
+
+  return documentSet
+    .map(function (ref) {
+      return { ref: ref, score: queryVector.similarity(this.documentVector(ref)) }
+    }, this)
+    .sort(function (a, b) {
+      return b.score - a.score
+    })
+}
+
+/**
+ * Generates a vector containing all the tokens in the document matching the
+ * passed documentRef.
+ *
+ * The vector contains the tf-idf score for each token contained in the
+ * document with the passed documentRef.  The vector will contain an element
+ * for every token in the indexes corpus, if the document does not contain that
+ * token the element will be 0.
+ *
+ * @param {Object} documentRef The ref to find the document with.
+ * @returns {lunr.Vector}
+ * @private
+ * @memberOf Index
+ */
+lunr.Index.prototype.documentVector = function (documentRef) {
+  var documentTokens = this.documentStore.get(documentRef),
+      documentTokensLength = documentTokens.length,
+      documentVector = new lunr.Vector
+
+  for (var i = 0; i < documentTokensLength; i++) {
+    var token = documentTokens.elements[i],
+        tf = this.tokenStore.get(token)[documentRef].tf,
+        idf = this.idf(token)
+
+    documentVector.insert(this.corpusTokens.indexOf(token), tf * idf)
+  };
+
+  return documentVector
+}
+
+/**
+ * Returns a representation of the index ready for serialisation.
+ *
+ * @returns {Object}
+ * @memberOf Index
+ */
+lunr.Index.prototype.toJSON = function () {
+  return {
+    version: lunr.version,
+    fields: this._fields,
+    ref: this._ref,
+    tokenizer: this.tokenizerFn.label,
+    documentStore: this.documentStore.toJSON(),
+    tokenStore: this.tokenStore.toJSON(),
+    corpusTokens: this.corpusTokens.toJSON(),
+    pipeline: this.pipeline.toJSON()
+  }
+}
+
+/**
+ * Creates a more space-efficient JSON serialisation object.
+ *
+ * @returns {Object}
+ * @memberOf Index
+ */
+lunr.Index.prototype.toPackedJSON = function(tfQuantisationFactor) {
+
+  var numCmp = function(a,b) {
+    return a-b;
+  };
+
+  if (tfQuantisationFactor === undefined) {
+    tfQuantisationFactor = 1;
+  }
+
+  var tokens = this.corpusTokens.toJSON();
+  var docs = [];
+  for (var i in this.documentStore.store) {
+    docs.push(i);
+  }
+  docs.sort();
+  var docIndex = {};
+  for (var i=0; i<docs.length; i++) {
+    docIndex[docs[i]] = i;
+  }
+  var packedTokens = [];
+  for (var i=0; i<tokens.length; i++) {
+    var tokenDocs = this.tokenStore.get(tokens[i]);
+    var docIds = [];
+    var docTFIndex = {};
+    for (var j in tokenDocs) {
+      var doc = tokenDocs[j];
+      docIds.push(docIndex[doc.ref]);
+      docTFIndex[docIndex[doc.ref]] = (tfQuantisationFactor > 1 ? Math.round(doc.tf * tfQuantisationFactor) : doc.tf);
+    }
+    docIds.sort(numCmp);
+    docTFs = [];
+    for (var j=0; j<docIds.length; j++) {
+      docTFs.push(docTFIndex[docIds[j]]);
+    }
+    packedTokens.push([tokens[i], lunr.Index.deltaPack(docIds), docTFs]);
+  }
+
+  var idx = {
+    packed: true,
+    tfQuantisationFactor: tfQuantisationFactor,
+    version: lunr.version,
+    fields: this._fields,
+    ref: this._ref,
+    tokenizer: this.tokenizerFn.label,
+    pipeline: this.pipeline.toJSON(),
+    docs: docs,
+    tokens: packedTokens
+  };
+
+  return idx;
+}
+
+/**
+ * Applies a plugin to the current index.
+ *
+ * A plugin is a function that is called with the index as its context.
+ * Plugins can be used to customise or extend the behaviour the index
+ * in some way. A plugin is just a function, that encapsulated the custom
+ * behaviour that should be applied to the index.
+ *
+ * The plugin function will be called with the index as its argument, additional
+ * arguments can also be passed when calling use. The function will be called
+ * with the index as its context.
+ *
+ * Example:
+ *
+ *     var myPlugin = function (idx, arg1, arg2) {
+ *       // `this` is the index to be extended
+ *       // apply any extensions etc here.
+ *     }
+ *
+ *     var idx = lunr(function () {
+ *       this.use(myPlugin, 'arg1', 'arg2')
+ *     })
+ *
+ * @param {Function} plugin The plugin to apply.
+ * @memberOf Index
+ */
+lunr.Index.prototype.use = function (plugin) {
+  var args = Array.prototype.slice.call(arguments, 1)
+  args.unshift(this)
+  plugin.apply(this, args)
+}
+/*!
+ * lunr.Store
+ * Copyright (C) 2016 Oliver Nightingale
+ */
+
+/**
+ * lunr.Store is a simple key-value store used for storing sets of tokens for
+ * documents stored in index.
+ *
+ * @constructor
+ * @module
+ */
+lunr.Store = function () {
+  this.store = {}
+  this.length = 0
+}
+
+/**
+ * Loads a previously serialised store
+ *
+ * @param {Object} serialisedData The serialised store to load.
+ * @returns {lunr.Store}
+ * @memberOf Store
+ */
+lunr.Store.load = function (serialisedData) {
+  var store = new this
+
+  store.length = serialisedData.length
+  store.store = Object.keys(serialisedData.store).reduce(function (memo, key) {
+    memo[key] = lunr.SortedSet.load(serialisedData.store[key])
+    return memo
+  }, {})
+
+  return store
+}
+
+/**
+ * Stores the given tokens in the store against the given id.
+ *
+ * @param {Object} id The key used to store the tokens against.
+ * @param {Object} tokens The tokens to store against the key.
+ * @memberOf Store
+ */
+lunr.Store.prototype.set = function (id, tokens) {
+  if (!this.has(id)) this.length++
+  this.store[id] = tokens
+}
+
+/**
+ * Retrieves the tokens from the store for a given key.
+ *
+ * @param {Object} id The key to lookup and retrieve from the store.
+ * @returns {Object}
+ * @memberOf Store
+ */
+lunr.Store.prototype.get = function (id) {
+  return this.store[id]
+}
+
+/**
+ * Checks whether the store contains a key.
+ *
+ * @param {Object} id The id to look up in the store.
+ * @returns {Boolean}
+ * @memberOf Store
+ */
+lunr.Store.prototype.has = function (id) {
+  return id in this.store
+}
+
+/**
+ * Removes the value for a key in the store.
+ *
+ * @param {Object} id The id to remove from the store.
+ * @memberOf Store
+ */
+lunr.Store.prototype.remove = function (id) {
+  if (!this.has(id)) return
+
+  delete this.store[id]
+  this.length--
+}
+
+/**
+ * Returns a representation of the store ready for serialisation.
+ *
+ * @returns {Object}
+ * @memberOf Store
+ */
+lunr.Store.prototype.toJSON = function () {
+  return {
+    store: this.store,
+    length: this.length
+  }
+}
+
+/*!
+ * lunr.stemmer
+ * Copyright (C) 2016 Oliver Nightingale
+ * Includes code from - http://tartarus.org/~martin/PorterStemmer/js.txt
+ */
+
+/**
+ * lunr.stemmer is an english language stemmer, this is a JavaScript
+ * implementation of the PorterStemmer taken from http://tartarus.org/~martin
+ *
+ * @module
+ * @param {String} str The string to stem
+ * @returns {String}
+ * @see lunr.Pipeline
+ */
+lunr.stemmer = (function(){
+  var step2list = {
+      "ational" : "ate",
+      "tional" : "tion",
+      "enci" : "ence",
+      "anci" : "ance",
+      "izer" : "ize",
+      "bli" : "ble",
+      "alli" : "al",
+      "entli" : "ent",
+      "eli" : "e",
+      "ousli" : "ous",
+      "ization" : "ize",
+      "ation" : "ate",
+      "ator" : "ate",
+      "alism" : "al",
+      "iveness" : "ive",
+      "fulness" : "ful",
+      "ousness" : "ous",
+      "aliti" : "al",
+      "iviti" : "ive",
+      "biliti" : "ble",
+      "logi" : "log"
+    },
+
+    step3list = {
+      "icate" : "ic",
+      "ative" : "",
+      "alize" : "al",
+      "iciti" : "ic",
+      "ical" : "ic",
+      "ful" : "",
+      "ness" : ""
+    },
+
+    c = "[^aeiou]",          // consonant
+    v = "[aeiouy]",          // vowel
+    C = c + "[^aeiouy]*",    // consonant sequence
+    V = v + "[aeiou]*",      // vowel sequence
+
+    mgr0 = "^(" + C + ")?" + V + C,               // [C]VC... is m>0
+    meq1 = "^(" + C + ")?" + V + C + "(" + V + ")?$",  // [C]VC[V] is m=1
+    mgr1 = "^(" + C + ")?" + V + C + V + C,       // [C]VCVC... is m>1
+    s_v = "^(" + C + ")?" + v;                   // vowel in stem
+
+  var re_mgr0 = new RegExp(mgr0);
+  var re_mgr1 = new RegExp(mgr1);
+  var re_meq1 = new RegExp(meq1);
+  var re_s_v = new RegExp(s_v);
+
+  var re_1a = /^(.+?)(ss|i)es$/;
+  var re2_1a = /^(.+?)([^s])s$/;
+  var re_1b = /^(.+?)eed$/;
+  var re2_1b = /^(.+?)(ed|ing)$/;
+  var re_1b_2 = /.$/;
+  var re2_1b_2 = /(at|bl|iz)$/;
+  var re3_1b_2 = new RegExp("([^aeiouylsz])\\1$");
+  var re4_1b_2 = new RegExp("^" + C + v + "[^aeiouwxy]$");
+
+  var re_1c = /^(.+?[^aeiou])y$/;
+  var re_2 = /^(.+?)(ational|tional|enci|anci|izer|bli|alli|entli|eli|ousli|ization|ation|ator|alism|iveness|fulness|ousness|aliti|iviti|biliti|logi)$/;
+
+  var re_3 = /^(.+?)(icate|ative|alize|iciti|ical|ful|ness)$/;
+
+  var re_4 = /^(.+?)(al|ance|ence|er|ic|able|ible|ant|ement|ment|ent|ou|ism|ate|iti|ous|ive|ize)$/;
+  var re2_4 = /^(.+?)(s|t)(ion)$/;
+
+  var re_5 = /^(.+?)e$/;
+  var re_5_1 = /ll$/;
+  var re3_5 = new RegExp("^" + C + v + "[^aeiouwxy]$");
+
+  var porterStemmer = function porterStemmer(w) {
+    var   stem,
+      suffix,
+      firstch,
+      re,
+      re2,
+      re3,
+      re4;
+
+    if (w.length < 3) { return w; }
+
+    firstch = w.substr(0,1);
+    if (firstch == "y") {
+      w = firstch.toUpperCase() + w.substr(1);
+    }
+
+    // Step 1a
+    re = re_1a
+    re2 = re2_1a;
+
+    if (re.test(w)) { w = w.replace(re,"$1$2"); }
+    else if (re2.test(w)) { w = w.replace(re2,"$1$2"); }
+
+    // Step 1b
+    re = re_1b;
+    re2 = re2_1b;
+    if (re.test(w)) {
+      var fp = re.exec(w);
+      re = re_mgr0;
+      if (re.test(fp[1])) {
+        re = re_1b_2;
+        w = w.replace(re,"");
+      }
+    } else if (re2.test(w)) {
+      var fp = re2.exec(w);
+      stem = fp[1];
+      re2 = re_s_v;
+      if (re2.test(stem)) {
+        w = stem;
+        re2 = re2_1b_2;
+        re3 = re3_1b_2;
+        re4 = re4_1b_2;
+        if (re2.test(w)) {  w = w + "e"; }
+        else if (re3.test(w)) { re = re_1b_2; w = w.replace(re,""); }
+        else if (re4.test(w)) { w = w + "e"; }
+      }
+    }
+
+    // Step 1c - replace suffix y or Y by i if preceded by a non-vowel which is not the first letter of the word (so cry -> cri, by -> by, say -> say)
+    re = re_1c;
+    if (re.test(w)) {
+      var fp = re.exec(w);
+      stem = fp[1];
+      w = stem + "i";
+    }
+
+    // Step 2
+    re = re_2;
+    if (re.test(w)) {
+      var fp = re.exec(w);
+      stem = fp[1];
+      suffix = fp[2];
+      re = re_mgr0;
+      if (re.test(stem)) {
+        w = stem + step2list[suffix];
+      }
+    }
+
+    // Step 3
+    re = re_3;
+    if (re.test(w)) {
+      var fp = re.exec(w);
+      stem = fp[1];
+      suffix = fp[2];
+      re = re_mgr0;
+      if (re.test(stem)) {
+        w = stem + step3list[suffix];
+      }
+    }
+
+    // Step 4
+    re = re_4;
+    re2 = re2_4;
+    if (re.test(w)) {
+      var fp = re.exec(w);
+      stem = fp[1];
+      re = re_mgr1;
+      if (re.test(stem)) {
+        w = stem;
+      }
+    } else if (re2.test(w)) {
+      var fp = re2.exec(w);
+      stem = fp[1] + fp[2];
+      re2 = re_mgr1;
+      if (re2.test(stem)) {
+        w = stem;
+      }
+    }
+
+    // Step 5
+    re = re_5;
+    if (re.test(w)) {
+      var fp = re.exec(w);
+      stem = fp[1];
+      re = re_mgr1;
+      re2 = re_meq1;
+      re3 = re3_5;
+      if (re.test(stem) || (re2.test(stem) && !(re3.test(stem)))) {
+        w = stem;
+      }
+    }
+
+    re = re_5_1;
+    re2 = re_mgr1;
+    if (re.test(w) && re2.test(w)) {
+      re = re_1b_2;
+      w = w.replace(re,"");
+    }
+
+    // and turn initial Y back to y
+
+    if (firstch == "y") {
+      w = firstch.toLowerCase() + w.substr(1);
+    }
+
+    return w;
+  };
+
+  return porterStemmer;
+})();
+
+lunr.Pipeline.registerFunction(lunr.stemmer, 'stemmer')
+/*!
+ * lunr.stopWordFilter
+ * Copyright (C) 2016 Oliver Nightingale
+ */
+
+/**
+ * lunr.generateStopWordFilter builds a stopWordFilter function from the provided
+ * list of stop words.
+ *
+ * The built in lunr.stopWordFilter is built using this generator and can be used
+ * to generate custom stopWordFilters for applications or non English languages.
+ *
+ * @module
+ * @param {Array} token The token to pass through the filter
+ * @returns {Function}
+ * @see lunr.Pipeline
+ * @see lunr.stopWordFilter
+ */
+lunr.generateStopWordFilter = function (stopWords) {
+  var words = stopWords.reduce(function (memo, stopWord) {
+    memo[stopWord] = stopWord
+    return memo
+  }, {})
+
+  return function (token) {
+    if (token && words[token] !== token) return token
+  }
+}
+
+/**
+ * lunr.stopWordFilter is an English language stop word list filter, any words
+ * contained in the list will not be passed through the filter.
+ *
+ * This is intended to be used in the Pipeline. If the token does not pass the
+ * filter then undefined will be returned.
+ *
+ * @module
+ * @param {String} token The token to pass through the filter
+ * @returns {String}
+ * @see lunr.Pipeline
+ */
+lunr.stopWordFilter = lunr.generateStopWordFilter([
+  'a',
+  'able',
+  'about',
+  'across',
+  'after',
+  'all',
+  'almost',
+  'also',
+  'am',
+  'among',
+  'an',
+  'and',
+  'any',
+  'are',
+  'as',
+  'at',
+  'be',
+  'because',
+  'been',
+  'but',
+  'by',
+  'can',
+  'cannot',
+  'could',
+  'dear',
+  'did',
+  'do',
+  'does',
+  'either',
+  'else',
+  'ever',
+  'every',
+  'for',
+  'from',
+  'get',
+  'got',
+  'had',
+  'has',
+  'have',
+  'he',
+  'her',
+  'hers',
+  'him',
+  'his',
+  'how',
+  'however',
+  'i',
+  'if',
+  'in',
+  'into',
+  'is',
+  'it',
+  'its',
+  'just',
+  'least',
+  'let',
+  'like',
+  'likely',
+  'may',
+  'me',
+  'might',
+  'most',
+  'must',
+  'my',
+  'neither',
+  'no',
+  'nor',
+  'not',
+  'of',
+  'off',
+  'often',
+  'on',
+  'only',
+  'or',
+  'other',
+  'our',
+  'own',
+  'rather',
+  'said',
+  'say',
+  'says',
+  'she',
+  'should',
+  'since',
+  'so',
+  'some',
+  'than',
+  'that',
+  'the',
+  'their',
+  'them',
+  'then',
+  'there',
+  'these',
+  'they',
+  'this',
+  'tis',
+  'to',
+  'too',
+  'twas',
+  'us',
+  'wants',
+  'was',
+  'we',
+  'were',
+  'what',
+  'when',
+  'where',
+  'which',
+  'while',
+  'who',
+  'whom',
+  'why',
+  'will',
+  'with',
+  'would',
+  'yet',
+  'you',
+  'your'
+])
+
+lunr.Pipeline.registerFunction(lunr.stopWordFilter, 'stopWordFilter')
+/*!
+ * lunr.trimmer
+ * Copyright (C) 2016 Oliver Nightingale
+ */
+
+/**
+ * lunr.trimmer is a pipeline function for trimming non word
+ * characters from the begining and end of tokens before they
+ * enter the index.
+ *
+ * This implementation may not work correctly for non latin
+ * characters and should either be removed or adapted for use
+ * with languages with non-latin characters.
+ *
+ * @module
+ * @param {String} token The token to pass through the filter
+ * @returns {String}
+ * @see lunr.Pipeline
+ */
+lunr.trimmer = function (token) {
+  return token.replace(/^\W+/, '').replace(/\W+$/, '')
+}
+
+lunr.Pipeline.registerFunction(lunr.trimmer, 'trimmer')
+/*!
+ * lunr.stemmer
+ * Copyright (C) 2016 Oliver Nightingale
+ * Includes code from - http://tartarus.org/~martin/PorterStemmer/js.txt
+ */
+
+/**
+ * lunr.TokenStore is used for efficient storing and lookup of the reverse
+ * index of token to document ref.
+ *
+ * @constructor
+ */
+lunr.TokenStore = function () {
+  this.root = { docs: {} }
+  this.length = 0
+}
+
+/**
+ * Loads a previously serialised token store
+ *
+ * @param {Object} serialisedData The serialised token store to load.
+ * @returns {lunr.TokenStore}
+ * @memberOf TokenStore
+ */
+lunr.TokenStore.load = function (serialisedData) {
+  var store = new this
+
+  store.root = serialisedData.root
+  store.length = serialisedData.length
+
+  return store
+}
+
+/**
+ * Adds a new token doc pair to the store.
+ *
+ * By default this function starts at the root of the current store, however
+ * it can start at any node of any token store if required.
+ *
+ * @param {String} token The token to store the doc under
+ * @param {Object} doc The doc to store against the token
+ * @param {Object} root An optional node at which to start looking for the
+ * correct place to enter the doc, by default the root of this lunr.TokenStore
+ * is used.
+ * @memberOf TokenStore
+ */
+lunr.TokenStore.prototype.add = function (token, doc, root) {
+  var root = root || this.root,
+      key = token.charAt(0),
+      rest = token.slice(1)
+
+  if (!(key in root)) root[key] = {docs: {}}
+
+  if (rest.length === 0) {
+    root[key].docs[doc.ref] = doc
+    this.length += 1
+    return
+  } else {
+    return this.add(rest, doc, root[key])
+  }
+}
+
+/**
+ * Checks whether this key is contained within this lunr.TokenStore.
+ *
+ * By default this function starts at the root of the current store, however
+ * it can start at any node of any token store if required.
+ *
+ * @param {String} token The token to check for
+ * @param {Object} root An optional node at which to start
+ * @memberOf TokenStore
+ */
+lunr.TokenStore.prototype.has = function (token) {
+  if (!token) return false
+
+  var node = this.root
+
+  for (var i = 0; i < token.length; i++) {
+    if (!node[token.charAt(i)]) return false
+
+    node = node[token.charAt(i)]
+  }
+
+  return true
+}
+
+/**
+ * Retrieve a node from the token store for a given token.
+ *
+ * By default this function starts at the root of the current store, however
+ * it can start at any node of any token store if required.
+ *
+ * @param {String} token The token to get the node for.
+ * @param {Object} root An optional node at which to start.
+ * @returns {Object}
+ * @see TokenStore.prototype.get
+ * @memberOf TokenStore
+ */
+lunr.TokenStore.prototype.getNode = function (token) {
+  if (!token) return {}
+
+  var node = this.root
+
+  for (var i = 0; i < token.length; i++) {
+    if (!node[token.charAt(i)]) return {}
+
+    node = node[token.charAt(i)]
+  }
+
+  return node
+}
+
+/**
+ * Retrieve the documents for a node for the given token.
+ *
+ * By default this function starts at the root of the current store, however
+ * it can start at any node of any token store if required.
+ *
+ * @param {String} token The token to get the documents for.
+ * @param {Object} root An optional node at which to start.
+ * @returns {Object}
+ * @memberOf TokenStore
+ */
+lunr.TokenStore.prototype.get = function (token, root) {
+  return this.getNode(token, root).docs || {}
+}
+
+lunr.TokenStore.prototype.count = function (token, root) {
+  return Object.keys(this.get(token, root)).length
+}
+
+/**
+ * Remove the document identified by ref from the token in the store.
+ *
+ * By default this function starts at the root of the current store, however
+ * it can start at any node of any token store if required.
+ *
+ * @param {String} token The token to get the documents for.
+ * @param {String} ref The ref of the document to remove from this token.
+ * @param {Object} root An optional node at which to start.
+ * @returns {Object}
+ * @memberOf TokenStore
+ */
+lunr.TokenStore.prototype.remove = function (token, ref) {
+  if (!token) return
+  var node = this.root
+
+  for (var i = 0; i < token.length; i++) {
+    if (!(token.charAt(i) in node)) return
+    node = node[token.charAt(i)]
+  }
+
+  delete node.docs[ref]
+}
+
+/**
+ * Find all the possible suffixes of the passed token using tokens
+ * currently in the store.
+ *
+ * @param {String} token The token to expand.
+ * @returns {Array}
+ * @memberOf TokenStore
+ */
+lunr.TokenStore.prototype.expand = function (token, memo) {
+  var root = this.getNode(token),
+      docs = root.docs || {},
+      memo = memo || []
+
+  if (Object.keys(docs).length) memo.push(token)
+
+  Object.keys(root)
+    .forEach(function (key) {
+      if (key === 'docs') return
+
+      memo.concat(this.expand(token + key, memo))
+    }, this)
+
+  return memo
+}
+
+/**
+ * Returns a representation of the token store ready for serialisation.
+ *
+ * @returns {Object}
+ * @memberOf TokenStore
+ */
+lunr.TokenStore.prototype.toJSON = function () {
+  return {
+    root: this.root,
+    length: this.length
+  }
+}
+
+  /**
+   * export the module via AMD, CommonJS or as a browser global
+   * Export code from https://github.com/umdjs/umd/blob/master/returnExports.js
+   */
+  ;(function (root, factory) {
+    if (typeof define === 'function' && define.amd) {
+      // AMD. Register as an anonymous module.
+      define(factory)
+    } else if (typeof exports === 'object') {
+      /**
+       * Node. Does not work with strict CommonJS, but
+       * only CommonJS-like enviroments that support module.exports,
+       * like Node.
+       */
+      module.exports = factory()
+    } else {
+      // Browser globals (root is window)
+      root.lunr = factory()
+    }
+  }(this, function () {
+    /**
+     * Just return a value to define the module export.
+     * This example returns an object, but the module
+     * can return a function as the exported value.
+     */
+    return lunr
+  }))
+})();
+
+},{}],21:[function(require,module,exports){
 /* eslint-disable no-unused-vars */
 'use strict';
 var hasOwnProperty = Object.prototype.hasOwnProperty;
@@ -706,7 +2916,7 @@ module.exports = Object.assign || function (target, source) {
 	return to;
 };
 
-},{}],21:[function(require,module,exports){
+},{}],22:[function(require,module,exports){
 module.exports = once
 
 once.proto = once(function () {
@@ -727,7 +2937,7 @@ function once (fn) {
   }
 }
 
-},{}],22:[function(require,module,exports){
+},{}],23:[function(require,module,exports){
 module.exports = function parseBMFontAscii(data) {
   if (!data)
     throw new Error('no data provided')
@@ -836,7 +3046,7 @@ function parseIntList(data) {
     return parseInt(val, 10)
   })
 }
-},{}],23:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 var HEADER = [66, 77, 70]
 
 module.exports = function readBMFontBinary(buf) {
@@ -997,7 +3207,7 @@ function readNameNT(buf, offset) {
 function readStringNT(buf, offset) {
   return readNameNT(buf, offset).toString('utf8')
 }
-},{}],24:[function(require,module,exports){
+},{}],25:[function(require,module,exports){
 var parseAttributes = require('./parse-attribs')
 var parseFromString = require('xml-parse-from-string')
 
@@ -1083,7 +3293,7 @@ function getAttribList(element) {
 function mapName(nodeName) {
   return NAME_MAP[nodeName.toLowerCase()] || nodeName
 }
-},{"./parse-attribs":25,"xml-parse-from-string":37}],25:[function(require,module,exports){
+},{"./parse-attribs":26,"xml-parse-from-string":38}],26:[function(require,module,exports){
 //Some versions of GlyphDesigner have a typo
 //that causes some bugs with parsing. 
 //Need to confirm with recent version of the software
@@ -1112,7 +3322,7 @@ function parseIntList(data) {
     return parseInt(val, 10)
   })
 }
-},{}],26:[function(require,module,exports){
+},{}],27:[function(require,module,exports){
 var trim = require('trim')
   , forEach = require('for-each')
   , isArray = function(arg) {
@@ -1144,7 +3354,7 @@ module.exports = function (headers) {
 
   return result
 }
-},{"for-each":11,"trim":34}],27:[function(require,module,exports){
+},{"for-each":11,"trim":35}],28:[function(require,module,exports){
 var dtype = require('dtype')
 var anArray = require('an-array')
 var isBuffer = require('is-buffer')
@@ -1187,7 +3397,7 @@ module.exports = function createQuadElements(array, opt) {
     }
     return indices
 }
-},{"an-array":6,"dtype":9,"is-buffer":15}],28:[function(require,module,exports){
+},{"an-array":6,"dtype":9,"is-buffer":15}],29:[function(require,module,exports){
 var createLayout = require('layout-bmfont-text')
 var inherits = require('inherits')
 var createIndices = require('quad-indices')
@@ -1307,7 +3517,7 @@ TextGeometry.prototype.computeBoundingBox = function () {
   utils.computeBox(positions, bbox)
 }
 
-},{"./lib/utils":29,"./lib/vertices":30,"inherits":14,"layout-bmfont-text":17,"object-assign":20,"quad-indices":27,"three-buffer-vertex-data":32}],29:[function(require,module,exports){
+},{"./lib/utils":30,"./lib/vertices":31,"inherits":14,"layout-bmfont-text":17,"object-assign":21,"quad-indices":28,"three-buffer-vertex-data":33}],30:[function(require,module,exports){
 var itemSize = 4
 var box = { min: [0, 0], max: [0, 0] }
 
@@ -1347,7 +3557,7 @@ module.exports.computeSphere = function (positions, output) {
   output.radius = length / 2
 }
 
-},{}],30:[function(require,module,exports){
+},{}],31:[function(require,module,exports){
 module.exports.pages = function pages (glyphs) {
   var pages = new Float32Array(glyphs.length * 4 * 1)
   var i = 0
@@ -1450,7 +3660,7 @@ module.exports.positions = function positions (glyphs) {
   return positions
 }
 
-},{}],31:[function(require,module,exports){
+},{}],32:[function(require,module,exports){
 var assign = require('object-assign')
 
 module.exports = function createSDFShader (opt) {
@@ -1534,7 +3744,7 @@ module.exports = function createSDFShader (opt) {
   }, opt)
 }
 
-},{"object-assign":20}],32:[function(require,module,exports){
+},{"object-assign":21}],33:[function(require,module,exports){
 var flatten = require('flatten-vertex-data')
 
 module.exports.attr = setAttribute
@@ -1602,7 +3812,7 @@ function rebuildAttribute (attrib, data, itemSize) {
   return false
 }
 
-},{"flatten-vertex-data":10}],33:[function(require,module,exports){
+},{"flatten-vertex-data":10}],34:[function(require,module,exports){
 var self = self || {};// File:src/Three.js
 
 /**
@@ -42172,7 +44382,7 @@ if (typeof exports !== 'undefined') {
   this['THREE'] = THREE;
 }
 
-},{}],34:[function(require,module,exports){
+},{}],35:[function(require,module,exports){
 
 exports = module.exports = trim;
 
@@ -42188,7 +44398,7 @@ exports.right = function(str){
   return str.replace(/\s*$/, '');
 };
 
-},{}],35:[function(require,module,exports){
+},{}],36:[function(require,module,exports){
 var newline = /\n/
 var newlineChar = '\n'
 var whitespace = /\s/
@@ -42309,7 +44519,7 @@ function monospace(text, start, end, width) {
         end: start+glyphs
     }
 }
-},{}],36:[function(require,module,exports){
+},{}],37:[function(require,module,exports){
 "use strict";
 var window = require("global/window")
 var once = require("once")
@@ -42530,7 +44740,7 @@ function _createXHR(options) {
 
 function noop() {}
 
-},{"global/window":12,"is-function":16,"once":21,"parse-headers":26,"xtend":38}],37:[function(require,module,exports){
+},{"global/window":12,"is-function":16,"once":22,"parse-headers":27,"xtend":39}],38:[function(require,module,exports){
 module.exports = (function xmlparser() {
   //common browsers
   if (typeof window.DOMParser !== 'undefined') {
@@ -42558,7 +44768,7 @@ module.exports = (function xmlparser() {
     return div
   }
 })()
-},{}],38:[function(require,module,exports){
+},{}],39:[function(require,module,exports){
 module.exports = extend
 
 var hasOwnProperty = Object.prototype.hasOwnProperty;
@@ -42579,7 +44789,7 @@ function extend() {
     return target
 }
 
-},{}],39:[function(require,module,exports){
+},{}],40:[function(require,module,exports){
 /*!
  * The buffer module from node.js, for the browser.
  *
@@ -43912,7 +46122,7 @@ function decodeUtf8Char (str) {
   }
 }
 
-},{"base64-js":40,"ieee754":41,"is-array":42}],40:[function(require,module,exports){
+},{"base64-js":41,"ieee754":42,"is-array":43}],41:[function(require,module,exports){
 var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 
 ;(function (exports) {
@@ -44038,7 +46248,7 @@ var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 	exports.fromByteArray = uint8ToBase64
 }(typeof exports === 'undefined' ? (this.base64js = {}) : exports))
 
-},{}],41:[function(require,module,exports){
+},{}],42:[function(require,module,exports){
 exports.read = function(buffer, offset, isLE, mLen, nBytes) {
   var e, m,
       eLen = nBytes * 8 - mLen - 1,
@@ -44124,7 +46334,7 @@ exports.write = function(buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128;
 };
 
-},{}],42:[function(require,module,exports){
+},{}],43:[function(require,module,exports){
 
 /**
  * isArray
