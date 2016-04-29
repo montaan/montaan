@@ -215,71 +215,82 @@ function start(font, fontTexture) {
 									xhr.fsEntry = o;
 									xhr.onload = function() {
 										if (this.responseText.length < 2e5 && this.obj.parent) {
-											
-											var contents = this.responseText;
-											var result = hljs.highlightAuto(contents);
-											var doc = document.createElement('pre');
-											doc.className = 'hljs ' + result.language;
-											doc.innerHTML = result.value;
-											document.body.appendChild(doc);
-											// console.log(doc, result);
-											var paletteIndex = {};
-											var palette = [];
-											var txt = [];
-											var color = getComputedStyle(doc).color;
-											paletteIndex[color] = palette.length;
-											var c = new THREE.Color(color);
-											palette.push(new THREE.Vector3(c.r, c.g, c.b));
-											for (var i=0; i<doc.childNodes.length; i++) {
-												var cc = doc.childNodes[i];
-												if (cc.tagName) {
-													var color = getComputedStyle(cc).color;
-													if (!paletteIndex[color]) {
-														paletteIndex[color] = palette.length;
-														var c = new THREE.Color(color);
-														palette.push(new THREE.Vector3(c.r, c.g, c.b));
-													}
-													txt.push({
-														color: paletteIndex[color],
-														text: cc.textContent
-													});
-												} else {
-													txt.push({
-														color: 0,
-														text: cc.textContent
-													})
-												}
+											var contents = this.responseText.substring(0);
+											var self = this;
+											var ext = null;
+											if (this.fsEntry.name.indexOf('.') !== -1) {
+												var exts = this.fsEntry.name.split(".");
+												ext = exts[exts.length-1];
 											}
-											document.body.removeChild(doc);
-											// console.log(txt);
+											prettyPrintWorker.prettyPrint(contents, ext, function(result) {
+												if (result.language) {
+													var doc = document.createElement('pre');
+													doc.className = 'hljs ' + result.language;
+													doc.style.display = 'none';
+													doc.innerHTML = result.value;
+													document.body.appendChild(doc);
+													var paletteIndex = {};
+													var palette = [];
+													var txt = [];
+													var color = getComputedStyle(doc).color;
+													paletteIndex[color] = palette.length;
+													var c = new THREE.Color(color);
+													palette.push(new THREE.Vector3(c.r, c.g, c.b));
+													for (var i=0; i<doc.childNodes.length; i++) {
+														var cc = doc.childNodes[i];
+														if (cc.tagName) {
+															var color = getComputedStyle(cc).color;
+															if (!paletteIndex[color]) {
+																paletteIndex[color] = palette.length;
+																var c = new THREE.Color(color);
+																palette.push(new THREE.Vector3(c.r, c.g, c.b));
+															}
+															txt.push({
+																color: paletteIndex[color],
+																text: cc.textContent
+															});
+														} else {
+															txt.push({
+																color: 0,
+																text: cc.textContent
+															})
+														}
+													}
+													document.body.removeChild(doc);
+												}
 
-											var text = this.obj;
-											text.visible = true;
-											text.geometry = createText({font: Layout.font, text: contents});
-											var verts = text.geometry.attributes.position.array;
-											for (var i=0, off=3; i<txt.length; i++) {
-												var t = txt[i];
-												for (var j=0; j<t.text.length; j++) {
-													var c = t.text.charCodeAt(j);
-													if (c === 10 || c === 32 || c === 9 || c === 13) continue;
-													for (var k=0; k<6; k++) {
-														verts[off] = t.color;
-														off += 4;
+												var text = self.obj;
+												text.visible = true;
+												text.geometry = createText({font: Layout.font, text: contents});
+												if (result.language) {
+													var verts = text.geometry.attributes.position.array;
+													for (var i=0, off=3; i<txt.length; i++) {
+														var t = txt[i];
+														for (var j=0; j<t.text.length; j++) {
+															var c = t.text.charCodeAt(j);
+															if (c === 10 || c === 32 || c === 9 || c === 13) continue;
+															for (var k=0; k<6; k++) {
+																verts[off] = t.color;
+																off += 4;
+															}
+														}
 													}
+													text.material = makeTextMaterial();
+													text.material.uniforms.palette = {type: 'v3v', value: palette.slice(0,8)};
+												} else {
+													text.material = textMaterial;
 												}
-											}
-											text.material = makeTextMaterial();
-											text.material.uniforms.palette = {type: 'v3v', value: palette.slice(0,8)};
-											var textScale = 1 / Math.max(text.geometry.layout.width+60, (text.geometry.layout.height+30)/0.75);
-											var scale = this.fsEntry.scale * textScale;
-											var vAspect = Math.min(1, ((text.geometry.layout.height+30)/0.75) / (text.geometry.layout.width+60));
-											text.scale.multiplyScalar(scale);
-											text.scale.y *= -1;
-											text.position.copy(this.fsEntry);
-											text.fsEntry = this.fsEntry;
-											text.position.x += this.fsEntry.scale * textScale * 30;
-											text.position.y -= this.fsEntry.scale * textScale * 7.5;
-											text.position.y += this.fsEntry.scale * 0.25 + this.fsEntry.scale * 0.75 * (1-vAspect);
+												var textScale = 1 / Math.max(text.geometry.layout.width+60, (text.geometry.layout.height+30)/0.75);
+												var scale = self.fsEntry.scale * textScale;
+												var vAspect = Math.min(1, ((text.geometry.layout.height+30)/0.75) / (text.geometry.layout.width+60));
+												text.scale.multiplyScalar(scale);
+												text.scale.y *= -1;
+												text.position.copy(self.fsEntry);
+												text.fsEntry = self.fsEntry;
+												text.position.x += self.fsEntry.scale * textScale * 30;
+												text.position.y -= self.fsEntry.scale * textScale * 7.5;
+												text.position.y += self.fsEntry.scale * 0.25 + self.fsEntry.scale * 0.75 * (1-vAspect);
+											});
 										}
 									};
 									xhr.send();
@@ -300,6 +311,21 @@ function start(font, fontTexture) {
 		// mesh.receiveShadow = true;
 		return mesh;
 	};
+
+
+	var prettyPrintWorker = new Worker('js/prettyPrintWorker.js');
+	prettyPrintWorker.callbacks = {};
+	prettyPrintWorker.callbackUID = 0;
+	prettyPrintWorker.onmessage = function(event) {
+		this.callbacks[event.data.id](event.data.result);
+		delete this.callbacks[event.data.id];
+	};
+	prettyPrintWorker.prettyPrint = function(string, ext, callback, mimeType) {
+		var id = this.callbackUID++;
+		this.callbacks[id] = callback;
+		this.postMessage({string: string, ext: ext, id: id, mimeType: mimeType});
+	};
+
 
 	var createFileListModel = function(fileCount, fileTree) {
 		var geo = Geometry.makeGeometry(fileCount);
