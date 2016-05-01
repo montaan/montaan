@@ -42,6 +42,89 @@ module.exports = {
 		return (maxX > -1 && minX < 1 && maxY > -1 && minY < 1);
 	},
 
+	quadCoversFrustum: function(quadIndex, model, camera) {
+		var vertexOff = quadIndex * 6 * this.quadCount;
+		var a = this.qTmp1;
+		var b = this.qTmp2;
+		var c = this.qTmp3;
+		var d = this.qTmp4;
+		// this.projectVertexToFrustum(a, vertexOff, model, camera);
+		// this.projectVertexToFrustum(b, vertexOff+1, model, camera);
+		// this.projectVertexToFrustum(c, vertexOff+2, model, camera);
+		// this.projectVertexToFrustum(d, vertexOff+5, model, camera);
+		if (
+			(a.x < 1 && a.x > -1 && a.y < 1 && a.y > -1) ||
+			(b.x < 1 && b.x > -1 && b.y < 1 && b.y > -1) ||
+			(c.x < 1 && c.x > -1 && c.y < 1 && c.y > -1) ||
+			(d.x < 1 && d.x > -1 && d.y < 1 && d.y > -1)
+		) {
+			return false;
+		}
+		var minX = Math.min(a.x, b.x, c.x, d.x);
+		var maxX = Math.max(a.x, b.x, c.x, d.x);
+		var minY = Math.min(a.y, b.y, c.y, d.y);
+		var maxY = Math.max(a.y, b.y, c.y, d.y);
+		if (!(maxX > 1 && minX < -1 && maxY > 1 && minY < -1)) {
+			return false;
+		}
+		return !(
+			this.lineIntersectsFrustum(a,b) ||
+			this.lineIntersectsFrustum(b,d) ||
+			this.lineIntersectsFrustum(c,d) ||
+			this.lineIntersectsFrustum(c,a)
+		);
+	},
+
+	lineIntersectsFrustum: function(a, b) {
+		if (
+			(a.y < -1 && b.y < -1) || 
+			(a.y > 1 && b.y > 1) || 
+			(a.x < -1 && b.x < -1) || 
+			(a.x > 1 && b.x > 1)
+		) {
+			return false;
+		}
+		return (
+			this.lineIntersect(a.x, a.y, b.x, b.y, -1, -1, 1, -1) ||
+			this.lineIntersect(a.x, a.y, b.x, b.y, -1, 1, 1, 1) ||
+			this.lineIntersect(a.x, a.y, b.x, b.y, -1, -1, -1, 1) ||
+			this.lineIntersect(a.x, a.y, b.x, b.y, 1, -1, 1, 1)
+		);
+	},
+
+	lineIntersect: function(x1, y1, x2, y2, x3, y3, x4, y4)
+	{
+		var mua,mub,x,y;
+		var denom,numera,numerb;
+		var EPS = 1e-6;
+
+		denom  = (y4-y3) * (x2-x1) - (x4-x3) * (y2-y1);
+		numera = (x4-x3) * (y1-y3) - (y4-y3) * (x1-x3);
+		numerb = (x2-x1) * (y1-y3) - (y2-y1) * (x1-x3);
+
+		/* Are the line coincident? */
+		if (Math.abs(numera) < EPS && Math.abs(numerb) < EPS && Math.abs(denom) < EPS) {
+			x = (x1 + x2) / 2;
+			y = (y1 + y2) / 2;
+			return {x: x, y: y};
+		}
+
+		/* Are the line parallel */
+		if (Math.abs(denom) < EPS) {
+			return false;
+		}
+
+		/* Is the intersection along the the segments */
+		mua = numera / denom;
+		mub = numerb / denom;
+		if (mua < 0 || mua > 1 || mub < 0 || mub > 1) {
+			return false;
+		}
+		x = x1 + mua * (x2 - x1);
+		y = y1 + mua * (y2 - y1);
+		return {x: x, y: y};
+	},
+
 	projectVertexToFrustum: function(u, vertexIndex, model, camera) {
 		var off = vertexIndex * 3;
 		var v = model.geometry.attributes.position.array;

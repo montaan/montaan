@@ -50,12 +50,13 @@ function start(font, fontTexture) {
 		return branch;
 	};
 
-	var makeTextMaterial = function() {
+	var makeTextMaterial = function(palette) {
 		return new THREE.RawShaderMaterial(SDFShader({
 			map: fontTexture,
 			side: THREE.DoubleSide,
 			transparent: true,
 			color: 0xffffff,
+			palette: palette,
 			// polygonOffset: true,
 			// polygonOffsetFactor: -0.2,
 			// polygonOffsetUnits: 0.1,
@@ -65,10 +66,6 @@ function start(font, fontTexture) {
 	};
 
 	var textMaterial = makeTextMaterial();
-	textMaterial.uniforms.palette = {type: 'v3v', value: [
-		new THREE.Vector3(1,1,1),
-		new THREE.Vector3(1,1,1)
-	]};
 
 	var minScale = 1000, maxScale = 0;
 	var textTick = function(t,dt) {
@@ -153,6 +150,8 @@ function start(font, fontTexture) {
 						if (c.material && c.material.map) {
 							c.material.map.dispose();
 						}
+					// } else if (c.material) {
+					// 	c.material.dispose();
 					}
 					if (c.geometry) {
 						c.geometry.dispose();
@@ -164,6 +163,7 @@ function start(font, fontTexture) {
 				}
 			}
 			var stack = [this.fileTree];
+			var zoomedInPath = "";
 			while (stack.length > 0) {
 				var obj = stack.pop();
 				for (var name in obj.entries) {
@@ -171,6 +171,9 @@ function start(font, fontTexture) {
 					var idx = o.index;
 					if (!Geometry.quadInsideFrustum(idx, this, camera)) {
 					} else if (o.scale * 50 / Math.max(camera.fov, camera.targetFOV) > 0.3) {
+						if (Geometry.quadCoversFrustum(idx, this, camera)) {
+							zoomedInPath += '/' + o.name;
+						}
 						if (o.entries === null) {
 							var fullPath = getFullPath(o);
 							if (visibleFiles.children.length < 20 && !visibleFiles.visibleSet[fullPath]) {
@@ -217,12 +220,7 @@ function start(font, fontTexture) {
 										if (this.responseText.length < 2e5 && this.obj.parent) {
 											var contents = this.responseText.substring(0);
 											var self = this;
-											var ext = null;
-											if (this.fsEntry.name.indexOf('.') !== -1) {
-												var exts = this.fsEntry.name.split(".");
-												ext = exts[exts.length-1];
-											}
-											prettyPrintWorker.prettyPrint(contents, ext, function(result) {
+											prettyPrintWorker.prettyPrint(contents, this.fsEntry.name, function(result) {
 												if (result.language) {
 													var doc = document.createElement('pre');
 													doc.className = 'hljs ' + result.language;
@@ -232,30 +230,34 @@ function start(font, fontTexture) {
 													var paletteIndex = {};
 													var palette = [];
 													var txt = [];
-													var color = getComputedStyle(doc).color;
-													paletteIndex[color] = palette.length;
-													var c = new THREE.Color(color);
-													palette.push(new THREE.Vector3(c.r, c.g, c.b));
-													for (var i=0; i<doc.childNodes.length; i++) {
-														var cc = doc.childNodes[i];
-														if (cc.tagName) {
-															var color = getComputedStyle(cc).color;
-															if (!paletteIndex[color]) {
-																paletteIndex[color] = palette.length;
-																var c = new THREE.Color(color);
-																palette.push(new THREE.Vector3(c.r, c.g, c.b));
-															}
-															txt.push({
-																color: paletteIndex[color],
-																text: cc.textContent
-															});
-														} else {
-															txt.push({
-																color: 0,
-																text: cc.textContent
-															})
+													var collectNodeStyles = function(doc, txt, palette, paletteIndex) {
+														var style = getComputedStyle(doc);
+														var color = style.color;
+														if (!paletteIndex[color]) {
+															paletteIndex[color] = palette.length;
+															var c = new THREE.Color(color);
+															palette.push(new THREE.Vector3(c.r, c.g, c.b));
 														}
-													}
+														var color = paletteIndex[color];
+														var bold = style.fontWeight !== 'normal';
+														var italic = style.fontStyle === 'italic';
+														var underline = style.textDecoration === 'underline';
+														for (var i=0; i<doc.childNodes.length; i++) {
+															var cc = doc.childNodes[i];
+															if (cc.tagName) {
+																collectNodeStyles(cc, txt, palette, paletteIndex);
+															} else {
+																txt.push({
+																	color: color,
+																	bold: bold,
+																	italic: italic,
+																	underline: underline,
+																	text: cc.textContent
+																})
+															}
+														}
+													};
+													collectNodeStyles(doc, txt, palette, paletteIndex);
 													document.body.removeChild(doc);
 												}
 
@@ -270,13 +272,15 @@ function start(font, fontTexture) {
 															var c = t.text.charCodeAt(j);
 															if (c === 10 || c === 32 || c === 9 || c === 13) continue;
 															for (var k=0; k<6; k++) {
-																verts[off] = t.color;
+																if (t.italic) {
+																	verts[off-3] += ((k <= 3 && k !== 0) ? -1 : 1) * 2.5;
+																}
+																verts[off] = t.color + 256 * t.bold;
 																off += 4;
 															}
 														}
 													}
-													text.material = makeTextMaterial();
-													text.material.uniforms.palette = {type: 'v3v', value: palette.slice(0,8)};
+													text.material = makeTextMaterial(palette);
 												} else {
 													text.material = textMaterial;
 												}
@@ -302,6 +306,7 @@ function start(font, fontTexture) {
 					}
 				}
 			}
+			console.log(zoomedInPath);
 		};
 		mesh.fileTree = fileTree;
 		mesh.material.side = THREE.DoubleSide;
@@ -320,10 +325,10 @@ function start(font, fontTexture) {
 		this.callbacks[event.data.id](event.data.result);
 		delete this.callbacks[event.data.id];
 	};
-	prettyPrintWorker.prettyPrint = function(string, ext, callback, mimeType) {
+	prettyPrintWorker.prettyPrint = function(string, filename, callback, mimeType) {
 		var id = this.callbackUID++;
 		this.callbacks[id] = callback;
-		this.postMessage({string: string, ext: ext, id: id, mimeType: mimeType});
+		this.postMessage({string: string, filename: filename, id: id, mimeType: mimeType});
 	};
 
 
