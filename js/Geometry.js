@@ -4,11 +4,13 @@ module.exports = {
 
 	quadCount: 2,
 
+	vertsPerFile: 6 * 2,
+
 	findFSEntry: function(ev, camera, models, highlighted) {
 		var intersections = utils.findIntersectionsUnderEvent(ev, camera, (models instanceof Array) ? models : [models]);
 		if (intersections.length > 0) {
 			var faceIndex = intersections[0].faceIndex;
-			var fsEntry = intersections[0].object.fileTree.index[Math.floor(faceIndex / (6 * this.quadCount))];
+			var fsEntry = intersections[0].object.fileTree.fsIndex[Math.floor(faceIndex / (6 * this.quadCount))];
 			while (fsEntry && fsEntry.scale * camera.projectionMatrix.elements[0] < 0.2) {
 				if (fsEntry.parent === highlighted) {
 					break;
@@ -319,6 +321,7 @@ module.exports = {
 		// verts[i++] = y + h;
 		// verts[i++] = z;
 
+		return i / 3;
 	}
 
 };

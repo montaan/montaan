@@ -102,15 +102,15 @@ function start(font, fontTexture) {
 
 
 	var createFileTreeModel = function(fileCount, fileTree) {
-		var geo = Geometry.makeGeometry(fileCount);
+		var geo = Geometry.makeGeometry(fileCount+1);
 
 		var fileIndex = 0;
 
-		fileTree.index = [fileTree];
+		fileTree.fsIndex = [fileTree];
 
 		var labels = new THREE.Object3D();
 		var thumbnails = new THREE.Object3D();
-		Layout.createFileTreeQuads(fileTree, fileIndex, geo.attributes.position.array, geo.attributes.color.array, 0, 0, 0, 1, 0, labels, thumbnails, fileTree.index);
+		Layout.createFileTreeQuads(fileTree, fileIndex, geo.attributes.position.array, geo.attributes.color.array, 0, 0, 0, 1, 0, labels, thumbnails, fileTree.fsIndex);
 
 		var bigGeo = createText({text:'', font: font});
 		var vertCount = 0;
@@ -164,6 +164,7 @@ function start(font, fontTexture) {
 			}
 			var stack = [this.fileTree];
 			var zoomedInPath = "";
+			var smallestCovering = this.fileTree;
 			while (stack.length > 0) {
 				var obj = stack.pop();
 				for (var name in obj.entries) {
@@ -173,6 +174,7 @@ function start(font, fontTexture) {
 					} else if (o.scale * 50 / Math.max(camera.fov, camera.targetFOV) > 0.3) {
 						if (Geometry.quadCoversFrustum(idx, this, camera)) {
 							zoomedInPath += '/' + o.name;
+							smallestCovering = o;
 						}
 						if (o.entries === null) {
 							var fullPath = getFullPath(o);
@@ -306,7 +308,9 @@ function start(font, fontTexture) {
 					}
 				}
 			}
-			console.log(zoomedInPath);
+			// console.log(zoomedInPath);
+			this.geometry.setDrawRange(smallestCovering.vertexIndex, smallestCovering.lastVertexIndex-smallestCovering.vertexIndex);
+			bigGeo.setDrawRange(smallestCovering.textVertexIndex, smallestCovering.lastTextVertexIndex - smallestCovering.textVertexIndex);
 		};
 		mesh.fileTree = fileTree;
 		mesh.material.side = THREE.DoubleSide;

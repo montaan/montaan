@@ -410,7 +410,7 @@ module.exports = {
 	},
 
 
-	createFileTreeQuads: function(fileTree, fileIndex, verts, colorVerts, parentX, parentY, parentZ, parentScale, depth, parentText, thumbnails, index) {
+	createFileTreeQuads: function(fileTree, fileIndex, verts, colorVerts, parentX, parentY, parentZ, parentScale, depth, parentText, thumbnails, index, accum) {
 		var dirs = [];
 		var files = [];
 		for (var i in fileTree.entries) {
@@ -426,6 +426,14 @@ module.exports = {
 			}
 		}
 		// fileIndex = this.layoutObjectsInRectangle(1.5, dirs, fileTree, fileIndex, verts, colorVerts, parentX, parentY, parentZ, parentScale, depth, parentText, thumbnails, index);
+
+		fileTree.index = fileIndex;
+		fileIndex++;
+		if (!accum) {
+			accum = { textVertexIndex: 0, vertexIndex: 0 };
+			fileTree.textVertexIndex = 0;
+			fileTree.vertexIndex = 0;
+		}
 
 		var dirCount = dirs.length + (files.length > 0 ? 1 : 0);
 		var squareSide = Math.ceil(Math.sqrt(dirCount));
@@ -462,10 +470,14 @@ module.exports = {
 							file.scale = fileScale * (0.9/squareSidef);
 							file.z = parentZ + file.scale * 0.2;
 							file.index = fileIndex;
+							file.vertexIndex = accum.vertexIndex;
+							file.lastIndex = fileIndex;
 							file.parent = fileTree;
 							index[fileIndex] = file;
 							Geometry.setColor(colorVerts, file.index, fileColor, depth);
-							Geometry.makeQuad(verts, file.index, file.x, file.y, file.scale, file.scale, file.z);
+							accum.vertexIndex = Geometry.makeQuad(verts, file.index, file.x, file.y, file.scale, file.scale, file.z);
+							accum.textVertexIndex = this.createTextForEntry(file, parentText, accum.textVertexIndex);
+							file.lastVertexIndex = accum.vertexIndex;
 							// file.thumbnail = Thumbnails.loadThumbnail(file);
 							// if (file.thumbnail) {
 							// 	file.thumbnailMesh = new THREE.Mesh(
@@ -492,12 +504,15 @@ module.exports = {
 					dir.scale = parentScale * (0.8 / squareSide);
 					dir.z = parentZ + dir.scale * 0.2;
 					dir.index = fileIndex;
+					dir.vertexIndex = accum.vertexIndex;
+					dir.textVertexIndex = accum.textVertexIndex;
 					dir.parent = fileTree;
 					index[fileIndex] = dir;
 					var dirColor = dir.color || Colors.getDirectoryColor(dir);
 					Geometry.setColor(colorVerts, dir.index, dirColor, depth);
-					Geometry.makeQuad(verts, dir.index, dir.x, dir.y, dir.scale, dir.scale, dir.z);
-					fileIndex++;
+					accum.vertexIndex = Geometry.makeQuad(verts, dir.index, dir.x, dir.y, dir.scale, dir.scale, dir.z);
+					accum.textVertexIndex = this.createTextForEntry(dir, parentText, accum.textVertexIndex);
+					fileIndex = this.createFileTreeQuads(dir, fileIndex, verts, colorVerts, dir.x, dir.y, dir.z, dir.scale, depth+1, dir.text, thumbnails, index, accum);
 				}
 			}
 		}
@@ -507,89 +522,89 @@ module.exports = {
 			Geometry.makeQuad(verts, fileTree.index, fileTree.x, fileTree.y+fileTree.scale*(1.0-yScale), fileTree.scale*xScale, fileTree.scale*yScale, fileTree.z);
 		}
 
-		if (true || depth < 4) {
-			for (var i in fileTree.entries) {
-				var obj = fileTree.entries[i];
-				var title = obj.title;
-				if (obj.entries == null) {
-					if (title.indexOf('\n') === -1 && title.length > 16) {
-						var breakPoint = Math.max(16, Math.floor(title.length / 2));
-						title = title.substring(0, breakPoint) + '\n' + title.substring(breakPoint);
-					}
-				} else if (title.indexOf('\n') === -1 && title.length > 26) {
-					var words = title.split(/ /);
-					var lineLength = 0;
-					var s = "";
-					var lineBreakLength = 26;
-					if (title.length < 52) {
-						lineBreakLength = 26
-					} else if (title.length < 107) {
-						lineBreakLength = 39;
-					} else if (title.length < 208) {
-						lineBreakLength = 52;
-					} else {
-						lineBreakLength = title.length+10;
-					}
-					var re = new RegExp(".{"+lineBreakLength+"}|.+$", 'g');
-					for (var i=0; i<words.length; i++) {
-						var w = words[i];
-						if (lineLength + w.length >= lineBreakLength) {
-							if (w.length >= lineBreakLength) {
-								var prefix = w.substring(0, lineBreakLength-lineLength);
-								s += prefix + '\n';
-								var suffix = w.substring(lineBreakLength-lineLength);
-								var bits = suffix.match(re);
-								s += bits.slice(0, -1).join("\n") + "\n";
-								s += bits[bits.length-1] + ' ';
-								lineLength = bits[bits.length-1].length + 1;
-							} else {
-								s += '\n' + w + ' ';
-								lineLength = w.length + 1;
-							}
-						} else {
-							s += w + ' ';
-							lineLength += w.length + 1;
-						}
-					}
-					title = s;
-				}
-
-				var textGeometry = createText({text: title, font: this.font});
-				var text = new THREE.Object3D();
-				text.geometry = textGeometry;
-				var textScaleW = (220/Math.max(textGeometry.layout.width, 220));
-				var textScaleH = (obj.entries ? 30 : 50)/textGeometry.layout.height;
-
-				var scale = Math.min(textScaleW, textScaleH);
-
-				text.position.x = obj.x + (obj.entries ? 0 : (obj.scale * 0.02));
-				text.position.y = obj.y + (obj.entries ? obj.scale*1.01 : obj.scale*0.02);
-				text.position.z = obj.z;
-				text.scale.multiplyScalar(obj.scale*0.00436*scale);
-				text.scale.y *= -1;
-				var arr = textGeometry.attributes.position.array;
-				for (var j=0; j<arr.length; j+=4) {
-					arr[j] = arr[j] * text.scale.x + text.position.x;
-					arr[j+1] = arr[j+1] * text.scale.y + text.position.y;
-					arr[j+2] = arr[j+2] * text.scale.z + text.position.z;
-				}
-				text.position.set(0,0,0);
-				text.scale.set(1,1,1);
-				var o = new THREE.Object3D();
-				if (parentText.children.length === 0) o.isFirst = true;
-				o.add(text);
-				parentText.add(o);
-				obj.text = o;
-			}
-		} else {
-			// return;
-		}
-
-		for (var j=0; j<dirs.length; j++) {
-			var dir = dirs[j];
-			fileIndex = this.createFileTreeQuads(dir, fileIndex, verts, colorVerts, dir.x, dir.y, dir.z, dir.scale, depth+1, dir.text, thumbnails, index);
-		}
+		fileTree.lastIndex = fileIndex-1;
+		fileTree.lastTextVertexIndex = accum.textVertexIndex;
+		fileTree.lastVertexIndex = accum.vertexIndex;
 		return fileIndex;
+	},
+
+	createTextForEntry: function(obj, parentText, textVertexIndex) {
+		var title = obj.title;
+		if (obj.entries == null) {
+			if (title.indexOf('\n') === -1 && title.length > 16) {
+				var breakPoint = Math.max(16, Math.floor(title.length / 2));
+				title = title.substring(0, breakPoint) + '\n' + title.substring(breakPoint);
+			}
+		} else if (title.indexOf('\n') === -1 && title.length > 26) {
+			var words = title.split(/ /);
+			var lineLength = 0;
+			var s = "";
+			var lineBreakLength = 26;
+			if (title.length < 52) {
+				lineBreakLength = 26
+			} else if (title.length < 107) {
+				lineBreakLength = 39;
+			} else if (title.length < 208) {
+				lineBreakLength = 52;
+			} else {
+				lineBreakLength = title.length+10;
+			}
+			var re = new RegExp(".{"+lineBreakLength+"}|.+$", 'g');
+			for (var i=0; i<words.length; i++) {
+				var w = words[i];
+				if (lineLength + w.length >= lineBreakLength) {
+					if (w.length >= lineBreakLength) {
+						var prefix = w.substring(0, lineBreakLength-lineLength);
+						s += prefix + '\n';
+						var suffix = w.substring(lineBreakLength-lineLength);
+						var bits = suffix.match(re);
+						s += bits.slice(0, -1).join("\n") + "\n";
+						s += bits[bits.length-1] + ' ';
+						lineLength = bits[bits.length-1].length + 1;
+					} else {
+						s += '\n' + w + ' ';
+						lineLength = w.length + 1;
+					}
+				} else {
+					s += w + ' ';
+					lineLength += w.length + 1;
+				}
+			}
+			title = s;
+		}
+
+		var textGeometry = createText({text: title, font: this.font});
+		var text = new THREE.Object3D();
+		text.geometry = textGeometry;
+
+		obj.textVertexIndex = textVertexIndex;
+		obj.lastTextVertexIndex = textVertexIndex + text.geometry.attributes.position.array.length/4;
+
+		var textScaleW = (220/Math.max(textGeometry.layout.width, 220));
+		var textScaleH = (obj.entries ? 30 : 50)/textGeometry.layout.height;
+
+		var scale = Math.min(textScaleW, textScaleH);
+
+		text.position.x = obj.x + (obj.entries ? 0 : (obj.scale * 0.02));
+		text.position.y = obj.y + (obj.entries ? obj.scale*1.01 : obj.scale*0.02);
+		text.position.z = obj.z;
+		text.scale.multiplyScalar(obj.scale*0.00436*scale);
+		text.scale.y *= -1;
+		var arr = textGeometry.attributes.position.array;
+		for (var j=0; j<arr.length; j+=4) {
+			arr[j] = arr[j] * text.scale.x + text.position.x;
+			arr[j+1] = arr[j+1] * text.scale.y + text.position.y;
+			arr[j+2] = arr[j+2] * text.scale.z + text.position.z;
+		}
+		text.position.set(0,0,0);
+		text.scale.set(1,1,1);
+		var o = new THREE.Object3D();
+		if (parentText.children.length === 0) o.isFirst = true;
+		o.add(text);
+		parentText.add(o);
+		obj.text = o;
+
+		return obj.lastTextVertexIndex;
 	}
 
 };
