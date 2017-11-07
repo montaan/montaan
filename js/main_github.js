@@ -57,11 +57,11 @@ function start(font, fontTexture) {
 			transparent: true,
 			color: 0xffffff,
 			palette: palette,
-			// polygonOffset: true,
-			// polygonOffsetFactor: -0.2,
-			// polygonOffsetUnits: 0.1,
-			depthTest: false,
-			depthWrite: false
+			polygonOffset: true,
+			polygonOffsetFactor: -0.5,
+			polygonOffsetUnits: 0.5
+			// depthTest: false,
+			// depthWrite: false
 		}));
 	};
 
@@ -100,6 +100,12 @@ function start(font, fontTexture) {
 	};
 
 
+	var countChars = function(s,charCode) { var j = 0;
+		for (var i=0; i<s.length; i++) {
+			if (s.charCodeAt(i) === charCode) j++;
+		}
+		return j;
+	};
 
 	var createFileTreeModel = function(fileCount, fileTree) {
 		var geo = Geometry.makeGeometry(fileCount+1);
@@ -1497,12 +1503,84 @@ function start(font, fontTexture) {
 			if (intersection) {
 				fsEntry = intersection.fsEntry;
 				var ca = intersection.object.geometry.attributes.color;
-				if (highlighted) {
-					// setColor(ca.array, highlighted.index, Colors[highlighted.entries === null ? 'getFileColor' : 'getDirectoryColor'](highlighted), 0);
+				var vs = intersection.object.geometry.attributes.position;
+				var tvs = intersection.object.children[1].geometry.attributes.position;
+				if (highlighted && highlighted.highlight) {
+					var obj = highlighted.highlight;
+					obj.parent.remove(obj);
 				}
 				if (highlighted !== fsEntry) {
-					// setColor(ca.array, fsEntry.index, [0.1,0.25,0.5], 0);
 					highlighted = fsEntry;
+					/*
+
+					highlighted.highlight = new THREE.Object3D();
+					var mesh = intersection.object;
+					var text = intersection.object.children[1]; 
+					var highlightMesh = new THREE.Mesh(
+						new THREE.BufferGeometry(),
+						mesh.material
+					);
+					highlighted.highlight.add(highlightMesh);
+
+					highlightMesh.geometry.addAttribute('position', mesh.geometry.attributes.position);
+					highlightMesh.geometry.addAttribute('color', mesh.geometry.attributes.color);
+					highlightMesh.geometry.setDrawRange(highlighted.vertexIndex, highlighted.lastVertexIndex-highlighted.vertexIndex);
+
+					var highlightText = new THREE.Mesh(
+						new THREE.BufferGeometry(),
+						text.material
+					);
+					highlighted.highlight.add(highlightText);
+
+					highlightText.geometry.addAttribute('position', text.geometry.attributes.position);
+					highlightText.geometry.addAttribute('uv', text.geometry.attributes.uv);
+					highlightText.geometry.setDrawRange(highlighted.textVertexIndex, highlighted.lastTextVertexIndex-highlighted.textVertexIndex);
+
+					var x = vs.array[highlighted.vertexIndex*3] + highlighted.scale * 0.5;
+					var y = vs.array[highlighted.vertexIndex*3+1] + highlighted.scale * 0.5;
+					var z = vs.array[highlighted.vertexIndex*3+2];
+
+					highlighted.highlight.position.set(x, y, z);
+					var startTime = performance.now();
+					highlighted.highlight.ontick = function() {
+						animating = true;
+						var elapsed = performance.now() - startTime;
+						var f = 0.5 - 0.5 * Math.cos(Math.PI * elapsed / 500);
+						if (elapsed > 500) {
+							f = 1;
+						}
+						this.parent.position.z = -0.3 * f;
+						this.position.z = z + 0.3 * f;
+						this.position.x = x + 0.5 * f;
+						this.position.y = y + 0.5 * f;
+						this.scale.set(f/highlighted.scale, f/highlighted.scale, f/highlighted.scale);
+						if (f === 1) {
+							animating = false;
+						}
+					};
+					highlightMesh.position.set(-x,-y,-z);
+					highlightText.position.set(-x,-y,-z);
+					mesh.add(highlighted.highlight);
+					*/
+
+					// var scale = 0.5 / highlighted.scale;
+					// for (var i=highlighted.vertexIndex*3, l=highlighted.lastVertexIndex*3; i<l; i+=3) {
+					// 	vs.array[i] = (vs.array[i] - x) * scale + x;
+					// 	vs.array[i+1] = (vs.array[i+1] - y) * scale + y;
+					// 	vs.array[i+2] = (vs.array[i+2] - z) * scale + z;
+					// 	vs.array[i+2] += 0.1;
+					// }
+					// for (var i=highlighted.textVertexIndex*4, l=highlighted.lastTextVertexIndex*4; i<l; i+=4) {
+					// 	tvs.array[i] = (tvs.array[i] - x) * scale + x;
+					// 	tvs.array[i+1] = (tvs.array[i+1] - y) * scale + y;
+					// 	tvs.array[i+2] = (tvs.array[i+2] - z) * scale + z;
+					// 	tvs.array[i+2] += 0.1;
+					// }
+					// vs.needsUpdate = true;
+					// tvs.needsUpdate = true;
+
+					// setColor(ca.array, fsEntry.index, [0.1,0.25,0.5], 0);
+
 					var targetFOV = fsEntry.scale * 50;
 					if (targetFOV / camera.fov > 0.3 && highlighted.entries === null) {
 						if (highlighted.entries === null) {
@@ -1515,7 +1593,7 @@ function start(font, fontTexture) {
 				} else {
 					if (highlighted.entries === null) {
 						// File, let's open it.
-						openFile(highlighted);
+						// openFile(highlighted);
 					}
 					highlighted = null;
 				}
@@ -1747,12 +1825,16 @@ function start(font, fontTexture) {
 	};
 
 	var tmpM4 = new THREE.Matrix4();
+	var lastFrameTime = performance.now();
+	window.animating = false;
 	var render = function() {
 		var visCount = 0;
 		scene.remove(searchLine);
 		scene.add(searchLine);
 		scene.updateMatrixWorld(true);
-		scene.tick();
+		var t = performance.now();
+		scene.tick(t, t - lastFrameTime);
+		lastFrameTime = t;
 		// scene.traverse(function(m) {
 		// 	tmpM4.multiplyMatrices(camera.matrixWorldInverse, m.matrixWorld);
 		// 	tmpM4.multiplyMatrices(camera.projectionMatrix, tmpM4);
@@ -1799,7 +1881,7 @@ function start(font, fontTexture) {
 			camera.updateProjectionMatrix();
 			changed = true;
 		}
-		if (changed) render();
+		if (changed || animating) render();
 		changed = false;
 		window.requestAnimationFrame(tick);
 	};
