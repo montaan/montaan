@@ -66,8 +66,8 @@ TextGeometry.prototype.update = function (opt) {
   // get common vertex data
   var positions = vertices.positions(glyphs)
   var uvs = vertices.uvs(glyphs, texWidth, texHeight, flipY)
-
-  // update vertex data
+ 
+   // update vertex data
   buffer.attr(this, 'position', positions, 4)
   buffer.attr(this, 'uv', uvs, 2)
 

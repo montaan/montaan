@@ -70,32 +70,32 @@ module.exports.positions = function positions (glyphs) {
     positions[i++] = x
     positions[i++] = y
     positions[i++] = 0
-    positions[i++] = 1
+    positions[i++] = 0
     // TL
     positions[i++] = x
     positions[i++] = y + h
     positions[i++] = 0
-    positions[i++] = 1
+    positions[i++] = 0
     // TR
     positions[i++] = x + w
     positions[i++] = y + h
     positions[i++] = 0
-    positions[i++] = 1
+    positions[i++] = 0
     // TR
     positions[i++] = x + w
     positions[i++] = y + h
     positions[i++] = 0
-    positions[i++] = 1
+    positions[i++] = 0
     // BR
     positions[i++] = x + w
     positions[i++] = y
     positions[i++] = 0
-    positions[i++] = 1
+    positions[i++] = 0
     // BL
     positions[i++] = x
     positions[i++] = y
     positions[i++] = 0
-    positions[i++] = 1
+    positions[i++] = 0
   })
   return positions
 }
