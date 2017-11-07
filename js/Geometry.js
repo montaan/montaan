@@ -79,9 +79,9 @@ module.exports = {
 
 	lineIntersectsFrustum: function(a, b) {
 		if (
-			(a.y < -1 && b.y < -1) || 
-			(a.y > 1 && b.y > 1) || 
-			(a.x < -1 && b.x < -1) || 
+			(a.y < -1 && b.y < -1) ||
+			(a.y > 1 && b.y > 1) ||
+			(a.x < -1 && b.x < -1) ||
 			(a.x > 1 && b.x > 1)
 		) {
 			return false;
@@ -132,7 +132,7 @@ module.exports = {
 		var v = model.geometry.attributes.position.array;
 		u.set(v[off + 0], v[off + 1], v[off + 2]);
 		u.applyMatrix4(model.modelViewMatrix);
-		u.applyProjection(camera.projectionMatrix);
+		u.applyMatrix4(camera.projectionMatrix);
 	},
 
 	vertexInsideFrustumTmp: new THREE.Vector3(),

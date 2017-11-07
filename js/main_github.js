@@ -7,11 +7,10 @@ var utils = require('./utils.js');
 var Geometry = require('./Geometry.js');
 var Colors = require('./Colors.js');
 var Layout = require('./Layout.js');
-var createText = require('three-bmfont-text');
-var SDFShader = require('three-bmfont-text/shaders/sdf');
+var createText = require('../three-bmfont-text-modified');
+var SDFShader = require('../three-bmfont-text-modified/shaders/sdf');
 var loadFont = require('load-bmfont');
 var lunr = require('lunr');
-
 
 var loadFontImage = function (opt, cb) {
   loadFont(opt.font, function (err, font) {
@@ -221,10 +220,12 @@ function start(font, fontTexture) {
 									visibleFiles.visibleSet[fullPath] = true;
 									visibleFiles.add(obj3);
 									var xhr = new XMLHttpRequest();
-									xhr.open('GET', fullPath);
+									xhr.open('GET', '/repos/' + repoURL + '/contents' + fullPath);
 									xhr.obj = obj3;
 									xhr.fsEntry = o;
 									xhr.onload = function() {
+										console.log(this.responseText);
+										return;
 										if (this.responseText.length < 2e5 && this.obj.parent) {
 											var contents = this.responseText.substring(0);
 											var self = this;
@@ -460,7 +461,7 @@ function start(font, fontTexture) {
 	var addLineBetweenEntries = function(geo, color, modelA, entryA, modelB, entryB) {
 		var a = entryA;
 		var b = entryB;
-		
+
 		var av = new THREE.Vector3(a.x, a.y, a.z);
 		av.applyMatrix4(modelA.matrix);
 
@@ -807,7 +808,7 @@ function start(font, fontTexture) {
 				ghNavTarget = ghPath;
 			} else {
 				var ghRepo = ghPath;
-				ghNavTarget = '';				
+				ghNavTarget = '';
 			}
 			ghNavQuery = (query || '').replace(/^q\=/,'');
 			window.searchInput.value = ghNavQuery;
@@ -816,7 +817,7 @@ function start(font, fontTexture) {
 		} else {
 			var commitLog, commitChanges;
 			var treeLoaded = false;
-			
+
 			var loadTick = function() {
 				if (!commitLog || !commitChanges || !treeLoaded) {
 					return;
@@ -1289,7 +1290,7 @@ function start(font, fontTexture) {
 				case 40:
 					dy = -50;
 				break;
-				
+
 				case 37:
 					dx = 50;
 				break;
@@ -1515,7 +1516,7 @@ function start(font, fontTexture) {
 
 					highlighted.highlight = new THREE.Object3D();
 					var mesh = intersection.object;
-					var text = intersection.object.children[1]; 
+					var text = intersection.object.children[1];
 					var highlightMesh = new THREE.Mesh(
 						new THREE.BufferGeometry(),
 						mesh.material
@@ -1765,7 +1766,7 @@ function start(font, fontTexture) {
 	var clearSearchLine = function() {
 		var geo = searchLine.geometry;
 		var verts = geo.vertices;
-		for (var i=0; i<verts.length; i++){ 
+		for (var i=0; i<verts.length; i++){
 			var v = verts[i];
 			v.x = v.y = v.z = 0;
 		}

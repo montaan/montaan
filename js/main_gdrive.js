@@ -1,7 +1,7 @@
 global.THREE = require('three')
 var utils = require('./utils.js');
-var createText = require('three-bmfont-text')
-var SDFShader = require('three-bmfont-text/shaders/sdf')
+var createText = require('../three-bmfont-text-modified')
+var SDFShader = require('../three-bmfont-text-modified/shaders/sdf')
 var loadFont = require('load-bmfont')
 
 var loadFontImage = function (opt, cb) {
@@ -354,7 +354,7 @@ function start(font, texture) {
 							file.thumbnail = loadThumbnail(file);
 							if (file.thumbnail) {
 								file.thumbnailMesh = new THREE.Mesh(
-									thumbnailGeo, 
+									thumbnailGeo,
 									new THREE.MeshBasicMaterial({
 										map: file.thumbnail,
 										transparent: true,

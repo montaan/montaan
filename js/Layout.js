@@ -1,7 +1,7 @@
 global.THREE = require('three');
 var Geometry = require('./Geometry.js');
 var Colors = require('./Colors.js');
-var createText = require('three-bmfont-text');
+var createText = require('../three-bmfont-text-modified');
 
 module.exports = {
 
@@ -104,7 +104,7 @@ module.exports = {
 							// file.thumbnail = Thumbnails.loadThumbnail(file);
 							// if (file.thumbnail) {
 							// 	file.thumbnailMesh = new THREE.Mesh(
-							// 		this.thumbnailGeo, 
+							// 		this.thumbnailGeo,
 							// 		new THREE.MeshBasicMaterial({
 							// 			map: file.thumbnail,
 							// 			transparent: true,
@@ -286,7 +286,7 @@ module.exports = {
 							// file.thumbnail = Thumbnails.loadThumbnail(file);
 							// if (file.thumbnail) {
 							// 	file.thumbnailMesh = new THREE.Mesh(
-							// 		this.thumbnailGeo, 
+							// 		this.thumbnailGeo,
 							// 		new THREE.MeshBasicMaterial({
 							// 			map: file.thumbnail,
 							// 			transparent: true,
@@ -481,7 +481,7 @@ module.exports = {
 							// file.thumbnail = Thumbnails.loadThumbnail(file);
 							// if (file.thumbnail) {
 							// 	file.thumbnailMesh = new THREE.Mesh(
-							// 		this.thumbnailGeo, 
+							// 		this.thumbnailGeo,
 							// 		new THREE.MeshBasicMaterial({
 							// 			map: file.thumbnail,
 							// 			transparent: true,
