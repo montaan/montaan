@@ -1,4 +1,4 @@
-#Misty
+# Misty
 
 Misty is a filesystem tree visualizer.
 
@@ -7,7 +7,7 @@ It displays the filesystem as an easy-to-understand 2D hierarchy, with folders s
 Misty wants to display the contents of individual files too. Can you help?
 
 
-##The focused project description
+## The focused project description
 
 - Understand a new project quickly (even old projects are new after a while - you forget how they work)
 - See who is working on what
@@ -16,7 +16,7 @@ Misty wants to display the contents of individual files too. Can you help?
 - Target user: freelancers, project managers
 
 
-##Vis milestones
+## Vis milestones
 
 - First two layers of homedir, with labels (1000 items) [x]
 - Full homedir, without labels (500k items) [x]
@@ -29,13 +29,13 @@ Misty wants to display the contents of individual files too. Can you help?
 - Wikipedia with categories & interlinking (55M-ish) [ ]
 
 
-##VR/AR management
+## VR/AR management
 
 - Hierarchies as 3D objects, more natural feel, easier to understand and work with
 - So coooool! Double-mondo radicalissimo!
 
 
-##Organization chart visualization
+## Organization chart visualization
 
 - What are the teams
 - Who is working on what
@@ -43,7 +43,7 @@ Misty wants to display the contents of individual files too. Can you help?
 - What expertise exists inside the organization, how to bring that to bear on the important problems
 
 
-##Visualize analytics, visitor flow
+## Visualize analytics, visitor flow
 
 - Analytics events clustered as different types of hierarchies
 - Link to users
