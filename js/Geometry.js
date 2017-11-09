@@ -132,7 +132,7 @@ module.exports = {
 		var v = model.geometry.attributes.position.array;
 		u.set(v[off + 0], v[off + 1], v[off + 2]);
 		u.applyMatrix4(model.modelViewMatrix);
-		u.applyMatrix4(camera.projectionMatrix);
+		u.applyProjection(camera.projectionMatrix);
 	},
 
 	vertexInsideFrustumTmp: new THREE.Vector3(),

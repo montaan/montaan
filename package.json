@@ -782,7 +782,7 @@
       "resolved": "https://registry.npmjs.org/supports-color/-/supports-color-2.0.0.tgz",
       "version": "2.0.0"
     },
-    "three": "^0.87.1",
+    "three": "^0.74.0",
     "three-bmfont-text": {
       "from": "three-bmfont-text@latest",
       "resolved": "https://registry.npmjs.org/three-bmfont-text/-/three-bmfont-text-2.1.0.tgz",

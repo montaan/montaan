@@ -50,6 +50,12 @@ function start(font, fontTexture) {
 	};
 
 	var makeTextMaterial = function(palette) {
+		if (!palette || palette.length < 8) {
+			palette = [].concat(palette || []);
+			while (palette.length < 8) {
+				palette.push(palette[palette.length-1] || new THREE.Vector3(1,1,1));
+			}
+		}
 		return new THREE.RawShaderMaterial(SDFShader({
 			map: fontTexture,
 			side: THREE.DoubleSide,
@@ -220,14 +226,17 @@ function start(font, fontTexture) {
 									visibleFiles.visibleSet[fullPath] = true;
 									visibleFiles.add(obj3);
 									var xhr = new XMLHttpRequest();
-									xhr.open('GET', '/repos/' + repoURL + '/contents' + fullPath);
+									xhr.open('GET', global.gitHubAPIPrefix + '/contents' + fullPath.replace(/^\/[^\/]+\/[^\/]+/, ''), true);
 									xhr.obj = obj3;
 									xhr.fsEntry = o;
 									xhr.onload = function() {
-										console.log(this.responseText);
-										return;
 										if (this.responseText.length < 2e5 && this.obj.parent) {
-											var contents = this.responseText.substring(0);
+											var ghObj = JSON.parse(this.responseText);
+											var contents = ghObj.content;
+											if (ghObj.encoding === 'base64') {
+												contents = atob(contents);
+											}
+
 											var self = this;
 											prettyPrintWorker.prettyPrint(contents, this.fsEntry.name, function(result) {
 												if (result.language) {
@@ -272,7 +281,7 @@ function start(font, fontTexture) {
 
 												var text = self.obj;
 												text.visible = true;
-												text.geometry = createText({font: Layout.font, text: contents});
+												text.geometry = createText({font: Layout.font, text: contents, mode: 'pre'});
 												if (result.language) {
 													var verts = text.geometry.attributes.position.array;
 													for (var i=0, off=3; i<txt.length; i++) {
@@ -296,6 +305,7 @@ function start(font, fontTexture) {
 												var textScale = 1 / Math.max(text.geometry.layout.width+60, (text.geometry.layout.height+30)/0.75);
 												var scale = self.fsEntry.scale * textScale;
 												var vAspect = Math.min(1, ((text.geometry.layout.height+30)/0.75) / (text.geometry.layout.width+60));
+												text.material.depthTest = false;
 												text.scale.multiplyScalar(scale);
 												text.scale.y *= -1;
 												text.position.copy(self.fsEntry);
@@ -638,6 +648,7 @@ function start(font, fontTexture) {
 				currentRepoName = repoName;
 				var gitHubRepoURL = ('https://github.com/' + repoName + '.git');
 				var gitHubAPIURL = 'https://api.github.com/repos/' + repoName + '/git/trees/master?recursive=1';
+				global.gitHubAPIPrefix = 'https://api.github.com/repos/' + repoName;
 				var commitsURL = 'https://api.github.com/repos/' + repoName + '/commits';
 				navigateTo(gitHubAPIURL, function() {
 					inGitHubRepo = true;
@@ -1500,9 +1511,8 @@ function start(font, fontTexture) {
 			}
 			// console.log(models);
 			var intersection = Geometry.findFSEntry(ev, camera, models, highlighted);
-			// console.log(intersection);
 			if (intersection) {
-				fsEntry = intersection.fsEntry;
+				var fsEntry = intersection.fsEntry;
 				var ca = intersection.object.geometry.attributes.color;
 				var vs = intersection.object.geometry.attributes.position;
 				var tvs = intersection.object.children[1].geometry.attributes.position;
