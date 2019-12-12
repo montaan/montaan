@@ -1,4 +1,4 @@
-var createLayout = require('layout-bmfont-text')
+var createLayout = require('../layout-bmfont-text-modified')
 var inherits = require('inherits')
 var createIndices = require('quad-indices')
 var buffer = require('three-buffer-vertex-data')
@@ -32,53 +32,53 @@ inherits(TextGeometry, Base)
 
 TextGeometry.prototype.update = function (opt) {
   if (typeof opt === 'string') {
-    opt = { text: opt }
+    opt = { text: opt };
   }
 
   // use constructor defaults
-  opt = assign({}, this._opt, opt)
+  opt = assign({}, this._opt, opt);
 
   if (!opt.font) {
-    throw new TypeError('must specify a { font } in options')
+    throw new TypeError('must specify a { font } in options');
   }
 
-  this.layout = createLayout(opt)
+  this.layout = createLayout(opt);
 
   // get vec2 texcoords
-  var flipY = opt.flipY !== false
+  var flipY = opt.flipY !== false;
 
   // the desired BMFont data
-  var font = opt.font
+  var font = opt.font;
 
   // determine texture size from font file
-  var texWidth = font.common.scaleW
-  var texHeight = font.common.scaleH
+  var texWidth = font.common.scaleW;
+  var texHeight = font.common.scaleH;
 
   // get visible glyphs
   var glyphs = this.layout.glyphs.filter(function (glyph) {
-    var bitmap = glyph.data
-    return bitmap.width * bitmap.height > 0
-  })
+    var bitmap = glyph.data;
+    return bitmap.width * bitmap.height > 0;
+  });
 
   // provide visible glyphs for convenience
-  this.visibleGlyphs = glyphs
+  this.visibleGlyphs = glyphs;
 
   // get common vertex data
-  var positions = vertices.positions(glyphs)
-  var uvs = vertices.uvs(glyphs, texWidth, texHeight, flipY)
+  var positions = vertices.positions(glyphs);
+  var uvs = vertices.uvs(glyphs, texWidth, texHeight, flipY);
  
    // update vertex data
-  buffer.attr(this, 'position', positions, 4)
-  buffer.attr(this, 'uv', uvs, 2)
+  buffer.attr(this, 'position', positions, 4);
+  buffer.attr(this, 'uv', uvs, 2);
 
   // update multipage data
   if (!opt.multipage && 'page' in this.attributes) {
     // disable multipage rendering
-    this.removeAttribute('page')
+    this.removeAttribute('page');
   } else if (opt.multipage) {
-    var pages = vertices.pages(glyphs)
+    var pages = vertices.pages(glyphs);
     // enable multipage rendering
-    buffer.attr(this, 'page', pages, 1)
+    buffer.attr(this, 'page', pages, 1);
   }
 }
 

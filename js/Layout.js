@@ -152,7 +152,7 @@ module.exports = {
 						title = title.substring(0, breakPoint) + '\n' + title.substring(breakPoint);
 					}
 				} else if (title.indexOf('\n') === -1 && title.length > 26) {
-					var words = title.split(/ /);
+					var words = title.split(/\s+/g);
 					var lineLength = 0;
 					var s = "";
 					var lineBreakLength = 26;
@@ -169,7 +169,7 @@ module.exports = {
 					for (var i=0; i<words.length; i++) {
 						var w = words[i];
 						if (lineLength + w.length >= lineBreakLength) {
-							if (w.length >= lineBreakLength) {
+							if (w.length > lineBreakLength) {
 								var prefix = w.substring(0, lineBreakLength-lineLength);
 								s += prefix + '\n';
 								var suffix = w.substring(lineBreakLength-lineLength);

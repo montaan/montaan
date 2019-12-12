@@ -1,17 +1,17 @@
 module.exports = {
 	music: [0.13,0.34,0.17],
 	image: [0.13,0.34,0.25],
-	document: [0.13,0.14,0.37,1],
-	archive: [0.28,0.24,0.2],
+	document: [0.13,0.14,0.37],
+	archive: [0.68,0.64,0.2],
 	video: [0.13,0.34,0.3],
-	exe: [0.28,0.14,0.17],
+	exe: [0.68,0.14,0.17],
 	unknown: [0.13,0.14,0.17],
 	hidden: [0.63,0.64,0.67],
 
 	musicF: [0.13,0.34,0.17],
-	configF: [0.13,0.14,0.27],
+	configF: [0.03,0.04,0.07],
 	imageF: [0.23,0.44,0.57],
-	documentF: [0.13,0.14,0.57],
+	documentF: [0.03,0.14,0.17],
 	archiveF: [0.03,0.04,0.07],
 	headerF: [0.03,0.14,0.17],
 	exeF: [0.43,0.34,0.17],
@@ -98,17 +98,17 @@ module.exports = {
 
 	getDirectoryColor: function(file) {
 		var name = file.name;
-		// if (this.musicDirRE.test(name)) {
-		// 	return this.music;
-		// } else if (this.imageDirRE.test(name)) {
-		// 	return this.image;
-		// } else 
+		if (this.musicDirRE.test(name)) {
+			return this.music;
+		} else if (this.imageDirRE.test(name)) {
+			return this.image;
+		} else 
 		if (this.documentDirRE.test(name)) {
 			return this.document;
 		} else if (this.archiveDirRE.test(name)) {
 			return this.archive;
-		// } else if (this.videoDirRE.test(name)) {
-		// 	return this.video;
+		} else if (this.videoDirRE.test(name)) {
+			return this.video;
 		} else if (this.exeDirRE.test(name)) {
 			return this.exe;
 		} else if (this.hiddenDirRE.test(name)) {

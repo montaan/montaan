@@ -2,6 +2,11 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/service-worker.js');
 }
 
+var repoPrefix = '/zxing/zxing';
+var repo = repoPrefix.split("/").pop();
+var MAX_COMMITS = 10000;
+
+
 global.THREE = require('three');
 var utils = require('./utils.js');
 var Geometry = require('./Geometry.js');
@@ -10,7 +15,9 @@ var Layout = require('./Layout.js');
 var createText = require('../three-bmfont-text-modified');
 var SDFShader = require('../three-bmfont-text-modified/shaders/sdf');
 var loadFont = require('load-bmfont');
-var lunr = require('lunr');
+var lunr = require('./lunr.js');
+
+window.lunr = lunr;
 
 var loadFontImage = function (opt, cb) {
   loadFont(opt.font, function (err, font) {
@@ -226,16 +233,12 @@ function start(font, fontTexture) {
 									visibleFiles.visibleSet[fullPath] = true;
 									visibleFiles.add(obj3);
 									var xhr = new XMLHttpRequest();
-									xhr.open('GET', global.gitHubAPIPrefix + '/contents' + fullPath.replace(/^\/[^\/]+\/[^\/]+/, ''), true);
+									xhr.open('GET', fullPath, true);
 									xhr.obj = obj3;
 									xhr.fsEntry = o;
 									xhr.onload = function() {
 										if (this.responseText.length < 2e5 && this.obj.parent) {
-											var ghObj = JSON.parse(this.responseText);
-											var contents = ghObj.content;
-											if (ghObj.encoding === 'base64') {
-												contents = atob(contents);
-											}
+											var contents = this.responseText;
 
 											var self = this;
 											prettyPrintWorker.prettyPrint(contents, this.fsEntry.name, function(result) {
@@ -271,7 +274,7 @@ function start(font, fontTexture) {
 																	italic: italic,
 																	underline: underline,
 																	text: cc.textContent
-																})
+																});
 															}
 														}
 													};
@@ -312,7 +315,13 @@ function start(font, fontTexture) {
 												text.fsEntry = self.fsEntry;
 												text.position.x += self.fsEntry.scale * textScale * 30;
 												text.position.y -= self.fsEntry.scale * textScale * 7.5;
-												text.position.y += self.fsEntry.scale * 0.25 + self.fsEntry.scale * 0.75 * (1-vAspect);
+												text.position.y += self.fsEntry.scale * 0.25;
+												
+												self.fsEntry.textScale = textScale;
+												self.fsEntry.textX = text.position.x + scale * (text.geometry.layout.width+60) * 0.5;
+												self.fsEntry.textY = text.position.y + self.fsEntry.scale * 0.75 - scale * 900;
+
+												text.position.y += self.fsEntry.scale * 0.75 * (1-vAspect);
 											});
 										}
 									};
@@ -834,10 +843,13 @@ function start(font, fontTexture) {
 					return;
 				}
 				setLoaded(true);
+				return;
 				var commits = commitLog.split(/^commit /m);
 				var authors = {};
 				var commitIndex = {};
 				commits.shift();
+				console.log(commits.length);
+				commits.splice(MAX_COMMITS);
 				commits = commits.map(function(c) {
 					var lines = c.split("\n");
 					var hash = lines[0];
@@ -870,18 +882,25 @@ function start(font, fontTexture) {
 					commitIndex[commit.sha] = commit;
 					return commit;
 				});
+
 				var changes = commitChanges.split('\n\n');
-				changes.forEach(function(c) {
+				changes.splice(MAX_COMMITS);
+
+				changes.forEach(function(c, index) {
 					if (c) {
 						var lines = c.split("\n");
 						var hash = lines[0];
-						commitIndex[hash].files = lines.slice(1).map(function(fs) {
-							var fileChange = {
-								path: fs.substring(2),
-								action: fs.charAt(0)
-							};
-							return fileChange;
-						});
+						if (!commitIndex[hash]) {
+							console.log(hash, index, c);
+						} else {
+							commitIndex[hash].files = lines.slice(1).map(function(fs) {
+								var fileChange = {
+									path: fs.substring(2),
+									action: fs.charAt(0)
+								};
+								return fileChange;
+							});
+						}
 					}
 				});
 				var commitsFSEntry = {name: "Commits", title: "Commits", index: 0, entries: {}};
@@ -917,7 +936,7 @@ function start(font, fontTexture) {
 						commitsFSCount += 1 + fileTree.count;
 					}
 					commitsFSEntry.entries[c.sha] = {
-						name: c.sha, title: c.message.match(/^\S+.*/)[0], index: 0, entries: entries
+						name: c.sha, title: (c.message.match(/^\S+.*/) || [''])[0], index: 0, entries: entries
 					};
 					c.fsEntry = commitsFSEntry.entries[c.sha];
 					commitsFSCount += 5;
@@ -934,6 +953,7 @@ function start(font, fontTexture) {
 					authorsFSCount++;
 					for (var i=0; i<author.length; i++) {
 						var c = author[i];
+						if (!c ||!c.fsEntry) continue;
 						var cEntry = mkfile(c.fsEntry.title);
 						author.fsEntry.entries[c.sha] = cEntry;
 						authorsFSCount++;
@@ -966,11 +986,11 @@ function start(font, fontTexture) {
 					author.color = color;
 					for (var i=0; i<author.length; i++) {
 						var commit = author[i];
-						addLineBetweenEntries(lineGeo, color, processModel, commit.fsEntry, authorModel, author.fsEntry.entries[commit.sha]);
+						if (commit && commit.fsEntry && author.fsEntry && author.fsEntry.entries[commit.sha]) {
+							addLineBetweenEntries(lineGeo, color, processModel, commit.fsEntry, authorModel, author.fsEntry.entries[commit.sha]);
+						}
 					}
 				}
-
-				var repoPrefix = '/v8/v8';
 
 				utils.traverseTree(window.CommitTree, function(fsEntry, fullPath) {
 					if (/^\/Commits\/.{40}\/Files\//.test(fullPath) && fsEntry.entries === null) {
@@ -994,6 +1014,7 @@ function start(font, fontTexture) {
 				lineGeo.colors.push(new THREE.Color(0,0,0), new THREE.Color(0,0,0));
 				connectionLines = new THREE.LineSegments(lineGeo, new THREE.LineBasicMaterial({
 					color: new THREE.Color(1.0, 1.0, 1.0), opacity: 0.3, transparent: true, depthWrite: false,
+					// linewidth: (2 * window.devicePixelRatio || 1),
 					vertexColors: true
 					// blending: THREE.AdditiveBlending
 				}))
@@ -1002,25 +1023,25 @@ function start(font, fontTexture) {
 				changed = true;
 			};
 
-			// var xhr = new XMLHttpRequest();
-			// xhr.open('GET', 'artoolkit_log.txt');
-			// xhr.onload = function(ev) {
-			// 	commitLog = ev.target.responseText;
-			// 	loadTick();
-			// };
-			// xhr.send();
+			var xhr = new XMLHttpRequest();
+			xhr.open('GET', repo+'_log.txt');
+			xhr.onload = function(ev) {
+				commitLog = ev.target.responseText;
+				loadTick();
+			};
+			xhr.send();
 
-			// var xhr = new XMLHttpRequest();
-			// xhr.open('GET', 'artoolkit_changes.txt');
-			// xhr.onload = function(ev) {
-			// 	commitChanges = ev.target.responseText;
-			// 	loadTick();
-			// };
-			// xhr.send();
+			var xhr = new XMLHttpRequest();
+			xhr.open('GET', repo+'_changes.txt');
+			xhr.onload = function(ev) {
+				commitChanges = ev.target.responseText;
+				loadTick();
+			};
+			xhr.send();
 
-			navigateTo('v8.txt', function() {
+			navigateTo(repo+'.txt', function() {
 				var xhr = new XMLHttpRequest;
-				xhr.open('GET', 'v8.lunr.json');
+				xhr.open('GET', repo+'.lunr.json');
 				xhr.onload = function() {
 
 					var filterByTrigrams = function(trigramIndex, token, smallestTrigram) {
@@ -1119,9 +1140,9 @@ function start(font, fontTexture) {
 					}
 				};
 				xhr.send();
-				// setLoaded(false);
-				// treeLoaded = true;
-				// loadTick();
+				setLoaded(false);
+				treeLoaded = true;
+				loadTick();
 			});
 
 		}
@@ -1481,6 +1502,16 @@ function start(font, fontTexture) {
 		fsPoint.applyMatrix4(model.matrixWorld);
 		camera.targetPosition.copy(fsPoint);
 		camera.targetFOV = fsEntry.scale * 50;
+		fsEntry.fov = camera.targetFOV;
+	};
+
+	var goToFSEntryText = function(fsEntry, model) {
+		scene.updateMatrixWorld();
+		var fsPoint = new THREE.Vector3(fsEntry.textX, fsEntry.textY, fsEntry.z);
+		fsPoint.applyMatrix4(model.matrixWorld);
+		camera.targetPosition.copy(fsPoint);
+		camera.targetFOV = fsEntry.scale * fsEntry.textScale * 2000 * 50;
+		fsEntry.textFOV = camera.targetFOV;
 	};
 
 	var highlighted = null;
@@ -1522,7 +1553,8 @@ function start(font, fontTexture) {
 				}
 				if (highlighted !== fsEntry) {
 					highlighted = fsEntry;
-					/*
+
+					/* Some sort of weird-ass object scaleup popup thing.
 
 					highlighted.highlight = new THREE.Object3D();
 					var mesh = intersection.object;
@@ -1572,41 +1604,42 @@ function start(font, fontTexture) {
 					highlightMesh.position.set(-x,-y,-z);
 					highlightText.position.set(-x,-y,-z);
 					mesh.add(highlighted.highlight);
+
 					*/
 
-					// var scale = 0.5 / highlighted.scale;
-					// for (var i=highlighted.vertexIndex*3, l=highlighted.lastVertexIndex*3; i<l; i+=3) {
-					// 	vs.array[i] = (vs.array[i] - x) * scale + x;
-					// 	vs.array[i+1] = (vs.array[i+1] - y) * scale + y;
-					// 	vs.array[i+2] = (vs.array[i+2] - z) * scale + z;
-					// 	vs.array[i+2] += 0.1;
-					// }
-					// for (var i=highlighted.textVertexIndex*4, l=highlighted.lastTextVertexIndex*4; i<l; i+=4) {
-					// 	tvs.array[i] = (tvs.array[i] - x) * scale + x;
-					// 	tvs.array[i+1] = (tvs.array[i+1] - y) * scale + y;
-					// 	tvs.array[i+2] = (tvs.array[i+2] - z) * scale + z;
-					// 	tvs.array[i+2] += 0.1;
-					// }
-					// vs.needsUpdate = true;
-					// tvs.needsUpdate = true;
+					/*
 
-					// setColor(ca.array, fsEntry.index, [0.1,0.25,0.5], 0);
-
-					var targetFOV = fsEntry.scale * 50;
-					if (targetFOV / camera.fov > 0.3 && highlighted.entries === null) {
-						if (highlighted.entries === null) {
-							// File, let's open it.
-							openFile(highlighted);
-						}
-					} else {
-						goToFSEntry(fsEntry, intersection.object);
+					var scale = 0.5 / highlighted.scale;
+					for (var i=highlighted.vertexIndex*3, l=highlighted.lastVertexIndex*3; i<l; i+=3) {
+						vs.array[i] = (vs.array[i] - x) * scale + x;
+						vs.array[i+1] = (vs.array[i+1] - y) * scale + y;
+						vs.array[i+2] = (vs.array[i+2] - z) * scale + z;
+						vs.array[i+2] += 0.1;
 					}
+					for (var i=highlighted.textVertexIndex*4, l=highlighted.lastTextVertexIndex*4; i<l; i+=4) {
+						tvs.array[i] = (tvs.array[i] - x) * scale + x;
+						tvs.array[i+1] = (tvs.array[i+1] - y) * scale + y;
+						tvs.array[i+2] = (tvs.array[i+2] - z) * scale + z;
+						tvs.array[i+2] += 0.1;
+					}
+					vs.needsUpdate = true;
+					tvs.needsUpdate = true;
+
+					setColor(ca.array, fsEntry.index, [0.1,0.25,0.5], 0);
+					*/
+
+					goToFSEntry(fsEntry, intersection.object);
 				} else {
 					if (highlighted.entries === null) {
-						// File, let's open it.
-						// openFile(highlighted);
+						var fovDiff = (highlighted.scale * 50) / camera.fov;
+						if (fovDiff > 1) {
+							goToFSEntry(highlighted, intersection.object);
+						} else {
+							goToFSEntryText(highlighted, intersection.object);
+						}
+					} else {
+						goToFSEntry(highlighted, intersection.object);
 					}
-					highlighted = null;
 				}
 				// ca.needsUpdate = true;
 				changed = true;
@@ -1660,12 +1693,14 @@ function start(font, fontTexture) {
 	var highlightedResults = [];
 	window.highlightResults = function(results) {
 		var ca = model.geometry.attributes.color;
-		// highlightedResults.forEach(function(highlighted) {
-		// 	Geometry.setColor(ca.array, highlighted.index, Colors[highlighted.entries === null ? 'getFileColor' : 'getDirectoryColor'](highlighted), 0);
-		// });
+		highlightedResults.forEach(function(highlighted) {
+			Geometry.setColor(ca.array, highlighted.index, Colors[highlighted.entries === null ? 'getFileColor' : 'getDirectoryColor'](highlighted), 0);
+		});
 		for (var i = 0; i < results.length; i++) {
 			var fsEntry = results[i];
-			// Geometry.setColor(ca.array, fsEntry.index, fsEntry.entries === null ? [1,0,0] : [0.6, 0, 0], 0);
+			if (fsEntry.entries !== null) {
+				Geometry.setColor(ca.array, fsEntry.index, fsEntry.entries === null ? [1,0,0] : [0.6, 0, 0], 0);
+			}
 		}
 		highlightedResults = results;
 		ca.needsUpdate = true;
@@ -1679,7 +1714,7 @@ function start(font, fontTexture) {
 			// console.time('token search');
 			lunrResults = window.SearchIndex.search(rawQuery);
 			lunrResults = lunrResults.map(function(r) {
-				return getPathEntry(window.FileTree, '/v8/v8/' + r.ref);
+				return getPathEntry(window.FileTree, r.ref);
 			});
 			// console.timeEnd('token search');
 		}
@@ -1729,11 +1764,11 @@ function start(font, fontTexture) {
 	};
 	var searchLine = new THREE.LineSegments(new THREE.Geometry(), new THREE.LineBasicMaterial({
 		color: 0xff0000,
-		opacity: 0.5,
+		opacity: 1,
 		transparent: true,
 		depthTest: false,
-		depthWrite: false,
-		linewidth: 2
+		depthWrite: false
+		// linewidth: 2 * (window.devicePixelRatio || 1)
 	}));
 	searchLine.frustumCulled = false;
 	searchLine.geometry.vertices.push(new THREE.Vector3());
@@ -1786,7 +1821,7 @@ function start(font, fontTexture) {
 
 	var populateSearchResults = function() {
 		window.searchResults.innerHTML = '';
-		if (false && window.innerWidth > 800) {
+		if (window.innerWidth > 800) {
 			for (var i=0; i<Math.min(highlightedResults.length, 100); i++) {
 				var fsEntry = highlightedResults[i];
 				var li = document.createElement('li');
@@ -1808,6 +1843,13 @@ function start(font, fontTexture) {
 				li.onclick = function(ev) {
 					ev.preventDefault();
 					goToFSEntry(this.fsEntry, model);
+					// Zoom into the line for the result once the fsEntry contents have been loaded.
+					// (You may be able to hack this by zooming into layout y-coord at lineNum / totalLines)
+					// Highlight the line and the hit text in fsEntry contents.
+					// How to add line-column info to search results?
+					// Prioritize full word content hits, offer prefix/suffix/infix hits last
+					// Hit list, shrink results not in view
+					// Replace click-file-to-go-to-github with click-file-to-zoom-text-to-screen-width
 				};
 				li.appendChild(title);
 				li.appendChild(fullPath);
