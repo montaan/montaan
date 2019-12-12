@@ -1,0 +1,12 @@
+#!/bin/bash
+
+repo=$1
+path=$2
+dir=$(dirname $path)
+base=$(basename $path)
+
+git clone $repo $path
+find ${dir} -type d -exec sh -c 'printf "%s/\n" "$0"' {} \; -or -print | grep -v /.git/ > ${base}.txt
+node bin/build_index.js ${base}.txt > ${base}.lunr.json
+(cd $path && git log) > ${base}_log.txt
+(cd $path && git log --pretty="format:%H" --name-status) > ${base}_changes.txt
