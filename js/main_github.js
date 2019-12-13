@@ -1692,7 +1692,7 @@ function start(font, fontTexture) {
 
 	window.searchTree = function(query, fileTree, results) {
 		if (query.every(function(re) { return re.test(fileTree.title); })) {
-			results.push(fileTree);
+			results.push({fsEntry: fileTree, line: 0, lineCount: 0});
 		}
 		for (var i in fileTree.entries) {
 			searchTree(query, fileTree.entries[i], results);
@@ -1704,10 +1704,10 @@ function start(font, fontTexture) {
 	window.highlightResults = function(results) {
 		var ca = model.geometry.attributes.color;
 		highlightedResults.forEach(function(highlighted) {
-			Geometry.setColor(ca.array, highlighted.index, Colors[highlighted.entries === null ? 'getFileColor' : 'getDirectoryColor'](highlighted), 0);
+			Geometry.setColor(ca.array, highlighted.fsEntry.index, Colors[highlighted.fsEntry.entries === null ? 'getFileColor' : 'getDirectoryColor'](highlighted.fsEntry), 0);
 		});
 		for (var i = 0; i < results.length; i++) {
-			var fsEntry = results[i];
+			var fsEntry = results[i].fsEntry;
 			if (fsEntry.entries !== null) {
 				Geometry.setColor(ca.array, fsEntry.index, fsEntry.entries === null ? [1,0,0] : [0.6, 0, 0], 0);
 			}
@@ -1724,7 +1724,11 @@ function start(font, fontTexture) {
 			// console.time('token search');
 			lunrResults = window.SearchIndex.search(rawQuery);
 			lunrResults = lunrResults.map(function(r) {
-				return getPathEntry(window.FileTree, r.ref);
+				const lineNumberMatch = r.ref.match(/:(\d+)\/(\d+)$/);
+				const [_, lineStr, lineCountStr] = (lineNumberMatch || ['0','0','0']); 
+				const line = parseInt(lineStr);
+				const lineCount = parseInt(lineCountStr);
+				return {fsEntry: getPathEntry(window.FileTree, r.ref.replace(/:\d+\/\d+$/, '')), line, lineCount};
 			});
 			// console.timeEnd('token search');
 		}
@@ -1798,7 +1802,7 @@ function start(font, fontTexture) {
 					searchLine.hovered = true;
 					bbox = li.getBoundingClientRect();
 				}
-				addScreenLine(searchLine.geometry, highlightedResults[i], bbox, i);
+				addScreenLine(searchLine.geometry, highlightedResults[i].fsEntry, bbox, i);
 			}
 		}
 		if (i > 0 || i !== searchLine.lastUpdate) {
@@ -1832,11 +1836,14 @@ function start(font, fontTexture) {
 		window.searchResults.innerHTML = '';
 		if (window.innerWidth > 800) {
 			for (var i=0; i<Math.min(highlightedResults.length, 100); i++) {
-				var fsEntry = highlightedResults[i];
+				const {fsEntry, line, lineCount} = highlightedResults[i];
 				var li = document.createElement('li');
 				var title = document.createElement('div');
 				title.className = 'searchTitle';
 				title.textContent = fsEntry.title;
+				if (line > 0) {
+					title.textContent += ":" + line;
+				}
 				var fullPath = document.createElement('div');
 				fullPath.className = 'searchFullPath';
 				fullPath.textContent = getFullPath(fsEntry).replace(/^\/[^\/]*\/[^\/]*\//, '/');

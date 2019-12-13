@@ -5216,11 +5216,13 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
 (function (global){
 'use strict';
 
+var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
+
 if ('serviceWorker' in navigator) {
 	navigator.serviceWorker.register('/service-worker.js');
 }
 
-var repoPrefix = '/makepad/makepad';
+var repoPrefix = '/torvalds/linux';
 var repo = repoPrefix.split("/").pop();
 var MAX_COMMITS = 10000;
 
@@ -6897,7 +6899,7 @@ function start(font, fontTexture) {
 		if (query.every(function (re) {
 			return re.test(fileTree.title);
 		})) {
-			results.push(fileTree);
+			results.push({ fsEntry: fileTree, line: 0, lineCount: 0 });
 		}
 		for (var i in fileTree.entries) {
 			searchTree(query, fileTree.entries[i], results);
@@ -6909,10 +6911,10 @@ function start(font, fontTexture) {
 	window.highlightResults = function (results) {
 		var ca = model.geometry.attributes.color;
 		highlightedResults.forEach(function (highlighted) {
-			Geometry.setColor(ca.array, highlighted.index, Colors[highlighted.entries === null ? 'getFileColor' : 'getDirectoryColor'](highlighted), 0);
+			Geometry.setColor(ca.array, highlighted.fsEntry.index, Colors[highlighted.fsEntry.entries === null ? 'getFileColor' : 'getDirectoryColor'](highlighted.fsEntry), 0);
 		});
 		for (var i = 0; i < results.length; i++) {
-			var fsEntry = results[i];
+			var fsEntry = results[i].fsEntry;
 			if (fsEntry.entries !== null) {
 				Geometry.setColor(ca.array, fsEntry.index, fsEntry.entries === null ? [1, 0, 0] : [0.6, 0, 0], 0);
 			}
@@ -6929,7 +6931,17 @@ function start(font, fontTexture) {
 			// console.time('token search');
 			lunrResults = window.SearchIndex.search(rawQuery);
 			lunrResults = lunrResults.map(function (r) {
-				return getPathEntry(window.FileTree, r.ref);
+				var lineNumberMatch = r.ref.match(/:(\d+)\/(\d+)$/);
+
+				var _ref = lineNumberMatch || ['0', '0', '0'],
+				    _ref2 = _slicedToArray(_ref, 3),
+				    _ = _ref2[0],
+				    lineStr = _ref2[1],
+				    lineCountStr = _ref2[2];
+
+				var line = parseInt(lineStr);
+				var lineCount = parseInt(lineCountStr);
+				return { fsEntry: getPathEntry(window.FileTree, r.ref.replace(/:\d+\/\d+$/, '')), line: line, lineCount: lineCount };
 			});
 			// console.timeEnd('token search');
 		}
@@ -7001,7 +7013,7 @@ function start(font, fontTexture) {
 					searchLine.hovered = true;
 					bbox = li.getBoundingClientRect();
 				}
-				addScreenLine(searchLine.geometry, highlightedResults[i], bbox, i);
+				addScreenLine(searchLine.geometry, highlightedResults[i].fsEntry, bbox, i);
 			}
 		}
 		if (i > 0 || i !== searchLine.lastUpdate) {
@@ -7035,11 +7047,18 @@ function start(font, fontTexture) {
 		window.searchResults.innerHTML = '';
 		if (window.innerWidth > 800) {
 			for (var i = 0; i < Math.min(highlightedResults.length, 100); i++) {
-				var fsEntry = highlightedResults[i];
+				var _highlightedResults$i = highlightedResults[i],
+				    fsEntry = _highlightedResults$i.fsEntry,
+				    line = _highlightedResults$i.line,
+				    lineCount = _highlightedResults$i.lineCount;
+
 				var li = document.createElement('li');
 				var title = document.createElement('div');
 				title.className = 'searchTitle';
 				title.textContent = fsEntry.title;
+				if (line > 0) {
+					title.textContent += ":" + line;
+				}
 				var fullPath = document.createElement('div');
 				fullPath.className = 'searchFullPath';
 				fullPath.textContent = getFullPath(fsEntry).replace(/^\/[^\/]*\/[^\/]*\//, '/');
