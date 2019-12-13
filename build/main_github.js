@@ -5222,7 +5222,7 @@ if ('serviceWorker' in navigator) {
 	navigator.serviceWorker.register('/service-worker.js');
 }
 
-var repoPrefix = '/torvalds/linux';
+var repoPrefix = '/makepad/makepad';
 var repo = repoPrefix.split("/").pop();
 var MAX_COMMITS = 10000;
 
@@ -5459,6 +5459,7 @@ function start(font, fontTexture) {
 											var self = this;
 											prettyPrintWorker.prettyPrint(contents, this.fsEntry.name, function (result) {
 												if (result.language) {
+													console.time('prettyPrint collectNodeStyles ' + currentFrame);
 													var doc = document.createElement('pre');
 													doc.className = 'hljs ' + result.language;
 													doc.style.display = 'none';
@@ -5496,7 +5497,10 @@ function start(font, fontTexture) {
 													};
 													collectNodeStyles(doc, txt, palette, paletteIndex);
 													document.body.removeChild(doc);
+													console.timeEnd('prettyPrint collectNodeStyles ' + currentFrame);
 												}
+
+												console.time('createText ' + currentFrame);
 
 												var text = self.obj;
 												text.visible = true;
@@ -5544,10 +5548,24 @@ function start(font, fontTexture) {
 												text.position.y += self.fsEntry.scale * 0.25;
 
 												self.fsEntry.textScale = textScale;
-												self.fsEntry.textX = text.position.x + scale * (text.geometry.layout.width + 60) * 0.5;
+												self.fsEntry.textXZero = text.position.x;
+												self.fsEntry.textX = text.position.x + scale * Math.min(40 * 30 + 60, text.geometry.layout.width + 60) * 0.5;
+												self.fsEntry.textYZero = text.position.y + self.fsEntry.scale * 0.75;
 												self.fsEntry.textY = text.position.y + self.fsEntry.scale * 0.75 - scale * 900;
+												self.fsEntry.textHeight = scale * (text.geometry.layout.height + 30);
 
 												text.position.y += self.fsEntry.scale * 0.75 * (1 - vAspect);
+
+												if (self.fsEntry.targetLine) {
+													var _self$fsEntry$targetL = self.fsEntry.targetLine,
+													    line = _self$fsEntry$targetL.line,
+													    lineCount = _self$fsEntry$targetL.lineCount;
+
+													self.fsEntry.targetLine = null;
+													goToFSEntryTextAtLine(self.fsEntry, model, line, lineCount);
+												}
+
+												console.timeEnd('createText ' + currentFrame);
 											});
 										}
 									};
@@ -6617,6 +6635,9 @@ function start(font, fontTexture) {
 	renderer.domElement.onwheel = function (ev) {
 		if (window.DocFrame) return;
 		ev.preventDefault();
+
+		// Change this to pan..
+
 		var cx = (ev.clientX - window.innerWidth / 2) * 0.0000575 * camera.fov;
 		var cy = (ev.clientY - window.innerHeight / 2) * 0.0000575 * camera.fov;
 		var d = ev.deltaY !== undefined ? ev.deltaY * 3 : ev.wheelDelta;
@@ -6733,6 +6754,20 @@ function start(font, fontTexture) {
 	var goToFSEntryText = function goToFSEntryText(fsEntry, model) {
 		scene.updateMatrixWorld();
 		var fsPoint = new THREE.Vector3(fsEntry.textX, fsEntry.textY, fsEntry.z);
+		fsPoint.applyMatrix4(model.matrixWorld);
+		camera.targetPosition.copy(fsPoint);
+		camera.targetFOV = fsEntry.scale * fsEntry.textScale * 2000 * 50;
+		fsEntry.textFOV = camera.targetFOV;
+	};
+
+	var goToFSEntryTextAtLine = function goToFSEntryTextAtLine(fsEntry, model, line, lineCount) {
+		if (!fsEntry.textHeight) {
+			fsEntry.targetLine = { line: line, lineCount: lineCount };
+			return goToFSEntry(fsEntry, model);
+		}
+		var textYOff = (line + 0.25) / lineCount * fsEntry.textHeight;
+		scene.updateMatrixWorld();
+		var fsPoint = new THREE.Vector3(fsEntry.textX, fsEntry.textYZero - textYOff, fsEntry.z);
 		fsPoint.applyMatrix4(model.matrixWorld);
 		camera.targetPosition.copy(fsPoint);
 		camera.targetFOV = fsEntry.scale * fsEntry.textScale * 2000 * 50;
@@ -6907,6 +6942,23 @@ function start(font, fontTexture) {
 		return results;
 	};
 
+	var addHighlightedLine = function addHighlightedLine(fsEntry, line, lineCount) {
+		if (fsEntry.textHeight) {
+			// fix this
+			// should add a quad under current line with highlight color
+			return;
+			var textYOff = (line + 0.25) / lineCount * fsEntry.textHeight;
+			var textLinePos = new THREE.Vector3(fsEntry.textXZero, fsEntry.textYZero - textYOff, fsEntry.z + fsEntry.scale * 0.01);
+			textLinePos.applyMatrix4(model.matrixWorld);
+			var lineHeight = fsEntry.textHeight / lineCount;
+			var hlquad = new THREE.Mesh(new THREE.PlaneBufferGeometry(1, 1, 1, 1), new THREE.MeshBasicMaterial({ color: 0xff0000 }));
+			hlquad.position.copy(textLinePos);
+			hlquad.scale.set(fsEntry.scale, fsEntry.scale * fsEntry.textScale * lineHeight, 1);
+			window.hlquad = hlquad;
+			scene.add(hlquad);
+		}
+	};
+
 	var highlightedResults = [];
 	window.highlightResults = function (results) {
 		var ca = model.geometry.attributes.color;
@@ -6915,8 +6967,10 @@ function start(font, fontTexture) {
 		});
 		for (var i = 0; i < results.length; i++) {
 			var fsEntry = results[i].fsEntry;
-			if (fsEntry.entries !== null) {
+			if (fsEntry.entries !== null && results[i].line === 0) {
 				Geometry.setColor(ca.array, fsEntry.index, fsEntry.entries === null ? [1, 0, 0] : [0.6, 0, 0], 0);
+			} else if (fsEntry.entries === null && results[i].line > 0) {
+				addHighlightedLine(fsEntry, results[i].line, results[i].lineCount);
 			}
 		}
 		highlightedResults = results;
@@ -6956,7 +7010,7 @@ function start(font, fontTexture) {
 	screenPlane.position.z = 0.75;
 	scene.add(screenPlane);
 
-	var addScreenLine = function addScreenLine(geo, fsEntry, bbox, index) {
+	var addScreenLine = function addScreenLine(geo, fsEntry, bbox, index, line, lineCount) {
 		var a = new THREE.Vector3(fsEntry.x, fsEntry.y, fsEntry.z);
 		a.applyMatrix4(model.matrixWorld);
 		var b = a;
@@ -6981,6 +7035,12 @@ function start(font, fontTexture) {
 			var b = intersections[0].point;
 			var bv = new THREE.Vector3(b.x, b.y, b.z);
 			var aUp = new THREE.Vector3(av.x, av.y, av.z);
+			if (line > 0 && fsEntry.textHeight) {
+				var textYOff = (line + 0.25) / lineCount * fsEntry.textHeight;
+				var textLinePos = new THREE.Vector3(fsEntry.textXZero, fsEntry.textYZero - textYOff, fsEntry.z);
+				textLinePos.applyMatrix4(model.matrixWorld);
+				aUp = av = textLinePos;
+			}
 		}
 
 		geo.vertices[off++].copy(av);
@@ -7005,15 +7065,16 @@ function start(font, fontTexture) {
 	var updateSearchLines = function updateSearchLines() {
 		clearSearchLine();
 		// searchLine.geometry.vertices.forEach(function(v) { v.x = v.y = v.z = -100; });
-		if (highlightedResults.length <= searchLine.geometry.vertices.length / 4) {
-			for (var i = 0, l = highlightedResults.length; i < l; i++) {
+		var lis = [].slice.call(window.searchResults.querySelectorAll('li'));
+		if (lis.length <= searchLine.geometry.vertices.length / 4) {
+			for (var i = 0, l = lis.length; i < l; i++) {
 				var bbox = null;
-				var li = window.searchResults.childNodes[i];
+				var li = lis[i];
 				if (li && li.classList.contains('hover')) {
 					searchLine.hovered = true;
 					bbox = li.getBoundingClientRect();
 				}
-				addScreenLine(searchLine.geometry, highlightedResults[i].fsEntry, bbox, i);
+				if (li) addScreenLine(searchLine.geometry, li.result.fsEntry, bbox, i, li.result.line, li.result.lineCount);
 			}
 		}
 		if (i > 0 || i !== searchLine.lastUpdate) {
@@ -7043,47 +7104,82 @@ function start(font, fontTexture) {
 		changed = true;
 	};
 
+	var createResultLink = function createResultLink(result) {
+		var fsEntry = result.fsEntry,
+		    line = result.line;
+
+		var li = document.createElement('li');
+		var title = document.createElement('div');
+		title.className = 'searchTitle';
+		title.textContent = fsEntry.title;
+		if (line > 0) {
+			title.textContent += ":" + line;
+		}
+		var fullPath = document.createElement('div');
+		fullPath.className = 'searchFullPath';
+		fullPath.textContent = getFullPath(fsEntry).replace(/^\/[^\/]*\/[^\/]*\//, '/');
+		li.result = result;
+		li.addEventListener('mouseover', function () {
+			this.classList.add('hover');
+			changed = true;
+		}, false);
+		li.addEventListener('mouseout', function () {
+			this.classList.remove('hover');
+			changed = true;
+		}, false);
+		li.onclick = function (ev) {
+			ev.preventDefault();
+			ev.stopPropagation();
+			if (this.result.line > 0) {
+				goToFSEntryTextAtLine(this.result.fsEntry, model, this.result.line, this.result.lineCount);
+			} else {
+				goToFSEntry(this.result.fsEntry, model);
+			}
+			// Zoom into the line for the result once the fsEntry contents have been loaded.
+			// (You may be able to hack this by zooming into layout y-coord at lineNum / totalLines)
+			// Highlight the line and the hit text in fsEntry contents.
+			// How to add line-column info to search results?
+			// Prioritize full word content hits, offer prefix/suffix/infix hits last
+			// Hit list, shrink results not in view
+			// Replace click-file-to-go-to-github with click-file-to-zoom-text-to-screen-width
+		};
+		li.appendChild(title);
+		li.appendChild(fullPath);
+		return li;
+	};
+
 	var populateSearchResults = function populateSearchResults() {
 		window.searchResults.innerHTML = '';
 		if (window.innerWidth > 800) {
-			for (var i = 0; i < Math.min(highlightedResults.length, 100); i++) {
-				var _highlightedResults$i = highlightedResults[i],
-				    fsEntry = _highlightedResults$i.fsEntry,
-				    line = _highlightedResults$i.line,
-				    lineCount = _highlightedResults$i.lineCount;
-
-				var li = document.createElement('li');
-				var title = document.createElement('div');
-				title.className = 'searchTitle';
-				title.textContent = fsEntry.title;
-				if (line > 0) {
-					title.textContent += ":" + line;
+			var results = [];
+			var resIndex = {};
+			for (var i = 0; i < highlightedResults.length; i++) {
+				var r = highlightedResults[i];
+				var fullPath = getFullPath(r.fsEntry);
+				if (!resIndex[fullPath]) {
+					var result = { fsEntry: r.fsEntry, line: 0, lineCount: 0, lineResults: [] };
+					resIndex[fullPath] = result;
+					results.push(result);
 				}
-				var fullPath = document.createElement('div');
-				fullPath.className = 'searchFullPath';
-				fullPath.textContent = getFullPath(fsEntry).replace(/^\/[^\/]*\/[^\/]*\//, '/');
-				li.fsEntry = fsEntry;
-				li.addEventListener('mouseover', function () {
-					this.classList.add('hover');
-					changed = true;
-				}, false);
-				li.addEventListener('mouseout', function () {
-					this.classList.remove('hover');
-					changed = true;
-				}, false);
-				li.onclick = function (ev) {
-					ev.preventDefault();
-					goToFSEntry(this.fsEntry, model);
-					// Zoom into the line for the result once the fsEntry contents have been loaded.
-					// (You may be able to hack this by zooming into layout y-coord at lineNum / totalLines)
-					// Highlight the line and the hit text in fsEntry contents.
-					// How to add line-column info to search results?
-					// Prioritize full word content hits, offer prefix/suffix/infix hits last
-					// Hit list, shrink results not in view
-					// Replace click-file-to-go-to-github with click-file-to-zoom-text-to-screen-width
-				};
-				li.appendChild(title);
-				li.appendChild(fullPath);
+				if (r.line > 0) resIndex[fullPath].lineResults.push(r);
+			}
+			results.forEach(function (r) {
+				return r.lineResults.sort(function (a, b) {
+					return a.line - b.line;
+				});
+			});
+			for (var i = 0; i < results.length; i++) {
+				var _result = results[i];
+				var li = createResultLink(_result);
+				if (_result.lineResults) {
+					(function () {
+						var ul = document.createElement('ul');
+						_result.lineResults.forEach(function (r) {
+							return ul.appendChild(createResultLink(r));
+						});
+						li.appendChild(ul);
+					})();
+				}
 				window.searchResults.appendChild(li);
 			}
 		}
@@ -7114,6 +7210,7 @@ function start(font, fontTexture) {
 	var tmpM4 = new THREE.Matrix4();
 	var lastFrameTime = performance.now();
 	window.animating = false;
+	window.currentFrame = 0;
 	var render = function render() {
 		var visCount = 0;
 		scene.remove(searchLine);
@@ -7137,6 +7234,7 @@ function start(font, fontTexture) {
 		// });
 		// console.log(visCount);
 		renderer.render(scene, camera);
+		window.currentFrame++;
 	};
 
 	var changed = true;
@@ -7167,6 +7265,9 @@ function start(font, fontTexture) {
 			}
 			camera.updateProjectionMatrix();
 			changed = true;
+			animating = true;
+		} else {
+			animating = false;
 		}
 		if (changed || animating) render();
 		changed = false;

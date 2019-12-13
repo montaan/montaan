@@ -24,14 +24,14 @@ readInterface.on('line', function(filename) {
         type = 'directory';
         body = '';
     } else {
-        type = mime.lookup(name);
-        if (stat.size < 3e5 && (!type || /^(text|application\/(json|javascript))/.test(type))) {
+        type = mime.lookup(filename);
+        if (stat.size < 3e5 && (!type || /^(text|application\/(json|javascript|toml|(.+\+)?xml)|image\/svg\+xml)/.test(type))) {
             body = fs.readFileSync(filename).toString();
         }
     }
     idx.add({id:filename, name, type, body});
     if (body.length > 0) {
-        lines = body.split(/[\r\n]+/g);
+        lines = body.split(/\r?\n/g);
         for (var i = 0; i < lines.length; i++) {
             idx.add({id: filename+":"+(i+1)+"/"+lines.length, name:'', type:'', body: lines[i]});
         }

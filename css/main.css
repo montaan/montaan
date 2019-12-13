@@ -198,6 +198,19 @@ label {
     width: 300px;
     word-wrap: break-word;
 }
+#searchResults li > ul {
+	list-style: tri;
+}
+#searchResults li > ul .searchTitle {
+	font-size: 12px;
+	font-weight: normal;
+}
+#searchResults li > ul .searchFullPath {
+	display: none;
+}
+#searchResults li li:last-child {
+	border-bottom: 0;
+}
 .searchTitle {
     font-family: sans-serif;
     font-size: 18px;
