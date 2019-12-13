@@ -1,12 +1,12 @@
 module.exports = {
 	music: [0.13,0.34,0.17],
-	image: [0.13,0.34,0.25],
-	document: [0.13,0.14,0.37],
+	image: [0.13,0.44,0.65],
+	document: [0.53,0.24,0.17],
 	archive: [0.68,0.64,0.2],
-	video: [0.13,0.34,0.3],
+	video: [0.13,0.44,0.4],
 	exe: [0.68,0.14,0.17],
 	unknown: [0.13,0.14,0.17],
-	hidden: [0.63,0.64,0.67],
+	hidden: [0.53,0.54,0.57],
 
 	musicF: [0.13,0.34,0.17],
 	configF: [0.03,0.04,0.07],
@@ -19,7 +19,7 @@ module.exports = {
 	legalF: [0.13,0.14,0.47],
 	videoF: [0.13,1.0,0.8],
 	unknownF: [0.13,0.14,0.17],
-	hiddenF: [0.53,0.54,0.57],
+	hiddenF: [0.33,0.34,0.37],
 
 	musicRE: /\.(mp3|m4a|ogg|ogm|wav|aac|flac)$/i,
 	configRE: /(^(makefile.*|configure|cmake.*|InfoPlist)|\.(gyp.?|pyt|isolate|json|xcscheme|projitems|shproj|gradle|properties|mk|xml|cfg|conf|vcxproj|xcconfig|plist|config|in)$)/i,

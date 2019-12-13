@@ -147,6 +147,7 @@ label {
 /*}*/
 
 #git {
+	display:none;
 	top: 61px;
 	transform: translate(-100%, 0);
 	transition: 0.5s;
@@ -155,6 +156,7 @@ label {
 	transform: translate(0, 0);
 }
 #gitfocus {
+	display:none;
 	position: absolute;
 	top: 61px;
 	left: 0px;
@@ -182,6 +184,11 @@ label {
 	overflow-y: auto;
 	color: black;
 	background: white;
+	width: 316px;
+	transition: 0.2s;
+}
+#searchResults:empty {
+	right: -316px;
 }
 #searchResults li {
 	margin: 0;

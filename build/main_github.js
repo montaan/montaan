@@ -2046,13 +2046,13 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
 
 module.exports = {
 	music: [0.13, 0.34, 0.17],
-	image: [0.13, 0.34, 0.25],
-	document: [0.13, 0.14, 0.37],
+	image: [0.13, 0.44, 0.65],
+	document: [0.53, 0.24, 0.17],
 	archive: [0.68, 0.64, 0.2],
-	video: [0.13, 0.34, 0.3],
+	video: [0.13, 0.44, 0.4],
 	exe: [0.68, 0.14, 0.17],
 	unknown: [0.13, 0.14, 0.17],
-	hidden: [0.63, 0.64, 0.67],
+	hidden: [0.53, 0.54, 0.57],
 
 	musicF: [0.13, 0.34, 0.17],
 	configF: [0.03, 0.04, 0.07],
@@ -2065,7 +2065,7 @@ module.exports = {
 	legalF: [0.13, 0.14, 0.47],
 	videoF: [0.13, 1.0, 0.8],
 	unknownF: [0.13, 0.14, 0.17],
-	hiddenF: [0.53, 0.54, 0.57],
+	hiddenF: [0.33, 0.34, 0.37],
 
 	musicRE: /\.(mp3|m4a|ogg|ogm|wav|aac|flac)$/i,
 	configRE: /(^(makefile.*|configure|cmake.*|InfoPlist)|\.(gyp.?|pyt|isolate|json|xcscheme|projitems|shproj|gradle|properties|mk|xml|cfg|conf|vcxproj|xcconfig|plist|config|in)$)/i,
@@ -5220,7 +5220,7 @@ if ('serviceWorker' in navigator) {
 	navigator.serviceWorker.register('/service-worker.js');
 }
 
-var repoPrefix = '/zxing/zxing';
+var repoPrefix = '/makepad/makepad';
 var repo = repoPrefix.split("/").pop();
 var MAX_COMMITS = 10000;
 
@@ -5288,9 +5288,9 @@ function start(font, fontTexture) {
 			palette: palette,
 			polygonOffset: true,
 			polygonOffsetFactor: -0.5,
-			polygonOffsetUnits: 0.5
-			// depthTest: false,
-			// depthWrite: false
+			polygonOffsetUnits: 0.5,
+			depthTest: false,
+			depthWrite: false
 		}));
 	};
 
@@ -5517,8 +5517,18 @@ function start(font, fontTexture) {
 													}
 													text.material = makeTextMaterial(palette);
 												} else {
-													text.material = textMaterial;
+													text.material = makeTextMaterial(palette);
 												}
+												text.material.uniforms.opacity.value = 0;
+												text.ontick = function (t, dt) {
+													if (this.material.uniforms.opacity.value === 1) return;
+													this.material.uniforms.opacity.value += dt / 1000 / 0.5;
+													if (this.material.uniforms.opacity.value > 1) {
+														this.material.uniforms.opacity.value = 1;
+													}
+													changed = true;
+												};
+
 												var textScale = 1 / Math.max(text.geometry.layout.width + 60, (text.geometry.layout.height + 30) / 0.75);
 												var scale = self.fsEntry.scale * textScale;
 												var vAspect = Math.min(1, (text.geometry.layout.height + 30) / 0.75 / (text.geometry.layout.width + 60));
@@ -6876,10 +6886,10 @@ function start(font, fontTexture) {
 		}
 	};
 
-	THREE.Object3D.prototype.tick = function () {
-		if (this.ontick) this.ontick();
+	THREE.Object3D.prototype.tick = function (t, dt) {
+		if (this.ontick) this.ontick(t, dt);
 		for (var i = 0; i < this.children.length; i++) {
-			this.children[i].tick();
+			this.children[i].tick(t, dt);
 		}
 	};
 
@@ -6925,7 +6935,6 @@ function start(font, fontTexture) {
 		}
 		window.highlightResults(window.searchTree(query, window.FileTree, lunrResults));
 		updateSearchLines();
-		window.searchResults.innerHTML = '';
 		clearTimeout(searchResultsTimeout);
 		searchResultsTimeout = setTimeout(populateSearchResults, 200);
 	};
@@ -6944,7 +6953,7 @@ function start(font, fontTexture) {
 
 		var off = index * 4;
 		if (!bbox || bbox.bottom < 0 || bbox.top > window.innerHeight) {
-			var bv = new THREE.Vector3(b.x - fsEntry.scale * 0.25, av.y + 3.15 * fsEntry.scale, av.z + 3.45 * fsEntry.scale);
+			var bv = new THREE.Vector3(b.x - fsEntry.scale * 0.25, av.y + 3.15 * 0.05, av.z + 3.45 * fsEntry.scale);
 			var aUp = new THREE.Vector3(av.x - fsEntry.scale * 0.075, av.y + 0.05 * fsEntry.scale, av.z + 0.15 * fsEntry.scale);
 			// geo.vertices[off++].set(-100,-100,-100);
 			// geo.vertices[off++].set(-100,-100,-100);
@@ -7060,6 +7069,7 @@ function start(font, fontTexture) {
 			}
 		}
 		updateSearchLines();
+		changed = true;
 	};
 	window.searchResults.onscroll = function () {
 		changed = true;
@@ -7593,6 +7603,275 @@ var utils = module.exports = {
 };
 
 },{"three":30}],10:[function(require,module,exports){
+'use strict';
+
+var wordWrap = require('word-wrapper');
+var xtend = require('xtend');
+var number = require('as-number');
+
+var X_HEIGHTS = ['x', 'e', 'a', 'o', 'n', 's', 'r', 'c', 'u', 'm', 'v', 'w', 'z'];
+var M_WIDTHS = ['m', 'w'];
+var CAP_HEIGHTS = ['H', 'I', 'N', 'E', 'F', 'K', 'L', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'];
+
+var TAB_ID = '\t'.charCodeAt(0);
+var SPACE_ID = ' '.charCodeAt(0);
+var ALIGN_LEFT = 0,
+    ALIGN_CENTER = 1,
+    ALIGN_RIGHT = 2;
+
+module.exports = function createLayout(opt) {
+  return new TextLayout(opt);
+};
+
+function TextLayout(opt) {
+  this.glyphs = [];
+  this._measure = this.computeMetrics.bind(this);
+  this.update(opt);
+}
+
+TextLayout.prototype.update = function (opt) {
+  opt = xtend({
+    measure: this._measure
+  }, opt);
+  this._opt = opt;
+  this._opt.tabSize = number(this._opt.tabSize, 4);
+
+  if (!opt.font) throw new Error('must provide a valid bitmap font');
+
+  var glyphs = this.glyphs;
+  var text = opt.text || '';
+  var font = opt.font;
+  this._setupSpaceGlyphs(font);
+
+  var lines = wordWrap.lines(text, opt);
+  var minWidth = opt.width || 0;
+
+  //clear glyphs
+  glyphs.length = 0;
+
+  //get max line width
+  var maxLineWidth = lines.reduce(function (prev, line) {
+    return Math.max(prev, line.width, minWidth);
+  }, 0);
+
+  //the pen position
+  var x = 0;
+  var y = 0;
+  var lineHeight = number(opt.lineHeight, font.common.lineHeight);
+  var baseline = font.common.base;
+  var descender = lineHeight - baseline;
+  var letterSpacing = opt.letterSpacing || 0;
+  var height = lineHeight * lines.length - descender;
+  var align = getAlignType(this._opt.align);
+
+  //draw text along baseline
+  y -= height;
+
+  //the metrics for this text layout
+  this._width = maxLineWidth;
+  this._height = height;
+  this._descender = lineHeight - baseline;
+  this._baseline = baseline;
+  this._xHeight = getXHeight(font);
+  this._capHeight = getCapHeight(font);
+  this._lineHeight = lineHeight;
+  this._ascender = lineHeight - descender - this._xHeight;
+
+  //layout each glyph
+  var self = this;
+  lines.forEach(function (line, lineIndex) {
+    var start = line.start;
+    var end = line.end;
+    var lineWidth = line.width;
+    var lastGlyph;
+
+    //for each glyph in that line...
+    for (var i = start; i < end; i++) {
+      var id = text.charCodeAt(i);
+      var glyph = self.getGlyph(font, id) || self.getGlyph(font, '?'.charCodeAt(0));
+      if (glyph) {
+        if (lastGlyph) x += getKerning(font, lastGlyph.id, glyph.id);
+
+        var tx = x;
+        if (align === ALIGN_CENTER) tx += (maxLineWidth - lineWidth) / 2;else if (align === ALIGN_RIGHT) tx += maxLineWidth - lineWidth;
+
+        glyphs.push({
+          position: [tx, y],
+          data: glyph,
+          index: i,
+          line: lineIndex
+        });
+
+        //move pen forward
+        x += glyph.xadvance + letterSpacing;
+        lastGlyph = glyph;
+      }
+    }
+
+    //next line down
+    y += lineHeight;
+    x = 0;
+  });
+  this._linesTotal = lines.length;
+};
+
+TextLayout.prototype._setupSpaceGlyphs = function (font) {
+  //These are fallbacks, when the font doesn't include
+  //' ' or '\t' glyphs
+  this._fallbackSpaceGlyph = null;
+  this._fallbackTabGlyph = null;
+
+  if (!font.chars || font.chars.length === 0) return;
+
+  //try to get space glyph
+  //then fall back to the 'm' or 'w' glyphs
+  //then fall back to the first glyph available
+  var space = getGlyphById(font, SPACE_ID) || getMGlyph(font) || font.chars[0];
+
+  //and create a fallback for tab
+  var tabWidth = this._opt.tabSize * space.xadvance;
+  this._fallbackSpaceGlyph = space;
+  this._fallbackTabGlyph = xtend(space, {
+    x: 0, y: 0, xadvance: tabWidth, id: TAB_ID,
+    xoffset: 0, yoffset: 0, width: 0, height: 0
+  });
+};
+
+TextLayout.prototype.getGlyph = function (font, id) {
+  var glyph = getGlyphById(font, id);
+  if (glyph) return glyph;else if (id === TAB_ID) return this._fallbackTabGlyph;else if (id === SPACE_ID) return this._fallbackSpaceGlyph;
+  return null;
+};
+
+TextLayout.prototype.computeMetrics = function (text, start, end, width) {
+  var letterSpacing = this._opt.letterSpacing || 0;
+  var font = this._opt.font;
+  var curPen = 0;
+  var curWidth = 0;
+  var count = 0;
+  var glyph;
+  var lastGlyph;
+
+  if (!font.chars || font.chars.length === 0) {
+    return {
+      start: start,
+      end: start,
+      width: 0
+    };
+  }
+
+  end = Math.min(text.length, end);
+  for (var i = start; i < end; i++) {
+    var id = text.charCodeAt(i);
+    var glyph = this.getGlyph(font, id);
+
+    if (glyph) {
+      //move pen forward
+      var xoff = glyph.xoffset;
+      var kern = lastGlyph ? getKerning(font, lastGlyph.id, glyph.id) : 0;
+      curPen += kern;
+
+      var nextPen = curPen + glyph.xadvance + letterSpacing;
+      var nextWidth = curPen + glyph.width;
+
+      //we've hit our limit; we can't move onto the next glyph
+      if (nextWidth >= width || nextPen >= width) break;
+
+      //otherwise continue along our line
+      curPen = nextPen;
+      curWidth = nextWidth;
+      lastGlyph = glyph;
+    }
+    count++;
+  }
+
+  //make sure rightmost edge lines up with rendered glyphs
+  if (lastGlyph) curWidth += lastGlyph.xoffset;
+
+  return {
+    start: start,
+    end: start + count,
+    width: curWidth
+  };
+}
+
+//getters for the private vars
+;['width', 'height', 'descender', 'ascender', 'xHeight', 'baseline', 'capHeight', 'lineHeight'].forEach(addGetter);
+
+function addGetter(name) {
+  Object.defineProperty(TextLayout.prototype, name, {
+    get: wrapper(name),
+    configurable: true
+  });
+}
+
+//create lookups for private vars
+function wrapper(name) {
+  return new Function(['return function ' + name + '() {', '  return this._' + name, '}'].join('\n'))();
+}
+
+function getGlyphById(font, id) {
+  if (!font.chars || font.chars.length === 0) return null;
+
+  var glyphIdx = findChar(font.chars, id);
+  if (glyphIdx >= 0) return font.chars[glyphIdx];
+  return null;
+}
+
+function getXHeight(font) {
+  for (var i = 0; i < X_HEIGHTS.length; i++) {
+    var id = X_HEIGHTS[i].charCodeAt(0);
+    var idx = findChar(font.chars, id);
+    if (idx >= 0) return font.chars[idx].height;
+  }
+  return 0;
+}
+
+function getMGlyph(font) {
+  for (var i = 0; i < M_WIDTHS.length; i++) {
+    var id = M_WIDTHS[i].charCodeAt(0);
+    var idx = findChar(font.chars, id);
+    if (idx >= 0) return font.chars[idx];
+  }
+  return 0;
+}
+
+function getCapHeight(font) {
+  for (var i = 0; i < CAP_HEIGHTS.length; i++) {
+    var id = CAP_HEIGHTS[i].charCodeAt(0);
+    var idx = findChar(font.chars, id);
+    if (idx >= 0) return font.chars[idx].height;
+  }
+  return 0;
+}
+
+function getKerning(font, left, right) {
+  if (!font.kernings || font.kernings.length === 0) return 0;
+
+  var table = font.kernings;
+  for (var i = 0; i < table.length; i++) {
+    var kern = table[i];
+    if (kern.first === left && kern.second === right) return kern.amount;
+  }
+  return 0;
+}
+
+function getAlignType(align) {
+  if (align === 'center') return ALIGN_CENTER;else if (align === 'right') return ALIGN_RIGHT;
+  return ALIGN_LEFT;
+}
+
+function findChar(array, value, start) {
+  start = start || 0;
+  for (var i = start; i < array.length; i++) {
+    if (array[i].id === value) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+},{"as-number":12,"word-wrapper":31,"xtend":34}],11:[function(require,module,exports){
 var str = Object.prototype.toString
 
 module.exports = anArray
@@ -7605,13 +7884,13 @@ function anArray(arr) {
   )
 }
 
-},{}],11:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 module.exports = function numtype(num, def) {
 	return typeof num === 'number'
 		? num 
 		: (typeof def === 'number' ? def : 0)
 }
-},{}],12:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 var Buffer = require('buffer').Buffer; // for use with browserify
 
 module.exports = function (a, b) {
@@ -7627,7 +7906,7 @@ module.exports = function (a, b) {
     return true;
 };
 
-},{"buffer":2}],13:[function(require,module,exports){
+},{"buffer":2}],14:[function(require,module,exports){
 module.exports = function(dtype) {
   switch (dtype) {
     case 'int8':
@@ -7653,7 +7932,7 @@ module.exports = function(dtype) {
   }
 }
 
-},{}],14:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
 /*eslint new-cap:0*/
 var dtype = require('dtype')
 
@@ -7713,7 +7992,7 @@ function flattenVertexData (data, output, offset) {
   return output
 }
 
-},{"dtype":13}],15:[function(require,module,exports){
+},{"dtype":14}],16:[function(require,module,exports){
 (function (global){
 var win;
 
@@ -7730,7 +8009,7 @@ if (typeof window !== "undefined") {
 module.exports = win;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],16:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 if (typeof Object.create === 'function') {
   // implementation from standard node.js 'util' module
   module.exports = function inherits(ctor, superCtor) {
@@ -7759,7 +8038,7 @@ if (typeof Object.create === 'function') {
   }
 }
 
-},{}],17:[function(require,module,exports){
+},{}],18:[function(require,module,exports){
 /*!
  * Determine if an object is a Buffer
  *
@@ -7782,7 +8061,7 @@ function isSlowBuffer (obj) {
   return typeof obj.readFloatLE === 'function' && typeof obj.slice === 'function' && isBuffer(obj.slice(0, 0))
 }
 
-},{}],18:[function(require,module,exports){
+},{}],19:[function(require,module,exports){
 module.exports = isFunction
 
 var toString = Object.prototype.toString
@@ -7799,307 +8078,7 @@ function isFunction (fn) {
       fn === window.prompt))
 };
 
-},{}],19:[function(require,module,exports){
-var wordWrap = require('word-wrapper')
-var xtend = require('xtend')
-var number = require('as-number')
-
-var X_HEIGHTS = ['x', 'e', 'a', 'o', 'n', 's', 'r', 'c', 'u', 'm', 'v', 'w', 'z']
-var M_WIDTHS = ['m', 'w']
-var CAP_HEIGHTS = ['H', 'I', 'N', 'E', 'F', 'K', 'L', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
-
-
-var TAB_ID = '\t'.charCodeAt(0)
-var SPACE_ID = ' '.charCodeAt(0)
-var ALIGN_LEFT = 0, 
-    ALIGN_CENTER = 1, 
-    ALIGN_RIGHT = 2
-
-module.exports = function createLayout(opt) {
-  return new TextLayout(opt)
-}
-
-function TextLayout(opt) {
-  this.glyphs = []
-  this._measure = this.computeMetrics.bind(this)
-  this.update(opt)
-}
-
-TextLayout.prototype.update = function(opt) {
-  opt = xtend({
-    measure: this._measure
-  }, opt)
-  this._opt = opt
-  this._opt.tabSize = number(this._opt.tabSize, 4)
-
-  if (!opt.font)
-    throw new Error('must provide a valid bitmap font')
-
-  var glyphs = this.glyphs
-  var text = opt.text||'' 
-  var font = opt.font
-  this._setupSpaceGlyphs(font)
-  
-  var lines = wordWrap.lines(text, opt)
-  var minWidth = opt.width || 0
-
-  //clear glyphs
-  glyphs.length = 0
-
-  //get max line width
-  var maxLineWidth = lines.reduce(function(prev, line) {
-    return Math.max(prev, line.width, minWidth)
-  }, 0)
-
-  //the pen position
-  var x = 0
-  var y = 0
-  var lineHeight = number(opt.lineHeight, font.common.lineHeight)
-  var baseline = font.common.base
-  var descender = lineHeight-baseline
-  var letterSpacing = opt.letterSpacing || 0
-  var height = lineHeight * lines.length - descender
-  var align = getAlignType(this._opt.align)
-
-  //draw text along baseline
-  y -= height
-  
-  //the metrics for this text layout
-  this._width = maxLineWidth
-  this._height = height
-  this._descender = lineHeight - baseline
-  this._baseline = baseline
-  this._xHeight = getXHeight(font)
-  this._capHeight = getCapHeight(font)
-  this._lineHeight = lineHeight
-  this._ascender = lineHeight - descender - this._xHeight
-    
-  //layout each glyph
-  var self = this
-  lines.forEach(function(line, lineIndex) {
-    var start = line.start
-    var end = line.end
-    var lineWidth = line.width
-    var lastGlyph
-    
-    //for each glyph in that line...
-    for (var i=start; i<end; i++) {
-      var id = text.charCodeAt(i)
-      var glyph = self.getGlyph(font, id) || self.getGlyph(font, '?'.charCodeAt(0));
-      if (glyph) {
-        if (lastGlyph) 
-          x += getKerning(font, lastGlyph.id, glyph.id)
-
-        var tx = x
-        if (align === ALIGN_CENTER) 
-          tx += (maxLineWidth-lineWidth)/2
-        else if (align === ALIGN_RIGHT)
-          tx += (maxLineWidth-lineWidth)
-
-        glyphs.push({
-          position: [tx, y],
-          data: glyph,
-          index: i,
-          line: lineIndex
-        })  
-
-        //move pen forward
-        x += glyph.xadvance + letterSpacing
-        lastGlyph = glyph
-      }
-    }
-
-    //next line down
-    y += lineHeight
-    x = 0
-  })
-  this._linesTotal = lines.length;
-}
-
-TextLayout.prototype._setupSpaceGlyphs = function(font) {
-  //These are fallbacks, when the font doesn't include
-  //' ' or '\t' glyphs
-  this._fallbackSpaceGlyph = null
-  this._fallbackTabGlyph = null
-
-  if (!font.chars || font.chars.length === 0)
-    return
-
-  //try to get space glyph
-  //then fall back to the 'm' or 'w' glyphs
-  //then fall back to the first glyph available
-  var space = getGlyphById(font, SPACE_ID) 
-          || getMGlyph(font) 
-          || font.chars[0]
-
-  //and create a fallback for tab
-  var tabWidth = this._opt.tabSize * space.xadvance
-  this._fallbackSpaceGlyph = space
-  this._fallbackTabGlyph = xtend(space, {
-    x: 0, y: 0, xadvance: tabWidth, id: TAB_ID, 
-    xoffset: 0, yoffset: 0, width: 0, height: 0
-  })
-}
-
-TextLayout.prototype.getGlyph = function(font, id) {
-  var glyph = getGlyphById(font, id)
-  if (glyph)
-    return glyph
-  else if (id === TAB_ID) 
-    return this._fallbackTabGlyph
-  else if (id === SPACE_ID) 
-    return this._fallbackSpaceGlyph
-  return null
-}
-
-TextLayout.prototype.computeMetrics = function(text, start, end, width) {
-  var letterSpacing = this._opt.letterSpacing || 0
-  var font = this._opt.font
-  var curPen = 0
-  var curWidth = 0
-  var count = 0
-  var glyph
-  var lastGlyph
-
-  if (!font.chars || font.chars.length === 0) {
-    return {
-      start: start,
-      end: start,
-      width: 0
-    }
-  }
-
-  end = Math.min(text.length, end)
-  for (var i=start; i < end; i++) {
-    var id = text.charCodeAt(i)
-    var glyph = this.getGlyph(font, id)
-
-    if (glyph) {
-      //move pen forward
-      var xoff = glyph.xoffset
-      var kern = lastGlyph ? getKerning(font, lastGlyph.id, glyph.id) : 0
-      curPen += kern
-
-      var nextPen = curPen + glyph.xadvance + letterSpacing
-      var nextWidth = curPen + glyph.width
-
-      //we've hit our limit; we can't move onto the next glyph
-      if (nextWidth >= width || nextPen >= width)
-        break
-
-      //otherwise continue along our line
-      curPen = nextPen
-      curWidth = nextWidth
-      lastGlyph = glyph
-    }
-    count++
-  }
-  
-  //make sure rightmost edge lines up with rendered glyphs
-  if (lastGlyph)
-    curWidth += lastGlyph.xoffset
-
-  return {
-    start: start,
-    end: start + count,
-    width: curWidth
-  }
-}
-
-//getters for the private vars
-;['width', 'height', 
-  'descender', 'ascender',
-  'xHeight', 'baseline',
-  'capHeight',
-  'lineHeight' ].forEach(addGetter)
-
-function addGetter(name) {
-  Object.defineProperty(TextLayout.prototype, name, {
-    get: wrapper(name),
-    configurable: true
-  })
-}
-
-//create lookups for private vars
-function wrapper(name) {
-  return (new Function([
-    'return function '+name+'() {',
-    '  return this._'+name,
-    '}'
-  ].join('\n')))()
-}
-
-function getGlyphById(font, id) {
-  if (!font.chars || font.chars.length === 0)
-    return null
-
-  var glyphIdx = findChar(font.chars, id)
-  if (glyphIdx >= 0)
-    return font.chars[glyphIdx]
-  return null
-}
-
-function getXHeight(font) {
-  for (var i=0; i<X_HEIGHTS.length; i++) {
-    var id = X_HEIGHTS[i].charCodeAt(0)
-    var idx = findChar(font.chars, id)
-    if (idx >= 0) 
-      return font.chars[idx].height
-  }
-  return 0
-}
-
-function getMGlyph(font) {
-  for (var i=0; i<M_WIDTHS.length; i++) {
-    var id = M_WIDTHS[i].charCodeAt(0)
-    var idx = findChar(font.chars, id)
-    if (idx >= 0) 
-      return font.chars[idx]
-  }
-  return 0
-}
-
-function getCapHeight(font) {
-  for (var i=0; i<CAP_HEIGHTS.length; i++) {
-    var id = CAP_HEIGHTS[i].charCodeAt(0)
-    var idx = findChar(font.chars, id)
-    if (idx >= 0) 
-      return font.chars[idx].height
-  }
-  return 0
-}
-
-function getKerning(font, left, right) {
-  if (!font.kernings || font.kernings.length === 0)
-    return 0
-
-  var table = font.kernings
-  for (var i=0; i<table.length; i++) {
-    var kern = table[i]
-    if (kern.first === left && kern.second === right)
-      return kern.amount
-  }
-  return 0
-}
-
-function getAlignType(align) {
-  if (align === 'center')
-    return ALIGN_CENTER
-  else if (align === 'right')
-    return ALIGN_RIGHT
-  return ALIGN_LEFT
-}
-
-function findChar (array, value, start) {
-  start = start || 0
-  for (var i = start; i < array.length; i++) {
-    if (array[i].id === value) {
-      return i
-    }
-  }
-  return -1
-}
-},{"as-number":11,"word-wrapper":31,"xtend":34}],20:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 (function (Buffer){
 var xhr = require('xhr')
 var noop = function(){}
@@ -8211,7 +8190,7 @@ module.exports = function(buf) {
   return buf.length > 4 && equal(buf.slice(0, 4), HEADER)
 }
 }).call(this,require("buffer").Buffer)
-},{"buffer":2,"buffer-equal":12}],22:[function(require,module,exports){
+},{"buffer":2,"buffer-equal":13}],22:[function(require,module,exports){
 /*
 object-assign
 (c) Sindre Sorhus
@@ -8765,7 +8744,7 @@ module.exports = function createQuadElements(array, opt) {
     }
     return indices
 }
-},{"an-array":10,"dtype":13,"is-buffer":17}],29:[function(require,module,exports){
+},{"an-array":11,"dtype":14,"is-buffer":18}],29:[function(require,module,exports){
 var flatten = require('flatten-vertex-data')
 var warned = false;
 
@@ -8865,7 +8844,7 @@ function rebuildAttribute (attrib, data, itemSize) {
   return false
 }
 
-},{"flatten-vertex-data":14}],30:[function(require,module,exports){
+},{"flatten-vertex-data":15}],30:[function(require,module,exports){
 var self = self || {};// File:src/Three.js
 
 /**
@@ -49812,7 +49791,7 @@ function getXml(xhr) {
 
 function noop() {}
 
-},{"global/window":15,"is-function":18,"parse-headers":27,"xtend":34}],33:[function(require,module,exports){
+},{"global/window":16,"is-function":19,"parse-headers":27,"xtend":34}],33:[function(require,module,exports){
 module.exports = (function xmlparser() {
   //common browsers
   if (typeof self.DOMParser !== 'undefined') {
@@ -49865,7 +49844,7 @@ function extend() {
 },{}],35:[function(require,module,exports){
 'use strict';
 
-var createLayout = require('layout-bmfont-text');
+var createLayout = require('../layout-bmfont-text-modified');
 var inherits = require('inherits');
 var createIndices = require('quad-indices');
 var buffer = require('three-buffer-vertex-data');
@@ -49982,7 +49961,7 @@ TextGeometry.prototype.computeBoundingBox = function () {
   utils.computeBox(positions, bbox);
 };
 
-},{"./lib/utils":36,"./lib/vertices":37,"inherits":16,"layout-bmfont-text":19,"object-assign":22,"quad-indices":28,"three-buffer-vertex-data":29}],36:[function(require,module,exports){
+},{"../layout-bmfont-text-modified":10,"./lib/utils":36,"./lib/vertices":37,"inherits":17,"object-assign":22,"quad-indices":28,"three-buffer-vertex-data":29}],36:[function(require,module,exports){
 "use strict";
 
 var itemSize = 4;

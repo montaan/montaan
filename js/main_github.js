@@ -2,7 +2,7 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/service-worker.js');
 }
 
-var repoPrefix = '/zxing/zxing';
+var repoPrefix = '/makepad/makepad';
 var repo = repoPrefix.split("/").pop();
 var MAX_COMMITS = 10000;
 
@@ -71,9 +71,9 @@ function start(font, fontTexture) {
 			palette: palette,
 			polygonOffset: true,
 			polygonOffsetFactor: -0.5,
-			polygonOffsetUnits: 0.5
-			// depthTest: false,
-			// depthWrite: false
+			polygonOffsetUnits: 0.5,
+			depthTest: false,
+			depthWrite: false
 		}));
 	};
 
@@ -303,8 +303,18 @@ function start(font, fontTexture) {
 													}
 													text.material = makeTextMaterial(palette);
 												} else {
-													text.material = textMaterial;
+													text.material = makeTextMaterial(palette);
 												}
+												text.material.uniforms.opacity.value = 0;
+												text.ontick = function(t, dt) {
+													if (this.material.uniforms.opacity.value === 1) return;
+													this.material.uniforms.opacity.value += (dt/1000) / 0.5;
+													if (this.material.uniforms.opacity.value > 1) {
+														this.material.uniforms.opacity.value = 1;
+													}
+													changed = true;
+												};
+
 												var textScale = 1 / Math.max(text.geometry.layout.width+60, (text.geometry.layout.height+30)/0.75);
 												var scale = self.fsEntry.scale * textScale;
 												var vAspect = Math.min(1, ((text.geometry.layout.height+30)/0.75) / (text.geometry.layout.width+60));
@@ -1673,10 +1683,10 @@ function start(font, fontTexture) {
 		}
 	};
 
-	THREE.Object3D.prototype.tick = function() {
-		if (this.ontick) this.ontick();
+	THREE.Object3D.prototype.tick = function(t, dt) {
+		if (this.ontick) this.ontick(t, dt);
 		for (var i=0; i<this.children.length; i++) {
-			this.children[i].tick();
+			this.children[i].tick(t, dt);
 		}
 	}
 
@@ -1720,7 +1730,6 @@ function start(font, fontTexture) {
 		}
 		window.highlightResults(window.searchTree(query, window.FileTree, lunrResults));
 		updateSearchLines();
-		window.searchResults.innerHTML = '';
 		clearTimeout(searchResultsTimeout);
 		searchResultsTimeout = setTimeout(populateSearchResults, 200);
 	};
@@ -1739,7 +1748,7 @@ function start(font, fontTexture) {
 
 		var off = index * 4;
 		if (!bbox || bbox.bottom < 0 || bbox.top > window.innerHeight) {
-			var bv = new THREE.Vector3(b.x - fsEntry.scale*0.25, av.y + 3.15*fsEntry.scale, av.z + 3.45*fsEntry.scale);
+			var bv = new THREE.Vector3(b.x - fsEntry.scale*0.25, av.y + 3.15*0.05, av.z + 3.45*fsEntry.scale);
 			var aUp = new THREE.Vector3(av.x - fsEntry.scale*0.075, av.y + 0.05*fsEntry.scale, av.z + 0.15*fsEntry.scale);
 			// geo.vertices[off++].set(-100,-100,-100);
 			// geo.vertices[off++].set(-100,-100,-100);
@@ -1857,6 +1866,7 @@ function start(font, fontTexture) {
 			}
 		}
 		updateSearchLines();
+		changed = true;
 	};
 	window.searchResults.onscroll = function() {
 		changed = true;
