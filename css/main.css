@@ -171,6 +171,28 @@ label {
 	line-height: 60px;
 	text-align: center;
 }
+#breadcrumb {
+	position: absolute;
+	top: 60px;
+	left: 0px;
+	color: silver;
+	box-sizing: border-box;
+	z-index: 10;
+	font-size: 14px;
+	background: rgba(0,0,0,0.9);
+	padding: 8px;
+	padding-right: 16px;
+	border-bottom-right-radius: 4px;
+}
+#breadcrumb span {
+	cursor: pointer;
+}
+#breadcrumb .separator {
+	cursor: default;
+	margin-left: 8px;
+	margin-right: 8px;
+	color: grey;
+}
 #searchResults {
 	position: absolute;
 	z-index: 9;

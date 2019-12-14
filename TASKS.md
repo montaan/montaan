@@ -15,7 +15,7 @@
     [x] Highlight search hit line
         [x] Draw connection line to hit line 
         [x] Add a line-sized quad under each hit line
-        [] Render the damn quads properly (instead of 3 lines)
+        [x] Render the damn quads properly (instead of 3 lines)
     [] Highlight found search token
     [] Shrink search results outside current view
 

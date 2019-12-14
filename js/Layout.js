@@ -321,7 +321,7 @@ module.exports = {
 		if (squareSide > 1) {
 			var xScale = (maxX+1)/squareSide;
 			var yScale = (maxY+1)/squareSide;
-			Geometry.makeQuad(verts, fileTree.index, fileTree.x, fileTree.y+fileTree.scale*(1.0-yScale), fileTree.scale*xScale, fileTree.scale*yScale, fileTree.z);
+			Geometry.makeQuad(verts, fileTree.index, fileTree.x, fileTree.y+fileTree.scale*(1.0-yScale), fileTree.scale*yScale, fileTree.scale*yScale, fileTree.z);
 		}
 
 		if (true || depth < 4) {
@@ -519,7 +519,7 @@ module.exports = {
 		if (squareSide > 1) {
 			var xScale = (maxX+1)/squareSide;
 			var yScale = (maxY+1)/squareSide;
-			Geometry.makeQuad(verts, fileTree.index, fileTree.x, fileTree.y+fileTree.scale*(1.0-yScale), fileTree.scale*xScale, fileTree.scale*yScale, fileTree.z);
+			Geometry.makeQuad(verts, fileTree.index, fileTree.x, fileTree.y+fileTree.scale*(1.0-yScale), fileTree.scale*yScale, fileTree.scale*yScale, fileTree.z);
 		}
 
 		fileTree.lastIndex = fileIndex-1;

@@ -2,7 +2,7 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/service-worker.js');
 }
 
-var repoPrefix = '/makepad/makepad';
+var repoPrefix = '/zxing/zxing';
 var repo = repoPrefix.split("/").pop();
 var MAX_COMMITS = 10000;
 
@@ -182,6 +182,7 @@ function start(font, fontTexture) {
 			}
 			var stack = [this.fileTree];
 			var zoomedInPath = "";
+			var navigationTarget = "";
 			var smallestCovering = this.fileTree;
 			while (stack.length > 0) {
 				var obj = stack.pop();
@@ -192,7 +193,10 @@ function start(font, fontTexture) {
 					} else if (o.scale * 50 / Math.max(camera.fov, camera.targetFOV) > 0.3) {
 						if (Geometry.quadCoversFrustum(idx, this, camera)) {
 							zoomedInPath += '/' + o.name;
+							navigationTarget += '/' + o.name;
 							smallestCovering = o;
+						} else if (o.scale * 50 / Math.max(camera.fov, camera.targetFOV) > 0.9 && Geometry.quadAtFrustumCenter(idx, this, camera)) {
+							navigationTarget += '/' + o.name;
 						}
 						if (o.entries === null) {
 							var fullPath = getFullPath(o);
@@ -359,7 +363,7 @@ function start(font, fontTexture) {
 					}
 				}
 			}
-			// console.log(zoomedInPath);
+			updateBreadCrumb(navigationTarget);
 			this.geometry.setDrawRange(smallestCovering.vertexIndex, smallestCovering.lastVertexIndex-smallestCovering.vertexIndex);
 			bigGeo.setDrawRange(smallestCovering.textVertexIndex, smallestCovering.lastTextVertexIndex - smallestCovering.textVertexIndex);
 		};
@@ -372,6 +376,28 @@ function start(font, fontTexture) {
 		return mesh;
 	};
 
+	var updateBreadCrumb = function(path) {
+		var el = document.getElementById('breadcrumb');
+		while (el.firstChild) el.removeChild(el.firstChild);
+		var segs = path.split("/");
+		for (var i = 1; i < segs.length; i++) {
+			var prefix = segs.slice(0,i+1).join("/");
+			var name = segs[i];
+			var sep = document.createElement('span');
+			sep.className = 'separator';
+			sep.textContent = '/';
+			el.appendChild(sep);
+			var link = document.createElement('span');
+			link.path = prefix;
+			link.textContent = name;
+			link.onclick = function(ev) {
+				ev.preventDefault();
+				var fsEntry = getPathEntry(window.FileTree, this.path);
+				if (fsEntry) goToFSEntry(fsEntry, model);
+			};
+			el.appendChild(link);
+		}
+	};
 
 	var prettyPrintWorker = new Worker('js/prettyPrintWorker.js');
 	prettyPrintWorker.callbacks = {};
@@ -1419,23 +1445,30 @@ function start(font, fontTexture) {
 		if (window.DocFrame) return;
 		ev.preventDefault();
 		
-		// Change this to pan..
-
-		var cx = (ev.clientX - window.innerWidth / 2) * 0.0000575 * camera.fov;
-		var cy = (ev.clientY - window.innerHeight / 2) * 0.0000575 * camera.fov;
-		var d = ev.deltaY !== undefined ? ev.deltaY*3 : ev.wheelDelta;
-		if (Date.now() - lastScroll > 500) {
-			prevD = d;
-		}
-		if (d > 20 || d < -20) {
-			d = 20 * d / Math.abs(d);
-		}
-		if ((d < 0 && prevD > 0) || (d > 0 && prevD < 0)) {
-			d = 0;
-		}
-		prevD = d;
-		zoomCamera(Math.pow(1.003, d), cx, cy);
-		lastScroll = Date.now();
+		// pan on wheel
+		var factor = 0.0000575;
+		camera.position.x += factor*ev.deltaX * camera.fov;
+		camera.position.y -= factor*ev.deltaY * camera.fov;
+		camera.targetPosition.copy(camera.position);
+		camera.targetFOV = camera.fov;
+		changed = true;
+		
+		// // zoom on wheel
+		// var cx = (ev.clientX - window.innerWidth / 2) * 0.0000575 * camera.fov;
+		// var cy = (ev.clientY - window.innerHeight / 2) * 0.0000575 * camera.fov;
+		// var d = ev.deltaY !== undefined ? ev.deltaY*3 : ev.wheelDelta;
+		// if (Date.now() - lastScroll > 500) {
+		// 	prevD = d;
+		// }
+		// if (d > 20 || d < -20) {
+		// 	d = 20 * d / Math.abs(d);
+		// }
+		// if ((d < 0 && prevD > 0) || (d > 0 && prevD < 0)) {
+		// 	d = 0;
+		// }
+		// prevD = d;
+		// zoomCamera(Math.pow(1.003, d), cx, cy);
+		// lastScroll = Date.now();
 	};
 
 	var loadThumbnail = function(fsEntry) {
@@ -1766,7 +1799,7 @@ function start(font, fontTexture) {
 	var searchHighlights = new THREE.Mesh(new THREE.Geometry(), new THREE.MeshBasicMaterial({
 		side: THREE.DoubleSide,
 		color: 0xff0000,
-		opacity: 1,
+		opacity: 0.33,
 		transparent: true,
 		depthTest: false,
 		depthWrite: false

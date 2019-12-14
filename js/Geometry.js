@@ -44,6 +44,23 @@ module.exports = {
 		return (maxX > -1 && minX < 1 && maxY > -1 && minY < 1);
 	},
 
+	quadAtFrustumCenter: function(quadIndex, model, camera) {
+		var vertexOff = quadIndex * 6 * this.quadCount;
+		var a = this.qTmp1;
+		var b = this.qTmp2;
+		var c = this.qTmp3;
+		var d = this.qTmp4;
+		this.projectVertexToFrustum(a, vertexOff, model, camera);
+		this.projectVertexToFrustum(b, vertexOff+1, model, camera);
+		this.projectVertexToFrustum(c, vertexOff+2, model, camera);
+		this.projectVertexToFrustum(d, vertexOff+5, model, camera);
+		var minX = Math.min(a.x, b.x, c.x, d.x);
+		var maxX = Math.max(a.x, b.x, c.x, d.x);
+		var minY = Math.min(a.y, b.y, c.y, d.y);
+		var maxY = Math.max(a.y, b.y, c.y, d.y);
+		return (maxX > 0 && minX < 0 && maxY > 0 && minY < 0);
+	},
+
 	quadCoversFrustum: function(quadIndex, model, camera) {
 		var vertexOff = quadIndex * 6 * this.quadCount;
 		var a = this.qTmp1;

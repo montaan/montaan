@@ -2231,6 +2231,23 @@ module.exports = {
 		return maxX > -1 && minX < 1 && maxY > -1 && minY < 1;
 	},
 
+	quadAtFrustumCenter: function quadAtFrustumCenter(quadIndex, model, camera) {
+		var vertexOff = quadIndex * 6 * this.quadCount;
+		var a = this.qTmp1;
+		var b = this.qTmp2;
+		var c = this.qTmp3;
+		var d = this.qTmp4;
+		this.projectVertexToFrustum(a, vertexOff, model, camera);
+		this.projectVertexToFrustum(b, vertexOff + 1, model, camera);
+		this.projectVertexToFrustum(c, vertexOff + 2, model, camera);
+		this.projectVertexToFrustum(d, vertexOff + 5, model, camera);
+		var minX = Math.min(a.x, b.x, c.x, d.x);
+		var maxX = Math.max(a.x, b.x, c.x, d.x);
+		var minY = Math.min(a.y, b.y, c.y, d.y);
+		var maxY = Math.max(a.y, b.y, c.y, d.y);
+		return maxX > 0 && minX < 0 && maxY > 0 && minY < 0;
+	},
+
 	quadCoversFrustum: function quadCoversFrustum(quadIndex, model, camera) {
 		var vertexOff = quadIndex * 6 * this.quadCount;
 		var a = this.qTmp1;
@@ -2828,7 +2845,7 @@ module.exports = (_module$exports = {
 		if (squareSide > 1) {
 			var xScale = (maxX + 1) / squareSide;
 			var yScale = (maxY + 1) / squareSide;
-			Geometry.makeQuad(verts, fileTree.index, fileTree.x, fileTree.y + fileTree.scale * (1.0 - yScale), fileTree.scale * xScale, fileTree.scale * yScale, fileTree.z);
+			Geometry.makeQuad(verts, fileTree.index, fileTree.x, fileTree.y + fileTree.scale * (1.0 - yScale), fileTree.scale * yScale, fileTree.scale * yScale, fileTree.z);
 		}
 
 		if (true || depth < 4) {
@@ -3026,7 +3043,7 @@ module.exports = (_module$exports = {
 	if (squareSide > 1) {
 		var xScale = (maxX + 1) / squareSide;
 		var yScale = (maxY + 1) / squareSide;
-		Geometry.makeQuad(verts, fileTree.index, fileTree.x, fileTree.y + fileTree.scale * (1.0 - yScale), fileTree.scale * xScale, fileTree.scale * yScale, fileTree.z);
+		Geometry.makeQuad(verts, fileTree.index, fileTree.x, fileTree.y + fileTree.scale * (1.0 - yScale), fileTree.scale * yScale, fileTree.scale * yScale, fileTree.z);
 	}
 
 	fileTree.lastIndex = fileIndex - 1;
@@ -5222,7 +5239,7 @@ if ('serviceWorker' in navigator) {
 	navigator.serviceWorker.register('/service-worker.js');
 }
 
-var repoPrefix = '/makepad/makepad';
+var repoPrefix = '/zxing/zxing';
 var repo = repoPrefix.split("/").pop();
 var MAX_COMMITS = 10000;
 
@@ -5399,6 +5416,7 @@ function start(font, fontTexture) {
 			}
 			var stack = [this.fileTree];
 			var zoomedInPath = "";
+			var navigationTarget = "";
 			var smallestCovering = this.fileTree;
 			while (stack.length > 0) {
 				var obj = stack.pop();
@@ -5408,7 +5426,10 @@ function start(font, fontTexture) {
 					if (!Geometry.quadInsideFrustum(idx, this, camera)) {} else if (o.scale * 50 / Math.max(camera.fov, camera.targetFOV) > 0.3) {
 						if (Geometry.quadCoversFrustum(idx, this, camera)) {
 							zoomedInPath += '/' + o.name;
+							navigationTarget += '/' + o.name;
 							smallestCovering = o;
+						} else if (o.scale * 50 / Math.max(camera.fov, camera.targetFOV) > 0.9 && Geometry.quadAtFrustumCenter(idx, this, camera)) {
+							navigationTarget += '/' + o.name;
 						}
 						if (o.entries === null) {
 							var fullPath = getFullPath(o);
@@ -5578,7 +5599,7 @@ function start(font, fontTexture) {
 					}
 				}
 			}
-			// console.log(zoomedInPath);
+			updateBreadCrumb(navigationTarget);
 			this.geometry.setDrawRange(smallestCovering.vertexIndex, smallestCovering.lastVertexIndex - smallestCovering.vertexIndex);
 			bigGeo.setDrawRange(smallestCovering.textVertexIndex, smallestCovering.lastTextVertexIndex - smallestCovering.textVertexIndex);
 		};
@@ -5589,6 +5610,30 @@ function start(font, fontTexture) {
 		// mesh.castShadow = true;
 		// mesh.receiveShadow = true;
 		return mesh;
+	};
+
+	var updateBreadCrumb = function updateBreadCrumb(path) {
+		var el = document.getElementById('breadcrumb');
+		while (el.firstChild) {
+			el.removeChild(el.firstChild);
+		}var segs = path.split("/");
+		for (var i = 1; i < segs.length; i++) {
+			var prefix = segs.slice(0, i + 1).join("/");
+			var name = segs[i];
+			var sep = document.createElement('span');
+			sep.className = 'separator';
+			sep.textContent = '/';
+			el.appendChild(sep);
+			var link = document.createElement('span');
+			link.path = prefix;
+			link.textContent = name;
+			link.onclick = function (ev) {
+				ev.preventDefault();
+				var fsEntry = getPathEntry(window.FileTree, this.path);
+				if (fsEntry) goToFSEntry(fsEntry, model);
+			};
+			el.appendChild(link);
+		}
 	};
 
 	var prettyPrintWorker = new Worker('js/prettyPrintWorker.js');
@@ -6636,23 +6681,30 @@ function start(font, fontTexture) {
 		if (window.DocFrame) return;
 		ev.preventDefault();
 
-		// Change this to pan..
+		// pan on wheel
+		var factor = 0.0001;
+		camera.position.x += factor * ev.deltaX * camera.fov;
+		camera.position.y -= factor * ev.deltaY * camera.fov;
+		camera.targetPosition.copy(camera.position);
+		camera.targetFOV = camera.fov;
+		changed = true;
 
-		var cx = (ev.clientX - window.innerWidth / 2) * 0.0000575 * camera.fov;
-		var cy = (ev.clientY - window.innerHeight / 2) * 0.0000575 * camera.fov;
-		var d = ev.deltaY !== undefined ? ev.deltaY * 3 : ev.wheelDelta;
-		if (Date.now() - lastScroll > 500) {
-			prevD = d;
-		}
-		if (d > 20 || d < -20) {
-			d = 20 * d / Math.abs(d);
-		}
-		if (d < 0 && prevD > 0 || d > 0 && prevD < 0) {
-			d = 0;
-		}
-		prevD = d;
-		zoomCamera(Math.pow(1.003, d), cx, cy);
-		lastScroll = Date.now();
+		// // zoom on wheel
+		// var cx = (ev.clientX - window.innerWidth / 2) * 0.0000575 * camera.fov;
+		// var cy = (ev.clientY - window.innerHeight / 2) * 0.0000575 * camera.fov;
+		// var d = ev.deltaY !== undefined ? ev.deltaY*3 : ev.wheelDelta;
+		// if (Date.now() - lastScroll > 500) {
+		// 	prevD = d;
+		// }
+		// if (d > 20 || d < -20) {
+		// 	d = 20 * d / Math.abs(d);
+		// }
+		// if ((d < 0 && prevD > 0) || (d > 0 && prevD < 0)) {
+		// 	d = 0;
+		// }
+		// prevD = d;
+		// zoomCamera(Math.pow(1.003, d), cx, cy);
+		// lastScroll = Date.now();
 	};
 
 	var loadThumbnail = function loadThumbnail(fsEntry) {
