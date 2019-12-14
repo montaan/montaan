@@ -6949,24 +6949,22 @@ function start(font, fontTexture) {
 			var index = searchHighlights.index;
 			searchHighlights.index++;
 
-			var lineBottom = fsEntry.textYZero - fsEntry.y - (line + 1) / lineCount * fsEntry.textHeight;
-			var lineTop = fsEntry.textYZero - fsEntry.y - line / lineCount * fsEntry.textHeight;
-			var c0 = new THREE.Vector3(fsEntry.x, fsEntry.y + lineBottom, fsEntry.z);
-			var c1 = new THREE.Vector3(fsEntry.x + fsEntry.scale, fsEntry.y + lineBottom, fsEntry.z);
-			var c2 = new THREE.Vector3(fsEntry.x + fsEntry.scale, fsEntry.y + lineTop, fsEntry.z);
-			var c3 = new THREE.Vector3(fsEntry.x, fsEntry.y + lineTop, fsEntry.z);
+			var lineBottom = fsEntry.textYZero - (line + 1) / lineCount * fsEntry.textHeight;
+			var lineTop = fsEntry.textYZero - line / lineCount * fsEntry.textHeight;
+			var c0 = new THREE.Vector3(fsEntry.x, lineBottom, fsEntry.z);
+			var c1 = new THREE.Vector3(fsEntry.x + fsEntry.scale, lineBottom, fsEntry.z);
+			var c2 = new THREE.Vector3(fsEntry.x + fsEntry.scale, lineTop, fsEntry.z);
+			var c3 = new THREE.Vector3(fsEntry.x, lineTop, fsEntry.z);
 
 			c0.applyMatrix4(model.matrixWorld);
 			c1.applyMatrix4(model.matrixWorld);
 			c2.applyMatrix4(model.matrixWorld);
 			c3.applyMatrix4(model.matrixWorld);
 
-			var off = index * 6;
+			var off = index * 4;
 
 			geo.vertices[off++].copy(c0);
 			geo.vertices[off++].copy(c1);
-			geo.vertices[off++].copy(c2);
-			geo.vertices[off++].copy(c0);
 			geo.vertices[off++].copy(c2);
 			geo.vertices[off++].copy(c3);
 
@@ -6975,17 +6973,21 @@ function start(font, fontTexture) {
 			highlightLater.push([fsEntry, line, lineCount]);
 		}
 	};
-	var searchHighlights = new THREE.LineSegments(new THREE.Geometry(), new THREE.LineBasicMaterial({
+	var searchHighlights = new THREE.Mesh(new THREE.Geometry(), new THREE.MeshBasicMaterial({
 		side: THREE.DoubleSide,
 		color: 0xff0000,
-		opacity: 1,
+		opacity: 0.33,
 		transparent: true,
 		depthTest: false,
 		depthWrite: false
 	}));
 	searchHighlights.frustumCulled = false;
-	for (var i = 0; i < 60000; i++) {
+	for (var i = 0; i < 40000; i++) {
 		searchHighlights.geometry.vertices.push(new THREE.Vector3());
+	}
+	for (var i = 0; i < 10000; i++) {
+		var off = i * 4;
+		searchHighlights.geometry.faces.push(new THREE.Face3(off, off + 1, off + 2), new THREE.Face3(off, off + 2, off + 3));
 	}
 	searchHighlights.ontick = function () {
 		if (highlightLater.length > 0) {
@@ -7816,7 +7818,7 @@ TextLayout.prototype.update = function (opt) {
   var lines = wordWrap.lines(text, opt);
   var minWidth = opt.width || 0;
 
-  console.log('lines:', lines.length, text.split('\n').length);
+  // console.log('lines:', lines.length, text.split('\n').length);
 
   //clear glyphs
   glyphs.length = 0;
