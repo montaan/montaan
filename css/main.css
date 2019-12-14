@@ -199,7 +199,12 @@ label {
     word-wrap: break-word;
 }
 #searchResults li > ul {
-	list-style: tri;
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+#searchResults li li {
+	padding-left: 16px;
 }
 #searchResults li > ul .searchTitle {
 	font-size: 12px;

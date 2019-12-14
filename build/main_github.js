@@ -3113,7 +3113,7 @@ module.exports = (_module$exports = {
 }), _module$exports);
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"../three-bmfont-text-modified":35,"./Colors.js":4,"./Geometry.js":5,"three":30}],7:[function(require,module,exports){
+},{"../three-bmfont-text-modified":34,"./Colors.js":4,"./Geometry.js":5,"three":30}],7:[function(require,module,exports){
 "use strict";
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
@@ -5552,7 +5552,7 @@ function start(font, fontTexture) {
 												self.fsEntry.textX = text.position.x + scale * Math.min(40 * 30 + 60, text.geometry.layout.width + 60) * 0.5;
 												self.fsEntry.textYZero = text.position.y + self.fsEntry.scale * 0.75;
 												self.fsEntry.textY = text.position.y + self.fsEntry.scale * 0.75 - scale * 900;
-												self.fsEntry.textHeight = scale * (text.geometry.layout.height + 30);
+												self.fsEntry.textHeight = scale * text.geometry.layout.height;
 
 												text.position.y += self.fsEntry.scale * 0.75 * (1 - vAspect);
 
@@ -6765,7 +6765,7 @@ function start(font, fontTexture) {
 			fsEntry.targetLine = { line: line, lineCount: lineCount };
 			return goToFSEntry(fsEntry, model);
 		}
-		var textYOff = (line + 0.25) / lineCount * fsEntry.textHeight;
+		var textYOff = (line + 0.5) / lineCount * fsEntry.textHeight;
 		scene.updateMatrixWorld();
 		var fsPoint = new THREE.Vector3(fsEntry.textX, fsEntry.textYZero - textYOff, fsEntry.z);
 		fsPoint.applyMatrix4(model.matrixWorld);
@@ -6942,21 +6942,69 @@ function start(font, fontTexture) {
 		return results;
 	};
 
+	var highlightLater = [];
 	var addHighlightedLine = function addHighlightedLine(fsEntry, line, lineCount) {
 		if (fsEntry.textHeight) {
-			// fix this
-			// should add a quad under current line with highlight color
-			return;
-			var textYOff = (line + 0.25) / lineCount * fsEntry.textHeight;
-			var textLinePos = new THREE.Vector3(fsEntry.textXZero, fsEntry.textYZero - textYOff, fsEntry.z + fsEntry.scale * 0.01);
-			textLinePos.applyMatrix4(model.matrixWorld);
-			var lineHeight = fsEntry.textHeight / lineCount;
-			var hlquad = new THREE.Mesh(new THREE.PlaneBufferGeometry(1, 1, 1, 1), new THREE.MeshBasicMaterial({ color: 0xff0000 }));
-			hlquad.position.copy(textLinePos);
-			hlquad.scale.set(fsEntry.scale, fsEntry.scale * fsEntry.textScale * lineHeight, 1);
-			window.hlquad = hlquad;
-			scene.add(hlquad);
+			var geo = searchHighlights.geometry;
+			var index = searchHighlights.index;
+			searchHighlights.index++;
+
+			var lineBottom = fsEntry.textYZero - fsEntry.y - (line + 1) / lineCount * fsEntry.textHeight;
+			var lineTop = fsEntry.textYZero - fsEntry.y - line / lineCount * fsEntry.textHeight;
+			var c0 = new THREE.Vector3(fsEntry.x, fsEntry.y + lineBottom, fsEntry.z);
+			var c1 = new THREE.Vector3(fsEntry.x + fsEntry.scale, fsEntry.y + lineBottom, fsEntry.z);
+			var c2 = new THREE.Vector3(fsEntry.x + fsEntry.scale, fsEntry.y + lineTop, fsEntry.z);
+			var c3 = new THREE.Vector3(fsEntry.x, fsEntry.y + lineTop, fsEntry.z);
+
+			c0.applyMatrix4(model.matrixWorld);
+			c1.applyMatrix4(model.matrixWorld);
+			c2.applyMatrix4(model.matrixWorld);
+			c3.applyMatrix4(model.matrixWorld);
+
+			var off = index * 6;
+
+			geo.vertices[off++].copy(c0);
+			geo.vertices[off++].copy(c1);
+			geo.vertices[off++].copy(c2);
+			geo.vertices[off++].copy(c0);
+			geo.vertices[off++].copy(c2);
+			geo.vertices[off++].copy(c3);
+
+			geo.verticesNeedUpdate = true;
+		} else {
+			highlightLater.push([fsEntry, line, lineCount]);
 		}
+	};
+	var searchHighlights = new THREE.LineSegments(new THREE.Geometry(), new THREE.LineBasicMaterial({
+		side: THREE.DoubleSide,
+		color: 0xff0000,
+		opacity: 1,
+		transparent: true,
+		depthTest: false,
+		depthWrite: false
+	}));
+	searchHighlights.frustumCulled = false;
+	for (var i = 0; i < 60000; i++) {
+		searchHighlights.geometry.vertices.push(new THREE.Vector3());
+	}
+	searchHighlights.ontick = function () {
+		if (highlightLater.length > 0) {
+			highlightLater.splice(0).forEach(function (args) {
+				return addHighlightedLine.apply(null, args);
+			});
+		}
+	};
+	var clearSearchHighlights = function clearSearchHighlights() {
+		var geo = searchHighlights.geometry;
+		var verts = geo.vertices;
+		for (var i = 0; i < verts.length; i++) {
+			var v = verts[i];
+			v.x = v.y = v.z = 0;
+		}
+		geo.verticesNeedUpdate = true;
+		searchHighlights.index = 0;
+		highlightLater = [];
+		changed = true;
 	};
 
 	var highlightedResults = [];
@@ -6965,6 +7013,7 @@ function start(font, fontTexture) {
 		highlightedResults.forEach(function (highlighted) {
 			Geometry.setColor(ca.array, highlighted.fsEntry.index, Colors[highlighted.fsEntry.entries === null ? 'getFileColor' : 'getDirectoryColor'](highlighted.fsEntry), 0);
 		});
+		clearSearchHighlights();
 		for (var i = 0; i < results.length; i++) {
 			var fsEntry = results[i].fsEntry;
 			if (fsEntry.entries !== null && results[i].line === 0) {
@@ -7019,8 +7068,8 @@ function start(font, fontTexture) {
 
 		var off = index * 4;
 		if (!bbox || bbox.bottom < 0 || bbox.top > window.innerHeight) {
-			var bv = new THREE.Vector3(b.x - fsEntry.scale * 0.25, av.y + 3.15 * 0.05, av.z + 3.45 * fsEntry.scale);
-			var aUp = new THREE.Vector3(av.x - fsEntry.scale * 0.075, av.y + 0.05 * fsEntry.scale, av.z + 0.15 * fsEntry.scale);
+			var bv = new THREE.Vector3(b.x - fsEntry.scale * 0.075, av.y + 0.05 * fsEntry.scale + 3.15 * 0.05, av.z);
+			var aUp = new THREE.Vector3(av.x - fsEntry.scale * 0.075, av.y + 0.05 * fsEntry.scale, av.z);
 			// geo.vertices[off++].set(-100,-100,-100);
 			// geo.vertices[off++].set(-100,-100,-100);
 			// geo.vertices[off++].set(-100,-100,-100);
@@ -7036,7 +7085,7 @@ function start(font, fontTexture) {
 			var bv = new THREE.Vector3(b.x, b.y, b.z);
 			var aUp = new THREE.Vector3(av.x, av.y, av.z);
 			if (line > 0 && fsEntry.textHeight) {
-				var textYOff = (line + 0.25) / lineCount * fsEntry.textHeight;
+				var textYOff = (line + 0.5) / lineCount * fsEntry.textHeight;
 				var textLinePos = new THREE.Vector3(fsEntry.textXZero, fsEntry.textYZero - textYOff, fsEntry.z);
 				textLinePos.applyMatrix4(model.matrixWorld);
 				aUp = av = textLinePos;
@@ -7070,7 +7119,7 @@ function start(font, fontTexture) {
 			for (var i = 0, l = lis.length; i < l; i++) {
 				var bbox = null;
 				var li = lis[i];
-				if (li && li.classList.contains('hover')) {
+				if (li && li.classList.contains('hover') && !li.result.lineResults) {
 					searchLine.hovered = true;
 					bbox = li.getBoundingClientRect();
 				}
@@ -7092,7 +7141,6 @@ function start(font, fontTexture) {
 			updateSearchLines();
 		}
 	};
-
 	var clearSearchLine = function clearSearchLine() {
 		var geo = searchLine.geometry;
 		var verts = geo.vertices;
@@ -7119,11 +7167,11 @@ function start(font, fontTexture) {
 		fullPath.className = 'searchFullPath';
 		fullPath.textContent = getFullPath(fsEntry).replace(/^\/[^\/]*\/[^\/]*\//, '/');
 		li.result = result;
-		li.addEventListener('mouseover', function () {
+		li.addEventListener('mouseover', function (ev) {
 			this.classList.add('hover');
 			changed = true;
 		}, false);
-		li.addEventListener('mouseout', function () {
+		li.addEventListener('mouseout', function (ev) {
 			this.classList.remove('hover');
 			changed = true;
 		}, false);
@@ -7215,6 +7263,8 @@ function start(font, fontTexture) {
 		var visCount = 0;
 		scene.remove(searchLine);
 		scene.add(searchLine);
+		scene.remove(searchHighlights);
+		scene.add(searchHighlights);
 		scene.updateMatrixWorld(true);
 		var t = performance.now();
 		scene.tick(t, t - lastFrameTime);
@@ -7251,15 +7301,15 @@ function start(font, fontTexture) {
 		}
 
 		if (camera.targetPosition.x !== camera.position.x || camera.targetPosition.y !== camera.position.y || camera.fov !== camera.targetFOV) {
-			camera.position.x += (camera.targetPosition.x - camera.position.x) * (1 - Math.pow(0.95, dt / 16));
-			camera.position.y += (camera.targetPosition.y - camera.position.y) * (1 - Math.pow(0.95, dt / 16));
+			camera.position.x += (camera.targetPosition.x - camera.position.x) * (1 - Math.pow(0.85, dt / 16));
+			camera.position.y += (camera.targetPosition.y - camera.position.y) * (1 - Math.pow(0.85, dt / 16));
 			if (Math.abs(camera.position.x - camera.targetPosition.x) < camera.fov * 0.00001) {
 				camera.position.x = camera.targetPosition.x;
 			}
 			if (Math.abs(camera.position.y - camera.targetPosition.y) < camera.fov * 0.00001) {
 				camera.position.y = camera.targetPosition.y;
 			}
-			camera.fov += (camera.targetFOV - camera.fov) * (1 - Math.pow(0.95, dt / 16));
+			camera.fov += (camera.targetFOV - camera.fov) * (1 - Math.pow(0.85, dt / 16));
 			if (Math.abs(camera.fov - camera.targetFOV) < camera.targetFOV / 1000) {
 				camera.fov = camera.targetFOV;
 			}
@@ -7297,7 +7347,7 @@ function start(font, fontTexture) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"../three-bmfont-text-modified":35,"../three-bmfont-text-modified/shaders/sdf":38,"./Colors.js":4,"./Geometry.js":5,"./Layout.js":6,"./lunr.js":7,"./utils.js":9,"load-bmfont":20,"three":30}],9:[function(require,module,exports){
+},{"../three-bmfont-text-modified":34,"../three-bmfont-text-modified/shaders/sdf":37,"./Colors.js":4,"./Geometry.js":5,"./Layout.js":6,"./lunr.js":7,"./utils.js":9,"load-bmfont":20,"three":30}],9:[function(require,module,exports){
 'use strict';
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
@@ -7725,7 +7775,7 @@ var utils = module.exports = {
 },{"three":30}],10:[function(require,module,exports){
 'use strict';
 
-var wordWrap = require('word-wrapper');
+var wordWrap = require('../word-wrapper-modified');
 var xtend = require('xtend');
 var number = require('as-number');
 
@@ -7765,6 +7815,8 @@ TextLayout.prototype.update = function (opt) {
 
   var lines = wordWrap.lines(text, opt);
   var minWidth = opt.width || 0;
+
+  console.log('lines:', lines.length, text.split('\n').length);
 
   //clear glyphs
   glyphs.length = 0;
@@ -7991,7 +8043,7 @@ function findChar(array, value, start) {
   return -1;
 }
 
-},{"as-number":12,"word-wrapper":31,"xtend":34}],11:[function(require,module,exports){
+},{"../word-wrapper-modified":38,"as-number":12,"xtend":33}],11:[function(require,module,exports){
 var str = Object.prototype.toString
 
 module.exports = anArray
@@ -8299,7 +8351,7 @@ function getBinaryOpts(opt) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"./lib/is-binary":21,"buffer":2,"parse-bmfont-ascii":23,"parse-bmfont-binary":24,"parse-bmfont-xml":25,"xhr":32,"xtend":34}],21:[function(require,module,exports){
+},{"./lib/is-binary":21,"buffer":2,"parse-bmfont-ascii":23,"parse-bmfont-binary":24,"parse-bmfont-xml":25,"xhr":31,"xtend":33}],21:[function(require,module,exports){
 (function (Buffer){
 var equal = require('buffer-equal')
 var HEADER = new Buffer([66, 77, 70, 3])
@@ -8758,7 +8810,7 @@ function getAttribList(element) {
 function mapName(nodeName) {
   return NAME_MAP[nodeName.toLowerCase()] || nodeName
 }
-},{"./parse-attribs":26,"xml-parse-from-string":33}],26:[function(require,module,exports){
+},{"./parse-attribs":26,"xml-parse-from-string":32}],26:[function(require,module,exports){
 //Some versions of GlyphDesigner have a typo
 //that causes some bugs with parsing. 
 //Need to confirm with recent version of the software
@@ -49535,134 +49587,6 @@ if (typeof exports !== 'undefined') {
 }
 
 },{}],31:[function(require,module,exports){
-var newline = /\n/
-var newlineChar = '\n'
-var whitespace = /\s/
-
-module.exports = function(text, opt) {
-    var lines = module.exports.lines(text, opt)
-    return lines.map(function(line) {
-        return text.substring(line.start, line.end)
-    }).join('\n')
-}
-
-module.exports.lines = function wordwrap(text, opt) {
-    opt = opt||{}
-
-    //zero width results in nothing visible
-    if (opt.width === 0 && opt.mode !== 'nowrap') 
-        return []
-
-    text = text||''
-    var width = typeof opt.width === 'number' ? opt.width : Number.MAX_VALUE
-    var start = Math.max(0, opt.start||0)
-    var end = typeof opt.end === 'number' ? opt.end : text.length
-    var mode = opt.mode
-
-    var measure = opt.measure || monospace
-    if (mode === 'pre')
-        return pre(measure, text, start, end, width)
-    else
-        return greedy(measure, text, start, end, width, mode)
-}
-
-function idxOf(text, chr, start, end) {
-    var idx = text.indexOf(chr, start)
-    if (idx === -1 || idx > end)
-        return end
-    return idx
-}
-
-function isWhitespace(chr) {
-    return whitespace.test(chr)
-}
-
-function pre(measure, text, start, end, width) {
-    var lines = []
-    var lineStart = start
-    for (var i=start; i<end && i<text.length; i++) {
-        var chr = text.charAt(i)
-        var isNewline = newline.test(chr)
-
-        //If we've reached a newline, then step down a line
-        //Or if we've reached the EOF
-        if (isNewline || i===end-1) {
-            var lineEnd = isNewline ? i : i+1
-            var measured = measure(text, lineStart, lineEnd, width)
-            lines.push(measured)
-            
-            lineStart = i+1
-        }
-    }
-    return lines
-}
-
-function greedy(measure, text, start, end, width, mode) {
-    //A greedy word wrapper based on LibGDX algorithm
-    //https://github.com/libgdx/libgdx/blob/master/gdx/src/com/badlogic/gdx/graphics/g2d/BitmapFontCache.java
-    var lines = []
-
-    var testWidth = width
-    //if 'nowrap' is specified, we only wrap on newline chars
-    if (mode === 'nowrap')
-        testWidth = Number.MAX_VALUE
-
-    while (start < end && start < text.length) {
-        //get next newline position
-        var newLine = idxOf(text, newlineChar, start, end)
-
-        //eat whitespace at start of line
-        while (start < newLine) {
-            if (!isWhitespace( text.charAt(start) ))
-                break
-            start++
-        }
-
-        //determine visible # of glyphs for the available width
-        var measured = measure(text, start, newLine, testWidth)
-
-        var lineEnd = start + (measured.end-measured.start)
-        var nextStart = lineEnd + newlineChar.length
-
-        //if we had to cut the line before the next newline...
-        if (lineEnd < newLine) {
-            //find char to break on
-            while (lineEnd > start) {
-                if (isWhitespace(text.charAt(lineEnd)))
-                    break
-                lineEnd--
-            }
-            if (lineEnd === start) {
-                if (nextStart > start + newlineChar.length) nextStart--
-                lineEnd = nextStart // If no characters to break, show all.
-            } else {
-                nextStart = lineEnd
-                //eat whitespace at end of line
-                while (lineEnd > start) {
-                    if (!isWhitespace(text.charAt(lineEnd - newlineChar.length)))
-                        break
-                    lineEnd--
-                }
-            }
-        }
-        if (lineEnd >= start) {
-            var result = measure(text, start, lineEnd, testWidth)
-            lines.push(result)
-        }
-        start = nextStart
-    }
-    return lines
-}
-
-//determines the visible number of glyphs within a given width
-function monospace(text, start, end, width) {
-    var glyphs = Math.min(width, end-start)
-    return {
-        start: start,
-        end: start+glyphs
-    }
-}
-},{}],32:[function(require,module,exports){
 "use strict";
 var window = require("global/window")
 var isFunction = require("is-function")
@@ -49911,7 +49835,7 @@ function getXml(xhr) {
 
 function noop() {}
 
-},{"global/window":16,"is-function":19,"parse-headers":27,"xtend":34}],33:[function(require,module,exports){
+},{"global/window":16,"is-function":19,"parse-headers":27,"xtend":33}],32:[function(require,module,exports){
 module.exports = (function xmlparser() {
   //common browsers
   if (typeof self.DOMParser !== 'undefined') {
@@ -49940,7 +49864,7 @@ module.exports = (function xmlparser() {
   }
 })()
 
-},{}],34:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
 module.exports = extend
 
 var hasOwnProperty = Object.prototype.hasOwnProperty;
@@ -49961,7 +49885,7 @@ function extend() {
     return target
 }
 
-},{}],35:[function(require,module,exports){
+},{}],34:[function(require,module,exports){
 'use strict';
 
 var createLayout = require('../layout-bmfont-text-modified');
@@ -50081,7 +50005,7 @@ TextGeometry.prototype.computeBoundingBox = function () {
   utils.computeBox(positions, bbox);
 };
 
-},{"../layout-bmfont-text-modified":10,"./lib/utils":36,"./lib/vertices":37,"inherits":17,"object-assign":22,"quad-indices":28,"three-buffer-vertex-data":29}],36:[function(require,module,exports){
+},{"../layout-bmfont-text-modified":10,"./lib/utils":35,"./lib/vertices":36,"inherits":17,"object-assign":22,"quad-indices":28,"three-buffer-vertex-data":29}],35:[function(require,module,exports){
 "use strict";
 
 var itemSize = 4;
@@ -50123,7 +50047,7 @@ module.exports.computeSphere = function (positions, output) {
   output.radius = length / 2;
 };
 
-},{}],37:[function(require,module,exports){
+},{}],36:[function(require,module,exports){
 "use strict";
 
 module.exports.pages = function pages(glyphs) {
@@ -50228,7 +50152,7 @@ module.exports.positions = function positions(glyphs) {
   return positions;
 };
 
-},{}],38:[function(require,module,exports){
+},{}],37:[function(require,module,exports){
 'use strict';
 
 var assign = require('object-assign');
@@ -50276,4 +50200,132 @@ module.exports = function createSDFShader(opt) {
   }, opt);
 };
 
-},{"object-assign":22}]},{},[8]);
+},{"object-assign":22}],38:[function(require,module,exports){
+'use strict';
+
+var newline = /\n/;
+var newlineChar = '\n';
+var whitespace = /\s/;
+
+module.exports = function (text, opt) {
+    var lines = module.exports.lines(text, opt);
+    return lines.map(function (line) {
+        return text.substring(line.start, line.end);
+    }).join('\n');
+};
+
+module.exports.lines = function wordwrap(text, opt) {
+    opt = opt || {};
+
+    //zero width results in nothing visible
+    if (opt.width === 0 && opt.mode !== 'nowrap') return [];
+
+    text = text || '';
+    var width = typeof opt.width === 'number' ? opt.width : Number.MAX_VALUE;
+    var start = Math.max(0, opt.start || 0);
+    var end = typeof opt.end === 'number' ? opt.end : text.length;
+    var mode = opt.mode;
+
+    var measure = opt.measure || monospace;
+    if (mode === 'pre') return pre(measure, text, start, end, width);else return greedy(measure, text, start, end, width, mode);
+};
+
+function idxOf(text, chr, start, end) {
+    var idx = text.indexOf(chr, start);
+    if (idx === -1 || idx > end) return end;
+    return idx;
+}
+
+function isWhitespace(chr) {
+    return whitespace.test(chr);
+}
+
+function pre(measure, text, start, end, width) {
+    var lines = [];
+    var lineStart = start;
+    for (var i = start; i < end && i < text.length; i++) {
+        var chr = text.charAt(i);
+        var isNewline = newline.test(chr);
+
+        //If we've reached a newline, then step down a line
+        //Or if we've reached the EOF
+        if (isNewline || i === end - 1) {
+            var lineEnd = isNewline ? i : i + 1;
+            var measured = measure(text, lineStart, lineEnd, width);
+            lines.push(measured);
+
+            lineStart = i + 1;
+        }
+    }
+    if (isNewline) {
+        var lineEnd = end;
+        var measured = measure(text, lineStart, lineEnd, width);
+        lines.push(measured);
+    }
+
+    return lines;
+}
+
+function greedy(measure, text, start, end, width, mode) {
+    //A greedy word wrapper based on LibGDX algorithm
+    //https://github.com/libgdx/libgdx/blob/master/gdx/src/com/badlogic/gdx/graphics/g2d/BitmapFontCache.java
+    var lines = [];
+
+    var testWidth = width;
+    //if 'nowrap' is specified, we only wrap on newline chars
+    if (mode === 'nowrap') testWidth = Number.MAX_VALUE;
+
+    while (start < end && start < text.length) {
+        //get next newline position
+        var newLine = idxOf(text, newlineChar, start, end);
+
+        //eat whitespace at start of line
+        while (start < newLine) {
+            if (!isWhitespace(text.charAt(start))) break;
+            start++;
+        }
+
+        //determine visible # of glyphs for the available width
+        var measured = measure(text, start, newLine, testWidth);
+
+        var lineEnd = start + (measured.end - measured.start);
+        var nextStart = lineEnd + newlineChar.length;
+
+        //if we had to cut the line before the next newline...
+        if (lineEnd < newLine) {
+            //find char to break on
+            while (lineEnd > start) {
+                if (isWhitespace(text.charAt(lineEnd))) break;
+                lineEnd--;
+            }
+            if (lineEnd === start) {
+                if (nextStart > start + newlineChar.length) nextStart--;
+                lineEnd = nextStart; // If no characters to break, show all.
+            } else {
+                nextStart = lineEnd;
+                //eat whitespace at end of line
+                while (lineEnd > start) {
+                    if (!isWhitespace(text.charAt(lineEnd - newlineChar.length))) break;
+                    lineEnd--;
+                }
+            }
+        }
+        if (lineEnd >= start) {
+            var result = measure(text, start, lineEnd, testWidth);
+            lines.push(result);
+        }
+        start = nextStart;
+    }
+    return lines;
+}
+
+//determines the visible number of glyphs within a given width
+function monospace(text, start, end, width) {
+    var glyphs = Math.min(width, end - start);
+    return {
+        start: start,
+        end: start + glyphs
+    };
+}
+
+},{}]},{},[8]);

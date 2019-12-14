@@ -1,4 +1,4 @@
-var wordWrap = require('word-wrapper')
+var wordWrap = require('../word-wrapper-modified')
 var xtend = require('xtend')
 var number = require('as-number')
 
@@ -40,6 +40,8 @@ TextLayout.prototype.update = function(opt) {
   
   var lines = wordWrap.lines(text, opt)
   var minWidth = opt.width || 0
+
+  console.log('lines:', lines.length, text.split('\n').length);
 
   //clear glyphs
   glyphs.length = 0

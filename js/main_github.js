@@ -336,7 +336,7 @@ function start(font, fontTexture) {
 												self.fsEntry.textX = text.position.x + scale * Math.min(40 * 30 + 60, text.geometry.layout.width + 60) * 0.5;
 												self.fsEntry.textYZero = text.position.y + self.fsEntry.scale * 0.75;
 												self.fsEntry.textY = text.position.y + self.fsEntry.scale * 0.75 - scale * 900;
-												self.fsEntry.textHeight = scale * (text.geometry.layout.height+30);
+												self.fsEntry.textHeight = scale * text.geometry.layout.height;
 
 												text.position.y += self.fsEntry.scale * 0.75 * (1-vAspect);
 
@@ -1547,7 +1547,7 @@ function start(font, fontTexture) {
 			fsEntry.targetLine = {line, lineCount};
 			return goToFSEntry(fsEntry, model);
 		}
-		const textYOff = ((line+0.25) / lineCount) * fsEntry.textHeight;
+		const textYOff = ((line+0.5) / lineCount) * fsEntry.textHeight;
 		scene.updateMatrixWorld();
 		var fsPoint = new THREE.Vector3(fsEntry.textX, fsEntry.textYZero - textYOff, fsEntry.z);
 		fsPoint.applyMatrix4(model.matrixWorld);
@@ -1732,25 +1732,69 @@ function start(font, fontTexture) {
 		return results;
 	};
 
+	var highlightLater = [];
 	var addHighlightedLine = function(fsEntry, line, lineCount) {
 		if (fsEntry.textHeight) {
-			// fix this
-			// should add a quad under current line with highlight color
-			return;
-			const textYOff = ((line+0.25) / lineCount) * fsEntry.textHeight;
-			const textLinePos = new THREE.Vector3(fsEntry.textXZero, fsEntry.textYZero - textYOff, fsEntry.z+fsEntry.scale*0.01);
-			textLinePos.applyMatrix4(model.matrixWorld);
-			const lineHeight = fsEntry.textHeight / lineCount;
-			var hlquad = new THREE.Mesh(
-				new THREE.PlaneBufferGeometry(1,1,1,1),
-				new THREE.MeshBasicMaterial({color: 0xff0000})
-			);
-			hlquad.position.copy(textLinePos);
-			hlquad.scale.set(fsEntry.scale, fsEntry.scale * fsEntry.textScale * lineHeight, 1);
-			window.hlquad = hlquad;
-			scene.add(hlquad);
+			var geo = searchHighlights.geometry;
+			var index = searchHighlights.index;
+			searchHighlights.index++;
+
+			const lineBottom = fsEntry.textYZero - fsEntry.y - ((line+1) / lineCount) * fsEntry.textHeight;
+			const lineTop    = fsEntry.textYZero - fsEntry.y - (line     / lineCount) * fsEntry.textHeight;
+			var c0 = new THREE.Vector3(fsEntry.x, 					fsEntry.y + lineBottom, fsEntry.z);
+			var c1 = new THREE.Vector3(fsEntry.x + fsEntry.scale, 	fsEntry.y + lineBottom, fsEntry.z);
+			var c2 = new THREE.Vector3(fsEntry.x + fsEntry.scale, 	fsEntry.y + lineTop, 	fsEntry.z);
+			var c3 = new THREE.Vector3(fsEntry.x, 					fsEntry.y + lineTop, 	fsEntry.z);
+
+			c0.applyMatrix4(model.matrixWorld);
+			c1.applyMatrix4(model.matrixWorld);
+			c2.applyMatrix4(model.matrixWorld);
+			c3.applyMatrix4(model.matrixWorld);
+
+			var off = index * 6;
+
+			geo.vertices[off++].copy(c0);
+			geo.vertices[off++].copy(c1);
+			geo.vertices[off++].copy(c2);
+			geo.vertices[off++].copy(c0);
+			geo.vertices[off++].copy(c2);
+			geo.vertices[off++].copy(c3);
+
+			geo.verticesNeedUpdate = true;
+		} else {
+			highlightLater.push([fsEntry, line, lineCount]);
 		}
 	};
+	var searchHighlights = new THREE.LineSegments(new THREE.Geometry(), new THREE.LineBasicMaterial({
+		side: THREE.DoubleSide,
+		color: 0xff0000,
+		opacity: 1,
+		transparent: true,
+		depthTest: false,
+		depthWrite: false
+	}));
+	searchHighlights.frustumCulled = false;
+	for (var i=0; i<60000; i++) {
+		searchHighlights.geometry.vertices.push(new THREE.Vector3());
+	}
+	searchHighlights.ontick = function() {
+		if (highlightLater.length > 0) {
+			highlightLater.splice(0).forEach(args => addHighlightedLine.apply(null, args));
+		}
+	}
+	var clearSearchHighlights = function() {
+		var geo = searchHighlights.geometry;
+		var verts = geo.vertices;
+		for (var i=0; i<verts.length; i++){
+			var v = verts[i];
+			v.x = v.y = v.z = 0;
+		}
+		geo.verticesNeedUpdate = true;
+		searchHighlights.index = 0;
+		highlightLater = [];
+		changed = true;
+	};
+
 
 	var highlightedResults = [];
 	window.highlightResults = function(results) {
@@ -1758,6 +1802,7 @@ function start(font, fontTexture) {
 		highlightedResults.forEach(function(highlighted) {
 			Geometry.setColor(ca.array, highlighted.fsEntry.index, Colors[highlighted.fsEntry.entries === null ? 'getFileColor' : 'getDirectoryColor'](highlighted.fsEntry), 0);
 		});
+		clearSearchHighlights();
 		for (var i = 0; i < results.length; i++) {
 			var fsEntry = results[i].fsEntry;
 			if (fsEntry.entries !== null && results[i].line === 0) {
@@ -1806,8 +1851,8 @@ function start(font, fontTexture) {
 
 		var off = index * 4;
 		if (!bbox || bbox.bottom < 0 || bbox.top > window.innerHeight) {
-			var bv = new THREE.Vector3(b.x - fsEntry.scale*0.25, av.y + 3.15*0.05, av.z + 3.45*fsEntry.scale);
-			var aUp = new THREE.Vector3(av.x - fsEntry.scale*0.075, av.y + 0.05*fsEntry.scale, av.z + 0.15*fsEntry.scale);
+			var bv = new THREE.Vector3(b.x - fsEntry.scale*0.075, av.y + 0.05*fsEntry.scale + 3.15*0.05, av.z);
+			var aUp = new THREE.Vector3(av.x - fsEntry.scale*0.075, av.y + 0.05*fsEntry.scale, av.z);
 			// geo.vertices[off++].set(-100,-100,-100);
 			// geo.vertices[off++].set(-100,-100,-100);
 			// geo.vertices[off++].set(-100,-100,-100);
@@ -1823,7 +1868,7 @@ function start(font, fontTexture) {
 			var bv = new THREE.Vector3(b.x, b.y, b.z);
 			var aUp = new THREE.Vector3(av.x, av.y, av.z);
 			if (line > 0 && fsEntry.textHeight) {
-				const textYOff = ((line+0.25) / lineCount) * fsEntry.textHeight;
+				const textYOff = ((line+0.5) / lineCount) * fsEntry.textHeight;
 				const textLinePos = new THREE.Vector3(fsEntry.textXZero, fsEntry.textYZero - textYOff, fsEntry.z);
 				textLinePos.applyMatrix4(model.matrixWorld);
 				aUp = av = textLinePos;
@@ -1859,7 +1904,7 @@ function start(font, fontTexture) {
 			for (var i=0, l=lis.length; i<l; i++) {
 				var bbox = null;
 				var li = lis[i];
-				if (li && li.classList.contains('hover')) {
+				if (li && li.classList.contains('hover') && !li.result.lineResults) {
 					searchLine.hovered = true;
 					bbox = li.getBoundingClientRect();
 				}
@@ -1881,7 +1926,6 @@ function start(font, fontTexture) {
 			updateSearchLines();
 		}
 	};
-
 	var clearSearchLine = function() {
 		var geo = searchLine.geometry;
 		var verts = geo.vertices;
@@ -1906,11 +1950,11 @@ function start(font, fontTexture) {
 		fullPath.className = 'searchFullPath';
 		fullPath.textContent = getFullPath(fsEntry).replace(/^\/[^\/]*\/[^\/]*\//, '/');
 		li.result = result;
-		li.addEventListener('mouseover', function() {
+		li.addEventListener('mouseover', function(ev) {
 			this.classList.add('hover');
 			changed = true;
 		}, false);
-		li.addEventListener('mouseout', function() {
+		li.addEventListener('mouseout', function(ev) {
 			this.classList.remove('hover');
 			changed = true;
 		}, false);
@@ -1992,6 +2036,8 @@ function start(font, fontTexture) {
 		var visCount = 0;
 		scene.remove(searchLine);
 		scene.add(searchLine);
+		scene.remove(searchHighlights);
+		scene.add(searchHighlights);
 		scene.updateMatrixWorld(true);
 		var t = performance.now();
 		scene.tick(t, t - lastFrameTime);
@@ -2028,15 +2074,15 @@ function start(font, fontTexture) {
 		}
 
 		if (camera.targetPosition.x !== camera.position.x || camera.targetPosition.y !== camera.position.y || camera.fov !== camera.targetFOV) {
-			camera.position.x += (camera.targetPosition.x - camera.position.x) * (1-Math.pow(0.95, dt/16));
-			camera.position.y += (camera.targetPosition.y - camera.position.y) * (1-Math.pow(0.95, dt/16));
+			camera.position.x += (camera.targetPosition.x - camera.position.x) * (1-Math.pow(0.85, dt/16));
+			camera.position.y += (camera.targetPosition.y - camera.position.y) * (1-Math.pow(0.85, dt/16));
 			if (Math.abs(camera.position.x - camera.targetPosition.x) < camera.fov*0.00001) {
 				camera.position.x = camera.targetPosition.x;
 			}
 			if (Math.abs(camera.position.y - camera.targetPosition.y) < camera.fov*0.00001) {
 				camera.position.y = camera.targetPosition.y;
 			}
-			camera.fov += (camera.targetFOV - camera.fov) * (1-Math.pow(0.95, dt/16));
+			camera.fov += (camera.targetFOV - camera.fov) * (1-Math.pow(0.85, dt/16));
 			if (Math.abs(camera.fov - camera.targetFOV) < camera.targetFOV / 1000) {
 				camera.fov = camera.targetFOV;
 			}

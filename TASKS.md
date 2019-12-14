@@ -12,9 +12,10 @@
             '- Line 300
         [x] Navigate to line when clicking a line result
     [] Pull and display line snippet context somehow
-    [] Highlight search hit line
+    [x] Highlight search hit line
         [x] Draw connection line to hit line 
-        [] Add a line-sized quad under each hit line
+        [x] Add a line-sized quad under each hit line
+        [] Render the damn quads properly (instead of 3 lines)
     [] Highlight found search token
     [] Shrink search results outside current view
 
