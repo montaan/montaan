@@ -6690,11 +6690,16 @@ function start(font, fontTexture) {
 
 		// pan on wheel
 		var factor = 0.0000575;
-		if (wheelFreePan || ev.deltaX > 5) {
-			camera.position.x += factor * ev.deltaX * camera.fov;
-			wheelFreePan = true;
+		var adx = Math.abs(ev.deltaX);
+		var ady = Math.abs(ev.deltaY);
+		var xMove = false,
+		    yMove = true;
+		if (adx > ady) {
+			xMove = true;yMove = false;
 		}
-		camera.position.y -= factor * ev.deltaY * camera.fov;
+		wheelFreePan = wheelFreePan || adx > 5 && ady > 5;
+		if (wheelFreePan || xMove) camera.position.x += factor * ev.deltaX * camera.fov;
+		if (wheelFreePan || yMove) camera.position.y -= factor * ev.deltaY * camera.fov;
 		camera.targetPosition.copy(camera.position);
 		camera.targetFOV = camera.fov;
 		changed = true;

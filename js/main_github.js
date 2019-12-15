@@ -1451,12 +1451,14 @@ function start(font, fontTexture) {
 		wheelSnapTimer = setTimeout(function() {wheelFreePan = false}, 1000);
 		
 		// pan on wheel
-		var factor = 0.0000575;
-		if (wheelFreePan || ev.deltaX > 5) {
-			camera.position.x += factor*ev.deltaX * camera.fov;
-			wheelFreePan = true;
-		}
-		camera.position.y -= factor*ev.deltaY * camera.fov;
+		const factor = 0.0000575;
+		const adx = Math.abs(ev.deltaX);
+		const ady = Math.abs(ev.deltaY);
+		var xMove = false, yMove = true;
+		if (adx > ady) { xMove = true; yMove = false; }
+		wheelFreePan = wheelFreePan || (adx > 5 && ady > 5);
+		if (wheelFreePan || xMove) camera.position.x += factor*ev.deltaX * camera.fov;
+		if (wheelFreePan || yMove) camera.position.y -= factor*ev.deltaY * camera.fov;
 		camera.targetPosition.copy(camera.position);
 		camera.targetFOV = camera.fov;
 		changed = true;

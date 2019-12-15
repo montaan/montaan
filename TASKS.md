@@ -37,4 +37,7 @@
     [x] Use scroll for lateral navigation
     [x] Breadcrumb navigation
     [x] In text view, constrain scroll to up-down with snap distance to free scroll (Normally scrolls just up and down but if you go to the side enough, you unlock free scroll)
+    [x] Snap scroll to vertical or horizontal, only do freeform after a diagonal swipe
+    [] Snap scroll to document boundaries
+    [] Line numbers for text view
     [] Show sibling dirs in breadcrumb (like OSX column view)
