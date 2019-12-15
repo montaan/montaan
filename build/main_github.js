@@ -5239,7 +5239,7 @@ if ('serviceWorker' in navigator) {
 	navigator.serviceWorker.register('/service-worker.js');
 }
 
-var repoPrefix = '/zxing/zxing';
+var repoPrefix = '/google/codesearch';
 var repo = repoPrefix.split("/").pop();
 var MAX_COMMITS = 10000;
 
@@ -6677,13 +6677,23 @@ function start(font, fontTexture) {
 		}
 	};
 	var prevD = 0;
+	var wheelSnapTimer;
+	var wheelFreePan = false;
 	renderer.domElement.onwheel = function (ev) {
 		if (window.DocFrame) return;
 		ev.preventDefault();
 
+		clearTimeout(wheelSnapTimer);
+		wheelSnapTimer = setTimeout(function () {
+			wheelFreePan = false;
+		}, 1000);
+
 		// pan on wheel
-		var factor = 0.0001;
-		camera.position.x += factor * ev.deltaX * camera.fov;
+		var factor = 0.0000575;
+		if (wheelFreePan || ev.deltaX > 5) {
+			camera.position.x += factor * ev.deltaX * camera.fov;
+			wheelFreePan = true;
+		}
 		camera.position.y -= factor * ev.deltaY * camera.fov;
 		camera.targetPosition.copy(camera.position);
 		camera.targetFOV = camera.fov;
