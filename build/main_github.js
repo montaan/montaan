@@ -5292,6 +5292,14 @@ function start(font, fontTexture) {
 		return branch;
 	};
 
+	var getSiblings = function getSiblings(fileTree, path) {
+		path = path.replace(/\/[^\/]+\/*$/, '');
+		var fsEntry = getPathEntry(fileTree, path);
+		return Object.keys(fsEntry.entries).map(function (n) {
+			return path + '/' + n;
+		});
+	};
+
 	var makeTextMaterial = function makeTextMaterial(palette) {
 		if (!palette || palette.length < 8) {
 			palette = [].concat(palette || []);
@@ -5631,6 +5639,29 @@ function start(font, fontTexture) {
 				ev.preventDefault();
 				var fsEntry = getPathEntry(window.FileTree, this.path);
 				if (fsEntry) goToFSEntry(fsEntry, model);
+			};
+			link.onmouseover = function (ev) {
+				if (this.querySelector('ul')) return;
+				var siblings = getSiblings(window.FileTree, this.path);
+				var ul = document.createElement('ul');
+				siblings.splice(siblings.indexOf(this.path), 1);
+				siblings.forEach(function (path) {
+					var link = document.createElement('li');
+					link.path = path;
+					link.textContent = path.split("/").pop();
+					link.onclick = function (ev) {
+						ev.preventDefault();
+						ev.stopPropagation();
+						var fsEntry = getPathEntry(window.FileTree, this.path);
+						if (fsEntry) goToFSEntry(fsEntry, model);
+					};
+					ul.append(link);
+				});
+				this.appendChild(ul);
+			};
+			link.onmouseout = function (ev) {
+				var ul = this.querySelector('ul');
+				if (ev.target === this && ul && !ul.contains(ev.relatedTarget)) this.removeChild(ul);
 			};
 			el.appendChild(link);
 		}

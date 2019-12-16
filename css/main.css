@@ -185,7 +185,14 @@ label {
 	border-bottom-right-radius: 4px;
 }
 #breadcrumb span {
+	vertical-align: top;
 	cursor: pointer;
+	display: inline-block;
+}
+#breadcrumb ul {
+	margin: 0;
+	padding: 0;
+	list-style: none;
 }
 #breadcrumb .separator {
 	cursor: default;

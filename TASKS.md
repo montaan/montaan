@@ -19,9 +19,15 @@
     [] Highlight found search token
     [] Pull and display line snippet context somehow
 
+# Commits
+    [] Add a button to toggle commits view
+    [] Click on author to show commits by that author
+    [] Click on commit to show files touched by commit
+
 # Performance
     [] Pipeline text model creation to avoid frame stutter (probably coming from shader compile / geometry creation)
     [] Handle unlimited number of lines by rendering only a portion
+    [] Handle a million commits somehow
 
 # Visualization
     [] Different representation for zoomed-out-text (solid lines minimap)
@@ -40,4 +46,4 @@
     [x] Snap scroll to vertical or horizontal, only do freeform after a diagonal swipe
     [] Snap scroll to document boundaries
     [] Line numbers for text view
-    [] Show sibling dirs in breadcrumb (like OSX column view)
+    [x] Show sibling dirs in breadcrumb (like OSX column view)
