@@ -5657,11 +5657,21 @@ function start(font, fontTexture) {
 					};
 					ul.append(link);
 				});
+				ul.onmouseout = function (ev) {
+					if (ev.target === this && !this.parentNode.contains(ev.relatedTarget)) {
+						this.parentNode.removeChild(this);
+					}
+				};
+				[].slice.call(this.parentNode.querySelectorAll('ul')).forEach(function (u) {
+					return u.remove();
+				});
 				this.appendChild(ul);
 			};
 			link.onmouseout = function (ev) {
 				var ul = this.querySelector('ul');
-				if (ev.target === this && ul && !ul.contains(ev.relatedTarget)) this.removeChild(ul);
+				if (ev.target === this && ev.relatedTarget !== this.parentNode && ul && !ul.contains(ev.relatedTarget)) {
+					this.removeChild(ul);
+				}
 			};
 			el.appendChild(link);
 		}
