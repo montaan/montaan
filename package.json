@@ -26,7 +26,7 @@
     "doc": "docs"
   },
   "scripts": {
-    "watch": "watch 'npm build' js css --ignoreDotFiles",
+    "watch": "watch 'date && yarn build && echo OK' js css --ignoreDotFiles",
     "build": "browserify js/main_github.js -o build/main_github.js -t [ babelify --presets [ es2015 react ] ]",
     "start": "serve",
     "test": "echo \"Error: no test specified\" && exit 1"

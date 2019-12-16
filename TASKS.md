@@ -1,5 +1,8 @@
 ### Tasks
 
+# Website engine
+    [] Turn README.md into HTML and display it on top of directory
+
 # Search
     [x] Add line number to search index
     [x] Group search results by file and sort in-file hits by line number:
@@ -18,6 +21,7 @@
     [] Shrink search results outside current view
     [] Highlight found search token
     [] Pull and display line snippet context somehow
+    [] Switch search engine to codesearch
 
 # Commits
     [] Add a button to toggle commits view
@@ -40,10 +44,16 @@
     [] Design that makes you feel awesome
 
 # UX tweaks
-    [x] Use scroll for lateral navigation
     [x] Breadcrumb navigation
-    [x] In text view, constrain scroll to up-down with snap distance to free scroll (Normally scrolls just up and down but if you go to the side enough, you unlock free scroll)
-    [x] Snap scroll to vertical or horizontal, only do freeform after a diagonal swipe
+        [x] Show sibling dirs in breadcrumb (like OSX column view)
+    [x] Use scroll for lateral navigation
+        [x] In text view, constrain scroll to up-down with snap distance to free scroll (Normally scrolls just up and down but if you go to the side enough, you unlock free scroll)
+        [x] Snap scroll to vertical or horizontal, only do freeform after a diagonal swipe
+        [x] Better y-x-snap
+    [x] Use gestures to zoom on touchpad
+    [] Keyboard zoom controls
+    [] Zoom text doc left side to screen left side (instead of middle of screen)
     [] Snap scroll to document boundaries
     [] Line numbers for text view
-    [x] Show sibling dirs in breadcrumb (like OSX column view)
+    [] Kb navigation of search results
+    [] Hide search results without erasing search term

@@ -2,7 +2,7 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/service-worker.js');
 }
 
-var repoPrefix = '/google/codesearch';
+var repoPrefix = '/makepad/makepad';
 var repo = repoPrefix.split("/").pop();
 var MAX_COMMITS = 10000;
 
@@ -933,7 +933,7 @@ function start(font, fontTexture) {
 					return;
 				}
 				setLoaded(true);
-				return;
+
 				var commits = commitLog.split(/^commit /m);
 				var authors = {};
 				var commitIndex = {};
@@ -1486,39 +1486,58 @@ function start(font, fontTexture) {
 		if (window.DocFrame) return;
 		ev.preventDefault();
 
-		clearTimeout(wheelSnapTimer);
-		wheelSnapTimer = setTimeout(function() {wheelFreePan = false}, 1000);
-		
-		// pan on wheel
-		const factor = 0.0000575;
-		const adx = Math.abs(ev.deltaX);
-		const ady = Math.abs(ev.deltaY);
-		var xMove = false, yMove = true;
-		if (adx > ady) { xMove = true; yMove = false; }
-		wheelFreePan = wheelFreePan || (adx > 5 && ady > 5);
-		if (wheelFreePan || xMove) camera.position.x += factor*ev.deltaX * camera.fov;
-		if (wheelFreePan || yMove) camera.position.y -= factor*ev.deltaY * camera.fov;
-		camera.targetPosition.copy(camera.position);
-		camera.targetFOV = camera.fov;
-		changed = true;
-		
-		// // zoom on wheel
-		// var cx = (ev.clientX - window.innerWidth / 2) * 0.0000575 * camera.fov;
-		// var cy = (ev.clientY - window.innerHeight / 2) * 0.0000575 * camera.fov;
-		// var d = ev.deltaY !== undefined ? ev.deltaY*3 : ev.wheelDelta;
-		// if (Date.now() - lastScroll > 500) {
-		// 	prevD = d;
-		// }
-		// if (d > 20 || d < -20) {
-		// 	d = 20 * d / Math.abs(d);
-		// }
-		// if ((d < 0 && prevD > 0) || (d > 0 && prevD < 0)) {
-		// 	d = 0;
-		// }
-		// prevD = d;
-		// zoomCamera(Math.pow(1.003, d), cx, cy);
-		// lastScroll = Date.now();
+		if (ev.ctrlKey) {
+			// zoom on wheel
+			var cx = (ev.clientX - window.innerWidth / 2) / window.innerWidth / 34 * camera.fov;
+			var cy = (ev.clientY - window.innerHeight / 2) / window.innerHeight / 34 * camera.fov;
+			var d = ev.deltaY !== undefined ? ev.deltaY*3 : ev.wheelDelta;
+			if (Date.now() - lastScroll > 500) {
+				prevD = d;
+			}
+			if (d > 20 || d < -20) {
+				d = 20 * d / Math.abs(d);
+			}
+			if ((d < 0 && prevD > 0) || (d > 0 && prevD < 0)) {
+				d = 0;
+			}
+			prevD = d;
+			zoomCamera(Math.pow(1.003, d), cx, cy);
+			lastScroll = Date.now();
+		} else {
+			clearTimeout(wheelSnapTimer);
+			wheelSnapTimer = setTimeout(function() {wheelFreePan = false}, 1000);
+			
+			// pan on wheel
+			const factor = 0.0000575;
+			const adx = Math.abs(ev.deltaX);
+			const ady = Math.abs(ev.deltaY);
+			var xMove = false, yMove = true;
+			if (adx > 3*ady) { xMove = true; yMove = false; }
+			wheelFreePan = wheelFreePan || (adx > 5 && ady > 5);
+			if (wheelFreePan || xMove) camera.position.x += factor*ev.deltaX * camera.fov;
+			if (wheelFreePan || yMove) camera.position.y -= factor*ev.deltaY * camera.fov;
+			camera.targetPosition.copy(camera.position);
+			camera.targetFOV = camera.fov;
+			changed = true;
+		}
 	};
+	
+	var gestureStartScale = 0;
+	window.addEventListener("gesturestart", function (e) {
+		e.preventDefault();
+		gestureStartScale = 1;
+	});
+	window.addEventListener("gesturechange", function (ev) {
+		ev.preventDefault();
+		var cx = (ev.clientX - window.innerWidth / 2) / window.innerWidth / 34 * camera.fov;
+		var cy = (ev.clientY - window.innerHeight / 2) / window.innerHeight / 34 * camera.fov;
+		var d = ev.scale / gestureStartScale;
+		gestureStartScale = ev.scale;
+		zoomCamera(1/d, cx, cy);
+	});
+	window.addEventListener("gestureend", function (e) {
+		e.preventDefault();
+	});
 
 	var loadThumbnail = function(fsEntry) {
 		if (fsEntry.id) { // Google Drive file.
