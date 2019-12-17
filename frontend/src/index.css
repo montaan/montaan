@@ -1,0 +1,63 @@
+html {
+  background: #fff;
+  background-size: cover;
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: 'Adobe Garamond', 'Bodoni 72', 'Times New Roman', serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: transparent;
+}
+
+.form-control.is-valid, .was-validated .form-control:valid,
+.form-control.is-invalid, .was-validated .form-control:invalid
+{
+  background-position: right 10px top calc(.375em + .1875rem);
+}
+
+.error-message {
+  font-weight: 700;
+  color: #d80459;
+  font-family: Avenir Next, Segoe UI, Helvetica, sans-serif;
+  text-transform: uppercase;
+  font-size: x-small;
+  letter-spacing: 0.05em;
+  position: absolute;
+  top: -15px;
+  text-align: center;
+  width: 100%;
+  left: 0;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
+    monospace;
+}
+
+a {
+  color: #444;
+}
+
+.btn-primary, .btn-secondary, .btn-outline-danger, .btn-outline-primary {
+  font-weight: 700;
+  font-size: 80%;
+  font-family: Avenir Next, Segoe UI, Helvetica, sans-serif;
+  text-transform: uppercase;
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+.btn-primary {
+  background: #1b6ec2
+}
+
+.btn-secondary {
+  background: #5d656d;
+}
+
+.svg-inline--fa {
+  vertical-align: -0.06125em;
+}

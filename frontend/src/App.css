@@ -1,0 +1,59 @@
+.App {
+    padding: 20px;
+    text-align: center;
+}
+
+.App .login,
+.App .logout,
+.App .scan
+{
+    position: absolute;
+    left: 50%;
+    top: 7px;
+    margin-left: -146px;
+
+    font-family: Avenir Next, Segoe UI, Helvetica, sans-serif;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 12px;
+
+    border: 0;
+    background: transparent;
+    outline: 0;
+
+    cursor: pointer;
+}
+.App .logout {
+    margin-left: 92px;
+}
+.App .scan {
+    margin-left: -30px;
+    top: 7px;
+    width: 60px;
+    text-align: center;
+}
+
+.App > button.go-back {
+    position: fixed;
+    display: block;
+
+    z-index: 10002;
+    left: 50%;
+    top: 30px;
+    margin: 0;
+    padding: 0;
+    margin-left: -182px;
+    width: 30px;
+    height: 30px;
+
+    font-family: Avenir Next, Segoe UI, Helvetica, sans-serif;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 18px;
+
+    border: 0;
+    background: transparent;
+    outline: 0;
+
+    cursor: pointer;
+}

@@ -1,8 +1,9 @@
-const lunr = require('../js/lunr.js');
+const lunr = require('../frontend/src/lib/third_party/lunr.js');
 const fs = require('fs');
 const readline = require('readline');
 const mime = require('mime-types');
 const path = require('path');
+const stringify = require('stream-json-stringify');
 
 const fileList = process.argv.pop();
 
@@ -25,7 +26,7 @@ readInterface.on('line', function(filename) {
         body = '';
     } else {
         type = mime.lookup(filename);
-        if (stat.size < 3e5 && (!type || /^(text|application\/(json|javascript|toml|(.+\+)?xml)|image\/svg\+xml)/.test(type))) {
+        if (stat.size < 3e5 && !(/\.(png|jpe?g|bmp|ico|icns|avi|mp4|mov|avi|mp3|gif|wma|wmv|exe)$/i.test(filename))) {
             body = fs.readFileSync(filename).toString();
         }
     }
@@ -39,6 +40,7 @@ readInterface.on('line', function(filename) {
 });
 
 readInterface.on('close', function() {
-    process.stdout.write(JSON.stringify(idx.toPackedJSON(32)));
-    process.stdout.end();
+    var packed = idx.toPackedJSON(32);
+    console.error('got packed');
+    stringify(packed).pipe(process.stdout);
 });
