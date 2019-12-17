@@ -1138,17 +1138,13 @@ function start(font, fontTexture) {
 						if (smallestTrigram === []) {
 							return smallestTrigram;
 						}
-						if (token.length < 3) {
-							return [];
-						} else {
-							for (var j=0; j<token.length-2; j++) {
-								var trigram = token.substring(j, j+3);
-								var tokens = trigramIndex[trigram];
-								if (!tokens) {
-									return [];
-								} else if (smallestTrigram === null || tokens.length < smallestTrigram.length) {
-									smallestTrigram = tokens;
-								}
+						for (var j=0; j<token.length-2; j++) {
+							var trigram = token.substring(j, j+3);
+							var tokens = trigramIndex[trigram];
+							if (!tokens) {
+								return [];
+							} else if (smallestTrigram === null || tokens.length < smallestTrigram.length) {
+								smallestTrigram = tokens;
 							}
 						}
 						return smallestTrigram;
@@ -1217,7 +1213,6 @@ function start(font, fontTexture) {
 
 					window.SearchIndex.search = function(query) {
 						var queryTokens = this.pipeline.run(this.tokenizer(query));
-						queryTokens = queryTokens.filter(function(q) { return q.length >= 3; });
 						if (queryTokens.length === 0) {
 							return [];
 						}
@@ -1636,7 +1631,9 @@ function start(font, fontTexture) {
 
 	var goToFSEntryText = function(fsEntry, model) {
 		scene.updateMatrixWorld();
-		var fsPoint = new THREE.Vector3(fsEntry.textX, fsEntry.textY, fsEntry.z);
+		var textX = fsEntry.textX;
+		textX += (fsEntry.scale * fsEntry.textScale) * window.innerWidth / 2 ;
+		var fsPoint = new THREE.Vector3(textX, fsEntry.textY, fsEntry.z);
 		fsPoint.applyMatrix4(model.matrixWorld);
 		camera.targetPosition.copy(fsPoint);
 		camera.targetFOV = fsEntry.scale * fsEntry.textScale * 2000 * 50;
@@ -1650,7 +1647,9 @@ function start(font, fontTexture) {
 		}
 		const textYOff = ((line+0.5) / lineCount) * fsEntry.textHeight;
 		scene.updateMatrixWorld();
-		var fsPoint = new THREE.Vector3(fsEntry.textX, fsEntry.textYZero - textYOff, fsEntry.z);
+		var textX = fsEntry.textX;
+		textX += (fsEntry.scale * fsEntry.textScale) * window.innerWidth / 2;
+		var fsPoint = new THREE.Vector3(textX, fsEntry.textYZero - textYOff, fsEntry.z);
 		fsPoint.applyMatrix4(model.matrixWorld);
 		camera.targetPosition.copy(fsPoint);
 		camera.targetFOV = fsEntry.scale * fsEntry.textScale * 2000 * 50;

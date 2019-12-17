@@ -18,10 +18,12 @@
         [x] Draw connection line to hit line 
         [x] Add a line-sized quad under each hit line
         [x] Render the damn quads properly (instead of 3 lines)
+    [/] Switch search engine to codesearch
+        - codesearch is server-side (it only uses the index to get the names of potentially matching files, then runs grep on the file contents)
+    [x] Fix lunr search with <3 letter search queries (Well, it seems to work?)
     [] Shrink search results outside current view
     [] Highlight found search token
     [] Pull and display line snippet context somehow
-    [] Switch search engine to codesearch
 
 # Commits
     [] Add a button to toggle commits view
