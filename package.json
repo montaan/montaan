@@ -14,9 +14,7 @@
     "object-assign": "^4.1.1",
     "qframe": "^0.11.0",
     "quad-indices": "^2.0.1",
-    "stream-json-stringify": "^1.0.0",
-    "three": "^0.74.0",
-    "three-buffer-vertex-data": "^1.1.0"
+    "stream-json-stringify": "^1.0.0"
   },
   "devDependencies": {
     "babel-preset-env": "^1.6.1",

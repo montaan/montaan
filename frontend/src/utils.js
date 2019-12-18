@@ -1,131 +1,131 @@
 var THREE = require('three');
 var slash = '/'.charCodeAt(0);
 
-// Your Client ID can be retrieved from your project in the Google
-// Developer Console, https://console.developers.google.com
-var CLIENT_ID = '671524571878.apps.googleusercontent.com';
-var SCOPES = ['https://www.googleapis.com/auth/drive.readonly'];
+// // Your Client ID can be retrieved from your project in the Google
+// // Developer Console, https://console.developers.google.com
+// var CLIENT_ID = '671524571878.apps.googleusercontent.com';
+// var SCOPES = ['https://www.googleapis.com/auth/drive.readonly'];
 
-/**
-* Check if current user has authorized this application.
-*/
-function checkAuth() {
-	console.log('checkAuth');
-	gapi.auth.authorize({
-		'client_id': CLIENT_ID,
-		'scope': SCOPES.join(' '),
-		'immediate': true
-	}, handleAuthResult);
-}
+// /**
+// * Check if current user has authorized this application.
+// */
+// function checkAuth() {
+// 	console.log('checkAuth');
+// 	gapi.auth.authorize({
+// 		'client_id': CLIENT_ID,
+// 		'scope': SCOPES.join(' '),
+// 		'immediate': true
+// 	}, handleAuthResult);
+// }
 
-window.checkAuth = checkAuth;
+// window.checkAuth = checkAuth;
 
-/**
-* Handle response from authorization server.
-*
-* @param {Object} authResult Authorization result.
-*/
-function handleAuthResult(authResult) {
-	// console.log(handleAuthResult, authResult);
-	var authorizeDiv = document.getElementById('authorize-div');
-	if (authResult && !authResult.error) {
-		// Hide auth UI, then load client library.
-		authorizeDiv.style.display = 'none';
-		loadDriveApi();
-	} else {
-		// Show auth UI, allowing the user to initiate authorization by
-		// clicking authorize button.
-		authorizeDiv.style.display = 'inline';
-	}
-}
+// /**
+// * Handle response from authorization server.
+// *
+// * @param {Object} authResult Authorization result.
+// */
+// function handleAuthResult(authResult) {
+// 	// console.log(handleAuthResult, authResult);
+// 	var authorizeDiv = document.getElementById('authorize-div');
+// 	if (authResult && !authResult.error) {
+// 		// Hide auth UI, then load client library.
+// 		authorizeDiv.style.display = 'none';
+// 		loadDriveApi();
+// 	} else {
+// 		// Show auth UI, allowing the user to initiate authorization by
+// 		// clicking authorize button.
+// 		authorizeDiv.style.display = 'inline';
+// 	}
+// }
 
-/**
-* Initiate auth flow in response to user clicking authorize button.
-*
-* @param {Event} event Button click event.
-*/
-function handleAuthClick(event) {
-	gapi.auth.authorize({client_id: CLIENT_ID, scope: SCOPES, immediate: false}, handleAuthResult);
-	return false;
-}
+// /**
+// * Initiate auth flow in response to user clicking authorize button.
+// *
+// * @param {Event} event Button click event.
+// */
+// function handleAuthClick(event) {
+// 	gapi.auth.authorize({client_id: CLIENT_ID, scope: SCOPES, immediate: false}, handleAuthResult);
+// 	return false;
+// }
 
-window.handleAuthClick = handleAuthClick;
+// window.handleAuthClick = handleAuthClick;
 
-/**
-* Load Drive API client library.
-*/
-function loadDriveApi() {
-	window.GDriveCallback = window.GDriveCallback || function(files){
-		console.log(files);
-	};
-	var listFiles = function() {
-		var request = gapi.client.drive.files.list({
-			'pageSize': 1000,
-			'trashed': false,
-			'spaces': 'drive',
-			'orderBy': 'name',
-			'fields': "nextPageToken, files(id, name, parents, mimeType, thumbnailLink, iconLink)"
-		});
+// /**
+// * Load Drive API client library.
+// */
+// function loadDriveApi() {
+// 	window.GDriveCallback = window.GDriveCallback || function(files){
+// 		console.log(files);
+// 	};
+// 	var listFiles = function() {
+// 		var request = gapi.client.drive.files.list({
+// 			'pageSize': 1000,
+// 			'trashed': false,
+// 			'spaces': 'drive',
+// 			'orderBy': 'name',
+// 			'fields': "nextPageToken, files(id, name, parents, mimeType, thumbnailLink, iconLink)"
+// 		});
 
-		var files = [];
-		var filesLoaded = function(files) {
-			if (files && files.length > 0) {
-				var fileIndex = {};
-				var fileTree = {name: "/", title: "Drive", entries: {}, index: 0};
-				var top = {name: "Drive", title: "Drive", entries: {}, index: 0};
-				fileTree.entries["Drive"] = top;
+// 		var files = [];
+// 		var filesLoaded = function(files) {
+// 			if (files && files.length > 0) {
+// 				var fileIndex = {};
+// 				var fileTree = {name: "/", title: "Drive", entries: {}, index: 0};
+// 				var top = {name: "Drive", title: "Drive", entries: {}, index: 0};
+// 				fileTree.entries["Drive"] = top;
 
-				for (var i = 0; i < files.length; i++) {
-					var f = files[i];
-					f.entries = null;
-					f.title = f.name;
-					f.name = f.id;
-					fileIndex[f.id] = f;
-				}
+// 				for (var i = 0; i < files.length; i++) {
+// 					var f = files[i];
+// 					f.entries = null;
+// 					f.title = f.name;
+// 					f.name = f.id;
+// 					fileIndex[f.id] = f;
+// 				}
 
-				for (var i = 0; i < files.length; i++) {
-					var f = files[i];
-					if (f.parents) {
-						for (var j=0; j<f.parents.length; j++) {
-							var p = fileIndex[f.parents[j]];
-							if (!p) {
-								p = top;
-							}
-							if (!p.entries) {
-								p.entries = {};
-							}
-							p.entries[f.name] = f;
-						}
-					} else {
-						top.entries[f.name] = f;
-					}
-				}
-			}
-			window.GDriveCallback({tree: fileTree, count: files.length});
-		};
-		var tick = function(resp) {
-			files = files.concat(resp.files || []);
-			var nextPageToken = resp.nextPageToken;
-			if (nextPageToken && files.length < 10000) {
-				var request = gapi.client.drive.files.list({
-					'pageSize': 1000,
-					'trashed': false,
-					'pageToken': nextPageToken,
-					'orderBy': 'name',
-					'fields': "nextPageToken, files(id, name, parents, mimeType, thumbnailLink, iconLink)"
-				});
-				request.execute(tick);
-				console.log(files.length);
-			} else {
-				filesLoaded(files);
-			}
-		}
-		request.execute(tick);
-	}
+// 				for (var i = 0; i < files.length; i++) {
+// 					var f = files[i];
+// 					if (f.parents) {
+// 						for (var j=0; j<f.parents.length; j++) {
+// 							var p = fileIndex[f.parents[j]];
+// 							if (!p) {
+// 								p = top;
+// 							}
+// 							if (!p.entries) {
+// 								p.entries = {};
+// 							}
+// 							p.entries[f.name] = f;
+// 						}
+// 					} else {
+// 						top.entries[f.name] = f;
+// 					}
+// 				}
+// 			}
+// 			window.GDriveCallback({tree: fileTree, count: files.length});
+// 		};
+// 		var tick = function(resp) {
+// 			files = files.concat(resp.files || []);
+// 			var nextPageToken = resp.nextPageToken;
+// 			if (nextPageToken && files.length < 10000) {
+// 				var request = gapi.client.drive.files.list({
+// 					'pageSize': 1000,
+// 					'trashed': false,
+// 					'pageToken': nextPageToken,
+// 					'orderBy': 'name',
+// 					'fields': "nextPageToken, files(id, name, parents, mimeType, thumbnailLink, iconLink)"
+// 				});
+// 				request.execute(tick);
+// 				console.log(files.length);
+// 			} else {
+// 				filesLoaded(files);
+// 			}
+// 		}
+// 		request.execute(tick);
+// 	}
 
-	gapi.client.load('drive', 'v3', listFiles);
+// 	gapi.client.load('drive', 'v3', listFiles);
 
-}
+// }
 
 
 var utils = module.exports = {
@@ -309,7 +309,7 @@ var utils = module.exports = {
 		}
 	},
 
-	parseFileList: function(fileString, xhr, includePrefix) {
+	parseFileList: function(fileString, xhr, includePrefix, prefix) {
 		var xml = xhr && xhr.responseXML;
 		if (!xml) {
 			var parser = new DOMParser();
@@ -358,10 +358,10 @@ var utils = module.exports = {
 				// Not JSON.
 			}
 		}
-		return this.parseFileList_(fileString, includePrefix);
+		return this.parseFileList_(fileString, includePrefix, prefix);
 	},
 
-	parseFileList_: function(fileString, includePrefix) {
+	parseFileList_: function(fileString, includePrefix, prefix='') {
 		// console.log("Parsing file string", fileString.length);
 		var fileTree = {name: "", title: "", entries: {}, index: 0};
 		var name = "";
@@ -369,15 +369,18 @@ var utils = module.exports = {
 		var fileCount = 0;
 		var first = includePrefix ? false : true;
 		var skip = 0;
+		console.log('prefix:', prefix);
 		for (var i=0; i<fileString.length; i++) {
 			if (fileString.charCodeAt(i) === 10) {
 				if (first) {
-					var segs = fileString.substring(startIndex+skip, i).split("/");
+					var segs = fileString.substring(startIndex+1+skip, i).split("/");
 					name = segs[segs.length-2] + '/';
-					skip = i - name.length;
+					skip = i - name.length + 1;
+					name = prefix;
 					first = false;
 				} else {
-					name = fileString.substring(startIndex+skip, i);
+					name = prefix + fileString.substring(startIndex+skip, i);
+					console.log(name);
 				}
 				startIndex = i+1;
 				fileCount += utils.addFileTreeEntry(name, fileTree);
@@ -394,7 +397,7 @@ var utils = module.exports = {
 			userName = repoName[1];
 			repoName = repoName[1] + "/" + repoName[2];
 		} else {
-			return parseFileList_("");
+			return this.parseFileList_("");
 		}
 		var paths = githubResult.tree.map(function(file) { return '/' + repoName + '/' + file.path + (file.type === 'tree' ? '/' : ''); });
 		return this.parseFileList_('/' + userName + '/\n/' + repoName + '/\n' + paths.join("\n") + '\n');
@@ -408,12 +411,12 @@ var utils = module.exports = {
 		}
 	},
 
-	loadFiles: function(url, onSuccess, onError) {
+	loadFiles: function(url, onSuccess, onError, prefix) {
 		var utils = this;
 		var xhr = new XMLHttpRequest();
 		xhr.open('GET', url);
 		xhr.onload = function(ev) {
-			onSuccess(utils.parseFileList(ev.target.responseText, ev.target), ev.target.responseText);
+			onSuccess(utils.parseFileList(ev.target.responseText, ev.target, undefined, prefix), ev.target.responseText);
 		};
 		xhr.onerror = onError;
 		xhr.send();

@@ -1,4 +1,5 @@
 var assign = require('object-assign')
+var THREE = require('three');
 
 module.exports = function createSDFShader (opt) {
   opt = opt || {}

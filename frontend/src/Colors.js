@@ -1,3 +1,5 @@
+var THREE = require('three');
+
 module.exports = {
 	music: [0.13,0.34,0.17],
 	image: [0.13,0.44,0.65],

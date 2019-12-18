@@ -1,7 +1,7 @@
-global.THREE = require('three');
+var THREE = require('three');
 var Geometry = require('./Geometry.js');
 var Colors = require('./Colors.js');
-var createText = require('../three-bmfont-text-modified');
+var createText = require('./lib/third_party/three-bmfont-text-modified');
 
 module.exports = {
 
@@ -281,8 +281,8 @@ module.exports = {
 							file.index = fileIndex;
 							file.parent = fileTree;
 							index[fileIndex] = file;
-							Geometry.setColor(colorVerts, file.index, fileColor, depth);
-							Geometry.makeQuad(verts, file.index, file.x, file.y, file.scale, file.scale*0.25, file.z);
+							Geometry.setColor(colorVerts, fileIndex, fileColor, depth);
+							Geometry.makeQuad(verts, fileIndex, file.x, file.y, file.scale, file.scale*0.25, file.z);
 							// file.thumbnail = Thumbnails.loadThumbnail(file);
 							// if (file.thumbnail) {
 							// 	file.thumbnailMesh = new THREE.Mesh(

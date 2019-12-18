@@ -6,6 +6,7 @@ import LoginForm from './LoginForm';
 import {RecoverForm, PasswordResetForm} from './RecoverForm';
 import UserActivation from './UserActivation';
 // import HelpOverlay from './HelpOverlay';
+import MainApp from './MainApp';
 
 import { Client } from './lib/quickgres-frontend';
 
@@ -188,6 +189,8 @@ class App extends React.Component {
                                 <UserActivation api={this.api} />
                             }/>
                         </Switch>
+
+                        <MainApp/>
                     </main>
                 </div>
             </Router>

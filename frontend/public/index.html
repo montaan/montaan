@@ -2,7 +2,7 @@
 <html>
 	<head>
 		<meta charset="utf-8">
-		<title>Tabletree</title>
+		<title>Montaan</title>
 		<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
 		<meta name="apple-mobile-web-app-capable" content="yes">
 		<meta name="mobile-web-app-capable" content="yes">
@@ -27,9 +27,13 @@
 		<meta name="theme-color" content="#ffffff">
 		<link rel="stylesheet" href="css/main.css">
 		<link rel="stylesheet" href="css/railscasts.min.css">
+	    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
 	</head>
 
 	<body class="mobile">
+		<noscript>You need to enable JavaScript to run this app.</noscript>
+		<div id="root"></div>
+
 		<script>
 			(function() {
 				var input = document.createElement('input');
@@ -43,31 +47,5 @@
 				}
 			})();
 		</script>
-		<div id="debug"></div>
-		<div id="fullscreen"></div>
-		<div id="loader"></div>
-
-		<input id="git" autocorrect="off" autocapitalize="off" placeholder="Public GitHub URL e.g. zxing/zxing or URL to find output">
-		<button id="gitshow">Show</button>
-		<div id="gitfocus" onclick="git.focus(); return false;">➤</div>
-
-		<input id="searchInput" autocorrect="off" autocapitalize="off" placeholder="Search files">
-		<button id="searchButton">Search</button>
-		<ul id="searchResults"></ul>
-
-		<div id="breadcrumb"></div>
-
-		<div id="directoryInputContainer">
-			<label for="directoryInput">Visualize directory</label>
-			<input id="directoryInput" type="file" directory webkitdirectory>
-		</div>
-
-		<div id="fileInputContainer">
-			<label for="fileInput">Visualize find output</label>
-			<input id="fileInput" type="file">
-		</div>
-
- 		<script src="build/main_github.js"></script>
-
 	</body>
 </html>

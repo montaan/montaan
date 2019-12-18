@@ -1,4 +1,5 @@
 var utils = require('./utils.js');
+var THREE = require('three');
 
 module.exports = {
 
@@ -10,7 +11,7 @@ module.exports = {
 		var intersections = utils.findIntersectionsUnderEvent(ev, camera, (models instanceof Array) ? models : [models]);
 		if (intersections.length > 0) {
 			var faceIndex = intersections[0].faceIndex;
-			var fsEntry = intersections[0].object.fileTree.fsIndex[Math.floor(faceIndex / (6 * this.quadCount))];
+			var fsEntry = intersections[0].object.fileTree.fsIndex[Math.floor(faceIndex / (2 * this.quadCount))];
 			while (fsEntry && fsEntry.scale * camera.projectionMatrix.elements[0] < 0.2) {
 				if (fsEntry.parent === highlighted) {
 					break;
@@ -149,7 +150,7 @@ module.exports = {
 		var v = model.geometry.attributes.position.array;
 		u.set(v[off + 0], v[off + 1], v[off + 2]);
 		u.applyMatrix4(model.modelViewMatrix);
-		u.applyProjection(camera.projectionMatrix);
+		u.applyMatrix4(camera.projectionMatrix);
 	},
 
 	vertexInsideFrustumTmp: new THREE.Vector3(),
@@ -164,8 +165,8 @@ module.exports = {
 		var geo = new THREE.BufferGeometry();
 		var verts = new Float32Array(fileCount * 3 * 6 * this.quadCount);
 		var colorVerts = new Float32Array(fileCount * 3 * 6 * this.quadCount);
-		geo.addAttribute('position', new THREE.BufferAttribute(verts, 3));
-		geo.addAttribute('color', new THREE.BufferAttribute(colorVerts, 3));
+		geo.setAttribute('position', new THREE.BufferAttribute(verts, 3));
+		geo.setAttribute('color', new THREE.BufferAttribute(colorVerts, 3));
 
 		// var normalVerts = new Float32Array(fileCount * 3 * 6 * 5); //* 2);
 		// geo.addAttribute('normal', new THREE.BufferAttribute(normalVerts, 3));
@@ -187,7 +188,7 @@ module.exports = {
 		dz *= f;
 		var x = dx, y = dy, z = dz;
 		if (color.length === 3) {
-			x = dx * 1.77, y = dy * 1.88, z = dz * 1.85;
+			x = dx * 1.77; y = dy * 1.88; z = dz * 1.85;
 		}
 
 

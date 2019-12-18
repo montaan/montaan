@@ -1,6 +1,6 @@
 .App {
     padding: 20px;
-    text-align: center;
+    text-align: left;
 }
 
 .App .login,
@@ -35,7 +35,7 @@
 
 .App > button.go-back {
     position: fixed;
-    display: block;
+    display: none;
 
     z-index: 10002;
     left: 50%;
