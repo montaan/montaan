@@ -1,6 +1,6 @@
 const apiPrefix = 'http://localhost:8008/_';
 const repoPrefix = 'google/codesearch';
-const MAX_COMMITS = 100;
+const MAX_COMMITS = 10000;
 
 const THREE = require('three');
 global.THREE = THREE;
@@ -22,18 +22,18 @@ export default function init () {
 	var currentFrame = 0;
 
 	var loadFontImage = function (opt, cb) {
-	loadFont(opt.font, function (err, font) {
-		if (err) throw err
-		new THREE.TextureLoader().load(opt.image, function (tex) {
-		cb(font, tex)
-		})
-	})
+		loadFont(opt.font, function (err, font) {
+			if (err) throw err;
+			new THREE.TextureLoader().load(opt.image, function (tex) {
+				cb(font, tex);
+			});
+		});
 	};
 
 	// load up a 'fnt' and texture
 	loadFontImage({
-	font: 'fnt/DejaVu-sdf.fnt',
-	image: 'fnt/DejaVu-sdf.png'
+		font: 'fnt/DejaVu-sdf.fnt',
+		image: 'fnt/DejaVu-sdf.png'
 	}, start)
 
 	function start(font, fontTexture) {
@@ -477,8 +477,8 @@ export default function init () {
 					vertCount += c.geometry.attributes.position.array.length;
 				}
 			});
-			var parr = bigGeo.attributes.position.array = new Float32Array(vertCount);
-			var uarr = bigGeo.attributes.uv.array = new Float32Array(vertCount/2);
+			var parr = new Float32Array(vertCount);
+			var uarr = new Float32Array(vertCount/2);
 			var j = 0;
 			labels.traverse(function(c) {
 				if (c.geometry) {
@@ -487,6 +487,9 @@ export default function init () {
 					j += c.geometry.attributes.position.array.length;
 				}
 			});
+
+			bigGeo.setAttribute('position', new THREE.BufferAttribute(parr, 4));
+			bigGeo.setAttribute('uv', new THREE.BufferAttribute(uarr, 2));
 
 			var bigMesh = new THREE.Mesh(bigGeo, textMaterial);
 
@@ -548,7 +551,7 @@ export default function init () {
 			}
 		};
 
-		var addLineBetweenEntries = function(geo, color, modelA, entryA, modelB, entryB) {
+		var updateLineBetweenEntries =  function(geo, index, color, modelA, entryA, modelB, entryB) {
 			var a = entryA;
 			var b = entryB;
 
@@ -561,16 +564,50 @@ export default function init () {
 			var aUp = new THREE.Vector3(av.x+(bv.x-av.x)*0.1, av.y+(bv.y-av.y)*0.1, Math.max(av.z, bv.z) + 0.1);
 			var bUp = new THREE.Vector3(bv.x-(bv.x-av.x)*0.1, bv.y-(bv.y-av.y)*0.1, Math.max(av.z, bv.z) + 0.1);
 
-			geo.vertices.push(av);
-			geo.vertices.push(aUp);
-			geo.vertices.push(aUp);
-			geo.vertices.push(bUp);
-			geo.vertices.push(bUp);
-			geo.vertices.push(bv);
+			geo.vertices[index++].copy(av);
+			geo.vertices[index++].copy(aUp);
+			geo.vertices[index++].copy(aUp);
+			geo.vertices[index++].copy(bUp);
+			geo.vertices[index++].copy(bUp);
+			geo.vertices[index++].copy(bv);
+			geo.verticesNeedUpdate = true;
+
+			if (color) {
+				index -= 6;
+				geo.colors[index++].copy(color);
+				geo.colors[index++].copy(color);
+				geo.colors[index++].copy(color);
+				geo.colors[index++].copy(color);
+				geo.colors[index++].copy(color);
+				geo.colors[index++].copy(color);
+			}
+		};
+
+		var showOnlyLinesForEntry = function(geo, entry, recurse=true) {
+			if (recurse) for (var i = 0; i < geo.vertices.length; i++) geo.vertices[i].set(-100,-100,-100);
+			if (entry.outgoingLines)
+				entry.outgoingLines.forEach(l => updateLineBetweenEntries(geo, l.index, l.color, l.src.model, l.src.entry, l.dst.model, l.dst.entry));
+			if (recurse) utils.traverseFSEntry(entry, e => showOnlyLinesForEntry(geo, e, false));
+		};
+
+		var addLineBetweenEntries = function(geo, color, modelA, entryA, modelB, entryB) {
+			var index = geo.vertices.length;
+
+			if (!entryA.outgoingLines) entryA.outgoingLines = [];
+			entryA.outgoingLines.push({src: {model: modelA, entry: entryA}, dst: {model:modelB, entry:entryB}, index, color});
+
+			geo.vertices.push(new THREE.Vector3());
+			geo.vertices.push(new THREE.Vector3());
+			geo.vertices.push(new THREE.Vector3());
+			geo.vertices.push(new THREE.Vector3());
+			geo.vertices.push(new THREE.Vector3());
+			geo.vertices.push(new THREE.Vector3());
 
 			if (color) {
 				geo.colors.push(color, color, color, color, color, color);
 			}
+
+			updateLineBetweenEntries(geo, index, color, modelA, entryA, modelB, entryB);
 		};
 
 		var model;
@@ -863,20 +900,24 @@ export default function init () {
 					if (fileEntry) {
 						var author = authors[commitIndex[sha].author.name];
 						var color = Colors.getThreeColor(fileEntry);
-						addLineBetweenEntries(lineGeo, author.color, model, fileEntry, processModel, fsEntry);
+						addLineBetweenEntries(lineGeo, author.color, processModel, fsEntry, model, fileEntry);
 					}
 				}
 			});
 			lineGeo.vertices.push(new THREE.Vector3(0,0,0), new THREE.Vector3(0,0,0));
 			lineGeo.colors.push(new THREE.Color(0,0,0), new THREE.Color(0,0,0));
 			connectionLines = new THREE.LineSegments(lineGeo, new THREE.LineBasicMaterial({
-				color: new THREE.Color(1.0, 1.0, 1.0), opacity: 0.3, transparent: true, depthWrite: false,
-				// linewidth: (2 * window.devicePixelRatio || 1),
+				color: new THREE.Color(1.0, 1.0, 1.0), opacity: 1, transparent: true, depthWrite: false,
 				vertexColors: true
-				// blending: THREE.AdditiveBlending
 			}))
 			modelPivot.add(connectionLines);
 			window.LineModel = connectionLines;
+			connectionLines.ontick = function() {
+				var cf = (currentFrame / 20) | 0;
+				var c = commits[commits.length-1-(cf % commits.length)];
+				showOnlyLinesForEntry(lineGeo, commitsFSEntry.entries[c.sha]);
+				changed = true;
+			};
 			changed = true;
 		};
 
@@ -1628,7 +1669,7 @@ export default function init () {
 			scene.tick(t, t - lastFrameTime);
 			lastFrameTime = t;
 			renderer.render(scene, camera);
-			window.currentFrame++;
+			currentFrame++;
 		};
 
 		var changed = true;
@@ -1663,8 +1704,9 @@ export default function init () {
 			} else {
 				animating = false;
 			}
-			if (changed || animating) render();
+			var wasChanged = changed;
 			changed = false;
+			if (wasChanged || animating) render();
 			window.requestAnimationFrame(tick);
 		};
 
@@ -1687,6 +1729,6 @@ export default function init () {
 		} else if (fullscreenButton) {
 			fullscreenButton.style.opacity = '0';
 		}
-		// window.search.focus();
+		window.searchInput.focus();
 	}
 }
