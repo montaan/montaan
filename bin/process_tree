@@ -12,7 +12,8 @@ fi
 
 cd repos/$path/repo || exit
 find . -type d -exec sh -c 'printf "%s/\n" "$0"' {} \; -or -print | grep -v /.git/ > ../files.txt
-CSEARCHINDEX=../index.csearch cindex .
+rm ../index.csearch
+CSEARCHINDEX=../index.csearch $HOME/go/bin/cindex .
 # node bin/build_index.js ../files.txt > ../index.lunr.json
 git log > ../log.txt
 git log --pretty="format:%H" --name-status > ../changes.txt
