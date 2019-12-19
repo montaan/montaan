@@ -1,6 +1,6 @@
 const apiPrefix = 'http://localhost:8008/_';
-const repoPrefix = 'google/codesearch';
-const MAX_COMMITS = 10000;
+const repoPrefix = 'v8/v8';
+const MAX_COMMITS = 1000;
 
 const THREE = require('three');
 global.THREE = THREE;
@@ -583,11 +583,14 @@ export default function init () {
 			}
 		};
 
-		var showOnlyLinesForEntry = function(geo, entry, recurse=true) {
+		var showLinesForEntry = function(geo, entry, depth=0, recurse=true, avoidModel=null) {
 			if (recurse) for (var i = 0; i < geo.vertices.length; i++) geo.vertices[i].set(-100,-100,-100);
-			if (entry.outgoingLines)
-				entry.outgoingLines.forEach(l => updateLineBetweenEntries(geo, l.index, l.color, l.src.model, l.src.entry, l.dst.model, l.dst.entry));
-			if (recurse) utils.traverseFSEntry(entry, e => showOnlyLinesForEntry(geo, e, false));
+			if (entry.outgoingLines) {
+				entry.outgoingLines.forEach(l => {
+					if (l.dst.model !== avoidModel) updateLineBetweenEntries(geo, l.index, l.color, l.src.model, l.src.entry, l.dst.model, l.dst.entry);
+					if (depth > 0) showLinesForEntry(geo, l.dst.entry, depth-1, false, l.src.model);
+				});
+			}
 		};
 
 		var addLineBetweenEntries = function(geo, color, modelA, entryA, modelB, entryB) {
@@ -595,6 +598,8 @@ export default function init () {
 
 			if (!entryA.outgoingLines) entryA.outgoingLines = [];
 			entryA.outgoingLines.push({src: {model: modelA, entry: entryA}, dst: {model:modelB, entry:entryB}, index, color});
+			if (!entryB.outgoingLines) entryB.outgoingLines = [];
+			entryB.outgoingLines.push({src: {model: modelB, entry: entryB}, dst: {model:modelA, entry:entryA}, index, color});
 
 			geo.vertices.push(new THREE.Vector3());
 			geo.vertices.push(new THREE.Vector3());
@@ -886,24 +891,25 @@ export default function init () {
 				}
 			}
 
-			utils.traverseTree(window.CommitTree, function(fsEntry, fullPath) {
-				if (/^\/Commits\/.{40}\/Files\//.test(fullPath) && fsEntry.entries === null) {
-					// Files entry \ ^_^ /
-					var sha = fullPath.substring(9, 49);
-					var path = fullPath.substring(55);
-					var filePath = repoPrefix + path;
-					var fileEntry = getPathEntry(window.FileTree, filePath);
-					// var lineGeo = commitIndex[sha].lineGeo;
-					// if (!lineGeo) {
-					// 	commitIndex[sha].lineGeo = lineGeo = new THREE.Geometry();
-					// }
-					if (fileEntry) {
-						var author = authors[commitIndex[sha].author.name];
-						var color = Colors.getThreeColor(fileEntry);
-						addLineBetweenEntries(lineGeo, author.color, processModel, fsEntry, model, fileEntry);
+			var touchedFilesIndex = {};
+
+			for (var i in window.CommitTree.tree.entries.Commits.entries) {
+				var commitFSEntry = window.CommitTree.tree.entries.Commits.entries[i];
+				utils.traverseFSEntry(commitFSEntry, function(fsEntry, fullPath) {
+					if (/^\/Commits\/.{40}\/Files\//.test(fullPath) && fsEntry.entries === null) {
+						var sha = fullPath.substring(9, 49);
+						var path = fullPath.substring(55);
+						var filePath = repoPrefix + path;
+						var fileEntry = getPathEntry(window.FileTree, filePath);
+						if (fileEntry) {
+							if (!touchedFilesIndex[filePath]) touchedFilesIndex[filePath] = fileEntry;
+							var author = authors[commitIndex[sha].author.name];
+							addLineBetweenEntries(lineGeo, author.color, processModel, commitFSEntry, model, fileEntry);
+						}
 					}
-				}
-			});
+				}, window.CommitTree.tree.name+"/Commits/");
+			}
+			var touchedFiles = Object.keys(touchedFilesIndex).sort().map(k => touchedFilesIndex[k]);
 			lineGeo.vertices.push(new THREE.Vector3(0,0,0), new THREE.Vector3(0,0,0));
 			lineGeo.colors.push(new THREE.Color(0,0,0), new THREE.Color(0,0,0));
 			connectionLines = new THREE.LineSegments(lineGeo, new THREE.LineBasicMaterial({
@@ -913,12 +919,28 @@ export default function init () {
 			modelPivot.add(connectionLines);
 			window.LineModel = connectionLines;
 			connectionLines.ontick = function() {
-				var cf = (currentFrame / 20) | 0;
-				var c = commits[commits.length-1-(cf % commits.length)];
-				showOnlyLinesForEntry(lineGeo, commitsFSEntry.entries[c.sha]);
+				var cf = (currentFrame / 2) | 0;
+				if (false) {
+					var aks = Object.keys(authors);
+					showCommitsByAuthor(aks[cf % aks.length]);
+				} else if (true) {
+					showCommitsForFile(touchedFiles[cf % touchedFiles.length]);
+				} else {
+					var c = commits[commits.length-1-(cf % commits.length)];
+					showLinesForEntry(lineGeo, commitsFSEntry.entries[c.sha], 0);
+				}
 				changed = true;
 			};
 			changed = true;
+			
+
+			var showCommitsByAuthor = function(authorName) {
+				showLinesForEntry(lineGeo, authors[authorName].fsEntry, 1);
+			};
+
+			var showCommitsForFile = function(fsEntry) {
+				showLinesForEntry(lineGeo, fsEntry, 1);
+			};
 		};
 
 		var xhr = new XMLHttpRequest();
