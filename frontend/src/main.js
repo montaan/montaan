@@ -1,5 +1,5 @@
 const apiPrefix = 'http://localhost:8008/_';
-const repoPrefix = 'v8/v8';
+const repoPrefix = 'Microsoft/vscode';
 const MAX_COMMITS = 1000;
 
 const THREE = require('three');
@@ -201,7 +201,7 @@ export default function init () {
 						var o = obj.entries[name];
 						var idx = o.index;
 						if (!Geometry.quadInsideFrustum(idx, this, camera)) {
-						} else if (o.scale * 50 / Math.max(camera.fov, camera.targetFOV) > 0.3) {
+						} else if (o.scale * 50 / Math.max(camera.fov, camera.targetFOV) > 0.2) {
 							if (Geometry.quadCoversFrustum(idx, this, camera)) {
 								zoomedInPath += '/' + o.name;
 								navigationTarget += '/' + o.name;
@@ -358,7 +358,9 @@ export default function init () {
 													text.position.y += self.fsEntry.scale * 0.75 * (1-vAspect);
 
 													if (self.fsEntry.targetLine) {
-														const {line, lineCount} = self.fsEntry.targetLine;
+														const {line} = self.fsEntry.targetLine;
+														const lineCount = contents.split("\n").length;
+														self.fsEntry.lineCount = lineCount;
 														self.fsEntry.targetLine = null;
 														goToFSEntryTextAtLine(self.fsEntry, model, line, lineCount);
 													}
@@ -409,6 +411,7 @@ export default function init () {
 					if (fsEntry) goToFSEntry(fsEntry, model);
 				};
 				link.onmouseover = function(ev) {
+					console.log(this.path);
 					if (this.querySelector('ul')) return;
 					var siblings = getSiblings(window.FileTree, this.path);
 					var ul = document.createElement('ul');
@@ -430,7 +433,7 @@ export default function init () {
 							this.parentNode.removeChild(this);
 						}
 					};
-					[].slice.call(this.parentNode.querySelectorAll('ul')).forEach(u => u.remove());
+					[].slice.call(this.parentNode.querySelectorAll('ul')).forEach(u => u.parentNode.removeChild(u));
 					this.appendChild(ul);
 				};
 				link.onmouseout = function(ev) {
@@ -611,8 +614,6 @@ export default function init () {
 			if (color) {
 				geo.colors.push(color, color, color, color, color, color);
 			}
-
-			updateLineBetweenEntries(geo, index, color, modelA, entryA, modelB, entryB);
 		};
 
 		var model;
@@ -790,7 +791,7 @@ export default function init () {
 					var lines = c.split("\n");
 					var hash = lines[0];
 					if (!commitIndex[hash]) {
-						console.log(hash, index, c);
+						// console.log(hash, index, c);
 					} else {
 						commitIndex[hash].files = lines.slice(1).map(function(fs) {
 							var fileChange = {
@@ -916,23 +917,26 @@ export default function init () {
 				color: new THREE.Color(1.0, 1.0, 1.0), opacity: 1, transparent: true, depthWrite: false,
 				vertexColors: true
 			}))
-			modelPivot.add(connectionLines);
+			// modelPivot.add(connectionLines);
 			window.LineModel = connectionLines;
 			connectionLines.ontick = function() {
 				var cf = (currentFrame / 2) | 0;
 				if (false) {
 					var aks = Object.keys(authors);
 					showCommitsByAuthor(aks[cf % aks.length]);
-				} else if (true) {
+				} else if (false) {
 					showCommitsForFile(touchedFiles[cf % touchedFiles.length]);
-				} else {
+				} else if (false) {
 					var c = commits[commits.length-1-(cf % commits.length)];
-					showLinesForEntry(lineGeo, commitsFSEntry.entries[c.sha], 0);
+					showCommit(c.sha);
 				}
-				changed = true;
+				// changed = true;
 			};
 			changed = true;
 			
+			var showCommit = function(sha) {
+				showLinesForEntry(lineGeo, commitsFSEntry.entries[sha], 0);
+			};
 
 			var showCommitsByAuthor = function(authorName) {
 				showLinesForEntry(lineGeo, authors[authorName].fsEntry, 1);
@@ -960,102 +964,102 @@ export default function init () {
 		xhr.send();
 
 		navigateTo(apiPrefix+'/repo/fs/'+repoPrefix+'/files.txt', function() {
-			var xhr = new XMLHttpRequest;
-			xhr.open('GET', apiPrefix+'/repo/fs/'+repoPrefix+'/index.lunr.json');
-			xhr.onload = function() {
+			// var xhr = new XMLHttpRequest;
+			// xhr.open('GET', apiPrefix+'/repo/fs/'+repoPrefix+'/index.lunr.json');
+			// xhr.onload = function() {
 
-				var filterByTrigrams = function(trigramIndex, token, smallestTrigram) {
-					if (smallestTrigram === []) {
-						return smallestTrigram;
-					}
-					for (var j=0; j<token.length-2; j++) {
-						var trigram = token.substring(j, j+3);
-						var tokens = trigramIndex[trigram];
-						if (!tokens) {
-							return [];
-						} else if (smallestTrigram === null || tokens.length < smallestTrigram.length) {
-							smallestTrigram = tokens;
-						}
-					}
-					return smallestTrigram;
-				};
+			// 	var filterByTrigrams = function(trigramIndex, token, smallestTrigram) {
+			// 		if (smallestTrigram === []) {
+			// 			return smallestTrigram;
+			// 		}
+			// 		for (var j=0; j<token.length-2; j++) {
+			// 			var trigram = token.substring(j, j+3);
+			// 			var tokens = trigramIndex[trigram];
+			// 			if (!tokens) {
+			// 				return [];
+			// 			} else if (smallestTrigram === null || tokens.length < smallestTrigram.length) {
+			// 				smallestTrigram = tokens;
+			// 			}
+			// 		}
+			// 		return smallestTrigram;
+			// 	};
 
-				var idx = window.SearchIndex = JSON.parse(this.responseText);
-				idx.tokenizer = lunr.tokenizer.load(idx.tokenizer);
-				idx.pipeline = lunr.Pipeline.load(idx.pipeline);
-				var trigramIndex = idx.trigramIndex = {};
-				for (var i=0; i<idx.tokens.length; i++) {
-					var token = idx.tokens[i][0];
-					for (var j=0; j<token.length-2; j++) {
-						var trigram = token.substring(j, j+3);
-						if (!trigramIndex[trigram]) {
-							trigramIndex[trigram] = [];
-						}
-						trigramIndex[trigram].push(idx.tokens[i]);
-					}
-					idx.tokens[i][1] = lunr.Index.deltaUnpack(idx.tokens[i][1]);
-				};
+			// 	var idx = window.SearchIndex = JSON.parse(this.responseText);
+			// 	idx.tokenizer = lunr.tokenizer.load(idx.tokenizer);
+			// 	idx.pipeline = lunr.Pipeline.load(idx.pipeline);
+			// 	var trigramIndex = idx.trigramIndex = {};
+			// 	for (var i=0; i<idx.tokens.length; i++) {
+			// 		var token = idx.tokens[i][0];
+			// 		for (var j=0; j<token.length-2; j++) {
+			// 			var trigram = token.substring(j, j+3);
+			// 			if (!trigramIndex[trigram]) {
+			// 				trigramIndex[trigram] = [];
+			// 			}
+			// 			trigramIndex[trigram].push(idx.tokens[i]);
+			// 		}
+			// 		idx.tokens[i][1] = lunr.Index.deltaUnpack(idx.tokens[i][1]);
+			// 	};
 
-				window.SearchIndex.searchByToken = function(queryToken) {
-					var filteredTokens = filterByTrigrams(this.trigramIndex, queryToken, this.tokens);
-					var hits = [];
-					var hitIndex = {};
-					for (var i=0; i<filteredTokens.length; i++) {
-						var tokenDocTFs = filteredTokens[i];
-						var token = tokenDocTFs[0];
-						var docs = tokenDocTFs[1];
-						var tfs = tokenDocTFs[2];
-						var matchScore = 0;
-						if (token.includes(queryToken)) {
-							matchScore = Math.max(matchScore, 1 - (token.length - queryToken.length) / token.length);
-						}
-						if (matchScore > 0) {
-							for (var j=0; j<docs.length; j++) {
-								var doc = docs[j];
-								if (!hitIndex[doc]) {
-									hitIndex[doc] = {id: doc, ref: this.docs[doc], score: 0};
-									hits.push(hitIndex[doc]);
-								}
-								hitIndex[doc].score += matchScore * tfs[j];
-							}
-						}
-					}
-					hits.sort(function(a,b) { return a.id - b.id; });
-					return hits;
-				};
+			// 	window.SearchIndex.searchByToken = function(queryToken) {
+			// 		var filteredTokens = filterByTrigrams(this.trigramIndex, queryToken, this.tokens);
+			// 		var hits = [];
+			// 		var hitIndex = {};
+			// 		for (var i=0; i<filteredTokens.length; i++) {
+			// 			var tokenDocTFs = filteredTokens[i];
+			// 			var token = tokenDocTFs[0];
+			// 			var docs = tokenDocTFs[1];
+			// 			var tfs = tokenDocTFs[2];
+			// 			var matchScore = 0;
+			// 			if (token.includes(queryToken)) {
+			// 				matchScore = Math.max(matchScore, 1 - (token.length - queryToken.length) / token.length);
+			// 			}
+			// 			if (matchScore > 0) {
+			// 				for (var j=0; j<docs.length; j++) {
+			// 					var doc = docs[j];
+			// 					if (!hitIndex[doc]) {
+			// 						hitIndex[doc] = {id: doc, ref: this.docs[doc], score: 0};
+			// 						hits.push(hitIndex[doc]);
+			// 					}
+			// 					hitIndex[doc].score += matchScore * tfs[j];
+			// 				}
+			// 			}
+			// 		}
+			// 		hits.sort(function(a,b) { return a.id - b.id; });
+			// 		return hits;
+			// 	};
 
-				window.SearchIndex.mergeHits = function(a, b) {
-					var hits = [];
-					for (var i=0, j=0; i<a.length && j<b.length;) {
-						if (a[i].id === b[j].id) {
-							a[i].score += b[j].score;
-							hits.push(a[i]);
-							i++;
-							j++;
-						} else if (a[i].id < b[j].id) {
-							i++;
-						} else {
-							j++;
-						}
-					}
-					return hits;
-				};
+			// 	window.SearchIndex.mergeHits = function(a, b) {
+			// 		var hits = [];
+			// 		for (var i=0, j=0; i<a.length && j<b.length;) {
+			// 			if (a[i].id === b[j].id) {
+			// 				a[i].score += b[j].score;
+			// 				hits.push(a[i]);
+			// 				i++;
+			// 				j++;
+			// 			} else if (a[i].id < b[j].id) {
+			// 				i++;
+			// 			} else {
+			// 				j++;
+			// 			}
+			// 		}
+			// 		return hits;
+			// 	};
 
-				window.SearchIndex.search = function(query) {
-					var queryTokens = this.pipeline.run(this.tokenizer(query));
-					if (queryTokens.length === 0) {
-						return [];
-					}
-					if (queryTokens.length === 1 && queryTokens[0].length < 3) return [];
-					var hits = this.searchByToken(queryTokens[0]);
-					for (var j=1; j<queryTokens.length; j++) {
-						hits = this.mergeHits(hits, this.searchByToken(queryTokens[j]));
-					}
-					hits.sort(function(a,b) { return b.score - a.score; });
-					return hits;
-				}
-			};
-			xhr.send();
+			// 	window.SearchIndex.search = function(query) {
+			// 		var queryTokens = this.pipeline.run(this.tokenizer(query));
+			// 		if (queryTokens.length === 0) {
+			// 			return [];
+			// 		}
+			// 		if (queryTokens.length === 1 && queryTokens[0].length < 3) return [];
+			// 		var hits = this.searchByToken(queryTokens[0]);
+			// 		for (var j=1; j<queryTokens.length; j++) {
+			// 			hits = this.mergeHits(hits, this.searchByToken(queryTokens[j]));
+			// 		}
+			// 		hits.sort(function(a,b) { return b.score - a.score; });
+			// 		return hits;
+			// 	}
+			// };
+			// xhr.send();
 			setLoaded(false);
 			treeLoaded = true;
 			loadTick();
@@ -1247,7 +1251,7 @@ export default function init () {
 				const adx = Math.abs(ev.deltaX);
 				const ady = Math.abs(ev.deltaY);
 				var xMove = false, yMove = true;
-				if (adx > 3*ady) { xMove = true; yMove = false; }
+				if (adx > ady && (adx > 5 || ady === 0)) { xMove = true; yMove = false; }
 				wheelFreePan = wheelFreePan || (adx > 5 && ady > 5);
 				if (wheelFreePan || xMove) camera.position.x += factor*ev.deltaX * camera.fov;
 				if (wheelFreePan || yMove) camera.position.y -= factor*ev.deltaY * camera.fov;
@@ -1295,23 +1299,23 @@ export default function init () {
 			var fsPoint = new THREE.Vector3(textX, fsEntry.textY, fsEntry.z);
 			fsPoint.applyMatrix4(model.matrixWorld);
 			camera.targetPosition.copy(fsPoint);
-			camera.targetFOV = fsEntry.scale * fsEntry.textScale * 2000 * 50;
+			camera.targetFOV = fsEntry.scale * fsEntry.textScale * 1500 * 50;
 			fsEntry.textFOV = camera.targetFOV;
 		};
 
-		var goToFSEntryTextAtLine = function(fsEntry, model, line, lineCount) {
+		var goToFSEntryTextAtLine = function(fsEntry, model, line) {
 			if (!fsEntry.textHeight) {
-				fsEntry.targetLine = {line, lineCount};
+				fsEntry.targetLine = {line};
 				return goToFSEntry(fsEntry, model);
 			}
-			const textYOff = ((line+0.5) / lineCount) * fsEntry.textHeight;
+			const textYOff = ((line+0.5) / fsEntry.lineCount) * fsEntry.textHeight;
 			scene.updateMatrixWorld();
 			var textX = fsEntry.textX;
 			textX += (fsEntry.scale * fsEntry.textScale) * window.innerWidth / 2;
 			var fsPoint = new THREE.Vector3(textX, fsEntry.textYZero - textYOff, fsEntry.z);
 			fsPoint.applyMatrix4(model.matrixWorld);
 			camera.targetPosition.copy(fsPoint);
-			camera.targetFOV = fsEntry.scale * fsEntry.textScale * 2000 * 50;
+			camera.targetFOV = fsEntry.scale * fsEntry.textScale * 1500 * 50;
 			fsEntry.textFOV = camera.targetFOV;
 		};
 
@@ -1384,7 +1388,8 @@ export default function init () {
 
 		window.searchTree = function(query, fileTree, results) {
 			if (query.every(function(re) { return re.test(fileTree.title); })) {
-				results.push({fsEntry: fileTree, line: 0, lineCount: 0});
+				results.push({fsEntry: fileTree, line: 0});
+				this.console.log(fileTree);
 			}
 			for (var i in fileTree.entries) {
 				window.searchTree(query, fileTree.entries[i], results);
@@ -1393,8 +1398,9 @@ export default function init () {
 		};
 
 		var highlightLater = [];
-		var addHighlightedLine = function(fsEntry, line, lineCount) {
+		var addHighlightedLine = function(fsEntry, line) {
 			if (fsEntry.textHeight) {
+				const lineCount = fsEntry.lineCount;
 				var geo = searchHighlights.geometry;
 				var index = searchHighlights.index;
 				searchHighlights.index++;
@@ -1420,7 +1426,7 @@ export default function init () {
 
 				geo.verticesNeedUpdate = true;
 			} else {
-				highlightLater.push([fsEntry, line, lineCount]);
+				highlightLater.push([fsEntry, line]);
 			}
 		};
 		var searchHighlights = new THREE.Mesh(new THREE.Geometry(), new THREE.MeshBasicMaterial({
@@ -1473,7 +1479,7 @@ export default function init () {
 				if (fsEntry.entries !== null && results[i].line === 0) {
 					Geometry.setColor(ca.array, fsEntry.index, fsEntry.entries === null ? [1,0,0] : [0.6, 0, 0], 0);
 				} else if (fsEntry.entries === null && results[i].line > 0) {
-					addHighlightedLine(fsEntry, results[i].line, results[i].lineCount);
+					addHighlightedLine(fsEntry, results[i].line);
 				}
 			}
 			highlightedResults = results;
@@ -1482,23 +1488,35 @@ export default function init () {
 		};
 
 		var searchResultsTimeout;
-		window.search = function(query, rawQuery) {
-			var lunrResults = [];
-			if (window.SearchIndex) {
-				console.time('token search');
-				lunrResults = window.SearchIndex.search(rawQuery);
-				lunrResults = lunrResults.map(function(r) {
-					const lineNumberMatch = r.ref.match(/:(\d+)\/(\d+)$/);
-					const [_, lineStr, lineCountStr] = (lineNumberMatch || ['0','0','0']); 
+		var searchQueryNumber = 0;
+		window.search = async function(query, rawQuery) {
+			clearTimeout(searchResultsTimeout);
+			var myNumber = ++searchQueryNumber;
+			var res = await fetch(apiPrefix+'/repo/search', {method: "POST", body: JSON.stringify({repo:repoPrefix, query:rawQuery})});
+			var lines = (await res.text()).split("\n");
+			if (searchQueryNumber !== myNumber) return;
+			const lunrResults = lines.map(line => {
+				const lineNumberMatch = line.match(/^([^:]+):(\d+):(.*)$/);
+				if (lineNumberMatch) {
+					const [_, filename, lineStr, snippet] = lineNumberMatch;
 					const line = parseInt(lineStr);
-					const lineCount = parseInt(lineCountStr);
-					return {fsEntry: getPathEntry(window.FileTree, r.ref.replace(/:\d+\/\d+$/, '')), line, lineCount};
-				});
-				console.timeEnd('token search');
-			}
+					return {fsEntry: getPathEntry(window.FileTree, repoPrefix + "/" + filename), line, snippet};
+				}
+			}).filter(l => l);
+			// if (window.SearchIndex) {
+			// 	console.time('token search');
+			// 	lunrResults = window.SearchIndex.search(rawQuery);
+			// 	lunrResults = lunrResults.map(function(r) {
+			// 		const lineNumberMatch = r.ref.match(/:(\d+)\/(\d+)$/);
+			// 		const [_, lineStr, lineCountStr] = (lineNumberMatch || ['0','0','0']); 
+			// 		const line = parseInt(lineStr);
+			// 		const lineCount = parseInt(lineCountStr);
+			// 		return {fsEntry: getPathEntry(window.FileTree, r.ref.replace(/^\./, repoPrefix).replace(/:\d+\/\d+$/, '')), line, lineCount};
+			// 	});
+			// 	console.timeEnd('token search');
+			// }
 			window.highlightResults(window.searchTree(query, window.FileTree, lunrResults));
 			updateSearchLines();
-			clearTimeout(searchResultsTimeout);
 			searchResultsTimeout = setTimeout(populateSearchResults, 200);
 		};
 
@@ -1565,7 +1583,7 @@ export default function init () {
 						searchLine.hovered = true;
 						bbox = li.getBoundingClientRect();
 					}
-					if (li) addScreenLine(searchLine.geometry, li.result.fsEntry, bbox, i, li.result.line, li.result.lineCount);
+					if (li) addScreenLine(searchLine.geometry, li.result.fsEntry, bbox, i, li.result.line, li.result.fsEntry.lineCount);
 				}
 			}
 			if (i > 0 || i !== searchLine.lastUpdate) {
@@ -1619,13 +1637,19 @@ export default function init () {
 				ev.preventDefault();
 				ev.stopPropagation();
 				if (this.result.line > 0) {
-					goToFSEntryTextAtLine(this.result.fsEntry, model, this.result.line, this.result.lineCount);
+					goToFSEntryTextAtLine(this.result.fsEntry, model, this.result.line, this.result.fsEntry.lineCount);
 				} else {
 					goToFSEntry(this.result.fsEntry, model);
 				}
 			};
 			li.appendChild(title);
 			li.appendChild(fullPath);
+			if (result.snippet){
+				var snippet = document.createElement('div');
+				snippet.className = 'searchSnippet prettyPrint';
+				snippet.textContent = result.snippet;
+				li.appendChild(snippet);
+			}
 			return li;
 		};
 
@@ -1638,7 +1662,7 @@ export default function init () {
 					const r = highlightedResults[i];
 					const fullPath = getFullPath(r.fsEntry);
 					if (!resIndex[fullPath]) {
-						const result = {fsEntry: r.fsEntry, line: 0, lineCount: 0, lineResults: []};
+						const result = {fsEntry: r.fsEntry, line: 0, lineResults: []};
 						resIndex[fullPath] = result;
 						results.push(result);
 					}
@@ -1681,7 +1705,6 @@ export default function init () {
 		var tmpM4 = new THREE.Matrix4();
 		var lastFrameTime = performance.now();
 		var render = function() {
-			var visCount = 0;
 			scene.remove(searchLine);
 			scene.add(searchLine);
 			scene.remove(searchHighlights);

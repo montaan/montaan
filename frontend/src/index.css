@@ -6,7 +6,7 @@ html {
 
 body {
   margin: 0;
-  font-family: 'Adobe Garamond', 'Bodoni 72', 'Times New Roman', serif;
+  font-family: Avenir Next, Segoe UI, Helvetica, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background: transparent;

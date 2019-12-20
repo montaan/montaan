@@ -3,11 +3,11 @@ var THREE = require('three');
 module.exports = {
 	music: [0.13,0.34,0.17],
 	image: [0.13,0.44,0.65],
-	document: [0.53,0.24,0.17],
-	archive: [0.38,0.32,0.17],
+	document: [0.33,0.24,0.17],
+	archive: [0.28,0.22,0.17],
 	video: [0.13,0.44,0.4],
 	exe: [0.68,0.14,0.17],
-	unknown: [0.13,0.14,0.17],
+	unknown: [0.13, 0.14, 0.17],
 	hidden: [0.53,0.54,0.57],
 
 	musicF: [0.13,0.34,0.17],

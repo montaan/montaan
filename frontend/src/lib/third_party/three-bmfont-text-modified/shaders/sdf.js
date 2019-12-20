@@ -94,7 +94,7 @@ module.exports = function createSDFShader (opt) {
       '    valpha += 0.25*aastep(texColor.a);',
 
       '    float maxD = max(dFdx(vUv.x), dFdy(vUv.y));',
-      '    valpha *= smoothstep(0.07, 0.01, maxD);', // Fade out small text (= when UV derivative gets big)
+      //'    valpha *= smoothstep(0.07, 0.01, maxD);', // Fade out small text (= when UV derivative gets big)
 
       '  #else',
       '    valpha *= 4.0;',

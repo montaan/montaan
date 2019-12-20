@@ -48,9 +48,8 @@ const Repos = {
         var [error, { filePath }] = assertRepoFile(path.join(repo, 'index.csearch')); if (error) return error;
         await new Promise((resolve, reject) => {
             exec(`CSEARCHINDEX='${filePath}' $HOME/go/bin/csearch -i -n '${query}' | sed -E 's:^.+/repo/::'`, async function(error, stdout, stderr){
-                console.log(error, stdout, stderr);
-                res.writeHeader(200, {'Content-Type': 'text/plain', 'Content-Length': stdout.length});
-                await res.end(stdout);
+                res.writeHeader(200, {'Content-Type': 'text/plain'});
+                await res.end(stdout || '');
                 resolve();
             });
         });

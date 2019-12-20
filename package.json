@@ -30,6 +30,7 @@
   "scripts": {
     "watch": "watch 'date && yarn build && echo OK' js css --ignoreDotFiles",
     "build": "browserify js/main_github.js -o build/main_github.js -t [ babelify --presets [ es2015 react ] ]",
+    "build-index": "node bin/build_index.js",
     "start": "node . ./config.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

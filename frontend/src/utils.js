@@ -369,7 +369,7 @@ var utils = module.exports = {
 		var fileCount = 0;
 		var first = includePrefix ? false : true;
 		var skip = 0;
-		console.log('prefix:', prefix);
+		// console.log('prefix:', prefix);
 		for (var i=0; i<fileString.length; i++) {
 			if (fileString.charCodeAt(i) === 10) {
 				if (first) {
@@ -380,7 +380,7 @@ var utils = module.exports = {
 					first = false;
 				} else {
 					name = prefix + fileString.substring(startIndex+skip, i);
-					console.log(name);
+					// console.log(name);
 				}
 				startIndex = i+1;
 				fileCount += utils.addFileTreeEntry(name, fileTree);
