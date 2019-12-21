@@ -21,7 +21,7 @@ class MainApp extends React.Component {
                 <div id="fullscreen"></div>
                 <div id="loader"></div>
 
-                <input id="searchInput" autocorrect="off" autocapitalize="off" placeholder="Search files"/>
+                <input id="searchInput" autoCorrect="off" autoCapitalize="off" placeholder="Search files"/>
                 <button id="searchButton">Search</button>
                 <ul id="searchResults"></ul>
 

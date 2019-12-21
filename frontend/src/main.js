@@ -1,5 +1,5 @@
 const apiPrefix = 'http://localhost:8008/_';
-const repoPrefix = 'Microsoft/vscode';
+const repoPrefix = 'torvalds/linux';
 const MAX_COMMITS = 1000;
 
 const THREE = require('three');
@@ -1016,18 +1016,21 @@ export default function init () {
 			var searchQueryNumber = 0;
 			window.search = async function(query, rawQuery) {
 				clearTimeout(searchResultsTimeout);
-				var myNumber = ++searchQueryNumber;
-				var res = await fetch(apiPrefix+'/repo/search', {method: "POST", body: JSON.stringify({repo:repoPrefix, query:rawQuery})});
-				var lines = (await res.text()).split("\n");
-				if (searchQueryNumber !== myNumber) return;
-				const lunrResults = lines.map(line => {
-					const lineNumberMatch = line.match(/^([^:]+):(\d+):(.*)$/);
-					if (lineNumberMatch) {
-						const [_, filename, lineStr, snippet] = lineNumberMatch;
-						const line = parseInt(lineStr);
-						return {fsEntry: getPathEntry(window.FileTree, repoPrefix + "/" + filename), line, snippet};
-					}
-				}).filter(l => l);
+				var lunrResults = [];
+				if (rawQuery.length > 2) {
+					var myNumber = ++searchQueryNumber;
+					var res = await fetch(apiPrefix+'/repo/search', {method: "POST", body: JSON.stringify({repo:repoPrefix, query:rawQuery})});
+					var lines = (await res.text()).split("\n");
+					if (searchQueryNumber !== myNumber) return;
+					lunrResults = lines.map(line => {
+						const lineNumberMatch = line.match(/^([^:]+):(\d+):(.*)$/);
+						if (lineNumberMatch) {
+							const [_, filename, lineStr, snippet] = lineNumberMatch;
+							const line = parseInt(lineStr);
+							return {fsEntry: getPathEntry(window.FileTree, repoPrefix + "/" + filename), line, snippet};
+						}
+					}).filter(l => l);
+				}
 				// if (window.SearchIndex) {
 				// 	console.time('token search');
 				// 	lunrResults = window.SearchIndex.search(rawQuery);
@@ -1040,7 +1043,11 @@ export default function init () {
 				// 	});
 				// 	console.timeEnd('token search');
 				// }
-				window.highlightResults(window.searchTree(query, window.FileTree, lunrResults));
+				if (rawQuery.length > 2) {
+					window.highlightResults(window.searchTree(query, window.FileTree, lunrResults));
+				} else {
+					window.highlightResults([]);
+				}
 				updateSearchLines();
 				searchResultsTimeout = setTimeout(populateSearchResults, 200);
 			};
