@@ -5,13 +5,16 @@ class MainApp extends React.Component {
     constructor() {
         super()
         const tick = () => {
-            if (document.getElementById('breadcrumb')) init();
-            else setTimeout(tick, 10);
+            if (document.getElementById('breadcrumb')) {
+                console.log("MainApp tick");
+                init();
+            } else setTimeout(tick, 10);
         };
         setTimeout(tick, 10);
     }
 
     render() {
+        console.log("MainApp render");
         return (
             <div>
                 <div id="debug"></div>

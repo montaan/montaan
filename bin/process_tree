@@ -11,7 +11,7 @@ else
 fi
 
 cd repos/$path/repo || exit
-find . -type d -exec sh -c 'printf "%s/\n" "$0"' {} \; -or -print | grep -v /.git/ > ../files.txt
+find . -type d -exec sh -c 'printf "%s/\n" "$0"' {} \; -or -print | grep -v /.git/ | sort > ../files.txt
 rm ../index.csearch
 CSEARCHINDEX=../index.csearch $HOME/go/bin/cindex .
 # node bin/build_index.js ../files.txt > ../index.lunr.json

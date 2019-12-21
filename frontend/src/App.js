@@ -134,6 +134,7 @@ class App extends React.Component {
     };
 
     render() {
+        console.log("App render");
         const loggedIn = !!this.state.authHeaders.csrf;
         const { firstFetchDone } = this.state;
         if (!firstFetchDone) {

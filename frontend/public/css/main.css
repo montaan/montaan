@@ -236,7 +236,27 @@ label {
 	border-bottom: 1px solid #ccc;
     width: 300px;
     word-wrap: break-word;
+	transition: 0.3s;
+	overflow: hidden;
+	height: auto;
 }
+#searchResults li:not(.in-view) {
+	height: 0px;
+	padding: 0px;
+    white-space: nowrap;
+}
+#searchResults li:not(.in-view) > .searchTitle {
+    font-size: 10px;
+    display:inline;
+    vertical-align: top;
+}
+#searchResults li:not(.in-view) > .searchFullPath {
+    font-size: 10px;
+    display:inline;
+    vertical-align: top;
+    margin-left:4px;
+}
+
 #searchResults li > ul {
 	list-style: none;
 	margin: 0;

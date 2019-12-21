@@ -28,7 +28,7 @@ const Repos = {
     },
 
     fs: async function(req, res, fsPath) {
-        var [error, { filePath, stat }] = assertRepoFile(fsPath); if (error) return error;
+        var [error, { filePath, stat }] = assertRepoFile(decodeURIComponent(fsPath)); if (error) return error;
         res.writeHeader(200, {'Content-Type': 'text/plain', 'Content-Length': stat.size});
         const stream = fs.createReadStream(filePath);
         stream.on('open', () => stream.pipe(res));
@@ -39,7 +39,7 @@ const Repos = {
     },
 
     file: async function(req, res, fsPath) {
-        const repoFilePath = fsPath.replace(/^([^\/]+\/[^\/]+\/)/, '$1repo/');
+        const repoFilePath = decodeURIComponent(fsPath).replace(/^([^\/]+\/[^\/]+\/)/, '$1repo/');
         return Repos.fs(req, res, repoFilePath);
     },
 
