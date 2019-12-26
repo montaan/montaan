@@ -1,5 +1,5 @@
 const apiPrefix = 'http://localhost:8008/_';
-const repoPrefix = 'torvalds/linux';
+const repoPrefix = 'kig/tabletree';
 const MAX_COMMITS = 1000;
 
 const THREE = require('three');
@@ -7,7 +7,7 @@ global.THREE = THREE;
 
 var utils = require('./utils.js');
 var Geometry = require('./Geometry.js');
-var Colors = require('./Colors.js');
+var Colors = require('./Colors.js').default;
 var Layout = require('./Layout.js');
 var createText = require('./lib/third_party/three-bmfont-text-modified');
 var SDFShader = require('./lib/third_party/three-bmfont-text-modified/shaders/sdf');
@@ -28,6 +28,18 @@ export default function init () {
 
 	var animating = false;
 	var currentFrame = 0;
+
+	(function() {
+		var input = document.createElement('input');
+		input.type = 'file';
+		if ((input.webkitdirectory === undefined && input.directory === undefined)) {
+			document.body.classList.add('no-directory');
+		}
+		if ((/mobile/i).test(window.navigator.userAgent)) {
+			document.body.classList.add('no-directory');
+			document.body.classList.add('mobile');
+		}
+	})();
 
 	var loadFontImage = function (opt, cb) {
 		loadFont(opt.font, function (err, font) {
@@ -51,7 +63,7 @@ export default function init () {
 			var renderer = new THREE.WebGLRenderer({antialias: true, alpha: false});
 			renderer.domElement.id = 'renderCanvas';
 			renderer.setPixelRatio( window.devicePixelRatio || 1 );
-			renderer.setClearColor(0x03060C, 1);
+			renderer.setClearColor(Colors.backgroundColor, 1);
 			document.body.appendChild(renderer.domElement);
 
 			var scene = new THREE.Scene();
@@ -92,7 +104,7 @@ export default function init () {
 				if (!palette || palette.length < 8) {
 					palette = [].concat(palette || []);
 					while (palette.length < 8) {
-						palette.push(palette[palette.length-1] || new THREE.Vector3(1,1,1));
+						palette.push(palette[palette.length-1] || Colors.textColor);
 					}
 				}
 				return new THREE.RawShaderMaterial(SDFShader({
@@ -1446,19 +1458,19 @@ export default function init () {
 
 		// Loading current repo data
 		{
-			fetch(apiPrefix+'/repo/fs/'+repoPrefix+'/log.txt').then(res => res.text()).then(txt => {
-				commitLog = txt;
-				loadTick();
-			});
+			// fetch(apiPrefix+'/repo/fs/'+repoPrefix+'/log.txt').then(res => res.text()).then(txt => {
+			// 	commitLog = txt;
+			// 	loadTick();
+			// });
 
-			fetch(apiPrefix+'/repo/fs/'+repoPrefix+'/changes.txt').then(res => res.text()).then(txt => {
-				commitChanges = txt;
-				loadTick();
-			});
+			// fetch(apiPrefix+'/repo/fs/'+repoPrefix+'/changes.txt').then(res => res.text()).then(txt => {
+			// 	commitChanges = txt;
+			// 	loadTick();
+			// });
 
 			navigateTo(apiPrefix+'/repo/fs/'+repoPrefix+'/files.txt', function() {
 				// window.SearchIndex = loadLunrIndex(apiPrefix+'/repo/fs/'+repoPrefix+'/index.lunr.json');
-				setLoaded(false);
+				setLoaded(true);
 				treeLoaded = true;
 				loadTick();
 			});

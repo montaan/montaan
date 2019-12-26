@@ -1,6 +1,6 @@
 var THREE = require('three');
 var Geometry = require('./Geometry.js');
-var Colors = require('./Colors.js');
+var Colors = require('./Colors.js').default;
 var createText = require('./lib/third_party/three-bmfont-text-modified');
 
 module.exports = {

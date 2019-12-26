@@ -1,28 +1,10 @@
-var THREE = require('three');
+import './Colors.css';
+import './main.css';
+import './railscast.min.css';
 
-module.exports = {
-	music: [0.13,0.34,0.17],
-	image: [0.13,0.44,0.65],
-	document: [0.33,0.24,0.17],
-	archive: [0.28,0.22,0.17],
-	video: [0.13,0.44,0.4],
-	exe: [0.68,0.14,0.17],
-	unknown: [0.13, 0.14, 0.17],
-	hidden: [0.53,0.54,0.57],
+import * as THREE from 'three';
 
-	musicF: [0.13,0.34,0.17],
-	configF: [0.03,0.04,0.07],
-	imageF: [0.23,0.44,0.57],
-	documentF: [0.03,0.14,0.17],
-	archiveF: [0.03,0.04,0.07],
-	headerF: [0.03,0.14,0.17],
-	exeF: [0.43,0.34,0.17],
-	objectF: [0.13,0.14,0.17],
-	legalF: [0.13,0.14,0.47],
-	videoF: [0.13,1.0,0.8],
-	unknownF: [0.13,0.14,0.17],
-	hiddenF: [0.33,0.34,0.37],
-
+var Colors = {
 	musicRE: /\.(mp3|m4a|ogg|ogm|wav|aac|flac)$/i,
 	configRE: /(^(makefile.*|configure|cmake.*|InfoPlist)|\.(gyp.?|pyt|isolate|json|xcscheme|projitems|shproj|gradle|properties|mk|xml|cfg|conf|vcxproj|xcconfig|plist|config|in)$)/i,
 	imageRE: /\.(ai|c4d|obj|png|gif|psd|tga|webm|jpe?g|svg)$/i,
@@ -46,23 +28,7 @@ module.exports = {
 		var name = file.name;
 		var mimeType = file.mimeType;
 		if (mimeType) {
-			if (mimeType === 'application/vnd.google-apps.spreadsheet') {
-				return this.musicF;
-			} else if (mimeType === 'application/vnd.google-apps.document') {
-				return this.documentF;
-			} else if (mimeType === 'application/vnd.google-apps.map') {
-				return this.videoF;
-			} else if (mimeType === 'application/vnd.google-apps.photo') {
-				return this.imageF;
-			} else if (mimeType === 'application/vnd.google-apps.drawing') {
-				return this.imageF;
-			} else if (mimeType === 'application/vnd.google-apps.presentation') {
-				return this.archiveF;
-			} else if (mimeType === 'application/vnd.google-apps.script') {
-				return this.archiveF;
-			} else if (mimeType === 'application/vnd.google-apps.sites') {
-				return this.archiveF;
-			} else if (/^image/.test(mimeType)) {
+			if (/^image/.test(mimeType)) {
 				return this.imageF;
 			} else if (/^audio/.test(mimeType)) {
 				return this.musicF;
@@ -104,8 +70,7 @@ module.exports = {
 			return this.music;
 		} else if (this.imageDirRE.test(name)) {
 			return this.image;
-		} else 
-		if (this.documentDirRE.test(name)) {
+		} else if (this.documentDirRE.test(name)) {
 			return this.document;
 		} else if (this.archiveDirRE.test(name)) {
 			return this.archive;
@@ -136,5 +101,30 @@ module.exports = {
 			return this.getDirectoryColor(fsEntry);
 		}
 		return this.getFileColor(fsEntry);
+	},
+
+	parseColors: function() {
+		var div = document.createElement('div');
+		document.body.appendChild(div);
+		var types = [
+			'music', 'image', 'document', 'archive', 'video', 'exe', 'hidden', 'unknown',
+			'musicF', 'configF', 'legalF', 'imageF', 'headerF', 'documentF', 'archiveF', 'exeF', 'objectF', 'videoF', 'hiddenF', 'unknownF'
+		];
+		types.forEach(t => {
+			div.className = t;
+			const color = getComputedStyle(div).color;
+			const [_, r, g, b] = color.match(/(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+			this[t] = [r/255, g/255, b/255];
+		});
+		document.body.removeChild(div);
+		var bodyStyle = getComputedStyle(document.body);
+		var [_, r, g, b] = bodyStyle.color.match(/(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+		this.textColor = new THREE.Color(r/255, g/255, b/255);
+		var [_, r, g, b] = bodyStyle.backgroundColor.match(/(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+		this.backgroundColor = new THREE.Color(r/255, g/255, b/255);
 	}
 };
+
+Colors.parseColors();
+
+export default Colors;

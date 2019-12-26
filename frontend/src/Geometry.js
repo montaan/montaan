@@ -187,9 +187,9 @@ module.exports = {
 		dy *= f;
 		dz *= f;
 		var x = dx, y = dy, z = dz;
-		if (color.length === 3) {
-			x = dx * 1.77; y = dy * 1.88; z = dz * 1.85;
-		}
+		// if (color.length === 3) {
+		// 	x = dx * 1.77; y = dy * 1.88; z = dz * 1.85;
+		// }
 
 
 		verts[i++] = dx;

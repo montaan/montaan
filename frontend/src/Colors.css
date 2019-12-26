@@ -1,0 +1,24 @@
+body {
+    background: white;
+    color: black;
+}
+.music { color: #c9ffa9; }
+.image { color: #b1b7f1; }
+.document { color: #f0baba; }
+.archive { color: #cecece; }
+.video { color: #c4ebf0; }
+.exe { color: #f8d6d6; }
+.hidden { color: #d4d4d4; }
+.unknown { color: #e9e9e9; }
+.musicF { color: #d3f0d5; }
+.configF { color: #f1f1e0; }
+.legalF { color: #d9f3e1; }
+.imageF { color: #d8d7e4; }
+.headerF { color: #d0d9f7; }
+.documentF { color: #e5e4fa; }
+.archiveF { color: #cfcece; }
+.exeF { color: #fdc5c5; }
+.objectF { color: #fae3e3; }
+.videoF { color: #cbebeb; }
+.hiddenF { color: #d4d4d4; }
+.unknownF { color: #d1d1d1; }
