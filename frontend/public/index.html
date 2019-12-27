@@ -25,27 +25,11 @@
 		<meta name="msapplication-TileColor" content="#2d89ef">
 		<meta name="msapplication-TileImage" content="/mstile-144x144.png">
 		<meta name="theme-color" content="#ffffff">
-		<link rel="stylesheet" href="css/main.css">
-		<link rel="stylesheet" href="css/railscasts.min.css">
 	    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
 	</head>
 
 	<body class="mobile">
 		<noscript>You need to enable JavaScript to run this app.</noscript>
 		<div id="root"></div>
-
-		<script>
-			(function() {
-				var input = document.createElement('input');
-				input.type = 'file';
-				if ((input.webkitdirectory === undefined && input.directory === undefined)) {
-					document.body.classList.add('no-directory');
-				}
-				if ((/mobile/i).test(window.navigator.userAgent)) {
-					document.body.classList.add('no-directory');
-					document.body.classList.add('mobile');
-				}
-			})();
-		</script>
 	</body>
 </html>

@@ -21,14 +21,21 @@
     [/] Switch search engine to codesearch
         - codesearch is server-side (it only uses the index to get the names of potentially matching files, then runs grep on the file contents)
     [x] Fix lunr search with <3 letter search queries (Well, it seems to work?)
-    [] Shrink search results outside current view
+    [x] Shrink search results outside current view
+    [x] Pull and display line snippet context somehow
     [] Highlight found search token
-    [] Pull and display line snippet context somehow
 
 # Commits
+    [x] Animated commit history
+    [x] Show files touched by single commit
+    [x] Show files and commits for author
+    [x] Show commits and authors for file
     [] Add a button to toggle commits view
     [] Click on author to show commits by that author
     [] Click on commit to show files touched by commit
+        [x] Slider to scrub commits
+        [x] Frame navigation to go from commit to next
+    [] Click on file to show commits and authors for file
 
 # Performance
     [] Pipeline text model creation to avoid frame stutter (probably coming from shader compile / geometry creation)

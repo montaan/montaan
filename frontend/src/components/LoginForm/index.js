@@ -7,7 +7,7 @@ import * as yup from "yup";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faArrowLeft, faKey } from '@fortawesome/free-solid-svg-icons'
 
-import './LoginForm.css';
+import './style.css';
 
 const schema = yup.object({
     email: yup.string()

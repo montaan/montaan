@@ -1,5 +1,8 @@
 import React from 'react';
 import init from './main.js';
+import CommitControls from './components/CommitControls';
+import Search from './components/Search';
+import Breadcrumb from './components/Breadcrumb';
 
 class MainApp extends React.Component {
     constructor() {
@@ -21,11 +24,9 @@ class MainApp extends React.Component {
                 <div id="fullscreen"></div>
                 <div id="loader"></div>
 
-                <input id="searchInput" autoCorrect="off" autoCapitalize="off" placeholder="Search files"/>
-                <button id="searchButton">Search</button>
-                <ul id="searchResults"></ul>
-
-                <div id="breadcrumb"></div>
+                <Search />
+                <Breadcrumb />
+                <CommitControls display={true} />
             </div>
         );
     }

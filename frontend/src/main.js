@@ -1,5 +1,7 @@
+import { faSlidersH } from '@fortawesome/free-solid-svg-icons';
+
 const apiPrefix = 'http://localhost:8008/_';
-const repoPrefix = 'kig/tabletree';
+const repoPrefix = 'v8/v8';
 const MAX_COMMITS = 1000;
 
 const THREE = require('three');
@@ -650,8 +652,11 @@ export default function init () {
 			});
 		};
 
+		var breadcrumbPath = '';
 		// Breadcrumb
 		var updateBreadCrumb = function(path) {
+			if (path === breadcrumbPath) return;
+			breadcrumbPath = path;
 			var el = document.getElementById('breadcrumb');
 			while (el.firstChild) el.removeChild(el.firstChild);
 			var segs = path.split("/");
@@ -689,6 +694,7 @@ export default function init () {
 					});
 					ul.onmouseout = function(ev) {
 						if (ev.target === this && !this.parentNode.contains(ev.relatedTarget)) {
+							console.log('removed', link.path);
 							this.parentNode.removeChild(this);
 						}
 					};
@@ -700,6 +706,7 @@ export default function init () {
 					if (ev.target === this && ev.relatedTarget !== this.parentNode &&
 						ul && !ul.contains(ev.relatedTarget)
 					) {
+						console.log('removed ul', link.path);
 						this.removeChild(ul);
 					}
 				};
@@ -851,17 +858,15 @@ export default function init () {
 
 				changes.forEach(function(c, index) {
 					if (c) {
-						var lines = c.split("\n");
+						var lines = c.split('\n');
+						while (lines[lines.length-1] === '') lines.pop();
 						var hash = lines[0];
 						if (!commitIndex[hash]) {
 							// console.log(hash, index, c);
 						} else {
 							commitIndex[hash].files = lines.slice(1).map(function(fs) {
-								var fileChange = {
-									path: fs.substring(2),
-									action: fs.charAt(0)
-								};
-								return fileChange;
+								const [action, path, renamed] = fs.split(/\t/);
+								return {action, path, renamed};
 							});
 						}
 					}
@@ -885,6 +890,7 @@ export default function init () {
 
 				var commitsFSCount = 2;
 				var commitToFile;
+				var commitIndex
 				commits.forEach(function(c) {
 					var entries = {
 						Author: mkfile(c.author.name),
@@ -979,26 +985,34 @@ export default function init () {
 				connectionLines = new THREE.LineSegments(lineGeo, new THREE.LineBasicMaterial({
 					color: new THREE.Color(1.0, 1.0, 1.0), opacity: 1, transparent: true, depthWrite: false,
 					vertexColors: true
-				}))
-				// modelPivot.add(connectionLines);
+				}));
+				connectionLines.frustumCulled = false;
+				modelPivot.add(connectionLines);
 				window.LineModel = connectionLines;
 				connectionLines.ontick = function() {
 					var cf = (currentFrame / 2) | 0;
 					if (false) {
 						var aks = Object.keys(authors);
 						showCommitsByAuthor(aks[cf % aks.length]);
+						changed = true;
 					} else if (false) {
 						showCommitsForFile(touchedFiles[cf % touchedFiles.length]);
+						changed = true;
 					} else if (false) {
 						var c = commits[commits.length-1-(cf % commits.length)];
 						showCommit(c.sha);
+						changed = true;
 					}
-					// changed = true;
 				};
 				changed = true;
 				
 				var showCommit = function(sha) {
+					var c = commitIndex[sha];
 					showLinesForEntry(lineGeo, commitsFSEntry.entries[sha], 0);
+					var commitDetails = document.getElementById('commitDetails');
+					commitDetails.textContent = `${sha}\n${c.date.toString()}\n${c.author.name} <${c.author.email}>\n\n${c.message}\n\n${c.files.map(
+						({action,path,renamed}) => `${action} ${path}${renamed ? ' '+renamed : ''}`
+					).join("\n")}`;
 				};
 
 				var showCommitsByAuthor = function(authorName) {
@@ -1007,6 +1021,30 @@ export default function init () {
 
 				var showCommitsForFile = function(fsEntry) {
 					showLinesForEntry(lineGeo, fsEntry, 1);
+				};
+
+				document.getElementById('commitSlider').oninput = function(ev) {
+					var v = parseInt(this.value);
+					if (commits[v]) {
+						showCommit(commits[v].sha);
+						changed = true;
+					}
+				};
+				document.getElementById('previousCommit').onclick = function(ev) {
+					var slider = document.getElementById('commitSlider');
+					var v = parseInt(slider.value) - 1;
+					if (commits[v]) {
+						slider.value = v;
+						slider.oninput();
+					}
+				};
+				document.getElementById('nextCommit').onclick = function(ev) {
+					var slider = document.getElementById('commitSlider');
+					var v = parseInt(slider.value) + 1;
+					if (commits[v]) {
+						slider.value = v;
+						slider.oninput();
+					}
 				};
 			};
 		}
@@ -1315,6 +1353,7 @@ export default function init () {
 			}
 			var updateSearchLines = function() {
 				clearSearchLine();
+				searchLine.hovered = false;
 				var lis = [].slice.call(window.searchResults.querySelectorAll('li'));
 				if (lis.length <= searchLine.geometry.vertices.length/4) {
 					for (var i=0, l=lis.length; i<l; i++) {
@@ -1458,15 +1497,15 @@ export default function init () {
 
 		// Loading current repo data
 		{
-			// fetch(apiPrefix+'/repo/fs/'+repoPrefix+'/log.txt').then(res => res.text()).then(txt => {
-			// 	commitLog = txt;
-			// 	loadTick();
-			// });
+			fetch(apiPrefix+'/repo/fs/'+repoPrefix+'/log.txt').then(res => res.text()).then(txt => {
+				commitLog = txt;
+				loadTick();
+			});
 
-			// fetch(apiPrefix+'/repo/fs/'+repoPrefix+'/changes.txt').then(res => res.text()).then(txt => {
-			// 	commitChanges = txt;
-			// 	loadTick();
-			// });
+			fetch(apiPrefix+'/repo/fs/'+repoPrefix+'/changes.txt').then(res => res.text()).then(txt => {
+				commitChanges = txt;
+				loadTick();
+			});
 
 			navigateTo(apiPrefix+'/repo/fs/'+repoPrefix+'/files.txt', function() {
 				// window.SearchIndex = loadLunrIndex(apiPrefix+'/repo/fs/'+repoPrefix+'/index.lunr.json');
@@ -1715,7 +1754,7 @@ export default function init () {
 
 			var highlighted = null;
 			window.onmouseup = function(ev) {
-				if (ev.preventDefault) ev.preventDefault();
+				if (down && ev.preventDefault) ev.preventDefault();
 				if (clickDisabled) {
 					down = false;
 					return;

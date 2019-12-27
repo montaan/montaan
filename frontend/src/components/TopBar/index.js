@@ -5,7 +5,7 @@ import Button from "react-bootstrap/Button";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faKey, faSignOutAlt, faAddressBook, faQrcode, faBars } from '@fortawesome/free-solid-svg-icons'
 
-import './TopBar.css';
+import './style.css';
 
 class TopBar extends React.Component {
 

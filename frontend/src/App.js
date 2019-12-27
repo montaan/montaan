@@ -1,11 +1,11 @@
 import React from 'react';
 import { Redirect, BrowserRouter as Router, Route, Switch, withRouter, Link } from "react-router-dom";
 
-// import TopBar from './TopBar';
-import LoginForm from './LoginForm';
-import {RecoverForm, PasswordResetForm} from './RecoverForm';
-import UserActivation from './UserActivation';
-// import HelpOverlay from './HelpOverlay';
+// import TopBar from './components/TopBar';
+import LoginForm from './components/LoginForm';
+import {RecoverForm, PasswordResetForm} from './components/RecoverForm';
+import UserActivation from './components/UserActivation';
+// import HelpOverlay from './components/HelpOverlay';
 import MainApp from './MainApp';
 
 import { Client } from './lib/quickgres-frontend';

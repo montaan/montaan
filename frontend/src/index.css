@@ -1,5 +1,6 @@
 html {
-  background: #000;
+  background: white;
+  color: black;
   background-size: cover;
   min-height: 100%;
 }

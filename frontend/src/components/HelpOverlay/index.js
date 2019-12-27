@@ -1,6 +1,6 @@
 import React from 'react';
 
-import './HelpOverlay.css';
+import './style.css';
 
 class HelpOverlay extends React.Component {
 

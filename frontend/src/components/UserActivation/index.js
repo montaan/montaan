@@ -2,7 +2,7 @@ import React from 'react';
 import { Redirect, withRouter } from "react-router-dom";
 import { Helmet } from "react-helmet";
 
-import './UserActivation.css'
+import './style.css'
 
 class UserActivation extends React.Component {
 

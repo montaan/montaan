@@ -7,7 +7,8 @@ import * as yup from "yup";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faKey, faEnvelope } from '@fortawesome/free-solid-svg-icons'
 
-import './LoginForm.css';
+import "./style.css";
+import '../LoginForm/style.css';
 
 const passwordResetSchema = yup.object({
     email: yup.string()
