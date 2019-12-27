@@ -26,7 +26,7 @@ class MainApp extends React.Component {
 
                 <Search />
                 <Breadcrumb />
-                <CommitControls display={true} />
+                <CommitControls />
             </div>
         );
     }

@@ -10,47 +10,6 @@ body
 	font-family: sans-serif;
 }
 
-#commitDetails {
-	color: black;
-	position: absolute;
-	top: 126px;
-	z-index: 10000;
-	white-space: pre;
-	font-size: 10px;
-	/* background: rgb(255,255,255); */
-	font-family: Source Sans, Monaco, monospace;
-	pointer-events: none;
-}
-
-#commitControls {
-	position: absolute;
-	top: 98px;
-	z-index: 10001;
-}
-
-#commitControls button {
-	height: 22px;
-	line-height: 22px;
-	padding: 0px 10px;
-	font-size: 8px;
-	vertical-align: top;
-}
-
-#commitSlider {
-	width: 1100px;
-	margin-left: 64px;
-	margin-right: 8px;
-	vertical-align: top;
-}
-
-#commitSlider:before {
-	content: "Commit";
-	margin-left: -64px;
-	width: 52px;
-	display: inline-block;
-	text-align: right;
-}
-
 #subscribe {
 	display: none;
 	background: rgba(255,255,255,1);
