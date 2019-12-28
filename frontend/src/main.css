@@ -10,6 +10,56 @@ body
 	font-family: sans-serif;
 }
 
+#authors {
+	position: absolute;
+
+	z-index: 1000;
+
+	right: 10px;
+	top: 126px;
+	bottom: 0px;
+
+	height: auto;
+	width: 200px;
+
+	overflow: auto;
+	font-size: 10px;
+}
+
+#authors .author-email:before { content: " <"; }
+#authors .author-email:after { content: ">"; }
+
+#activeCommits {
+	position: absolute;
+
+	z-index: 1000;
+
+	right: 220px;
+	top: 126px;
+	bottom: 0px;
+
+	height: auto;
+	width: 400px;
+
+	overflow: auto;
+	font-size: 10px;
+}
+
+#activeCommits div {
+	padding-bottom: 10px;
+	margin-bottom: 10px;
+	border-bottom: 1px solid silver;
+}
+
+#activeCommits span {
+	display: block;
+	white-space: pre;
+}
+
+#activeCommits span.commit-diff {
+	margin-top: 10px;
+}
+
 #subscribe {
 	display: none;
 	background: rgba(255,255,255,1);

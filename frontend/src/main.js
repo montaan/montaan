@@ -1,4 +1,5 @@
 import { faSlidersH } from '@fortawesome/free-solid-svg-icons';
+import { EALREADY } from 'constants';
 
 const apiPrefix = 'http://localhost:8008/_';
 const repoPrefix = 'v8/v8';
@@ -1051,16 +1052,53 @@ export default function init () {
 					return a.name.localeCompare(b.name) || a.email.localeCompare(b.email);
 				};
 
+				var span = function(className, content) {
+					var el = document.createElement('span');
+					el.className = className;
+					el.textContent = content;
+					return el;
+				};
+
+				var updateActiveCommitSetDiffs = function() {
+					var el = document.getElementById('activeCommits');
+					while (el.firstChild) el.removeChild(el.firstChild);
+					activeCommitSet.forEach(c => {
+						var div = document.createElement('div');
+						var hashSpan = span('commit-hash', c.sha);
+						var dateSpan = span('commit-date', c.date.toString());
+						var authorSpan = span('commit-author', `${c.author.name} <${c.author.email}>`);
+						var messageSpan = span('commit-message', c.message);
+						var diffSpan = span('commit-diff', c.diff);
+						div.append(hashSpan, dateSpan, authorSpan, messageSpan, diffSpan);
+						el.appendChild(div);
+					});
+				};
+				
+				var updateActiveCommitSetAuthors = function(authors) {
+					var el = document.getElementById('authors');
+					while (el.firstChild) el.removeChild(el.firstChild);
+					authors.forEach(({name, email}) => {
+						var div = document.createElement('div');
+						var nameSpan = span('author-name', name);
+						var emailSpan = span('author-email', email);
+						div.append(nameSpan, emailSpan);
+						el.appendChild(div);
+					});
+				};
+
 				document.getElementById('showFileCommits').onclick = function(ev) {
 					var fsEntry = getPathEntry(window.FileTree, breadcrumbPath);
 					if (fsEntry) {
 						activeCommitSet = findCommitsForPath(breadcrumbPath);
 						const authors = utils.uniq(activeCommitSet.map(c => c.author), authorCmp);
-						console.log(authors);
-						// activeCommitSet.forEach(async c => {
-						// 	const diff = await (await fetch(apiPrefix + '/repo/diff', {method: 'POST', body: JSON.stringify({repo: repoPrefix, hash: c.sha})})).text();
-						// 	console.log(diff);
-						// });
+						updateActiveCommitSetAuthors(authors);
+						activeCommitSet.forEach(async c => {
+							if (!c.diff) {
+								const diff = await (await fetch(apiPrefix + '/repo/diff', {method: 'POST', body: JSON.stringify({repo: repoPrefix, hash: c.sha})})).text();
+								c.diff = diff;
+								updateActiveCommitSetDiffs();
+							}
+						});
 						showCommitsForFile(fsEntry);
 						changed = true;
 					}
