@@ -1047,14 +1047,20 @@ export default function init () {
 					changed = true;
 				};
 
+				var authorCmp = function(a, b) {
+					return a.name.localeCompare(b.name) || a.email.localeCompare(b.email);
+				};
+
 				document.getElementById('showFileCommits').onclick = function(ev) {
 					var fsEntry = getPathEntry(window.FileTree, breadcrumbPath);
 					if (fsEntry) {
 						activeCommitSet = findCommitsForPath(breadcrumbPath);
-						activeCommitSet.forEach(async c => {
-							const diff = await (await fetch(apiPrefix + '/repo/diff', {method: 'POST', body: JSON.stringify({repo: repoPrefix, hash: c.sha})})).text();
-							console.log(diff);
-						});
+						const authors = utils.uniq(activeCommitSet.map(c => c.author), authorCmp);
+						console.log(authors);
+						// activeCommitSet.forEach(async c => {
+						// 	const diff = await (await fetch(apiPrefix + '/repo/diff', {method: 'POST', body: JSON.stringify({repo: repoPrefix, hash: c.sha})})).text();
+						// 	console.log(diff);
+						// });
 						showCommitsForFile(fsEntry);
 						changed = true;
 					}
