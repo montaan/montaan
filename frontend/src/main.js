@@ -1005,8 +1005,11 @@ export default function init () {
 					} else if (false) {
 						showCommitsForFile(touchedFiles[cf % touchedFiles.length]);
 						changed = true;
-					} else if (false) {
-						var c = commits[commits.length-1-(cf % commits.length)];
+					} else if (commitsPlaying) {
+						var idx = activeCommitSet.length-1-(cf % activeCommitSet.length);
+						var c = activeCommitSet[idx];
+						var slider = document.getElementById('commitSlider');
+						slider.value = idx;
 						showCommit(c.sha);
 						changed = true;
 					}
@@ -1035,6 +1038,13 @@ export default function init () {
 				var findCommitsForPath = function(path) {
 					path = path.substring(repoPrefix.length + 2);
 					return commits.filter(c => c.files.some(f => f.path.startsWith(path)));
+				};
+
+				var commitsPlaying = false;
+
+				document.getElementById('playCommits').onclick = function(ev) {
+					commitsPlaying = !commitsPlaying;
+					changed = true;
 				};
 
 				document.getElementById('showFileCommits').onclick = function(ev) {
