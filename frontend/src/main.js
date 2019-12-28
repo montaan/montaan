@@ -1012,6 +1012,8 @@ export default function init () {
 					}
 				};
 				changed = true;
+
+				var activeCommitSet = commits;
 				
 				var showCommit = function(sha) {
 					var c = commitIndex[sha];
@@ -1030,9 +1032,15 @@ export default function init () {
 					showLinesForEntry(lineGeo, fsEntry, 1);
 				};
 
+				var findCommitsForPath = function(path) {
+					path = path.substring(repoPrefix.length + 2);
+					return commits.filter(c => c.files.some(f => f.path.startsWith(path)));
+				};
+
 				document.getElementById('showFileCommits').onclick = function(ev) {
 					var fsEntry = getPathEntry(window.FileTree, breadcrumbPath);
 					if (fsEntry) {
+						activeCommitSet = findCommitsForPath(breadcrumbPath);
 						showCommitsForFile(fsEntry);
 						changed = true;
 					}
@@ -1040,15 +1048,15 @@ export default function init () {
 
 				document.getElementById('commitSlider').oninput = function(ev) {
 					var v = parseInt(this.value);
-					if (commits[v]) {
-						showCommit(commits[v].sha);
+					if (activeCommitSet[v]) {
+						showCommit(activeCommitSet[v].sha);
 						changed = true;
 					}
 				};
 				document.getElementById('previousCommit').onclick = function(ev) {
 					var slider = document.getElementById('commitSlider');
 					var v = parseInt(slider.value) - 1;
-					if (commits[v]) {
+					if (activeCommitSet[v]) {
 						slider.value = v;
 						slider.oninput();
 					}
@@ -1056,7 +1064,7 @@ export default function init () {
 				document.getElementById('nextCommit').onclick = function(ev) {
 					var slider = document.getElementById('commitSlider');
 					var v = parseInt(slider.value) + 1;
-					if (commits[v]) {
+					if (activeCommitSet[v]) {
 						slider.value = v;
 						slider.oninput();
 					}
