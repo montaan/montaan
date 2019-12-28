@@ -1041,6 +1041,10 @@ export default function init () {
 					var fsEntry = getPathEntry(window.FileTree, breadcrumbPath);
 					if (fsEntry) {
 						activeCommitSet = findCommitsForPath(breadcrumbPath);
+						activeCommitSet.forEach(async c => {
+							const diff = await (await fetch(apiPrefix + '/repo/diff', {method: 'POST', body: JSON.stringify({repo: repoPrefix, hash: c.sha})})).text();
+							console.log(diff);
+						});
 						showCommitsForFile(fsEntry);
 						changed = true;
 					}
