@@ -130,6 +130,13 @@ var slash = '/'.charCodeAt(0);
 
 var utils = module.exports = {
 
+	uniq: function(array, cmp) {
+		return array.sort(cmp).reduce(function(s,a) {
+			if (s.length === 0 || cmp(s[s.length-1], a) !== 0) s.push(a);
+			return s;
+		}, []);
+	},
+
 	findIntersectionsUnderEvent: function(ev, camera, objects) {
 
 		var style = getComputedStyle(ev.target);
