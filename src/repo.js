@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const repoDataShape = { url:isStrlen(1,1024) };
 const exec = require('child_process').exec;
+const mime = require('mime-types');
 
 function assertRepoFile(fsPath) {
     const filePath = path.resolve('repos', fsPath);
@@ -29,7 +30,7 @@ const Repos = {
 
     fs: async function(req, res, fsPath) {
         var [error, { filePath, stat }] = assertRepoFile(decodeURIComponent(fsPath)); if (error) return error;
-        res.writeHeader(200, {'Content-Type': 'text/plain', 'Content-Length': stat.size});
+        res.writeHeader(200, {'Content-Type': mime.lookup(filePath) || 'text/plain', 'Content-Length': stat.size});
         const stream = fs.createReadStream(filePath);
         stream.on('open', () => stream.pipe(res));
         await new Promise((resolve, reject)  => {

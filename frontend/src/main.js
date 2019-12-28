@@ -307,6 +307,7 @@ export default function init () {
 											obj3.visible = false;
 											window.imageObj = obj3;
 											var img = new Image();
+											img.crossOrigin = 'anonymous';
 											img.src = apiPrefix+'/repo/file'+fullPath;
 											img.obj = obj3;
 											img.onload = function() {
@@ -317,6 +318,7 @@ export default function init () {
 													this.obj.scale.y *= this.height/maxD;
 													this.obj.material = new THREE.MeshBasicMaterial({
 														map: new THREE.Texture(this),
+														transparent: true,
 														depthTest: false,
 														depthWrite: false
 													});
@@ -789,13 +791,18 @@ export default function init () {
 				}
 			};
 
-			var showLinesForEntry = function(geo, entry, depth=0, recurse=true, avoidModel=null) {
-				if (recurse) for (var i = 0; i < geo.vertices.length; i++) geo.vertices[i].set(-100,-100,-100);
+			var showLinesForEntry = function(geo, entry, depth=0, recurse=true, avoidModel=null, first=true) {
+				if (first) for (var i = 0; i < geo.vertices.length; i++) geo.vertices[i].set(-100,-100,-100);
 				if (entry.outgoingLines) {
 					entry.outgoingLines.forEach(l => {
 						if (l.dst.model !== avoidModel) updateLineBetweenEntries(geo, l.index, l.color, l.src.model, l.src.entry, l.dst.model, l.dst.entry);
-						if (depth > 0) showLinesForEntry(geo, l.dst.entry, depth-1, false, l.src.model);
+						if (depth > 0) showLinesForEntry(geo, l.dst.entry, depth-1, false, l.src.model, false);
 					});
+				}
+				if (recurse) {
+					for (let e in entry.entries) {
+						showLinesForEntry(geo, entry.entries[e], depth, recurse, avoidModel, false);
+					}
 				}
 			};
 		}
@@ -1021,6 +1028,14 @@ export default function init () {
 
 				var showCommitsForFile = function(fsEntry) {
 					showLinesForEntry(lineGeo, fsEntry, 1);
+				};
+
+				document.getElementById('showFileCommits').onclick = function(ev) {
+					var fsEntry = getPathEntry(window.FileTree, breadcrumbPath);
+					if (fsEntry) {
+						showCommitsForFile(fsEntry);
+						changed = true;
+					}
 				};
 
 				document.getElementById('commitSlider').oninput = function(ev) {
