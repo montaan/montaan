@@ -27,7 +27,20 @@ Test vis
 3. Draw lines from tests to files & coverage
 
 
-Spotify vis
-===
+Git vis UI model
+---
 
-1. Get your playlists & songs with the Spotify API.
+The two main ways to show an object are highlighting it in the tree and bringing it to fore.
+Highlighting displays the object in context but requires navigation to view object details.
+Bringing the item to fore displays object details readily but uses a large solid angle and makes the context hard to see.
+
+For single objects, quick dive to detail + back button for quick return is workable.
+For multiple objects, bringing related detail to fore is better (e.g. search results with snippets.)
+Commit change lists need a view that's a scrollable drill-down list with a diff view of the code files.
+
+Currently selected file
+Authors of the file
+Commits that modified the file
+Diffs that created the file
+Timeline of the file
+Dependencies of the file
