@@ -72,11 +72,22 @@ body
 	color: rgb(0, 0, 0);
 }
 .commit-diff .prev {
-	background: rgba(255, 158, 158, 0.562);
+	background: rgba(216, 216, 215, 0.562);
 	color: rgb(0, 0, 0);
 }
 .commit-diff .cur {
-	background: rgba(158, 255, 179, 0.562);
+	background: rgba(253, 255, 158, 0.562);
+	font-weight: bold;
+	color: rgb(0, 0, 0);
+}
+.commit-diff .diff {
+	margin-top: 8px;
+	background: rgba(197, 204, 255, 0.562);
+	font-weight: bold;
+	color: rgb(0, 0, 0);
+}
+.commit-diff .index {
+	background: rgba(255, 236, 255, 0.562);
 	color: rgb(0, 0, 0);
 }
 

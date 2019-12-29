@@ -1064,11 +1064,13 @@ export default function init () {
 					const container = span();
 					lines.forEach(line => {
 						var lineClass = '';
-						if (line.startsWith("+ ")) lineClass = 'add';
-						else if (line.startsWith("- ")) lineClass = 'sub';
-						else if (line.startsWith("@@ ")) lineClass = 'pos';
+						if (line.startsWith("@@ ")) lineClass = 'pos';
 						else if (line.startsWith("--- ")) lineClass = 'prev';
 						else if (line.startsWith("+++ ")) lineClass = 'cur';
+						else if (line.startsWith("diff --git ")) lineClass = 'diff';
+						else if (/^index [0-9a-f]+\.\.[0-9a-f]+ [0-9]{6}$/.test(line)) lineClass = 'index';
+						else if (line.startsWith("+")) lineClass = 'add';
+						else if (line.startsWith("-")) lineClass = 'sub';
 						container.appendChild(span(lineClass, line));
 					});
 					return container;
