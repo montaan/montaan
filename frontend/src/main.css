@@ -59,6 +59,26 @@ body
 #activeCommits span.commit-diff {
 	margin-top: 10px;
 }
+.commit-diff .add {
+	background: rgba(158, 255, 179, 0.562);
+	color: rgb(0,40,0);
+}
+.commit-diff .sub {
+	background: rgba(255, 158, 158, 0.562);
+	color: rgb(40,00,0);
+}
+.commit-diff .pos {
+	background: rgba(158, 236, 255, 0.562);
+	color: rgb(0, 0, 0);
+}
+.commit-diff .prev {
+	background: rgba(255, 158, 158, 0.562);
+	color: rgb(0, 0, 0);
+}
+.commit-diff .cur {
+	background: rgba(158, 255, 179, 0.562);
+	color: rgb(0, 0, 0);
+}
 
 #subscribe {
 	display: none;

@@ -1052,11 +1052,26 @@ export default function init () {
 					return a.name.localeCompare(b.name) || a.email.localeCompare(b.email);
 				};
 
-				var span = function(className, content) {
+				var span = function(className='', content='') {
 					var el = document.createElement('span');
 					el.className = className;
 					el.textContent = content;
 					return el;
+				};
+
+				var formatDiff = function(diff) {
+					const lines = diff.split("\n");
+					const container = span();
+					lines.forEach(line => {
+						var lineClass = '';
+						if (line.startsWith("+ ")) lineClass = 'add';
+						else if (line.startsWith("- ")) lineClass = 'sub';
+						else if (line.startsWith("@@ ")) lineClass = 'pos';
+						else if (line.startsWith("--- ")) lineClass = 'prev';
+						else if (line.startsWith("+++ ")) lineClass = 'cur';
+						container.appendChild(span(lineClass, line));
+					});
+					return container;
 				};
 
 				var updateActiveCommitSetDiffs = function() {
@@ -1068,12 +1083,13 @@ export default function init () {
 						var dateSpan = span('commit-date', c.date.toString());
 						var authorSpan = span('commit-author', `${c.author.name} <${c.author.email}>`);
 						var messageSpan = span('commit-message', c.message);
-						var diffSpan = span('commit-diff', c.diff);
+						var diffSpan = span('commit-diff', '');
+						if (c.diff) diffSpan.appendChild(formatDiff(c.diff));
 						div.append(hashSpan, dateSpan, authorSpan, messageSpan, diffSpan);
 						el.appendChild(div);
 					});
 				};
-				
+
 				var updateActiveCommitSetAuthors = function(authors) {
 					var el = document.getElementById('authors');
 					while (el.firstChild) el.removeChild(el.firstChild);
