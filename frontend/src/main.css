@@ -24,6 +24,7 @@ body
 
 	overflow: auto;
 	font-size: 10px;
+	pointer-events: none;
 }
 
 #authors .author-email:before { content: " <"; }
@@ -43,6 +44,7 @@ body
 
 	overflow: auto;
 	font-size: 10px;
+	pointer-events: none;
 }
 
 #activeCommits div {

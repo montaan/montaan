@@ -1059,14 +1059,61 @@ export default function init () {
 					return el;
 				};
 
+				var parseDiff = function(diff) {
+					const lines = diff.split("\n");
+					const changes = [];
+					var currentChange = { cmd: '', index: '', srcPath: '', dstPath: '', changes: [] };
+					var pos = null;
+					var parsePos = function(posMatch, line) {
+						pos = {
+							previous: {line: parseInt(posMatch[1]), lineCount: parseInt(posMatch[2])},
+							current: {line: parseInt(posMatch[3]), lineCount: parseInt(posMatch[4])},
+						};
+						currentChange.changes.push({pos, lines: [line.substring(posMatch[0].length)]});
+					};
+					var parseCmd = function(line) {
+						currentChange = { cmd: '', index: '', srcPath: '', dstPath: '', changes: [] };
+						pos = null;
+						currentChange.cmd = line;
+					};
+					lines.forEach(line => {
+						if (!currentChange.cmd) parseCmd(line);
+						else if (!currentChange.index) currentChange.index = line;
+						else if (!currentChange.srcPath) currentChange.srcPath = line.substring(5);
+						else if (!currentChange.dstPath) currentChange.dstPath = line.substring(5);
+						else if (!pos) {
+							var posMatch = line.match(/^@@ -(\d+),(\d+) \+(\d+),(\d+) @@/);
+							parsePos(posMatch, line);
+						} else if (/^[ +-]/.test(line)) {
+							currentChange.changes[currentChange.changes.length-1].lines.push(line);
+						} else {
+							var posMatch = line.match(/^@@ -(\d+),(\d+) \+(\d+),(\d+) @@/);
+							if (posMatch) parsePos(posMatch, line);
+							else {
+								changes.push(currentChange);
+								parseCmd(line);
+							}
+						}
+					});
+					if (currentChange.cmd) changes.push(currentChange);
+					return changes;
+				};
+
 				var formatDiff = function(diff) {
+					var changes = parseDiff(diff);
+					changes = changes.filter(c => ('/' + repoPrefix + c.dstPath).startsWith(breadcrumbPath));
+					console.log(changes);
 					const lines = diff.split("\n");
 					const container = span();
 					lines.forEach(line => {
 						var lineClass = '';
 						if (line.startsWith("@@ ")) lineClass = 'pos';
-						else if (line.startsWith("--- ")) lineClass = 'prev';
-						else if (line.startsWith("+++ ")) lineClass = 'cur';
+						else if (line.startsWith("--- ")) {
+							lineClass = 'prev';
+						}
+						else if (line.startsWith("+++ ")) {
+							lineClass = 'cur';
+						}
 						else if (line.startsWith("diff --git ")) lineClass = 'diff';
 						else if (/^index [0-9a-f]+\.\.[0-9a-f]+ [0-9]{6}$/.test(line)) lineClass = 'index';
 						else if (line.startsWith("+")) lineClass = 'add';

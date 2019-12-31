@@ -34,7 +34,11 @@
         [] Click handler for author timeline (raycast to scene, find closest author to ray if ray is in the active area for authors)
         [] Display list of files touched by author
     [] Click handler for commit timeline (raycast to scene, find closest commit to ray if ray is in the active area for commits)
-    [] Display list of authors who have worked on the file
+    [x] Display list of authors who have worked on the file
+    [x] Display list of commits and diffs for a file
+    [] Crop commit diffs to only ones relevant to file
+    [] Link from authors list to files and commits in current active set
+    [] Link from commits list to files and authors in current active set
 
 # Performance
     [] Pipeline text model creation to avoid frame stutter (probably coming from shader compile / geometry creation)
