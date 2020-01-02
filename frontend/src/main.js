@@ -1062,32 +1062,36 @@ export default function init () {
 				var parseDiff = function(diff) {
 					const lines = diff.split("\n");
 					const changes = [];
-					var currentChange = { cmd: '', index: '', srcPath: '', dstPath: '', changes: [] };
+					var currentChange = { cmd: '', newMode: '', index: '', srcPath: '', dstPath: '', changes: [] };
 					var pos = null;
 					var parsePos = function(posMatch, line) {
+						if (!posMatch) console.log(line, lines);
 						pos = {
 							previous: {line: parseInt(posMatch[1]), lineCount: parseInt(posMatch[2])},
-							current: {line: parseInt(posMatch[3]), lineCount: parseInt(posMatch[4])},
+							current: {line: parseInt(posMatch[3]), lineCount: parseInt(posMatch[5])},
 						};
 						currentChange.changes.push({pos, lines: [line.substring(posMatch[0].length)]});
 					};
 					var parseCmd = function(line) {
-						currentChange = { cmd: '', index: '', srcPath: '', dstPath: '', changes: [] };
+						currentChange = { cmd: '', newMode: '', index: '', srcPath: '', dstPath: '', changes: [] };
 						pos = null;
 						currentChange.cmd = line;
 					};
 					lines.forEach(line => {
 						if (!currentChange.cmd) parseCmd(line);
-						else if (!currentChange.index) currentChange.index = line;
+						else if (!currentChange.index) {
+							if (/^(new|deleted) /.test(line)) currentChange.newMode = line;
+							else currentChange.index = line;
+						}
 						else if (!currentChange.srcPath) currentChange.srcPath = line.substring(5);
 						else if (!currentChange.dstPath) currentChange.dstPath = line.substring(5);
 						else if (!pos) {
-							var posMatch = line.match(/^@@ -(\d+),(\d+) \+(\d+),(\d+) @@/);
+							var posMatch = line.match(/^@@ -(\d+),(\d+) \+(\d+)(,(\d+))? @@/);
 							parsePos(posMatch, line);
 						} else if (/^[ +-]/.test(line)) {
 							currentChange.changes[currentChange.changes.length-1].lines.push(line);
 						} else {
-							var posMatch = line.match(/^@@ -(\d+),(\d+) \+(\d+),(\d+) @@/);
+							var posMatch = line.match(/^@@ -(\d+),(\d+) \+(\d+)(,(\d+))? @@/);
 							if (posMatch) parsePos(posMatch, line);
 							else {
 								changes.push(currentChange);
@@ -1100,25 +1104,25 @@ export default function init () {
 				};
 
 				var formatDiff = function(diff) {
-					var changes = parseDiff(diff);
-					changes = changes.filter(c => ('/' + repoPrefix + c.dstPath).startsWith(breadcrumbPath));
-					console.log(changes);
-					const lines = diff.split("\n");
 					const container = span();
-					lines.forEach(line => {
-						var lineClass = '';
-						if (line.startsWith("@@ ")) lineClass = 'pos';
-						else if (line.startsWith("--- ")) {
-							lineClass = 'prev';
-						}
-						else if (line.startsWith("+++ ")) {
-							lineClass = 'cur';
-						}
-						else if (line.startsWith("diff --git ")) lineClass = 'diff';
-						else if (/^index [0-9a-f]+\.\.[0-9a-f]+ [0-9]{6}$/.test(line)) lineClass = 'index';
-						else if (line.startsWith("+")) lineClass = 'add';
-						else if (line.startsWith("-")) lineClass = 'sub';
-						container.appendChild(span(lineClass, line));
+					const changes = parseDiff(diff);
+					changes.forEach(change => {
+						const inPath = ('/' + repoPrefix + change.dstPath).startsWith(breadcrumbPath);
+						const changeEl = span(inPath ? '' : 'collapsed');
+						container.append(changeEl);
+						changeEl.append(
+							span('prev', change.srcPath),
+							span('cur', change.dstPath)
+						);
+						change.changes.forEach(({pos, lines}) => {
+							changeEl.append(span('pos', `-${pos.previous.line},${pos.previous.lineCount} +${pos.current.line},${pos.current.lineCount}`));
+							lines.forEach(line => {
+								var lineClass = '';
+								if (line.startsWith("+")) lineClass = 'add';
+								else if (line.startsWith("-")) lineClass = 'sub';
+								changeEl.appendChild(span(lineClass, line));
+							});
+						});
 					});
 					return container;
 				};
@@ -1157,15 +1161,18 @@ export default function init () {
 						activeCommitSet = findCommitsForPath(breadcrumbPath);
 						const authors = utils.uniq(activeCommitSet.map(c => c.author), authorCmp);
 						updateActiveCommitSetAuthors(authors);
-						activeCommitSet.forEach(async c => {
+						Promise.all(activeCommitSet.map(async c => {
 							if (!c.diff) {
 								const diff = await (await fetch(apiPrefix + '/repo/diff', {method: 'POST', body: JSON.stringify({repo: repoPrefix, hash: c.sha})})).text();
 								c.diff = diff;
-								updateActiveCommitSetDiffs();
 							}
-						});
+						})).then(updateActiveCommitSetDiffs);
 						showCommitsForFile(fsEntry);
 						changed = true;
+					} else {
+						activeCommitSet = [];
+						updateActiveCommitSetAuthors([]);
+						updateActiveCommitSetDiffs();
 					}
 				};
 

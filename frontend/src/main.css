@@ -58,6 +58,15 @@ body
 	white-space: pre;
 }
 
+#activeCommits .collapsed {
+	height: 0;
+	overflow: hidden;
+}
+#activeCommits span.commit-diff > span > span {
+	border-bottom: 1px dotted silver;
+	margin-bottom: 1px;
+}
+
 #activeCommits span.commit-diff {
 	margin-top: 10px;
 }
