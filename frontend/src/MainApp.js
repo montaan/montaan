@@ -1,6 +1,7 @@
 import React from 'react';
 import init from './main.js';
 import CommitControls from './components/CommitControls';
+import CommitInfo from './components/CommitInfo';
 import Search from './components/Search';
 import Breadcrumb from './components/Breadcrumb';
 
@@ -27,9 +28,7 @@ class MainApp extends React.Component {
                 <Search />
                 <Breadcrumb />
                 <CommitControls />
-
-                <div id="authors"/>
-                <div id="activeCommits"/>
+                <CommitInfo />
             </div>
         );
     }

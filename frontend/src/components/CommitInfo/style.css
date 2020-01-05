@@ -1,0 +1,109 @@
+
+#commitInfo.hidden > div {
+	display: none;
+}
+
+#commitInfo > button {
+	position: absolute;
+	right: 0px;
+	top: 96px;
+	z-index: 1001;
+
+	height: 22px;
+	line-height: 22px;
+	padding: 0px 10px;
+	font-size: 8px;
+	vertical-align: top;
+}
+
+#authors {
+	position: absolute;
+	background: white;
+
+	z-index: 1000;
+
+	right: 10px;
+	top: 126px;
+	bottom: 0px;
+
+	height: auto;
+	width: 200px;
+
+	overflow: auto;
+	font-size: 10px;
+}
+
+#authors .author-email:before { content: " <"; }
+#authors .author-email:after { content: ">"; }
+
+#activeCommits {
+	position: absolute;
+	background: white;
+
+	z-index: 1000;
+
+	right: 220px;
+	top: 126px;
+	bottom: 0px;
+
+	height: auto;
+	width: 400px;
+
+	overflow: auto;
+	font-size: 10px;
+}
+
+#activeCommits div {
+	padding-bottom: 10px;
+	margin-bottom: 10px;
+	border-bottom: 1px solid silver;
+}
+
+#activeCommits span {
+	display: block;
+	white-space: pre;
+}
+
+#activeCommits .collapsed {
+	height: 0;
+	overflow: hidden;
+}
+#activeCommits span.commit-diff > span > span {
+	border-bottom: 1px dotted silver;
+	margin-bottom: 1px;
+}
+
+#activeCommits span.commit-diff {
+	margin-top: 10px;
+}
+.commit-diff .add {
+	background: rgba(158, 255, 179, 0.562);
+	color: rgb(0,40,0);
+}
+.commit-diff .sub {
+	background: rgba(255, 158, 158, 0.562);
+	color: rgb(40,00,0);
+}
+.commit-diff .pos {
+	background: rgba(158, 236, 255, 0.562);
+	color: rgb(0, 0, 0);
+}
+.commit-diff .prev {
+	background: rgba(216, 216, 215, 0.562);
+	color: rgb(0, 0, 0);
+}
+.commit-diff .cur {
+	background: rgba(253, 255, 158, 0.562);
+	font-weight: bold;
+	color: rgb(0, 0, 0);
+}
+.commit-diff .diff {
+	margin-top: 8px;
+	background: rgba(197, 204, 255, 0.562);
+	font-weight: bold;
+	color: rgb(0, 0, 0);
+}
+.commit-diff .index {
+	background: rgba(255, 236, 255, 0.562);
+	color: rgb(0, 0, 0);
+}
