@@ -1080,8 +1080,15 @@ export default function init () {
 					lines.forEach(line => {
 						if (!currentChange.cmd) parseCmd(line);
 						else if (!currentChange.index) {
-							if (/^(new|deleted) /.test(line)) currentChange.newMode = line;
-							else currentChange.index = line;
+							if (currentChange.similarity) {
+								if (!currentChange.srcPath) currentChange.srcPath = line.substring(12);
+								else if (!currentChange.dstPath) currentChange.dstPath = line.substring(10);
+								else pos = true;
+							} else {
+								if (/^similarity index /.test(line)) currentChange.similarity = line;
+								else if (/^(new|deleted) /.test(line)) currentChange.newMode = line;
+								else currentChange.index = line;
+							}
 						}
 						else if (!currentChange.srcPath) currentChange.srcPath = line.substring(5);
 						else if (!currentChange.dstPath) currentChange.dstPath = line.substring(5);
