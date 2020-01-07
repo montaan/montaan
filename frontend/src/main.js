@@ -3,7 +3,7 @@ import { EALREADY } from 'constants';
 
 const apiPrefix = 'http://localhost:8008/_';
 const repoPrefix = 'v8/v8';
-const MAX_COMMITS = 1000;
+const MAX_COMMITS = 1000000;
 
 const THREE = require('three');
 global.THREE = THREE;
@@ -822,12 +822,14 @@ export default function init () {
 				}
 				setLoaded(true);
 
+				console.time("commits");
+
 				var commits = commitLog.split(/^commit /m);
 				var authors = {};
 				var commitIndex = {};
 				commits.shift();
-				console.log(commits.length);
-				commits.splice(MAX_COMMITS);
+				console.log(commits.length, 'commits');
+				// commits.splice(MAX_COMMITS);
 				commits = commits.map(function(c) {
 					var lines = c.split("\n");
 					var hash = lines[0];
@@ -860,27 +862,29 @@ export default function init () {
 					commitIndex[commit.sha] = commit;
 					return commit;
 				});
+				console.timeLog("commits", "commits preparse");
 
-				var changes = commitChanges.split('\n\n');
-				changes.splice(MAX_COMMITS);
-
-				changes.forEach(function(c, index) {
-					if (c) {
-						var lines = c.split('\n');
-						while (lines[lines.length-1] === '') lines.pop();
-						var hash = lines[0];
-						if (!commitIndex[hash]) {
-							// console.log(hash, index, c);
-						} else {
-							commitIndex[hash].files = lines.slice(1).map(function(fs) {
-								const [action, path, renamed] = fs.split(/\t/);
-								return {action, path, renamed};
-							});
-						}
+				{
+					let lineStart = 0, hash = null, setHash = false;
+					for (let i = 0; i < commitChanges.length; i++) {
+						let c = commitChanges.charCodeAt(i);
+						if (c === 10) { // new line
+							if (lineStart !== i) {
+								if (setHash) hash = commitChanges.substring(lineStart, i);
+								else if (commitIndex[hash]) {
+									let [action, path, renamed] = commitChanges.substring(lineStart, i).split("\t");
+									commitIndex[hash].files.push({action, path, renamed});
+								}
+							}
+							lineStart = i+1;
+						} else if (lineStart === i) setHash = ((c >= 97 && c <= 102) || (c >= 48 && c <= 57));
 					}
-				});
+				}
+
 				var commitsFSEntry = {name: "Commits", title: "Commits", index: 0, entries: {}};
 				var commitsRoot = {name:"", title: "", index:0, entries:{"Commits": commitsFSEntry}};
+
+				console.timeLog("commits", "changes preparse");
 
 				var mkfile = function(filename) {
 					return {
@@ -918,6 +922,7 @@ export default function init () {
 					c.fsEntry = commitsFSEntry.entries[c.sha];
 					commitsFSCount += 5;
 				});
+				console.timeLog("commits", "done with commits");
 
 				var authorsFSEntry = {name: "Authors", title: "Authors", index: 0, entries: {}};
 				var authorsRoot = {name:"", title: "", index:0, entries:{"Authors": authorsFSEntry}};
@@ -936,20 +941,21 @@ export default function init () {
 						authorsFSCount++;
 					}
 				}
+				console.timeLog("commits", "done with authors");
 
 				window.AuthorTree = {tree: authorsRoot, count: authorsFSCount};
-				authorModel = createFileListModel(window.AuthorTree.count, window.AuthorTree.tree);
-				authorModel.position.set(1.5, -0.5, 0.0);
-				modelPivot.add(authorModel);
+				// authorModel = createFileListModel(window.AuthorTree.count, window.AuthorTree.tree);
+				// authorModel.position.set(1.5, -0.5, 0.0);
+				// modelPivot.add(authorModel);
 
 				window.CommitTree = {tree: commitsRoot, count: commitsFSCount};
-				processModel = createFileListModel(window.CommitTree.count, window.CommitTree.tree);
-				processModel.position.set(0.5, -0.5, 0.0);
-				modelPivot.add(processModel);
+				// processModel = createFileListModel(window.CommitTree.count, window.CommitTree.tree);
+				// processModel.position.set(0.5, -0.5, 0.0);
+				// modelPivot.add(processModel);
 
 				model.updateMatrix();
-				processModel.updateMatrix();
-				authorModel.updateMatrix();
+				// processModel.updateMatrix();
+				// authorModel.updateMatrix();
 
 				var lineGeo = new THREE.Geometry();
 
@@ -961,12 +967,12 @@ export default function init () {
 					color.setHSL((h%7)/7, 1, 0.5);
 					h+=2;
 					author.color = color;
-					for (var i=0; i<author.length; i++) {
-						var commit = author[i];
-						if (commit && commit.fsEntry && author.fsEntry && author.fsEntry.entries[commit.sha]) {
-							addLineBetweenEntries(lineGeo, color, processModel, commit.fsEntry, authorModel, author.fsEntry.entries[commit.sha]);
-						}
-					}
+					// for (var i=0; i<author.length; i++) {
+						// var commit = author[i];
+						// if (commit && commit.fsEntry && author.fsEntry && author.fsEntry.entries[commit.sha]) {
+						// 	addLineBetweenEntries(lineGeo, color, processModel, commit.fsEntry, authorModel, author.fsEntry.entries[commit.sha]);
+						// }
+					// }
 				}
 
 				var touchedFilesIndex = {};
@@ -982,12 +988,14 @@ export default function init () {
 							if (fileEntry) {
 								if (!touchedFilesIndex[filePath]) touchedFilesIndex[filePath] = fileEntry;
 								var author = authors[commitIndex[sha].author.name];
-								addLineBetweenEntries(lineGeo, author.color, processModel, commitFSEntry, model, fileEntry);
+								// addLineBetweenEntries(lineGeo, author.color, processModel, commitFSEntry, model, fileEntry);
 							}
 						}
 					}, window.CommitTree.tree.name+"/Commits/");
 				}
 				var touchedFiles = Object.keys(touchedFilesIndex).sort().map(k => touchedFilesIndex[k]);
+				console.timeLog("commits", "done with touchedFiles");
+
 				lineGeo.vertices.push(new THREE.Vector3(0,0,0), new THREE.Vector3(0,0,0));
 				lineGeo.colors.push(new THREE.Color(0,0,0), new THREE.Color(0,0,0));
 				connectionLines = new THREE.LineSegments(lineGeo, new THREE.LineBasicMaterial({
@@ -1017,6 +1025,8 @@ export default function init () {
 				};
 				changed = true;
 
+				console.timeEnd("commits");
+
 				var activeCommitSet = commits;
 				
 				var showCommit = function(sha) {
@@ -1038,7 +1048,13 @@ export default function init () {
 
 				var findCommitsForPath = function(path) {
 					path = path.substring(repoPrefix.length + 2);
-					return commits.filter(c => c.files.some(f => f.path.startsWith(path)));
+					return commits.filter(c => c.files.some(f => {
+ 						if (f.renamed && f.renamed.startsWith(path)) {
+							if (f.renamed === path) path = f.path;
+							return true;
+						}
+						if (f.path.startsWith(path)) return true;
+					}));
 				};
 
 				var commitsPlaying = false;
@@ -1060,6 +1076,44 @@ export default function init () {
 				};
 
 				var parseDiff = function(diff) {
+					/*
+					1. It is preceded with a "git diff" header that looks like this:
+
+						diff --git a/file1 b/file2
+
+					The a/ and b/ filenames are the same unless rename/copy is involved. Especially, even for a
+					creation or a deletion, /dev/null is not used in place of the a/ or b/ filenames.
+
+					When rename/copy is involved, file1 and file2 show the name of the source file of the rename/copy
+					and the name of the file that rename/copy produces, respectively.
+
+					2. It is followed by one or more extended header lines:
+
+						old mode <mode>
+						new mode <mode>
+						deleted file mode <mode>
+						new file mode <mode>
+						copy from <path>
+						copy to <path>
+						rename from <path>
+						rename to <path>
+						similarity index <number>
+						dissimilarity index <number>
+						index <hash>..<hash> <mode>
+
+					File modes are printed as 6-digit octal numbers including the file type and file permission bits.
+
+					Path names in extended headers do not include the a/ and b/ prefixes.
+
+					The similarity index is the percentage of unchanged lines, and the dissimilarity index is the
+					percentage of changed lines. It is a rounded down integer, followed by a percent sign. The
+					similarity index value of 100% is thus reserved for two equal files, while 100% dissimilarity
+					means that no line from the old file made it into the new one.
+
+					The index line includes the SHA-1 checksum before and after the change. The <mode> is included if
+					the file mode does not change; otherwise, separate lines indicate the old and the new mode.
+
+					*/
 					const lines = diff.split("\n");
 					const changes = [];
 					var currentChange = { cmd: '', newMode: '', index: '', srcPath: '', dstPath: '', changes: [] };
@@ -1067,8 +1121,8 @@ export default function init () {
 					var parsePos = function(posMatch, line) {
 						if (!posMatch) console.log(line, lines);
 						pos = {
-							previous: {line: parseInt(posMatch[1]), lineCount: parseInt(posMatch[2])},
-							current: {line: parseInt(posMatch[3]), lineCount: parseInt(posMatch[5])},
+							previous: {line: parseInt(posMatch[1]), lineCount: parseInt(posMatch[3])},
+							current: {line: parseInt(posMatch[4]), lineCount: parseInt(posMatch[6])},
 						};
 						currentChange.changes.push({pos, lines: [line.substring(posMatch[0].length)]});
 					};
@@ -1078,33 +1132,26 @@ export default function init () {
 						currentChange.cmd = line;
 					};
 					lines.forEach(line => {
-						if (!currentChange.cmd) parseCmd(line);
-						else if (!currentChange.index) {
-							if (currentChange.similarity) {
-								if (!currentChange.srcPath) currentChange.srcPath = line.substring(12);
-								else if (!currentChange.dstPath) currentChange.dstPath = line.substring(10);
-								else pos = true;
-							} else {
-								if (/^similarity index /.test(line)) currentChange.similarity = line;
-								else if (/^(new|deleted) /.test(line)) currentChange.newMode = line;
-								else currentChange.index = line;
-							}
+						if (/^diff/.test(line)) {
+							if (currentChange.cmd) changes.push(currentChange);
+							parseCmd(line);
 						}
-						else if (!currentChange.srcPath) currentChange.srcPath = line.substring(5);
-						else if (!currentChange.dstPath) currentChange.dstPath = line.substring(5);
-						else if (!pos) {
-							var posMatch = line.match(/^@@ -(\d+),(\d+) \+(\d+)(,(\d+))? @@/);
+						else if (line.charCodeAt(0) === 64) {
+							var posMatch = line.match(/^@@ -(\d+)(,(\d+))? \+(\d+)(,(\d+))? @@/);
+							if (!posMatch) posMatch = ['', 0, 0, 0, 0, 0, 0];
 							parsePos(posMatch, line);
-						} else if (/^[ +-]/.test(line)) {
-							currentChange.changes[currentChange.changes.length-1].lines.push(line);
-						} else {
-							var posMatch = line.match(/^@@ -(\d+),(\d+) \+(\d+)(,(\d+))? @@/);
-							if (posMatch) parsePos(posMatch, line);
-							else {
-								changes.push(currentChange);
-								parseCmd(line);
-							}
 						}
+						else if (/^(dis)?similarity index /.test(line)) currentChange.similarity = line;
+						else if (/^(new|deleted|old) /.test(line)) currentChange.newMode = line;
+						else if (/^copy from /.test(line)) currentChange.srcPath = line.substring(10);
+						else if (/^copy to /.test(line)) currentChange.srcPath = line.substring(8);
+						else if (/^rename from /.test(line)) currentChange.srcPath = line.substring(12);
+						else if (/^rename to /.test(line)) currentChange.srcPath = line.substring(10);
+						else if (/^index /.test(line)) currentChange.index = line;
+						else if (/^Binary /.test(line)) parsePos(['', 0, 0, 0, 0, 0, 0], line);
+						else if (!pos && /^\-\-\- /.test(line)) currentChange.srcPath = line.substring(5);
+						else if (!pos && /^\+\+\+ /.test(line)) currentChange.dstPath = line.substring(5);
+						else if (pos) currentChange.changes[currentChange.changes.length-1].lines.push(line);
 					});
 					if (currentChange.cmd) changes.push(currentChange);
 					return changes;
@@ -1134,9 +1181,55 @@ export default function init () {
 					return container;
 				};
 
+				var createCalendar = function(dates) {
+					var createYear = function(year) {
+						const el = document.createElement('div');
+						el.className = 'calendar-year';
+						el.dataset.year = year;
+						for (var i = 0; i < 12; i++) {
+							var monthEl = span('calendar-month');
+							var week = 0;
+							for (var j = 0; j < 31; j++) {
+								var dateString = `${year}-${i<9?'0':''}${i+1}-${j<9?'0':''}${j+1}`;
+								var date = new Date(Date.parse(dateString));
+								if (date.getUTCMonth() === i) {
+									var day = date.getUTCDay();
+									var dayEl = span('calendar-day');
+									dayEl.dataset.day = day;
+									dayEl.dataset.week = week;
+									dayEl.dataset.commitCount = 0;
+									dayEl.dataset.date = dateString;
+									monthEl.appendChild(dayEl);
+									if (day === 0) week++;
+								}
+							}
+							el.appendChild(monthEl);
+						}
+						return el;
+					};
+					const el = document.createElement('div');
+					el.className = 'calendar';
+					var years = {};
+					dates.forEach(d => {
+						const year = d.getUTCFullYear();
+						const month = d.getUTCMonth();
+						const date = d.getUTCDate();
+						if (!years[year]) {
+							years[year] = createYear(year);
+							el.appendChild(years[year]);
+						}
+						years[year].childNodes[month].childNodes[date-1].dataset.commitCount++;
+					});
+					return el;
+				};
+
 				var updateActiveCommitSetDiffs = function() {
-					var el = document.getElementById('activeCommits');
+					var el = document.getElementById('commitList');
 					while (el.firstChild) el.removeChild(el.firstChild);
+					el.dataset.count = activeCommitSet.length;
+
+					el.appendChild(createCalendar(activeCommitSet.map(c => c.date)));
+
 					activeCommitSet.forEach(c => {
 						var div = document.createElement('div');
 						var hashSpan = span('commit-hash', c.sha);
@@ -1144,20 +1237,41 @@ export default function init () {
 						var authorSpan = span('commit-author', `${c.author.name} <${c.author.email}>`);
 						var messageSpan = span('commit-message', c.message);
 						var diffSpan = span('commit-diff', '');
-						if (c.diff) diffSpan.appendChild(formatDiff(c.diff));
-						div.append(hashSpan, dateSpan, authorSpan, messageSpan, diffSpan);
+						if (c.diff && !c.diffEl) c.diffEl = formatDiff(c.diff);
+						if (c.diffEl) diffSpan.appendChild(c.diffEl);
+						var toggle = span('commit-toggle', 'Full info');
+						var toggleDiffs = span('commit-toggle-diffs', 'All changes');
+						toggle.onmousedown = function(ev) { ev.preventDefault(); div.classList.toggle('expanded'); };
+						toggleDiffs.onmousedown = function(ev) { ev.preventDefault(); div.classList.toggle('expanded-diffs'); };
+						div.append(toggle, hashSpan, dateSpan, authorSpan, messageSpan, toggleDiffs, diffSpan);
 						el.appendChild(div);
 					});
 				};
 
-				var updateActiveCommitSetAuthors = function(authors) {
-					var el = document.getElementById('authors');
+				var updateActiveCommitSetAuthors = function(authors, authorCommitCounts) {
+					var el = document.getElementById('authorList');
 					while (el.firstChild) el.removeChild(el.firstChild);
+					el.dataset.count = authors.length;
+					var originalCommitSet = activeCommitSet;
+					var filteredByAuthor = false;
 					authors.forEach(({name, email}) => {
 						var div = document.createElement('div');
+						var key = name + ' <' + email + '>';
+						div.dataset.commitCount = authorCommitCounts[key];
 						var nameSpan = span('author-name', name);
 						var emailSpan = span('author-email', email);
 						div.append(nameSpan, emailSpan);
+						div.onmousedown = function(ev) {
+							ev.preventDefault();
+							if (filteredByAuthor === this) {
+								activeCommitSet = originalCommitSet;
+								filteredByAuthor = false;
+							} else {
+								activeCommitSet = originalCommitSet.filter(c => (c.author.name + ' <' + c.author.email + '>') === key);
+								filteredByAuthor = this;
+							}
+							updateActiveCommitSetDiffs();
+						};
 						el.appendChild(div);
 					});
 				};
@@ -1166,8 +1280,16 @@ export default function init () {
 					var fsEntry = getPathEntry(window.FileTree, breadcrumbPath);
 					if (fsEntry) {
 						activeCommitSet = findCommitsForPath(breadcrumbPath);
-						const authors = utils.uniq(activeCommitSet.map(c => c.author), authorCmp);
-						updateActiveCommitSetAuthors(authors);
+						const authorList = activeCommitSet.map(c => c.author);
+						const authorCommitCounts = {};
+						authorList.forEach(author => {
+							const key = author.name + ' <' + author.email + '>';
+							if (!authorCommitCounts[key]) authorCommitCounts[key] = 0;
+							authorCommitCounts[key]++;
+						});
+						const authors = utils.uniq(authorList, authorCmp);
+						updateActiveCommitSetAuthors(authors, authorCommitCounts);
+						updateActiveCommitSetDiffs();
 						Promise.all(activeCommitSet.map(async c => {
 							if (!c.diff) {
 								const diff = await (await fetch(apiPrefix + '/repo/diff', {method: 'POST', body: JSON.stringify({repo: repoPrefix, hash: c.sha})})).text();

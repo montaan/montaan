@@ -15,8 +15,14 @@ export default class CommitInfo extends React.Component {
         return (
             <div id="commitInfo" className={this.state.visible ? 'visible' : 'hidden'}>
                 <button onClick={this.toggleVisible}>{this.state.visible ? ">" : "<"}</button>
-                <div id="authors"/>
-                <div id="activeCommits"/>
+                <div id="authors">
+                    <h3>Authors</h3>
+                    <div id="authorList"/>
+                </div>
+                <div id="activeCommits">
+                    <h3>Commits</h3>
+                    <div id="commitList"/>
+                </div>
             </div>
         );
     }

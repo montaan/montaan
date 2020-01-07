@@ -2,7 +2,8 @@
 const fs = require('fs');
 const path = require('path');
 const repoDataShape = { url:isStrlen(1,1024) };
-const exec = require('child_process').exec;
+const child_process = require('child_process');
+const exec = child_process.exec;
 const mime = require('mime-types');
 
 function assertRepoFile(fsPath) {
@@ -71,7 +72,7 @@ const Repos = {
         if (!/^[a-f0-9]+$/.test(hash)) return '400: Malformed hash';
         var [error, { filePath }] = assertRepoDir(path.join(repo, 'repo')); if (error) return error;
         await new Promise((resolve, reject) => {
-            exec(`cd ${filePath} && git diff ${hash}~1 ${hash}`, async function(error, stdout, stderr){
+            exec(`cd ${filePath} && git diff ${hash}~1 ${hash}`, {maxBuffer: 2000000}, async function(error, stdout, stderr){
                 if (error) reject(error);
                 res.writeHeader(200, {'Content-Type': 'text/plain'});
                 await res.end(stdout || '');

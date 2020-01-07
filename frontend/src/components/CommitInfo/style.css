@@ -5,7 +5,7 @@
 
 #commitInfo > button {
 	position: absolute;
-	right: 0px;
+	right: -10px;
 	top: 96px;
 	z-index: 1001;
 
@@ -18,62 +18,175 @@
 
 #authors {
 	position: absolute;
-	background: white;
+	background: #f8f8f8;
 
 	z-index: 1000;
 
-	right: 10px;
+	right: 0px;
 	top: 126px;
 	bottom: 0px;
 
 	height: auto;
-	width: 200px;
+	width: 270px;
+
+	padding: 10px;
 
 	overflow: auto;
 	font-size: 10px;
+}
+
+#authorList::before {
+	display: block;
+	content: attr(data-count) " authors";
+	font-size: 14px;
+	font-weight: bold;
+	margin-bottom: 8px;
+}
+
+#commitList::before {
+	display: block;
+	content: attr(data-count) " commits";
+	font-size: 14px;
+	font-weight: bold;
+	margin-bottom: 8px;
 }
 
 #authors .author-email:before { content: " <"; }
 #authors .author-email:after { content: ">"; }
 
+#authorList div:after { content: " (" attr(data-commit-count) ")"; }
+
 #activeCommits {
 	position: absolute;
-	background: white;
+	background: #fff;
 
 	z-index: 1000;
 
-	right: 220px;
+	right: 270px;
 	top: 126px;
 	bottom: 0px;
 
 	height: auto;
-	width: 400px;
+	width: 500px;
+
+	padding: 10px;
 
 	overflow: auto;
 	font-size: 10px;
 }
 
-#activeCommits div {
-	padding-bottom: 10px;
-	margin-bottom: 10px;
-	border-bottom: 1px solid silver;
+#commitList div.calendar-year {
+	padding-bottom: 0px;
+	margin-bottom: 0px;
+	border-bottom: 0;
 }
 
-#activeCommits span {
+.calendar-year:before {
+	content: attr(data-year);
+	display: block;
+}
+
+#commitList .calendar-month {
+	position: relative;
+	display: inline-block;
+	width: 20px;
+	min-height: 20px;
+	margin-right: 2px;
+}
+
+.calendar-day {
+	position: absolute;
+
+	background: #eee;
+
+	width: 2px;
+	height: 2px;
+}
+
+.calendar-day[data-day="1"] { left: 0px; }
+.calendar-day[data-day="2"] { left: 3px; }
+.calendar-day[data-day="3"] { left: 6px; }
+.calendar-day[data-day="4"] { left: 9px; }
+.calendar-day[data-day="5"] { left: 12px; }
+.calendar-day[data-day="6"] { left: 15px; }
+.calendar-day[data-day="0"] { left: 18px; }
+
+.calendar-day[data-week="0"] { top: 0px; }
+.calendar-day[data-week="1"] { top: 3px; }
+.calendar-day[data-week="2"] { top: 6px; }
+.calendar-day[data-week="3"] { top: 9px; }
+.calendar-day[data-week="4"] { top: 12px; }
+.calendar-day[data-week="5"] { top: 15px; }
+
+.calendar-day:not([data-commit-count="0"]) { background: red; }
+.calendar-day[data-commit-count="1"] { background: #62c43b; }
+.calendar-day[data-commit-count="2"] { background: #d860e6; }
+
+#commitList div {
+	/* padding-bottom: 10px;
+	margin-bottom: 10px;
+	border-bottom: 1px solid silver; */
+}
+
+#commitList span {
 	display: block;
 	white-space: pre;
 }
 
-#activeCommits .collapsed {
+#commitList .commit-toggle,
+#commitList .commit-toggle-diffs
+{
+	cursor: pointer;
+}
+
+#commitList div:not(.expanded) .commit-hash, 
+#commitList div:not(.expanded) .commit-diff,
+#commitList div:not(.expanded) .commit-toggle-diffs
+{
 	height: 0;
 	overflow: hidden;
 }
-#activeCommits span.commit-diff > span > span {
+
+#commitList div:not(.expanded) .commit-message
+{
+	height: 1.5em;
+	overflow: hidden;
+	font-weight: bold;
+	font-size: 12px;
+}
+
+#commitList .commit-date,
+#commitList .commit-author
+{
+	display: inline-block;
+}
+
+#commitList div .commit-toggle:before,
+#commitList div .commit-toggle-diffs:before
+{
+	content: "+ ";
+}
+
+#commitList div.expanded .commit-toggle:before,
+#commitList div.expanded-diffs .commit-toggle-diffs:before
+{
+	content: "- ";
+}
+
+.commit-author:before {
+	content: " — ";
+}
+
+#commitList div:not(.expanded-diffs) .collapsed {
+	height: 0;
+	overflow: hidden;
+}
+#commitList span.commit-diff > span > span {
 	border-bottom: 1px dotted silver;
 	margin-bottom: 1px;
 }
 
-#activeCommits span.commit-diff {
+#commitList span.commit-diff {
 	margin-top: 10px;
 }
 .commit-diff .add {
