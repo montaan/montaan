@@ -139,6 +139,12 @@
 	cursor: pointer;
 }
 
+#commitList div .commit-hash, 
+#commitList div .commit-diff
+{
+	transition: 0.3s;
+}
+
 #commitList div:not(.expanded) .commit-hash, 
 #commitList div:not(.expanded) .commit-diff,
 #commitList div:not(.expanded) .commit-toggle-diffs
@@ -159,6 +165,12 @@
 #commitList .commit-author
 {
 	display: inline-block;
+}
+
+#commitList div .commit-toggle,
+#commitList div .commit-toggle-diffs
+{
+	font-weight: bold;
 }
 
 #commitList div .commit-toggle:before,

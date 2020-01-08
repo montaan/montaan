@@ -42,8 +42,9 @@
 }
 
 #showFileCommits {
-	height: 22px;
-	line-height: 22px;
+	height: 36px;
+	line-height: 36px;
 	padding: 0px 10px;
-	font-size: 10px;
+	font-size: 14px;
+    margin-left: 0px;
 }
