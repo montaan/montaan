@@ -339,7 +339,7 @@ export default function init () {
 											xhr.fsEntry = o;
 											xhr.fullPath = fullPath;
 											xhr.onload = function() {
-												if (this.responseText.length < 3e5 && this.obj.parent) {
+												if (this.responseText.length < 1e6 && this.obj.parent) {
 													var contents = this.responseText;
 													if (contents.length === 0) return;
 
@@ -663,6 +663,11 @@ export default function init () {
 			var el = document.getElementById('breadcrumb');
 			while (el.firstChild) el.removeChild(el.firstChild);
 			var segs = path.split("/");
+			el.onmouseout = function(ev) {
+				if (ev.target === this && !this.contains(ev.relatedTarget)) {
+					[].slice.call(this.querySelectorAll('ul')).forEach(u => u.parentNode.removeChild(u));
+				}
+			};
 			for (var i = 1; i < segs.length; i++) {
 				var prefix = segs.slice(0,i+1).join("/");
 				var name = segs[i];
@@ -700,6 +705,7 @@ export default function init () {
 							console.log('removed', link.path);
 							this.parentNode.removeChild(this);
 						}
+						else if (ev.target === this) console.log("UL MOUSEOUT IGNORED LOL", ev.target, ev.relatedTarget);
 					};
 					[].slice.call(this.parentNode.querySelectorAll('ul')).forEach(u => u.parentNode.removeChild(u));
 					this.appendChild(ul);
@@ -712,6 +718,7 @@ export default function init () {
 						console.log('removed ul', link.path);
 						this.removeChild(ul);
 					}
+					else if (ev.target === this) console.log("LI MOUSEOUT IGNORED LOL", ev.target, ev.relatedTarget);
 				};
 				el.appendChild(link);
 			}
@@ -1595,7 +1602,7 @@ export default function init () {
 
 				var off = index * 4;
 				if (!bbox || bbox.bottom < 0 || bbox.top > window.innerHeight) {
-					var bv = new THREE.Vector3(b.x - fsEntry.scale*0.075, av.y + 0.05*fsEntry.scale + 3.15*0.05, av.z);
+					var bv = new THREE.Vector3(b.x - fsEntry.scale*0.5, av.y + 0.05*fsEntry.scale + fsEntry.scale*3.15, av.z - fsEntry.scale*0.5);
 					var aUp = new THREE.Vector3(av.x - fsEntry.scale*0.075, av.y + 0.05*fsEntry.scale, av.z);
 				} else {
 					screenPlane.visible = true;
