@@ -9,10 +9,10 @@ export default class MainView extends React.Component {
     }
 
     shouldComponentUpdate(nextProps, nextState, nextContext) {
-        if (this.props.searchQuery !== nextProps.searchQuery) window.searchString(nextProps.searchQuery);
         if (this.props.commitLog !== nextProps.commitLog) window.setCommitLog(nextProps.commitLog);
         if (this.props.commitChanges !== nextProps.commitChanges) window.setCommitChanges(nextProps.commitChanges);
         if (this.props.files !== nextProps.files) window.setFiles(nextProps.files);
+        if (this.props.searchResults !== nextProps.searchResults) window.setSearchResults(nextProps.searchResults);
         return false;
     }
 

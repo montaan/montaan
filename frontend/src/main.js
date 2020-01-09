@@ -1,3 +1,5 @@
+import { getPathEntry, getFullPath, getSiblings } from './lib/filetree';
+
 const apiPrefix = 'http://localhost:8008/_';
 const repoPrefix = 'kig/tabletree';
 const MAX_COMMITS = 1000000;
@@ -12,10 +14,15 @@ var Layout = require('./Layout.js');
 var createText = require('./lib/third_party/three-bmfont-text-modified');
 var SDFShader = require('./lib/third_party/three-bmfont-text-modified/shaders/sdf');
 var loadFont = require('load-bmfont');
-var lunr = require('./lib/third_party/lunr.js');
 
+var lunr = require('./lib/third_party/lunr.js');
 window.lunr = lunr;
 
+window.changed = true;
+window.model = null;
+window.authorModel = null;
+window.processModel = null;
+window.connectionLines = null;
 
 THREE.Object3D.prototype.tick = function(t, dt) {
 	if (this.ontick) this.ontick(t, dt);
@@ -82,13 +89,10 @@ export default function init () {
 				camera.aspect = window.innerWidth / window.innerHeight;
 				camera.updateProjectionMatrix();
 				renderer.setSize(window.innerWidth, window.innerHeight);
-				changed = true;
+				window.changed = true;
 			};
 
 			window.onresize();
-
-			var model;
-			var processModel;
 
 			var modelTop = new THREE.Object3D();
 			modelTop.position.set(-0.5, -0.5, 0.0);
@@ -183,35 +187,6 @@ export default function init () {
 
 		// File tree functions
 		{
-			var getPathEntry = function(fileTree, path) {
-				path = path.replace(/\/+$/, '');
-				var segments = path.split("/");
-				while (segments[0] === "") {
-					segments.shift();
-				}
-				var branch = fileTree;
-				var parent;
-				for (var i=0; i<segments.length; i++) {
-					var segment = segments[i];
-					branch = branch.entries[segment];
-					if (!branch) {
-						return null;
-					}
-				}
-				return branch;
-			};
-
-			var getFullPath = function(fsEntry) {
-				if (!fsEntry.parent) return '';
-				return getFullPath(fsEntry.parent) + '/' + fsEntry.name;
-			};
-
-			var getSiblings = function(fileTree, path) {
-				path = path.replace(/\/[^\/]+\/*$/, '');
-				var fsEntry = getPathEntry(fileTree, path);
-				return Object.keys(fsEntry.entries).map(n => path +'/'+ n);
-			};
-
 			var createFileTreeModel = function(fileCount, fileTree) {
 				var geo = Geometry.makeGeometry(fileCount+1);
 
@@ -422,7 +397,7 @@ export default function init () {
 															if (this.material.uniforms.opacity.value > 1) {
 																this.material.uniforms.opacity.value = 1;
 															}
-															changed = true;
+															window.changed = true;
 														};
 
 														var textScale = 1 / Math.max(text.geometry.layout.width+60, (text.geometry.layout.height+30)/0.75);
@@ -452,7 +427,7 @@ export default function init () {
 														if (self.fsEntry.targetLine) {
 															const {line} = self.fsEntry.targetLine;
 															self.fsEntry.targetLine = null;
-															goToFSEntryTextAtLine(self.fsEntry, model, line, lineCount);
+															goToFSEntryTextAtLine(self.fsEntry, window.model, line, lineCount);
 														}
 
 														console.timeEnd('tweakText ' + currentFrame);
@@ -469,7 +444,7 @@ export default function init () {
 						}
 					}
 					updateBreadCrumb(navigationTarget);
-					updateSearchResults(navigationTarget);
+					window.setNavigationTarget(navigationTarget);
 					this.geometry.setDrawRange(smallestCovering.vertexIndex, smallestCovering.lastVertexIndex-smallestCovering.vertexIndex);
 					bigGeo.setDrawRange(smallestCovering.textVertexIndex, smallestCovering.lastTextVertexIndex - smallestCovering.textVertexIndex);
 				};
@@ -531,39 +506,39 @@ export default function init () {
 				if (processXHR) {
 					processXHR.onload = undefined;
 				}
-				changed = true;
-				if (model) {
-					model.parent.remove(model);
-					model.traverse(function(m) {
+				window.changed = true;
+				if (window.model) {
+					window.model.parent.remove(window.model);
+					window.model.traverse(function(m) {
 						if (m.geometry) {
 							m.geometry.dispose();
 						}
 					});
-					model = null;
+					window.model = null;
 				}
-				if (processModel) {
-					processModel.parent.remove(processModel);
-					processModel.traverse(function(m) {
+				if (window.processModel) {
+					window.processModel.parent.remove(window.processModel);
+					window.processModel.traverse(function(m) {
 						if (m.geometry) {
 							m.geometry.dispose();
 						}
 					});
-					processModel = null;
+					window.processModel = null;
 				}
-				if (authorModel) {
-					authorModel.visible = false;
-					authorModel.parent.remove(authorModel);
-					authorModel = null;
+				if (window.authorModel) {
+					window.authorModel.visible = false;
+					window.authorModel.parent.remove(window.authorModel);
+					window.authorModel = null;
 				}
-				if (connectionLines) {
-					connectionLines.visible = false;
-					connectionLines.parent.remove(connectionLines);
-					connectionLines = null;
+				if (window.connectionLines) {
+					window.connectionLines.visible = false;
+					window.connectionLines.parent.remove(window.connectionLines);
+					window.connectionLines = null;
 				}
 				window.FileTree = fileTree.tree;
-				model = createFileTreeModel(fileTree.count, fileTree.tree);
-				model.position.set(-0.5, -0.5, 0.0);
-				modelPivot.add(model);
+				window.model = createFileTreeModel(fileTree.count, fileTree.tree);
+				window.model.position.set(-0.5, -0.5, 0.0);
+				modelPivot.add(window.model);
 				// processTick();
 			};
 
@@ -610,7 +585,7 @@ export default function init () {
 			var goToFSEntryTextAtLine = function(fsEntry, model, line) {
 				if (!fsEntry.textHeight) {
 					fsEntry.targetLine = {line};
-					return goToFSEntry(fsEntry, model);
+					return goToFSEntry(fsEntry, window.model);
 				}
 				const textYOff = ((line+0.5) / fsEntry.lineCount) * fsEntry.textHeight;
 				scene.updateMatrixWorld();
@@ -622,6 +597,9 @@ export default function init () {
 				camera.targetFOV = fsEntry.scale * fsEntry.textScale * 1500 * 50;
 				fsEntry.textFOV = camera.targetFOV;
 			};
+			window.goToFSEntry = goToFSEntry;
+			window.goToFSEntryText = goToFSEntryText;
+			window.goToFSEntryTextAtLine = goToFSEntryTextAtLine;
 		}
 
 		// Running processes tree
@@ -629,16 +607,16 @@ export default function init () {
 			return;
 			utils.loadFiles('http://localhost:8080/?processes=1', function(processTree, processString) {
 				window.ProcessTree = processTree.tree;
-				if (processModel) {
-					scene.remove(processModel);
-					scene.remove(processModel.line);
-					processModel.line.geometry.dispose();
-					processModel.geometry.dispose();
+				if (window.processModel) {
+					scene.remove(window.processModel);
+					scene.remove(window.processModel.line);
+					window.processModel.line.geometry.dispose();
+					window.processModel.geometry.dispose();
 				}
-				processModel = createFileTreeModel(processTree.count, processTree.tree);
-				processModel.position.set(0.5, -0.25, 0.0);
-				processModel.scale.multiplyScalar(0.5);
-				scene.add(processModel);
+				window.processModel = createFileTreeModel(processTree.count, processTree.tree);
+				window.processModel.position.set(0.5, -0.25, 0.0);
+				window.processModel.scale.multiplyScalar(0.5);
+				scene.add(window.processModel);
 
 				var geo = new THREE.Geometry();
 
@@ -651,7 +629,7 @@ export default function init () {
 				var line = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({
 					color: 0xffffff, opacity: 0.1, blending: THREE.AdditiveBlending, transparent: true
 				}));
-				processModel.line = line;
+				window.processModel.line = line;
 				scene.add(line);
 
 				// setTimeout(processTick, 1000);
@@ -684,7 +662,7 @@ export default function init () {
 				link.onclick = function(ev) {
 					ev.preventDefault();
 					var fsEntry = getPathEntry(window.FileTree, this.path);
-					if (fsEntry) goToFSEntry(fsEntry, model);
+					if (fsEntry) goToFSEntry(fsEntry, window.model);
 				};
 				link.onmouseover = function(ev) {
 					if (this.querySelector('ul')) return;
@@ -699,7 +677,7 @@ export default function init () {
 							ev.preventDefault();
 							ev.stopPropagation();
 							var fsEntry = getPathEntry(window.FileTree, this.path);
-							if (fsEntry) goToFSEntry(fsEntry, model);
+							if (fsEntry) goToFSEntry(fsEntry, window.model);
 						};
 						ul.append(link);
 					});
@@ -734,10 +712,10 @@ export default function init () {
 				var b = getPathEntry(window.FileTree, processPath.replace(/^\/\d+\/files/, '').replace(/\:/g, '/'));
 				if (a && b) {
 					var av = new THREE.Vector3(a.x, a.y, a.z);
-					av.multiply(processModel.scale);
-					av.add(processModel.position);
+					av.multiply(window.processModel.scale);
+					av.add(window.processModel.position);
 					var bv = new THREE.Vector3(b.x, b.y, b.z);
-					bv.add(model.position);
+					bv.add(window.model.position);
 					var aUp = new THREE.Vector3(av.x, av.y, Math.max(av.z, bv.z) + 0.1);
 					var bUp = new THREE.Vector3(bv.x, bv.y, Math.max(av.z, bv.z) + 0.1);
 
@@ -806,8 +784,8 @@ export default function init () {
 				if (first) for (var i = 0; i < geo.vertices.length; i++) geo.vertices[i].set(-100,-100,-100);
 				if (entry.outgoingLines) {
 					entry.outgoingLines.forEach(l => {
-						if (l.dst.model !== avoidModel) updateLineBetweenEntries(geo, l.index, l.color, l.src.model, l.src.entry, l.dst.model, l.dst.entry);
-						if (depth > 0) showLinesForEntry(geo, l.dst.entry, depth-1, false, l.src.model, false);
+						if (l.dst.window.model !== avoidModel) updateLineBetweenEntries(geo, l.index, l.color, l.src.window.model, l.src.entry, l.dst.window.model, l.dst.entry);
+						if (depth > 0) showLinesForEntry(geo, l.dst.entry, depth-1, false, l.src.window.model, false);
 					});
 				}
 				if (recurse) {
@@ -820,7 +798,6 @@ export default function init () {
 
 		// Git commits and authors
 		{
-			var authorModel, connectionLines;
 			var processXHR;
 
 			var commitLog, commitChanges;
@@ -954,18 +931,18 @@ export default function init () {
 				console.timeLog("commits", "done with authors");
 
 				window.AuthorTree = {tree: authorsRoot, count: authorsFSCount};
-				// authorModel = createFileListModel(window.AuthorTree.count, window.AuthorTree.tree);
-				// authorModel.position.set(1.5, -0.5, 0.0);
-				// modelPivot.add(authorModel);
+				// window.authorModel = createFileListModel(window.AuthorTree.count, window.AuthorTree.tree);
+				// window.authorModel.position.set(1.5, -0.5, 0.0);
+				// modelPivot.add(window.authorModel);
 
 				window.CommitTree = {tree: commitsRoot, count: commitsFSCount};
-				// processModel = createFileListModel(window.CommitTree.count, window.CommitTree.tree);
-				// processModel.position.set(0.5, -0.5, 0.0);
-				// modelPivot.add(processModel);
+				// window.processModel = createFileListModel(window.CommitTree.count, window.CommitTree.tree);
+				// window.processModel.position.set(0.5, -0.5, 0.0);
+				// modelPivot.add(window.processModel);
 
-				model.updateMatrix();
-				// processModel.updateMatrix();
-				// authorModel.updateMatrix();
+				window.model.updateMatrix();
+				// window.processModel.updateMatrix();
+				// window.authorModel.updateMatrix();
 
 				var lineGeo = new THREE.Geometry();
 
@@ -980,7 +957,7 @@ export default function init () {
 					// for (var i=0; i<author.length; i++) {
 						// var commit = author[i];
 						// if (commit && commit.fsEntry && author.fsEntry && author.fsEntry.entries[commit.sha]) {
-						// 	addLineBetweenEntries(lineGeo, color, processModel, commit.fsEntry, authorModel, author.fsEntry.entries[commit.sha]);
+						// 	addLineBetweenEntries(lineGeo, color, window.processModel, commit.fsEntry, window.authorModel, author.fsEntry.entries[commit.sha]);
 						// }
 					// }
 				}
@@ -998,7 +975,7 @@ export default function init () {
 							if (fileEntry) {
 								if (!touchedFilesIndex[filePath]) touchedFilesIndex[filePath] = fileEntry;
 								var author = authors[commitIndex[sha].author.name];
-								// addLineBetweenEntries(lineGeo, author.color, processModel, commitFSEntry, model, fileEntry);
+								// addLineBetweenEntries(lineGeo, author.color, window.processModel, commitFSEntry, window.model, fileEntry);
 							}
 						}
 					}, window.CommitTree.tree.name+"/Commits/");
@@ -1008,32 +985,32 @@ export default function init () {
 
 				lineGeo.vertices.push(new THREE.Vector3(0,0,0), new THREE.Vector3(0,0,0));
 				lineGeo.colors.push(new THREE.Color(0,0,0), new THREE.Color(0,0,0));
-				connectionLines = new THREE.LineSegments(lineGeo, new THREE.LineBasicMaterial({
+				window.connectionLines = new THREE.LineSegments(lineGeo, new THREE.LineBasicMaterial({
 					color: new THREE.Color(1.0, 1.0, 1.0), opacity: 1, transparent: true, depthWrite: false,
 					vertexColors: true
 				}));
-				connectionLines.frustumCulled = false;
-				modelPivot.add(connectionLines);
-				window.LineModel = connectionLines;
-				connectionLines.ontick = function() {
+				window.connectionLines.frustumCulled = false;
+				modelPivot.add(window.connectionLines);
+				window.LineModel = window.connectionLines;
+				window.connectionLines.ontick = function() {
 					var cf = (currentFrame / 2) | 0;
 					if (false) {
 						var aks = Object.keys(authors);
 						showCommitsByAuthor(aks[cf % aks.length]);
-						changed = true;
+						window.changed = true;
 					} else if (false) {
 						showCommitsForFile(touchedFiles[cf % touchedFiles.length]);
-						changed = true;
+						window.changed = true;
 					} else if (commitsPlaying) {
 						var idx = activeCommitSet.length-1-(cf % activeCommitSet.length);
 						var c = activeCommitSet[idx];
 						var slider = document.getElementById('commitSlider');
 						slider.value = idx;
 						showCommit(c.sha);
-						changed = true;
+						window.changed = true;
 					}
 				};
-				changed = true;
+				window.changed = true;
 
 				console.timeEnd("commits");
 
@@ -1071,7 +1048,7 @@ export default function init () {
 
 				document.getElementById('playCommits').onclick = function(ev) {
 					commitsPlaying = !commitsPlaying;
-					changed = true;
+					window.changed = true;
 				};
 
 				var authorCmp = function(a, b) {
@@ -1307,7 +1284,7 @@ export default function init () {
 							}
 						})).then(updateActiveCommitSetDiffs);
 						showCommitsForFile(fsEntry);
-						changed = true;
+						window.changed = true;
 					} else {
 						activeCommitSet = [];
 						updateActiveCommitSetAuthors([]);
@@ -1319,7 +1296,7 @@ export default function init () {
 					var v = parseInt(this.value);
 					if (activeCommitSet[v]) {
 						showCommit(activeCommitSet[v].sha);
-						changed = true;
+						window.changed = true;
 					}
 				};
 				document.getElementById('previousCommit').onclick = function(ev) {
@@ -1341,164 +1318,10 @@ export default function init () {
 			};
 		}
 
-		// Search
-		{
-			window.searchTree = function(query, fileTree, results) {
-				if (query.every(function(re) { return re.test(fileTree.title); })) {
-					results.push({fsEntry: fileTree, line: 0});
-					// this.console.log(fileTree);
-				}
-				for (var i in fileTree.entries) {
-					window.searchTree(query, fileTree.entries[i], results);
-				}
-				return results;
-			};
-
-			var searchResultsTimeout;
-			var searchQueryNumber = 0;
-			window.search = async function(query, rawQuery) {
-				clearTimeout(searchResultsTimeout);
-				var lunrResults = [];
-				if (rawQuery.length > 2) {
-					var myNumber = ++searchQueryNumber;
-					var res = await fetch(apiPrefix+'/repo/search', {method: "POST", body: JSON.stringify({repo:repoPrefix, query:rawQuery})});
-					var lines = (await res.text()).split("\n");
-					if (searchQueryNumber !== myNumber) return;
-					lunrResults = lines.map(line => {
-						const lineNumberMatch = line.match(/^([^:]+):(\d+):(.*)$/);
-						if (lineNumberMatch) {
-							const [_, filename, lineStr, snippet] = lineNumberMatch;
-							const line = parseInt(lineStr);
-							return {fsEntry: getPathEntry(window.FileTree, repoPrefix + "/" + filename), line, snippet};
-						}
-					}).filter(l => l);
-				}
-				// if (window.SearchIndex) {
-				// 	console.time('token search');
-				// 	lunrResults = window.SearchIndex.search(rawQuery);
-				// 	lunrResults = lunrResults.map(function(r) {
-				// 		const lineNumberMatch = r.ref.match(/:(\d+)\/(\d+)$/);
-				// 		const [_, lineStr, lineCountStr] = (lineNumberMatch || ['0','0','0']); 
-				// 		const line = parseInt(lineStr);
-				// 		const lineCount = parseInt(lineCountStr);
-				// 		return {fsEntry: getPathEntry(window.FileTree, r.ref.replace(/^\./, repoPrefix).replace(/:\d+\/\d+$/, '')), line, lineCount};
-				// 	});
-				// 	console.timeEnd('token search');
-				// }
-				if (rawQuery.length > 2) {
-					window.highlightResults(window.searchTree(query, window.FileTree, lunrResults));
-				} else {
-					window.highlightResults([]);
-				}
-				updateSearchLines();
-				searchResultsTimeout = setTimeout(populateSearchResults, 200);
-			};
-			window.searchString = function(searchQuery) {
-				if (searchQuery === '' && highlightedResults.length > 0) {
-					window.searchResults.innerHTML = '';
-					window.highlightResults([]);
-					updateSearchLines();
-				} else if (searchQuery === '') {
-					window.searchResults.innerHTML = '';
-					updateSearchLines();
-				} else {
-					var segs = searchQuery.split(/\s+/);
-					var re = [];
-					try { re = segs.map(function(r) { return new RegExp(r, "i"); }); } catch(e) {}
-					window.search(re, searchQuery);
-				}
-			};
-		}
-
-		// Search results box
-		{
-			var createResultLink = function(result) {
-				const {fsEntry, line} = result;
-				const li = document.createElement('li');
-				li.fullPath = result.fullPath;
-				const title = document.createElement('div');
-				title.className = 'searchTitle';
-				title.textContent = fsEntry.title;
-				if (line > 0) {
-					title.textContent += ":" + line;
-				}
-				const fullPath = document.createElement('div');
-				fullPath.className = 'searchFullPath';
-				fullPath.textContent = li.fullPath.replace(/^\/[^\/]*\/[^\/]*\//, '/');
-				li.result = result;
-				li.addEventListener('mouseover', function(ev) {
-					this.classList.add('hover');
-					changed = true;
-				}, false);
-				li.addEventListener('mouseout', function(ev) {
-					this.classList.remove('hover');
-					changed = true;
-				}, false);
-				li.onclick = function(ev) {
-					ev.preventDefault();
-					ev.stopPropagation();
-					if (this.result.line > 0) {
-						goToFSEntryTextAtLine(this.result.fsEntry, model, this.result.line, this.result.fsEntry.lineCount);
-					} else {
-						goToFSEntry(this.result.fsEntry, model);
-					}
-				};
-				li.appendChild(title);
-				li.appendChild(fullPath);
-				if (result.snippet){
-					var snippet = document.createElement('div');
-					snippet.className = 'searchSnippet prettyPrint';
-					snippet.textContent = result.snippet;
-					li.appendChild(snippet);
-				}
-				return li;
-			};
-
-			var populateSearchResults = function() {
-				window.searchResults.innerHTML = '';
-				if (window.innerWidth > 800) {
-					const results = [];
-					const resIndex = {};
-					for (var i=0; i<highlightedResults.length; i++) {
-						const r = highlightedResults[i];
-						const fullPath = getFullPath(r.fsEntry);
-						r.fullPath = fullPath;
-						if (!resIndex[fullPath]) {
-							const result = {fsEntry: r.fsEntry, line: 0, fullPath, lineResults: []};
-							resIndex[fullPath] = result;
-							results.push(result);
-						}
-						if (r.line > 0) resIndex[fullPath].lineResults.push(r);
-					}
-					results.forEach(r => r.lineResults.sort((a,b) => a.line - b.line));
-					for (var i=0; i<results.length; i++) {
-						const result = results[i];
-						const li = createResultLink(result);
-						if (result.lineResults) {
-							const ul = document.createElement('ul');
-							result.lineResults.forEach(r => ul.appendChild(createResultLink(r)));
-							li.appendChild(ul);
-						}
-						window.searchResults.appendChild(li);
-					}
-				}
-				updateSearchLines();
-				changed = true;
-			};
-
-			var updateSearchResults = function(navigationPath) {
-				const lis = [].slice.call(window.searchResults.querySelectorAll('li'));
-				for (var i = 0; i < lis.length; i++) {
-					const li = lis[i];
-					if (li.fullPath.startsWith(navigationPath + '/') || li.fullPath === navigationPath) li.classList.add('in-view');
-					else li.classList.remove('in-view');
-				}
-			};
-
-			window.searchResults.onscroll = function() {
-				changed = true;
-			};
-		}
+		window.setSearchResults = function(searchResults) {
+			window.highlightResults(searchResults);
+			updateSearchLines();
+		};
 
 		// Search highlighting
 		{
@@ -1517,10 +1340,10 @@ export default function init () {
 					var c2 = new THREE.Vector3(fsEntry.x + fsEntry.scale, 	lineTop, 	fsEntry.z);
 					var c3 = new THREE.Vector3(fsEntry.x, 					lineTop, 	fsEntry.z);
 
-					c0.applyMatrix4(model.matrixWorld);
-					c1.applyMatrix4(model.matrixWorld);
-					c2.applyMatrix4(model.matrixWorld);
-					c3.applyMatrix4(model.matrixWorld);
+					c0.applyMatrix4(window.model.matrixWorld);
+					c1.applyMatrix4(window.model.matrixWorld);
+					c2.applyMatrix4(window.model.matrixWorld);
+					c3.applyMatrix4(window.model.matrixWorld);
 
 					var off = index * 4;
 
@@ -1568,12 +1391,12 @@ export default function init () {
 				geo.verticesNeedUpdate = true;
 				searchHighlights.index = 0;
 				highlightLater = [];
-				changed = true;
+				window.changed = true;
 			};
 
 			var highlightedResults = [];
 			window.highlightResults = function(results) {
-				var ca = model.geometry.attributes.color;
+				var ca = window.model.geometry.attributes.color;
 				highlightedResults.forEach(function(highlighted) {
 					Geometry.setColor(ca.array, highlighted.fsEntry.index, Colors[highlighted.fsEntry.entries === null ? 'getFileColor' : 'getDirectoryColor'](highlighted.fsEntry), 0);
 				});
@@ -1588,7 +1411,7 @@ export default function init () {
 				}
 				highlightedResults = results;
 				ca.needsUpdate = true;
-				changed = true;
+				window.changed = true;
 			};
 
 			var screenPlane = new THREE.Mesh(new THREE.PlaneBufferGeometry(2000,2000), new THREE.MeshBasicMaterial({ color: 0xff00ff }));
@@ -1598,7 +1421,7 @@ export default function init () {
 
 			var addScreenLine = function(geo, fsEntry, bbox, index, line, lineCount) {
 				var a = new THREE.Vector3(fsEntry.x, fsEntry.y, fsEntry.z);
-				a.applyMatrix4(model.matrixWorld);
+				a.applyMatrix4(window.model.matrixWorld);
 				var b = a;
 
 				var av = new THREE.Vector3(a.x + 0.05 * fsEntry.scale, a.y + 0.05 * fsEntry.scale, a.z);
@@ -1617,7 +1440,7 @@ export default function init () {
 					if (line > 0 && fsEntry.textHeight) {
 						const textYOff = ((line+0.5) / lineCount) * fsEntry.textHeight;
 						const textLinePos = new THREE.Vector3(fsEntry.textXZero, fsEntry.textYZero - textYOff, fsEntry.z);
-						textLinePos.applyMatrix4(model.matrixWorld);
+						textLinePos.applyMatrix4(window.model.matrixWorld);
 						aUp = av = textLinePos;
 					}
 				}
@@ -1662,7 +1485,7 @@ export default function init () {
 				}
 				if (i > 0 || i !== searchLine.lastUpdate) {
 					searchLine.geometry.verticesNeedUpdate = true;
-					changed = true;
+					window.changed = true;
 					searchLine.lastUpdate = i;
 				}
 				if (window.LineModel) {
@@ -1683,7 +1506,7 @@ export default function init () {
 					v.x = v.y = v.z = 0;
 				}
 				geo.verticesNeedUpdate = true;
-				changed = true;
+				window.changed = true;
 			};
 		}
 
@@ -1956,7 +1779,7 @@ export default function init () {
 					if (!factor) {
 						factor = 0.0001;
 					}
-					changed = true;
+					window.changed = true;
 					if (ev.preventDefault) ev.preventDefault();
 					var dx = ev.clientX - previousX;
 					var dy = ev.clientY - previousY;
@@ -1987,7 +1810,7 @@ export default function init () {
 					camera.targetFOV = camera.fov;
 					camera.targetPosition.copy(camera.position);
 					camera.updateProjectionMatrix();
-					changed = true;
+					window.changed = true;
 				}
 			};
 
@@ -2030,7 +1853,7 @@ export default function init () {
 					if (wheelFreePan || yMove) camera.position.y -= factor*ev.deltaY * camera.fov;
 					camera.targetPosition.copy(camera.position);
 					camera.targetFOV = camera.fov;
-					changed = true;
+					window.changed = true;
 				}
 			};
 			
@@ -2070,12 +1893,12 @@ export default function init () {
 				}
 				if (down) {
 					down = false;
-					var models = [model];
-					if (processModel) {
-						models.push(processModel);
+					var models = [window.model];
+					if (window.processModel) {
+						models.push(window.processModel);
 					}
-					if (authorModel) {
-						models.push(authorModel);
+					if (window.authorModel) {
+						models.push(window.authorModel);
 					}
 
 					var intersection = Geometry.findFSEntry(ev, camera, models, highlighted);
@@ -2104,7 +1927,7 @@ export default function init () {
 								goToFSEntry(highlighted, intersection.object);
 							}
 						}
-						changed = true;
+						window.changed = true;
 
 						return;
 					}
@@ -2127,8 +1950,6 @@ export default function init () {
 				renderer.render(scene, camera);
 				currentFrame++;
 			};
-
-			var changed = true;
 
 			camera.targetPosition = new THREE.Vector3().copy(camera.position);
 			camera.targetFOV = camera.fov;
@@ -2155,13 +1976,13 @@ export default function init () {
 						camera.fov = camera.targetFOV;
 					}
 					camera.updateProjectionMatrix();
-					changed = true;
+					window.changed = true;
 					animating = true;
 				} else {
 					animating = false;
 				}
-				var wasChanged = changed;
-				changed = false;
+				var wasChanged = window.changed;
+				window.changed = false;
 				if (wasChanged || animating) render();
 				window.requestAnimationFrame(tick);
 			};
