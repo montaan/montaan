@@ -11,7 +11,7 @@
     [] Use React to maintain current UI state
         [] Slicing-dicing MegaQueryObject to pass down fileTree, highlights, connections
         [x] Search query
-        [] Search results
+        [x] Search results
         [] Commit filters
         [] HTML UI elements
 
