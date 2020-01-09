@@ -1130,10 +1130,10 @@ export default function init () {
 						}
 						else if (/^(dis)?similarity index /.test(line)) currentChange.similarity = line;
 						else if (/^(new|deleted|old) /.test(line)) currentChange.newMode = line;
-						else if (/^copy from /.test(line)) currentChange.srcPath = line.substring(10);
-						else if (/^copy to /.test(line)) currentChange.srcPath = line.substring(8);
-						else if (/^rename from /.test(line)) currentChange.srcPath = line.substring(12);
-						else if (/^rename to /.test(line)) currentChange.srcPath = line.substring(10);
+						else if (/^copy from /.test(line)) currentChange.srcPath = '/'+line.substring(10);
+						else if (/^copy to /.test(line)) currentChange.dstPath = '/'+line.substring(8);
+						else if (/^rename from /.test(line)) currentChange.srcPath = '/'+line.substring(12);
+						else if (/^rename to /.test(line)) currentChange.dstPath = '/'+line.substring(10);
 						else if (/^index /.test(line)) currentChange.index = line;
 						else if (/^Binary /.test(line)) parsePos(['', 0, 0, 0, 0, 0, 0], line);
 						else if (!pos && /^\-\-\- /.test(line)) currentChange.srcPath = line.substring(5);
@@ -1144,11 +1144,26 @@ export default function init () {
 					return changes;
 				};
 
-				var formatDiff = function(diff) {
+				var formatDiff = function(diff, trackedPaths, trackedIndex) {
 					const container = span();
 					const changes = parseDiff(diff);
 					changes.forEach(change => {
-						const inPath = ('/' + repoPrefix + change.dstPath).startsWith(breadcrumbPath);
+						const dstPath = ('/' + repoPrefix + change.dstPath);
+						const inPath = (change.dstPath !== 'dev/null') && trackedPaths.some(path => dstPath.startsWith(path));
+						if (inPath) {
+							var path = dstPath;
+							if (!trackedIndex[path]) {
+								trackedPaths.push(path);
+								trackedIndex[path] = true;
+							}
+							if (change.srcPath !== 'dev/null') {
+								path = '/' + repoPrefix + change.srcPath;
+								if (!trackedIndex[path]) {
+									trackedPaths.push(path);
+									trackedIndex[path] = true;
+								}
+							}
+						}
 						const changeEl = span(inPath ? '' : 'collapsed');
 						container.append(changeEl);
 						changeEl.append(
@@ -1157,12 +1172,14 @@ export default function init () {
 						);
 						change.changes.forEach(({pos, lines}) => {
 							changeEl.append(span('pos', `-${pos.previous.line},${pos.previous.lineCount} +${pos.current.line},${pos.current.lineCount}`));
-							lines.forEach(line => {
-								var lineClass = '';
-								if (line.startsWith("+")) lineClass = 'add';
-								else if (line.startsWith("-")) lineClass = 'sub';
-								changeEl.appendChild(span(lineClass, line));
-							});
+							if (change.dstPath !== 'dev/null') {
+								lines.forEach(line => {
+									var lineClass = '';
+									if (line.startsWith("+")) lineClass = 'add';
+									else if (line.startsWith("-")) lineClass = 'sub';
+									changeEl.appendChild(span(lineClass, line));
+								});
+							}
 						});
 					});
 					return container;
@@ -1211,11 +1228,15 @@ export default function init () {
 				};
 
 				var updateActiveCommitSetDiffs = function() {
-					var el = document.getElementById('commitList');
+					const el = document.getElementById('commitList');
 					while (el.firstChild) el.removeChild(el.firstChild);
 					el.dataset.count = activeCommitSet.length;
 
 					el.appendChild(createCalendar(activeCommitSet.map(c => c.date)));
+
+					const trackedPaths = [breadcrumbPath];
+					const trackedIndex = {};
+					trackedIndex[breadcrumbPath] = true;
 
 					activeCommitSet.forEach(c => {
 						var div = document.createElement('div');
@@ -1224,7 +1245,7 @@ export default function init () {
 						var authorSpan = span('commit-author', `${c.author.name} <${c.author.email}>`);
 						var messageSpan = span('commit-message', c.message);
 						var diffSpan = span('commit-diff', '');
-						if (c.diff && !c.diffEl) c.diffEl = formatDiff(c.diff);
+						if (c.diff && !c.diffEl) c.diffEl = formatDiff(c.diff, trackedPaths, trackedIndex);
 						if (c.diffEl) diffSpan.appendChild(c.diffEl);
 						var toggle = span('commit-toggle', 'Full info');
 						var toggleDiffs = span('commit-toggle-diffs', 'All changes');
