@@ -11,6 +11,11 @@ export default class CommitInfo extends React.Component {
         this.setState({visible: !this.state.visible})
     }
 
+    shouldComponentUpdate(nextProps) {
+        if (nextProps.activeCommits !== this.props.activeCommits && nextProps.activeCommits) this.setState({visible: true});
+        return true;
+    }
+
     render() {
         return (
             <div id="commitInfo" className={this.state.visible ? 'visible' : 'hidden'}>

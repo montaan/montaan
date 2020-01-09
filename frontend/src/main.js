@@ -1002,8 +1002,8 @@ export default function init () {
 						showCommitsForFile(touchedFiles[cf % touchedFiles.length]);
 						window.changed = true;
 					} else if (commitsPlaying) {
-						var idx = activeCommitSet.length-1-(cf % activeCommitSet.length);
-						var c = activeCommitSet[idx];
+						var idx = window.activeCommitSet.length-1-(cf % window.activeCommitSet.length);
+						var c = window.activeCommitSet[idx];
 						var slider = document.getElementById('commitSlider');
 						slider.value = idx;
 						showCommit(c.sha);
@@ -1014,7 +1014,7 @@ export default function init () {
 
 				console.timeEnd("commits");
 
-				var activeCommitSet = commits;
+				window.activeCommitSet = commits;
 				
 				var showCommit = function(sha) {
 					var c = commitIndex[sha];
@@ -1230,15 +1230,15 @@ export default function init () {
 				var updateActiveCommitSetDiffs = function() {
 					const el = document.getElementById('commitList');
 					while (el.firstChild) el.removeChild(el.firstChild);
-					el.dataset.count = activeCommitSet.length;
+					el.dataset.count = window.activeCommitSet.length;
 
-					el.appendChild(createCalendar(activeCommitSet.map(c => c.date)));
+					el.appendChild(createCalendar(window.activeCommitSet.map(c => c.date)));
 
 					const trackedPaths = [breadcrumbPath];
 					const trackedIndex = {};
 					trackedIndex[breadcrumbPath] = true;
 
-					activeCommitSet.forEach(c => {
+					window.activeCommitSet.forEach(c => {
 						var div = document.createElement('div');
 						var hashSpan = span('commit-hash', c.sha);
 						var dateSpan = span('commit-date', c.date.toString());
@@ -1260,7 +1260,7 @@ export default function init () {
 					var el = document.getElementById('authorList');
 					while (el.firstChild) el.removeChild(el.firstChild);
 					el.dataset.count = authors.length;
-					var originalCommitSet = activeCommitSet;
+					var originalCommitSet = window.activeCommitSet;
 					var filteredByAuthor = false;
 					authors.forEach(({name, email}) => {
 						var div = document.createElement('div');
@@ -1272,10 +1272,10 @@ export default function init () {
 						div.onmousedown = function(ev) {
 							ev.preventDefault();
 							if (filteredByAuthor === this) {
-								activeCommitSet = originalCommitSet;
+								window.activeCommitSet = originalCommitSet;
 								filteredByAuthor = false;
 							} else {
-								activeCommitSet = originalCommitSet.filter(c => (c.author.name + ' <' + c.author.email + '>') === key);
+								window.activeCommitSet = originalCommitSet.filter(c => (c.author.name + ' <' + c.author.email + '>') === key);
 								filteredByAuthor = this;
 							}
 							updateActiveCommitSetDiffs();
@@ -1287,8 +1287,8 @@ export default function init () {
 				document.getElementById('showFileCommits').onclick = function(ev) {
 					var fsEntry = getPathEntry(window.FileTree, breadcrumbPath);
 					if (fsEntry) {
-						activeCommitSet = findCommitsForPath(breadcrumbPath);
-						const authorList = activeCommitSet.map(c => c.author);
+						window.activeCommitSet = findCommitsForPath(breadcrumbPath);
+						const authorList = window.activeCommitSet.map(c => c.author);
 						const authorCommitCounts = {};
 						authorList.forEach(author => {
 							const key = author.name + ' <' + author.email + '>';
@@ -1298,7 +1298,7 @@ export default function init () {
 						const authors = utils.uniq(authorList, authorCmp);
 						updateActiveCommitSetAuthors(authors, authorCommitCounts);
 						updateActiveCommitSetDiffs();
-						Promise.all(activeCommitSet.map(async c => {
+						Promise.all(window.activeCommitSet.map(async c => {
 							if (!c.diff) {
 								const diff = await (await fetch(apiPrefix + '/repo/diff', {method: 'POST', body: JSON.stringify({repo: repoPrefix, hash: c.sha})})).text();
 								c.diff = diff;
@@ -1307,7 +1307,7 @@ export default function init () {
 						showCommitsForFile(fsEntry);
 						window.changed = true;
 					} else {
-						activeCommitSet = [];
+						window.activeCommitSet = [];
 						updateActiveCommitSetAuthors([]);
 						updateActiveCommitSetDiffs();
 					}
@@ -1315,15 +1315,15 @@ export default function init () {
 
 				document.getElementById('commitSlider').oninput = function(ev) {
 					var v = parseInt(this.value);
-					if (activeCommitSet[v]) {
-						showCommit(activeCommitSet[v].sha);
+					if (window.activeCommitSet[v]) {
+						showCommit(window.activeCommitSet[v].sha);
 						window.changed = true;
 					}
 				};
 				document.getElementById('previousCommit').onclick = function(ev) {
 					var slider = document.getElementById('commitSlider');
 					var v = parseInt(slider.value) - 1;
-					if (activeCommitSet[v]) {
+					if (window.activeCommitSet[v]) {
 						slider.value = v;
 						slider.oninput();
 					}
@@ -1331,7 +1331,7 @@ export default function init () {
 				document.getElementById('nextCommit').onclick = function(ev) {
 					var slider = document.getElementById('commitSlider');
 					var v = parseInt(slider.value) + 1;
-					if (activeCommitSet[v]) {
+					if (window.activeCommitSet[v]) {
 						slider.value = v;
 						slider.oninput();
 					}

@@ -115,7 +115,7 @@ class MainApp extends React.Component {
                 <Search goToFSEntryTextAtLine={window.goToFSEntryTextAtLine} goToFSEntry={window.goToFSEntry} navigationTarget={this.state.navigationTarget} requestFrame={this.requestFrame} searchResults={this.state.searchResults}  setSearchQuery={this.setSearchQuery} searchQuery={this.state.searchQuery} commitFilter={this.state.commitFilter} setCommitFilter={this.setCommitFilter}/>
                 <Breadcrumb navigationTarget={this.state.navigationTarget} commitFilter={this.state.commitFilter} setCommitFilter={this.setCommitFilter} />
                 <CommitControls navigationTarget={this.state.navigationTarget} searchQuery={this.state.searchQuery} commitFilter={this.state.commitFilter} setCommitFilter={this.setCommitFilter} />
-                <CommitInfo navigationTarget={this.state.navigationTarget} searchQuery={this.state.searchQuery} commitFilter={this.state.commitFilter} setCommitFilter={this.setCommitFilter} />
+                <CommitInfo activeCommits={window.activeCommitSet} navigationTarget={this.state.navigationTarget} searchQuery={this.state.searchQuery} commitFilter={this.state.commitFilter} setCommitFilter={this.setCommitFilter} />
 
                 <MainView navigationTarget={this.state.navigationTarget} searchResults={this.state.searchResults} commitLog={this.state.commitLog} commitChanges={this.state.commitChanges} files={this.state.files} searchQuery={this.state.searchQuery} commitFilter={this.state.commitFilter} />
             </div>
