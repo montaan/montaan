@@ -13,6 +13,8 @@
 	padding: 8px;
 	padding-right: 16px;
 	border-bottom-right-radius: 4px;
+    background: rgba(0,0,0,0.9);
+    color: #eee;
 }
 #breadcrumb span {
 	vertical-align: top;
@@ -30,6 +32,9 @@
 	border-bottom-right-radius: 4px;
 	margin-left: -16px;
 	margin-top: 8px;
+    background: rgba(0,0,0,0.9);
+    max-height: 400px;
+    overflow: auto;
 }
 #breadcrumb ul:empty {
 	display: none;
