@@ -188,9 +188,9 @@ module.exports = {
 		dz *= f;
 		var x = dx, y = dy, z = dz;
 		if (color.length === 3) {
-			x = 1-((1-dx) * 0.5); 
-			y = 1-((1-dy) * 0.5); 
-			z = 1-((1-dz) * 0.5); 
+			x = 1-((1-dx) * 0.85); 
+			y = 1-((1-dy) * 0.85); 
+			z = 1-((1-dz) * 0.85); 
 		}
 
 
@@ -215,25 +215,25 @@ module.exports = {
 		verts[i++] = z;
 
 		for (var j=1; j<this.quadCount; j++) {
-			verts[i++] = dx*0.75;
-			verts[i++] = dy*0.75;
-			verts[i++] = dz*0.75;
-			verts[i++] = dx*0.75;
-			verts[i++] = dy*0.75;
-			verts[i++] = dz*0.75;
-			verts[i++] = dx*0.873;
-			verts[i++] = dy*0.873;
-			verts[i++] = dz*0.873;
+			verts[i++] = dx*0.5;
+			verts[i++] = dy*0.5;
+			verts[i++] = dz*0.5;
+			verts[i++] = dx*0.5;
+			verts[i++] = dy*0.5;
+			verts[i++] = dz*0.5;
+			verts[i++] = dx*0.73;
+			verts[i++] = dy*0.73;
+			verts[i++] = dz*0.73;
 
-			verts[i++] = dx*0.873;
-			verts[i++] = dy*0.873;
-			verts[i++] = dz*0.873;
-			verts[i++] = dx*0.75;
-			verts[i++] = dy*0.75;
-			verts[i++] = dz*0.75;
-			verts[i++] = dx*0.873;
-			verts[i++] = dy*0.873;
-			verts[i++] = dz*0.873;
+			verts[i++] = dx*0.73;
+			verts[i++] = dy*0.73;
+			verts[i++] = dz*0.73;
+			verts[i++] = dx*0.5;
+			verts[i++] = dy*0.5;
+			verts[i++] = dz*0.5;
+			verts[i++] = dx*0.73;
+			verts[i++] = dy*0.73;
+			verts[i++] = dz*0.73;
 		}
 	},
 

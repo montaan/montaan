@@ -1,8 +1,5 @@
-import { faSlidersH } from '@fortawesome/free-solid-svg-icons';
-import { EALREADY } from 'constants';
-
 const apiPrefix = 'http://localhost:8008/_';
-const repoPrefix = 'v8/v8';
+const repoPrefix = 'kig/tabletree';
 const MAX_COMMITS = 1000000;
 
 const THREE = require('three');
@@ -28,6 +25,10 @@ THREE.Object3D.prototype.tick = function(t, dt) {
 };
 
 export default function init () {
+
+	window.setCommitLog = txt => window._commitLog = txt;
+	window.setCommitChanges = txt => window._commitChanges = txt;
+	window.setFiles = txt => window._files = txt;
 
 	var animating = false;
 	var currentFrame = 0;
@@ -65,7 +66,7 @@ export default function init () {
 		{
 			var renderer = new THREE.WebGLRenderer({antialias: true, alpha: false});
 			renderer.domElement.id = 'renderCanvas';
-			renderer.setPixelRatio( window.devicePixelRatio || 1 );
+			renderer.setPixelRatio(window.devicePixelRatio || 1);
 			renderer.setClearColor(Colors.backgroundColor, 1);
 			document.body.appendChild(renderer.domElement);
 
@@ -577,6 +578,8 @@ export default function init () {
 			};
 
 			var navigateToList = function(text, onSuccess, onFailure) {
+				window.SearchIndex = null;
+
 				utils.loadFromText(text, function(fileTree) {
 					setLoaded(true);
 					showFileTree(fileTree);
@@ -1390,19 +1393,19 @@ export default function init () {
 				updateSearchLines();
 				searchResultsTimeout = setTimeout(populateSearchResults, 200);
 			};
-
-			window.searchInput.oninput = function() {
-				if (this.value === '' && highlightedResults.length > 0) {
+			window.searchString = function(searchQuery) {
+				if (searchQuery === '' && highlightedResults.length > 0) {
 					window.searchResults.innerHTML = '';
 					window.highlightResults([]);
 					updateSearchLines();
-				} else if (this.value === '') {
+				} else if (searchQuery === '') {
 					window.searchResults.innerHTML = '';
 					updateSearchLines();
 				} else {
-					var segs = this.value.split(/\s+/);
-					var re = segs.map(function(r) { return new RegExp(r, "i"); });
-					window.search(re, this.value);
+					var segs = searchQuery.split(/\s+/);
+					var re = [];
+					try { re = segs.map(function(r) { return new RegExp(r, "i"); }); } catch(e) {}
+					window.search(re, searchQuery);
 				}
 			};
 		}
@@ -1786,22 +1789,29 @@ export default function init () {
 
 		// Loading current repo data
 		{
-			fetch(apiPrefix+'/repo/fs/'+repoPrefix+'/log.txt').then(res => res.text()).then(txt => {
+			window.setCommitLog = txt => {
 				commitLog = txt;
 				loadTick();
-			});
+			};
 
-			fetch(apiPrefix+'/repo/fs/'+repoPrefix+'/changes.txt').then(res => res.text()).then(txt => {
+			window.setCommitChanges = txt => {
 				commitChanges = txt;
 				loadTick();
-			});
+			};
 
-			navigateTo(apiPrefix+'/repo/fs/'+repoPrefix+'/files.txt', function() {
+			window.setFiles = txt => {
 				// window.SearchIndex = loadLunrIndex(apiPrefix+'/repo/fs/'+repoPrefix+'/index.lunr.json');
+				navigateToList(txt);
 				setLoaded(true);
 				treeLoaded = true;
 				loadTick();
-			});
+			};
+
+			setTimeout(function() {
+				if (window._files) window.setFiles(window._files);
+				if (window._commitLog) window.setCommitLog(window._commitLog);
+				if (window._commitChanges) window.setCommitChanges(window._commitChanges);
+			}, 10);
 
 			var setLoaded = function(loaded) {
 				if (loaded) {

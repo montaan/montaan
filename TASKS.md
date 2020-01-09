@@ -3,10 +3,22 @@
 
 ## Active
 
+# Backend
+    [] Register & Log in
+    [] Add your own repos (supply repo URL -> pull repo -> add to repo list)
+
+## Data model
+    [] Use React to maintain current UI state
+        [] Slicing-dicing MegaQueryObject to pass down fileTree, highlights, connections
+        [x] Search query
+        [] Search results
+        [] Commit filters
+        [] HTML UI elements
 
 # Website engine
     [] Turn README.md into HTML and display it on top of directory
     [] Display images nicely - design system for directories
+    [] Use a Blender scene as directory and models as files
 
 # Frontend data model
     [] Move state to React app
@@ -30,14 +42,10 @@
     [] Search in Commits and Authors
 
 # Commits
-    [] Click on author to show commits by that author
+    [x] Click on author to show commits by that author
         [] Click handler for author timeline (raycast to scene, find closest author to ray if ray is in the active area for authors)
         [] Display list of files touched by author
     [] Click handler for commit timeline (raycast to scene, find closest commit to ray if ray is in the active area for commits)
-    [x] Display list of authors who have worked on the file
-    [x] Display list of commits and diffs for a file
-    [] Crop commit diffs to only ones relevant to file
-    [] Link from authors list to files and commits in current active set
     [] Link from commits list to files and authors in current active set
 
 # Performance
@@ -103,6 +111,10 @@
         [x] Show commits under directory hierarchy
         [x] Show diffs for file commits (How did this file came to be?)
     [x] Play button to play commits animation
+    [x] Display list of authors who have worked on the file
+    [x] Display list of commits and diffs for a file
+    [x] Crop commit diffs to only ones relevant to file
+    [x] Link from authors list to files and commits in current active set
 
 # Visualization
     [/] Different representation for zoomed-out-text (solid lines minimap)

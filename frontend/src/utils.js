@@ -410,9 +410,9 @@ var utils = module.exports = {
 		return this.parseFileList_('/' + userName + '/\n/' + repoName + '/\n' + paths.join("\n") + '\n');
 	},
 
-	loadFromText: function(text, onSuccess, onError) {
+	loadFromText: function(text, onSuccess, onError, prefix) {
 		try {
-			onSuccess(this.parseFileList(text, {}), text);
+			onSuccess(this.parseFileList(text, {}, undefined, prefix), text);
 		} catch (e) {
 			if (onError) onError(e);
 		}
