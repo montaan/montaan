@@ -1,4 +1,8 @@
 
+#commitInfo {
+	color: black;
+}
+
 #commitInfo.hidden > div {
 	display: none;
 }
