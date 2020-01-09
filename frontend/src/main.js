@@ -7,10 +7,10 @@ const MAX_COMMITS = 1000000;
 const THREE = require('three');
 global.THREE = THREE;
 
-var utils = require('./utils.js');
-var Geometry = require('./Geometry.js');
-var Colors = require('./Colors.js').default;
-var Layout = require('./Layout.js');
+var utils = require('./lib/utils.js');
+var Geometry = require('./lib/Geometry.js');
+var Colors = require('./lib/Colors.js').default;
+var Layout = require('./lib/Layout.js');
 var createText = require('./lib/third_party/three-bmfont-text-modified');
 var SDFShader = require('./lib/third_party/three-bmfont-text-modified/shaders/sdf');
 var loadFont = require('load-bmfont');
