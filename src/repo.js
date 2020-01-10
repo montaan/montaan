@@ -1,27 +1,28 @@
 // Repos
-const fs = require('fs');
-const path = require('path');
+const FS = require('fs');
+const Path = require('path');
+const ChildProcess = require('child_process');
+const Exec = ChildProcess.exec;
+const Mime = require('mime-types');
+
 const repoDataShape = { url:isStrlen(1,1024) };
-const child_process = require('child_process');
-const exec = child_process.exec;
-const mime = require('mime-types');
 
 function assertRepoFile(fsPath) {
-    const filePath = path.resolve('repos', fsPath);
-    const reposPath = path.resolve('repos');
+    const filePath = Path.resolve('repos', fsPath);
+    const reposPath = Path.resolve('repos');
     if (!filePath.startsWith(reposPath+'/')) return ['403: Access Denied', {}];
-    if (!fs.existsSync(filePath)) return ['404: File Not Found', {}];
-    const stat = fs.statSync(filePath);
+    if (!FS.existsSync(filePath)) return ['404: File Not Found', {}];
+    const stat = FS.statSync(filePath);
     if (!stat.isFile()) return ['403: Access Denied', {}];
     return [null, {filePath, stat}];
 }
 
 function assertRepoDir(fsPath) {
-    const filePath = path.resolve('repos', fsPath);
-    const reposPath = path.resolve('repos');
+    const filePath = Path.resolve('repos', fsPath);
+    const reposPath = Path.resolve('repos');
     if (!filePath.startsWith(reposPath+'/')) return ['403: Access Denied', {}];
-    if (!fs.existsSync(filePath)) return ['404: File Not Found', {}];
-    const stat = fs.statSync(filePath);
+    if (!FS.existsSync(filePath)) return ['404: File Not Found', {}];
+    const stat = FS.statSync(filePath);
     if (!stat.isDirectory()) return ['403: Access Denied', {}];
     return [null, {filePath, stat}];
 }
@@ -41,8 +42,8 @@ const Repos = {
 
     fs: async function(req, res, fsPath) {
         var [error, { filePath, stat }] = assertRepoFile(decodeURIComponent(fsPath)); if (error) return error;
-        res.writeHeader(200, {'Content-Type': mime.lookup(filePath) || 'text/plain', 'Content-Length': stat.size});
-        const stream = fs.createReadStream(filePath);
+        res.writeHeader(200, {'Content-Type': Mime.lookup(filePath) || 'text/plain', 'Content-Length': stat.size});
+        const stream = FS.createReadStream(filePath);
         stream.on('open', () => stream.pipe(res));
         await new Promise((resolve, reject)  => {
             stream.on('close', resolve);
@@ -57,9 +58,9 @@ const Repos = {
 
     search: async function(req, res) {
         var [error, { repo, query }] = assertShape({repo:isString, query:isString}, await bodyAsJson(req)); if (error) return error;
-        var [error, { filePath }] = assertRepoFile(path.join(repo, 'index.csearch')); if (error) return error;
+        var [error, { filePath }] = assertRepoFile(Path.join(repo, 'index.csearch')); if (error) return error;
         await new Promise((resolve, reject) => {
-            exec(`CSEARCHINDEX='${filePath}' $HOME/go/bin/csearch -i -n '${query}' | sed -E 's:^.+/repo/::'`, async function(error, stdout, stderr){
+            Exec(`CSEARCHINDEX='${filePath}' $HOME/go/bin/csearch -i -n '${query}' | sed -E 's:^.+/repo/::'`, async function(error, stdout, stderr){
                 res.writeHeader(200, {'Content-Type': 'text/plain'});
                 await res.end(stdout || '');
                 resolve();
@@ -70,9 +71,25 @@ const Repos = {
     diff: async function(req, res) {
         var [error, { repo, hash }] = assertShape({repo:isString, hash:isString}, await bodyAsJson(req)); if (error) return error;
         if (!/^[a-f0-9]+$/.test(hash)) return '400: Malformed hash';
-        var [error, { filePath }] = assertRepoDir(path.join(repo, 'repo')); if (error) return error;
+        var [error, { filePath }] = assertRepoDir(Path.join(repo, 'repo')); if (error) return error;
         await new Promise((resolve, reject) => {
-            exec(`cd ${filePath} && git show --pretty=format:%b ${hash}`, {maxBuffer: 100000000}, async function(error, stdout, stderr){
+            Exec(`cd ${filePath} && git show --pretty=format:%b ${hash}`, {maxBuffer: 100000000}, async function(error, stdout, stderr){
+                if (error) reject(error);
+                res.writeHeader(200, {'Content-Type': 'text/plain'});
+                await res.end(stdout || '');
+                resolve();
+            });
+        });
+    },
+
+    // Returns the file in repo/path at the commit hash.
+    // Useful for fetching individual file history.
+    checkout: async function(req, res) {
+        var [error, { repo, path, hash }] = assertShape({repo:isString, path:isString, hash:isString}, await bodyAsJson(req)); if (error) return error;
+        if (!/^[a-f0-9]+$/.test(hash)) return '400: Malformed hash';
+        var [error, { filePath }] = assertRepoDir(Path.join(repo, 'repo')); if (error) return error;
+        await new Promise((resolve, reject) => {
+            Exec(`cd ${filePath} && git show ${hash}:${path}`, {maxBuffer: 100000000}, async function(error, stdout, stderr){
                 if (error) reject(error);
                 res.writeHeader(200, {'Content-Type': 'text/plain'});
                 await res.end(stdout || '');
@@ -80,7 +97,6 @@ const Repos = {
             });
         });
     }
-
 };
 
 module.exports = Repos;
