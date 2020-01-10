@@ -1,4 +1,6 @@
 import { getPathEntry, getFullPath, getSiblings } from './lib/filetree';
+import { parseCommits } from './lib/parse_commits';
+import Colors from './lib/Colors';
 
 const apiPrefix = 'http://localhost:8008/_';
 const repoPrefix = 'kig/tabletree';
@@ -9,7 +11,6 @@ global.THREE = THREE;
 
 var utils = require('./lib/utils.js');
 var Geometry = require('./lib/Geometry.js');
-var Colors = require('./lib/Colors.js').default;
 var Layout = require('./lib/Layout.js');
 var createText = require('./lib/third_party/three-bmfont-text-modified');
 var SDFShader = require('./lib/third_party/three-bmfont-text-modified/shaders/sdf');
@@ -31,43 +32,37 @@ THREE.Object3D.prototype.tick = function(t, dt) {
 	}
 };
 
-export default function init () {
+(function() {
+	var input = document.createElement('input');
+	input.type = 'file';
+	if ((input.webkitdirectory === undefined && input.directory === undefined)) {
+		document.body.classList.add('no-directory');
+	}
+	if ((/mobile/i).test(window.navigator.userAgent)) {
+		document.body.classList.add('no-directory');
+		document.body.classList.add('mobile');
+	}
+})();
 
-	window.setCommitLog = txt => window._commitLog = txt;
-	window.setCommitChanges = txt => window._commitChanges = txt;
-	window.setFiles = txt => window._files = txt;
 
-	var animating = false;
-	var currentFrame = 0;
+class Tabletree {
+	animating = false;
+	currentFrame = 0;
 
-	(function() {
-		var input = document.createElement('input');
-		input.type = 'file';
-		if ((input.webkitdirectory === undefined && input.directory === undefined)) {
-			document.body.classList.add('no-directory');
-		}
-		if ((/mobile/i).test(window.navigator.userAgent)) {
-			document.body.classList.add('no-directory');
-			document.body.classList.add('mobile');
-		}
-	})();
+	setCommitLog = txt => this._commitLog = txt;
+	setCommitChanges = txt => this._commitChanges = txt;
+	setFiles = txt => this._files = txt;
 
-	var loadFontImage = function (opt, cb) {
-		loadFont(opt.font, function (err, font) {
+	init() {
+		loadFont('fnt/DejaVu-sdf.fnt', (err, font) => {
 			if (err) throw err;
-			new THREE.TextureLoader().load(opt.image, function (tex) {
-				cb(font, tex);
-			});
+			new THREE.TextureLoader().load('fnt/DejaVu-sdf.png', (tex) => this.start(font, tex));
 		});
-	};
+	}
 
-	// load up a 'fnt' and texture
-	loadFontImage({
-		font: 'fnt/DejaVu-sdf.fnt',
-		image: 'fnt/DejaVu-sdf.png'
-	}, start)
-
-	function start(font, fontTexture) {
+	start(font, fontTexture) {
+		var animating = false;
+		var currentFrame = 0;
 
 		// Scene setup
 		{
@@ -800,142 +795,17 @@ export default function init () {
 		{
 			var processXHR;
 
-			var commitLog, commitChanges;
-			var treeLoaded = false;
-
-			var loadTick = function() {
-				if (!commitLog || !commitChanges || !treeLoaded) {
-					return;
-				}
+			window.setCommitData = function(commitData) {
 				setLoaded(true);
 
-				console.time("commits");
-
-				var commits = commitLog.split(/^commit /m);
-				var authors = {};
-				var commitIndex = {};
-				commits.shift();
-				console.log(commits.length, 'commits');
-				// commits.splice(MAX_COMMITS);
-				commits = commits.map(function(c) {
-					var lines = c.split("\n");
-					var hash = lines[0];
-					var idx = 0;
-					while (lines[idx] && !/^Author:/.test(lines[idx])) {
-						idx++;
-					}
-					var author = lines[idx++].substring(8);
-					var email = author.match(/<([^>]+)>/)[1];
-					var authorName = author.substring(0, author.length - email.length - 3);
-					var date = lines[idx++].substring(6);
-					var message = lines.slice(idx+1).map(function(line) {
-						return line.replace(/^    /, '');
-					}).join("\n");
-					var commit = {
-						sha: hash,
-						author: {
-							name: authorName,
-							email: email
-						},
-						message: message,
-						date: new Date(date),
-						files: []
-					};
-					var authorObj = authors[authorName];
-					if (!authorObj) {
-						authors[authorName] = authorObj = [];
-					}
-					authorObj.push(commit);
-					commitIndex[commit.sha] = commit;
-					return commit;
-				});
-				console.timeLog("commits", "commits preparse");
-
-				{
-					let lineStart = 0, hash = null, setHash = false;
-					for (let i = 0; i < commitChanges.length; i++) {
-						let c = commitChanges.charCodeAt(i);
-						if (c === 10) { // new line
-							if (lineStart !== i) {
-								if (setHash) hash = commitChanges.substring(lineStart, i);
-								else if (commitIndex[hash]) {
-									let [action, path, renamed] = commitChanges.substring(lineStart, i).split("\t");
-									commitIndex[hash].files.push({action, path, renamed});
-								}
-							}
-							lineStart = i+1;
-						} else if (lineStart === i) setHash = ((c >= 97 && c <= 102) || (c >= 48 && c <= 57));
-					}
-				}
-
-				var commitsFSEntry = {name: "Commits", title: "Commits", index: 0, entries: {}};
-				var commitsRoot = {name:"", title: "", index:0, entries:{"Commits": commitsFSEntry}};
-
-				console.timeLog("commits", "changes preparse");
-
-				var mkfile = function(filename) {
-					return {
-						name: filename, title: filename, index: 0, entries: null
-					};
-				};
-
-				var mkdir = function(dirname, files) {
-					var entries = {};
-					files.forEach(function(f) { entries[f] = mkfile(f) });
-					return {
-						name: dirname, title: dirname, index: 0, entries: entries
-					};
-				};
-
-				var commitsFSCount = 2;
-				var commitToFile;
-				var commitIndex
-				commits.forEach(function(c) {
-					var entries = {
-						Author: mkfile(c.author.name),
-						SHA: mkfile(c.sha),
-						Date: mkfile(c.date.toString()),
-						Message: mkfile(c.message)
-					}
-					if (c.files.length > 0 && c.files[0]) {
-						var fileTree = utils.parseFileList_(c.files.map(function(f) { return f.path }).join("\n")+'\n', true);
-						fileTree.tree.title = fileTree.tree.name = 'Files';
-						entries.Files = fileTree.tree;
-						commitsFSCount += 1 + fileTree.count;
-					}
-					commitsFSEntry.entries[c.sha] = {
-						name: c.sha, title: (c.message.match(/^\S+.*/) || [''])[0], index: 0, entries: entries
-					};
-					c.fsEntry = commitsFSEntry.entries[c.sha];
-					commitsFSCount += 5;
-				});
-				console.timeLog("commits", "done with commits");
-
-				var authorsFSEntry = {name: "Authors", title: "Authors", index: 0, entries: {}};
-				var authorsRoot = {name:"", title: "", index:0, entries:{"Authors": authorsFSEntry}};
-				var authorsFSCount = 2;
-
-				for (var authorName in authors) {
-					var author = authors[authorName];
-					author.fsEntry = mkdir(authorName, []);
-					authorsFSEntry.entries[authorName] = author.fsEntry;
-					authorsFSCount++;
-					for (var i=0; i<author.length; i++) {
-						var c = author[i];
-						if (!c ||!c.fsEntry) continue;
-						var cEntry = mkfile(c.fsEntry.title);
-						author.fsEntry.entries[c.sha] = cEntry;
-						authorsFSCount++;
-					}
-				}
-				console.timeLog("commits", "done with authors");
-
-				window.AuthorTree = {tree: authorsRoot, count: authorsFSCount};
+				window.AuthorTree = commitData.authorTree;
+				window.CommitTree = commitData.commitTree;
+				var {commits, commitIndex, authors, commitsFSEntry, lineGeo, touchedFiles} = commitData;
+				
 				// window.authorModel = createFileListModel(window.AuthorTree.count, window.AuthorTree.tree);
 				// window.authorModel.position.set(1.5, -0.5, 0.0);
 				// modelPivot.add(window.authorModel);
 
-				window.CommitTree = {tree: commitsRoot, count: commitsFSCount};
 				// window.processModel = createFileListModel(window.CommitTree.count, window.CommitTree.tree);
 				// window.processModel.position.set(0.5, -0.5, 0.0);
 				// modelPivot.add(window.processModel);
@@ -944,47 +814,6 @@ export default function init () {
 				// window.processModel.updateMatrix();
 				// window.authorModel.updateMatrix();
 
-				var lineGeo = new THREE.Geometry();
-
-				var h = 4;
-				for (var authorName in authors) {
-					var author = authors[authorName];
-					var authorEntry = author.fsEntry;
-					var color = new THREE.Color();
-					color.setHSL((h%7)/7, 1, 0.5);
-					h+=2;
-					author.color = color;
-					// for (var i=0; i<author.length; i++) {
-						// var commit = author[i];
-						// if (commit && commit.fsEntry && author.fsEntry && author.fsEntry.entries[commit.sha]) {
-						// 	addLineBetweenEntries(lineGeo, color, window.processModel, commit.fsEntry, window.authorModel, author.fsEntry.entries[commit.sha]);
-						// }
-					// }
-				}
-
-				var touchedFilesIndex = {};
-
-				for (var i in window.CommitTree.tree.entries.Commits.entries) {
-					var commitFSEntry = window.CommitTree.tree.entries.Commits.entries[i];
-					utils.traverseFSEntry(commitFSEntry, function(fsEntry, fullPath) {
-						if (/^\/Commits\/.{40}\/Files\//.test(fullPath) && fsEntry.entries === null) {
-							var sha = fullPath.substring(9, 49);
-							var path = fullPath.substring(55);
-							var filePath = repoPrefix + path;
-							var fileEntry = getPathEntry(window.FileTree, filePath);
-							if (fileEntry) {
-								if (!touchedFilesIndex[filePath]) touchedFilesIndex[filePath] = fileEntry;
-								var author = authors[commitIndex[sha].author.name];
-								// addLineBetweenEntries(lineGeo, author.color, window.processModel, commitFSEntry, window.model, fileEntry);
-							}
-						}
-					}, window.CommitTree.tree.name+"/Commits/");
-				}
-				var touchedFiles = Object.keys(touchedFilesIndex).sort().map(k => touchedFilesIndex[k]);
-				console.timeLog("commits", "done with touchedFiles");
-
-				lineGeo.vertices.push(new THREE.Vector3(0,0,0), new THREE.Vector3(0,0,0));
-				lineGeo.colors.push(new THREE.Color(0,0,0), new THREE.Color(0,0,0));
 				window.connectionLines = new THREE.LineSegments(lineGeo, new THREE.LineBasicMaterial({
 					color: new THREE.Color(1.0, 1.0, 1.0), opacity: 1, transparent: true, depthWrite: false,
 					vertexColors: true
@@ -1011,8 +840,6 @@ export default function init () {
 					}
 				};
 				window.changed = true;
-
-				console.timeEnd("commits");
 
 				window.activeCommitSet = commits;
 				
@@ -1051,268 +878,6 @@ export default function init () {
 					window.changed = true;
 				};
 
-				var authorCmp = function(a, b) {
-					return a.name.localeCompare(b.name) || a.email.localeCompare(b.email);
-				};
-
-				var span = function(className='', content='') {
-					var el = document.createElement('span');
-					el.className = className;
-					el.textContent = content;
-					return el;
-				};
-
-				var parseDiff = function(diff) {
-					/*
-					1. It is preceded with a "git diff" header that looks like this:
-
-						diff --git a/file1 b/file2
-
-					The a/ and b/ filenames are the same unless rename/copy is involved. Especially, even for a
-					creation or a deletion, /dev/null is not used in place of the a/ or b/ filenames.
-
-					When rename/copy is involved, file1 and file2 show the name of the source file of the rename/copy
-					and the name of the file that rename/copy produces, respectively.
-
-					2. It is followed by one or more extended header lines:
-
-						old mode <mode>
-						new mode <mode>
-						deleted file mode <mode>
-						new file mode <mode>
-						copy from <path>
-						copy to <path>
-						rename from <path>
-						rename to <path>
-						similarity index <number>
-						dissimilarity index <number>
-						index <hash>..<hash> <mode>
-
-					File modes are printed as 6-digit octal numbers including the file type and file permission bits.
-
-					Path names in extended headers do not include the a/ and b/ prefixes.
-
-					The similarity index is the percentage of unchanged lines, and the dissimilarity index is the
-					percentage of changed lines. It is a rounded down integer, followed by a percent sign. The
-					similarity index value of 100% is thus reserved for two equal files, while 100% dissimilarity
-					means that no line from the old file made it into the new one.
-
-					The index line includes the SHA-1 checksum before and after the change. The <mode> is included if
-					the file mode does not change; otherwise, separate lines indicate the old and the new mode.
-
-					*/
-					const lines = diff.split("\n");
-					const changes = [];
-					var currentChange = { cmd: '', newMode: '', index: '', srcPath: '', dstPath: '', changes: [] };
-					var pos = null;
-					var parsePos = function(posMatch, line) {
-						if (!posMatch) console.log(line, lines);
-						pos = {
-							previous: {line: parseInt(posMatch[1]), lineCount: parseInt(posMatch[3])},
-							current: {line: parseInt(posMatch[4]), lineCount: parseInt(posMatch[6])},
-						};
-						currentChange.changes.push({pos, lines: [line.substring(posMatch[0].length)]});
-					};
-					var parseCmd = function(line) {
-						currentChange = { cmd: '', newMode: '', index: '', srcPath: '', dstPath: '', changes: [] };
-						pos = null;
-						currentChange.cmd = line;
-					};
-					lines.forEach(line => {
-						if (/^diff/.test(line)) {
-							if (currentChange.cmd) changes.push(currentChange);
-							parseCmd(line);
-						}
-						else if (line.charCodeAt(0) === 64) {
-							var posMatch = line.match(/^@@ -(\d+)(,(\d+))? \+(\d+)(,(\d+))? @@/);
-							if (!posMatch) posMatch = ['', 0, 0, 0, 0, 0, 0];
-							parsePos(posMatch, line);
-						}
-						else if (/^(dis)?similarity index /.test(line)) currentChange.similarity = line;
-						else if (/^(new|deleted|old) /.test(line)) currentChange.newMode = line;
-						else if (/^copy from /.test(line)) currentChange.srcPath = '/'+line.substring(10);
-						else if (/^copy to /.test(line)) currentChange.dstPath = '/'+line.substring(8);
-						else if (/^rename from /.test(line)) currentChange.srcPath = '/'+line.substring(12);
-						else if (/^rename to /.test(line)) currentChange.dstPath = '/'+line.substring(10);
-						else if (/^index /.test(line)) currentChange.index = line;
-						else if (/^Binary /.test(line)) parsePos(['', 0, 0, 0, 0, 0, 0], line);
-						else if (!pos && /^\-\-\- /.test(line)) currentChange.srcPath = line.substring(5);
-						else if (!pos && /^\+\+\+ /.test(line)) currentChange.dstPath = line.substring(5);
-						else if (pos) currentChange.changes[currentChange.changes.length-1].lines.push(line);
-					});
-					if (currentChange.cmd) changes.push(currentChange);
-					return changes;
-				};
-
-				var formatDiff = function(diff, trackedPaths, trackedIndex) {
-					const container = span();
-					const changes = parseDiff(diff);
-					changes.forEach(change => {
-						const dstPath = ('/' + repoPrefix + change.dstPath);
-						const inPath = (change.dstPath !== 'dev/null') && trackedPaths.some(path => dstPath.startsWith(path));
-						if (inPath) {
-							var path = dstPath;
-							if (!trackedIndex[path]) {
-								trackedPaths.push(path);
-								trackedIndex[path] = true;
-							}
-							if (change.srcPath !== 'dev/null') {
-								path = '/' + repoPrefix + change.srcPath;
-								if (!trackedIndex[path]) {
-									trackedPaths.push(path);
-									trackedIndex[path] = true;
-								}
-							}
-						}
-						const changeEl = span(inPath ? '' : 'collapsed');
-						container.append(changeEl);
-						changeEl.append(
-							span('prev', change.srcPath),
-							span('cur', change.dstPath)
-						);
-						change.changes.forEach(({pos, lines}) => {
-							changeEl.append(span('pos', `-${pos.previous.line},${pos.previous.lineCount} +${pos.current.line},${pos.current.lineCount}`));
-							if (change.dstPath !== 'dev/null') {
-								lines.forEach(line => {
-									var lineClass = '';
-									if (line.startsWith("+")) lineClass = 'add';
-									else if (line.startsWith("-")) lineClass = 'sub';
-									changeEl.appendChild(span(lineClass, line));
-								});
-							}
-						});
-					});
-					return container;
-				};
-
-				var createCalendar = function(dates) {
-					var createYear = function(year) {
-						const el = document.createElement('div');
-						el.className = 'calendar-year';
-						el.dataset.year = year;
-						for (var i = 0; i < 12; i++) {
-							var monthEl = span('calendar-month');
-							var week = 0;
-							for (var j = 0; j < 31; j++) {
-								var dateString = `${year}-${i<9?'0':''}${i+1}-${j<9?'0':''}${j+1}`;
-								var date = new Date(Date.parse(dateString));
-								if (date.getUTCMonth() === i) {
-									var day = date.getUTCDay();
-									var dayEl = span('calendar-day');
-									dayEl.dataset.day = day;
-									dayEl.dataset.week = week;
-									dayEl.dataset.commitCount = 0;
-									dayEl.dataset.date = dateString;
-									monthEl.appendChild(dayEl);
-									if (day === 0) week++;
-								}
-							}
-							el.appendChild(monthEl);
-						}
-						return el;
-					};
-					const el = document.createElement('div');
-					el.className = 'calendar';
-					var years = {};
-					dates.forEach(d => {
-						const year = d.getUTCFullYear();
-						const month = d.getUTCMonth();
-						const date = d.getUTCDate();
-						if (!years[year]) {
-							years[year] = createYear(year);
-							el.appendChild(years[year]);
-						}
-						years[year].childNodes[month].childNodes[date-1].dataset.commitCount++;
-					});
-					return el;
-				};
-
-				var updateActiveCommitSetDiffs = function() {
-					const el = document.getElementById('commitList');
-					while (el.firstChild) el.removeChild(el.firstChild);
-					el.dataset.count = window.activeCommitSet.length;
-
-					el.appendChild(createCalendar(window.activeCommitSet.map(c => c.date)));
-
-					const trackedPaths = [breadcrumbPath];
-					const trackedIndex = {};
-					trackedIndex[breadcrumbPath] = true;
-
-					window.activeCommitSet.forEach(c => {
-						var div = document.createElement('div');
-						var hashSpan = span('commit-hash', c.sha);
-						var dateSpan = span('commit-date', c.date.toString());
-						var authorSpan = span('commit-author', `${c.author.name} <${c.author.email}>`);
-						var messageSpan = span('commit-message', c.message);
-						var diffSpan = span('commit-diff', '');
-						if (c.diff && !c.diffEl) c.diffEl = formatDiff(c.diff, trackedPaths, trackedIndex);
-						if (c.diffEl) diffSpan.appendChild(c.diffEl);
-						var toggle = span('commit-toggle', 'Full info');
-						var toggleDiffs = span('commit-toggle-diffs', 'All changes');
-						toggle.onmousedown = function(ev) { ev.preventDefault(); div.classList.toggle('expanded'); };
-						toggleDiffs.onmousedown = function(ev) { ev.preventDefault(); div.classList.toggle('expanded-diffs'); };
-						div.append(toggle, hashSpan, dateSpan, authorSpan, messageSpan, toggleDiffs, diffSpan);
-						el.appendChild(div);
-					});
-				};
-
-				var updateActiveCommitSetAuthors = function(authors, authorCommitCounts) {
-					var el = document.getElementById('authorList');
-					while (el.firstChild) el.removeChild(el.firstChild);
-					el.dataset.count = authors.length;
-					var originalCommitSet = window.activeCommitSet;
-					var filteredByAuthor = false;
-					authors.forEach(({name, email}) => {
-						var div = document.createElement('div');
-						var key = name + ' <' + email + '>';
-						div.dataset.commitCount = authorCommitCounts[key];
-						var nameSpan = span('author-name', name);
-						var emailSpan = span('author-email', email);
-						div.append(nameSpan, emailSpan);
-						div.onmousedown = function(ev) {
-							ev.preventDefault();
-							if (filteredByAuthor === this) {
-								window.activeCommitSet = originalCommitSet;
-								filteredByAuthor = false;
-							} else {
-								window.activeCommitSet = originalCommitSet.filter(c => (c.author.name + ' <' + c.author.email + '>') === key);
-								filteredByAuthor = this;
-							}
-							updateActiveCommitSetDiffs();
-						};
-						el.appendChild(div);
-					});
-				};
-
-				document.getElementById('showFileCommits').onclick = function(ev) {
-					var fsEntry = getPathEntry(window.FileTree, breadcrumbPath);
-					if (fsEntry) {
-						window.activeCommitSet = findCommitsForPath(breadcrumbPath);
-						const authorList = window.activeCommitSet.map(c => c.author);
-						const authorCommitCounts = {};
-						authorList.forEach(author => {
-							const key = author.name + ' <' + author.email + '>';
-							if (!authorCommitCounts[key]) authorCommitCounts[key] = 0;
-							authorCommitCounts[key]++;
-						});
-						const authors = utils.uniq(authorList, authorCmp);
-						updateActiveCommitSetAuthors(authors, authorCommitCounts);
-						updateActiveCommitSetDiffs();
-						Promise.all(window.activeCommitSet.map(async c => {
-							if (!c.diff) {
-								const diff = await (await fetch(apiPrefix + '/repo/diff', {method: 'POST', body: JSON.stringify({repo: repoPrefix, hash: c.sha})})).text();
-								c.diff = diff;
-							}
-						})).then(updateActiveCommitSetDiffs);
-						showCommitsForFile(fsEntry);
-						window.changed = true;
-					} else {
-						window.activeCommitSet = [];
-						updateActiveCommitSetAuthors([]);
-						updateActiveCommitSetDiffs();
-					}
-				};
-
 				document.getElementById('commitSlider').oninput = function(ev) {
 					var v = parseInt(this.value);
 					if (window.activeCommitSet[v]) {
@@ -1339,7 +904,7 @@ export default function init () {
 			};
 		}
 
-		window.setSearchResults = function(searchResults) {
+		this.setSearchResults = function(searchResults) {
 			window.highlightResults(searchResults);
 			updateSearchLines();
 		};
@@ -1633,28 +1198,14 @@ export default function init () {
 
 		// Loading current repo data
 		{
-			window.setCommitLog = txt => {
-				commitLog = txt;
-				loadTick();
-			};
-
-			window.setCommitChanges = txt => {
-				commitChanges = txt;
-				loadTick();
-			};
-
-			window.setFiles = txt => {
+			this.setFiles = txt => {
 				// window.SearchIndex = loadLunrIndex(apiPrefix+'/repo/fs/'+repoPrefix+'/index.lunr.json');
 				navigateToList(txt);
 				setLoaded(true);
-				treeLoaded = true;
-				loadTick();
 			};
 
-			setTimeout(function() {
-				if (window._files) window.setFiles(window._files);
-				if (window._commitLog) window.setCommitLog(window._commitLog);
-				if (window._commitChanges) window.setCommitChanges(window._commitChanges);
+			setTimeout(() => {
+				if (this._files) this.setFiles(this._files);
 			}, 10);
 
 			var setLoaded = function(loaded) {
@@ -2036,3 +1587,5 @@ export default function init () {
 		window.searchInput.focus();
 	}
 }
+
+export default new Tabletree();

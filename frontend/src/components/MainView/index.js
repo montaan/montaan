@@ -1,18 +1,18 @@
 import React from 'react';
 import './style.css';
-import init from '../../main.js';
+import tabletree from '../../main.js';
 
 export default class MainView extends React.Component {
     constructor() {
-        init();
+        tabletree.init();
         super();
     }
 
     shouldComponentUpdate(nextProps, nextState, nextContext) {
-        if (this.props.commitLog !== nextProps.commitLog) window.setCommitLog(nextProps.commitLog);
-        if (this.props.commitChanges !== nextProps.commitChanges) window.setCommitChanges(nextProps.commitChanges);
-        if (this.props.files !== nextProps.files) window.setFiles(nextProps.files);
-        if (this.props.searchResults !== nextProps.searchResults) window.setSearchResults(nextProps.searchResults);
+        if (this.props.commitLog !== nextProps.commitLog) tabletree.setCommitLog(nextProps.commitLog);
+        if (this.props.commitChanges !== nextProps.commitChanges) tabletree.setCommitChanges(nextProps.commitChanges);
+        if (this.props.files !== nextProps.files) tabletree.setFiles(nextProps.files);
+        if (this.props.searchResults !== nextProps.searchResults) tabletree.setSearchResults(nextProps.searchResults);
         return false;
     }
 

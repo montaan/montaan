@@ -4,7 +4,10 @@ import CommitControls from './components/CommitControls';
 import CommitInfo from './components/CommitInfo';
 import Search from './components/Search';
 import Breadcrumb from './components/Breadcrumb';
+import utils from './lib/utils';
 
+import { parseCommits } from './lib/parse_commits';
+import { span, formatDiff, authorCmp, createCalendar } from './lib/parse_diff';
 import { getPathEntry, getFullPath, getSiblings } from './lib/filetree';
 
 const apiPrefix = 'http://localhost:8008/_';
@@ -92,6 +95,92 @@ class MainApp extends React.Component {
         }
     }
 
+    updateActiveCommitSetDiffs() {
+        const el = document.getElementById('commitList');
+        while (el.firstChild) el.removeChild(el.firstChild);
+        el.dataset.count = window.activeCommitSet.length;
+
+        el.appendChild(createCalendar(window.activeCommitSet.map(c => c.date)));
+
+        const trackedPaths = [this.state.navigationTarget];
+        const trackedIndex = {};
+        trackedIndex[this.state.navigationTarget] = true;
+
+        window.activeCommitSet.forEach(c => {
+            var div = document.createElement('div');
+            var hashSpan = span('commit-hash', c.sha);
+            var dateSpan = span('commit-date', c.date.toString());
+            var authorSpan = span('commit-author', `${c.author.name} <${c.author.email}>`);
+            var messageSpan = span('commit-message', c.message);
+            var diffSpan = span('commit-diff', '');
+            if (c.diff && !c.diffEl) c.diffEl = formatDiff(c.diff, trackedPaths, trackedIndex);
+            if (c.diffEl) diffSpan.appendChild(c.diffEl);
+            var toggle = span('commit-toggle', 'Full info');
+            var toggleDiffs = span('commit-toggle-diffs', 'All changes');
+            toggle.onmousedown = function(ev) { ev.preventDefault(); div.classList.toggle('expanded'); };
+            toggleDiffs.onmousedown = function(ev) { ev.preventDefault(); div.classList.toggle('expanded-diffs'); };
+            div.append(toggle, hashSpan, dateSpan, authorSpan, messageSpan, toggleDiffs, diffSpan);
+            el.appendChild(div);
+        });
+    }
+
+    updateActiveCommitSetAuthors(authors, authorCommitCounts) {
+        var el = document.getElementById('authorList');
+        while (el.firstChild) el.removeChild(el.firstChild);
+        el.dataset.count = authors.length;
+        var originalCommitSet = window.activeCommitSet;
+        var filteredByAuthor = false;
+        authors.forEach(({name, email}) => {
+            var div = document.createElement('div');
+            var key = name + ' <' + email + '>';
+            div.dataset.commitCount = authorCommitCounts[key];
+            var nameSpan = span('author-name', name);
+            var emailSpan = span('author-email', email);
+            div.append(nameSpan, emailSpan);
+            div.onmousedown = function(ev) {
+                ev.preventDefault();
+                if (filteredByAuthor === this) {
+                    window.activeCommitSet = originalCommitSet;
+                    filteredByAuthor = false;
+                } else {
+                    window.activeCommitSet = originalCommitSet.filter(c => (c.author.name + ' <' + c.author.email + '>') === key);
+                    filteredByAuthor = this;
+                }
+                this.updateActiveCommitSetDiffs();
+            };
+            el.appendChild(div);
+        });
+    }
+
+    showFileCommitsClick = (ev) => {
+        var fsEntry = getPathEntry(window.FileTree, this.state.navigationTarget);
+        if (fsEntry) {
+            window.activeCommitSet = this.findCommitsForPath(this.state.navigationTarget);
+            const authorList = window.activeCommitSet.map(c => c.author);
+            const authorCommitCounts = {};
+            authorList.forEach(author => {
+                const key = author.name + ' <' + author.email + '>';
+                if (!authorCommitCounts[key]) authorCommitCounts[key] = 0;
+                authorCommitCounts[key]++;
+            });
+            const authors = utils.uniq(authorList, this.authorCmp);
+            this.updateActiveCommitSetAuthors(authors, authorCommitCounts);
+            this.updateActiveCommitSetDiffs();
+            Promise.all(window.activeCommitSet.map(async c => {
+                if (!c.diff) {
+                    const diff = await (await fetch(apiPrefix + '/repo/diff', {method: 'POST', body: JSON.stringify({repo: repoPrefix, hash: c.sha})})).text();
+                    c.diff = diff;
+                }
+            })).then(this.updateActiveCommitSetDiffs);
+            this.showCommitsForFile(fsEntry);
+            window.changed = true;
+        } else {
+            window.activeCommitSet = [];
+            this.updateActiveCommitSetAuthors([]);
+            this.updateActiveCommitSetDiffs();
+        }
+    };
+
     setCommitFilter = commitFilter => this.setState({commitFilter});
     setSearchQuery = searchQuery => {
         this.setState({searchQuery});
@@ -104,6 +193,21 @@ class MainApp extends React.Component {
     setCommitChanges = commitChanges => this.setState({commitChanges});
     setFiles = files => this.setState({files});
     setNavigationTarget = navigationTarget => this.setState({navigationTarget});
+
+    parseCommits(commitLog, commitChanges, files) {
+        const {
+            authorTree, commitTree, commits, commitIndex, authors, commitsFSEntry, lineGeo, touchedFiles
+        } = parseCommits(commitLog, commitChanges, files);
+
+    }
+
+    shouldComponentUpdate(nextProps, nextState) {
+        if (nextState.commitLog && nextState.commitChanges && nextState.files &&
+            !(this.state.commitLog && this.state.commitChanges && this.state.files)) {
+            //this.parseCommits(nextState.commitLog, nextState.commitChanges, nextState.files);
+        }
+        return true;
+    }
 
     render() {
         return (
