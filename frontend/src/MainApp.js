@@ -10,9 +10,6 @@ import { parseCommits } from './lib/parse_commits';
 import { span, formatDiff, authorCmp, createCalendar } from './lib/parse_diff';
 import { getPathEntry, getFullPath, getSiblings } from './lib/filetree';
 
-const apiPrefix = 'http://localhost:8008/_';
-const repoPrefix = 'kig/tabletree';
-
 const fullscreenSupported = (document.exitFullscreen||document.webkitExitFullscreen||document.webkitExitFullScreen||document.mozCancelFullScreen||document.msExitFullscreen) && !window.navigator.standalone;
 
 var searchResultsTimeout;
@@ -20,28 +17,90 @@ var searchQueryNumber = 0;
 
 class MainApp extends React.Component {
     
-    constructor() {
-        super()
-        this.state = {
-            commitFilter: {},
-            searchQuery: '',
-            commits: [],
-            activeCommits: [],
-            fileTree: {name: '', entries: {}},
-            commitLog: '',
-            commitChanges: '',
-            files: '',
-            searchResults: [],
-            navigationTarget: '',
-            frameRequestTime: 0
-        };
+    emptyState = {
+        commitFilter: {},
+        searchQuery: '',
+        commits: [],
+        activeCommits: [],
+        fileTree: {title: '', entries: {}},
+        commitLog: '',
+        commitChanges: '',
+        files: '',
+        searchResults: [],
+        navigationTarget: '',
+        goToTarget: null,
+        frameRequestTime: 0,
+        diffsLoaded: 0,
+        fileContents: ''
+    };
+
+    constructor(props) {
+        super(props);
+        this.state = {...this.emptyState};
         window.setNavigationTarget = this.setNavigationTarget;
-        fetch(apiPrefix+'/repo/fs/'+repoPrefix+'/log.txt').then(res => res.text()).then(this.setCommitLog);
-        fetch(apiPrefix+'/repo/fs/'+repoPrefix+'/changes.txt').then(res => res.text()).then(this.setCommitChanges);
-        fetch(apiPrefix+'/repo/fs/'+repoPrefix+'/files.txt').then(res => res.text()).then(this.setFiles);
+        this.setRepo(props.repoPrefix);
     }
 
-    requestFrame = () => this.setState({frameRequestTime: this.state.frameRequestTime++ % 1048576});
+    parseFiles(text) { return utils.parseFileList(text, {}, undefined, this.props.repoPrefix+'/'); }
+
+    async setRepo(repoPrefix) {
+        const files = await (await fetch(this.props.apiPrefix+'/repo/fs/'+repoPrefix+'/files.txt')).text();
+        const fileTree = this.parseFiles(files);
+        const commitLog = await (await fetch(this.props.apiPrefix+'/repo/fs/'+repoPrefix+'/log.txt')).text();
+        const commitChanges = await (await fetch(this.props.apiPrefix+'/repo/fs/'+repoPrefix+'/changes.txt')).text();
+        const commitData = parseCommits(commitLog, commitChanges, fileTree.tree, repoPrefix);
+        this.setState({...this.emptyState, fileTree, commitData, activeCommits: commitData.commits});
+    }
+    
+    setCommitFilter = commitFilter => {
+        this.setState({commitFilter});
+        this.setActiveCommits(this.filterCommits(commitFilter));
+    };
+
+    setSearchQuery = searchQuery => {
+        this.setState({searchQuery});
+        this.searchString(searchQuery);
+    };
+
+    setNavigationTarget = navigationTarget => this.setState({navigationTarget});
+
+    setActiveCommits = activeCommits => {
+        const authorList = activeCommits.map(c => c.author);
+        const authorCommitCounts = {};
+        authorList.forEach(author => {
+            const key = author.name + ' <' + author.email + '>';
+            if (!authorCommitCounts[key]) authorCommitCounts[key] = 0;
+            authorCommitCounts[key]++;
+        });
+        const authors = utils.uniq(authorList, authorCmp);
+        const files = [];
+        Promise.all(activeCommits.map(async c => {
+            if (!c.diff) {
+                const diff = await (await fetch(this.props.apiPrefix + '/repo/diff', {method: 'POST', body: JSON.stringify({repo: this.props.repoPrefix, hash: c.sha})})).text();
+                c.diff = diff;
+            }
+        })).then(() => this.setState({diffsLoaded: ++this.state.diffsLoaded % 1048576}));
+        this.setState({activeCommitData: {commits: activeCommits, authors, authorCommitCounts, files}});
+    };
+
+    requestFrame = () => this.setState({frameRequestTime: ++this.state.frameRequestTime % 1048576});
+
+    filterCommits(commitFilter) {
+		var path = (commitFilter.path || '').substring(this.props.repoPrefix.length + 2);
+        var author = commitFilter.author;
+
+		return this.state.commitData.commits.filter(c => {
+            var pathHit = !path || c.files.some(f => {
+                if (f.renamed && f.renamed.startsWith(path)) {
+                    if (f.renamed === path) path = f.path;
+                    return true;
+                }
+                if (f.path.startsWith(path)) return true;
+		    });
+            var authorHit = !author || authorCmp(author, c.author) === 0;
+            return pathHit && authorHit;
+        });
+    }
 
     searchTree(query, fileTree, results) {
         if (query.every(function(re) { return re.test(fileTree.title); })) {
@@ -59,7 +118,7 @@ class MainApp extends React.Component {
         var searchResults = [];
         if (rawQuery.length > 2) {
             var myNumber = ++searchQueryNumber;
-            var res = await fetch(apiPrefix+'/repo/search', {method: "POST", body: JSON.stringify({repo:repoPrefix, query:rawQuery})});
+            var res = await fetch(this.props.apiPrefix+'/repo/search', {method: "POST", body: JSON.stringify({repo:this.props.repoPrefix, query:rawQuery})});
             var lines = (await res.text()).split("\n");
             if (searchQueryNumber !== myNumber) return;
             const codeSearchResults = lines.map(line => {
@@ -67,10 +126,10 @@ class MainApp extends React.Component {
                 if (lineNumberMatch) {
                     const [_, filename, lineStr, snippet] = lineNumberMatch;
                     const line = parseInt(lineStr);
-                    return {fsEntry: getPathEntry(this.state.fileTree, repoPrefix + "/" + filename), line, snippet};
+                    return {fsEntry: getPathEntry(this.state.fileTree.tree, this.props.repoPrefix + "/" + filename), line, snippet};
                 }
             }).filter(l => l);
-            searchResults = this.searchTree(query, this.state.fileTree, codeSearchResults);
+            searchResults = this.searchTree(query, this.state.fileTree.tree, codeSearchResults);
         }
         this.setState({searchResults});
         // if (this.state.searchIndex) {
@@ -81,7 +140,7 @@ class MainApp extends React.Component {
         // 		const [_, lineStr, lineCountStr] = (lineNumberMatch || ['0','0','0']); 
         // 		const line = parseInt(lineStr);
         // 		const lineCount = parseInt(lineCountStr);
-        // 		return {fsEntry: getPathEntry(this.state.fileTree, r.ref.replace(/^\./, repoPrefix).replace(/:\d+\/\d+$/, '')), line, lineCount};
+        // 		return {fsEntry: getPathEntry(this.state.fileTree.tree, r.ref.replace(/^\./, this.props.repoPrefix).replace(/:\d+\/\d+$/, '')), line, lineCount};
         // 	});
         // 	console.timeEnd('token search');
         // }
@@ -98,119 +157,21 @@ class MainApp extends React.Component {
         }
     }
 
-    updateActiveCommitSetDiffs() {
-        const el = document.getElementById('commitList');
-        while (el.firstChild) el.removeChild(el.firstChild);
-        el.dataset.count = window.activeCommitSet.length;
-
-        el.appendChild(createCalendar(window.activeCommitSet.map(c => c.date)));
-
-        const trackedPaths = [this.state.navigationTarget];
-        const trackedIndex = {};
-        trackedIndex[this.state.navigationTarget] = true;
-
-        window.activeCommitSet.forEach(c => {
-            var div = document.createElement('div');
-            var hashSpan = span('commit-hash', c.sha);
-            var dateSpan = span('commit-date', c.date.toString());
-            var authorSpan = span('commit-author', `${c.author.name} <${c.author.email}>`);
-            var messageSpan = span('commit-message', c.message);
-            var diffSpan = span('commit-diff', '');
-            if (c.diff && !c.diffEl) c.diffEl = formatDiff(c.diff, trackedPaths, trackedIndex);
-            if (c.diffEl) diffSpan.appendChild(c.diffEl);
-            var toggle = span('commit-toggle', 'Full info');
-            var toggleDiffs = span('commit-toggle-diffs', 'All changes');
-            toggle.onmousedown = function(ev) { ev.preventDefault(); div.classList.toggle('expanded'); };
-            toggleDiffs.onmousedown = function(ev) { ev.preventDefault(); div.classList.toggle('expanded-diffs'); };
-            div.append(toggle, hashSpan, dateSpan, authorSpan, messageSpan, toggleDiffs, diffSpan);
-            el.appendChild(div);
-        });
-    }
-
-    updateActiveCommitSetAuthors(authors, authorCommitCounts) {
-        var el = document.getElementById('authorList');
-        while (el.firstChild) el.removeChild(el.firstChild);
-        el.dataset.count = authors.length;
-        var originalCommitSet = window.activeCommitSet;
-        var filteredByAuthor = false;
-        authors.forEach(({name, email}) => {
-            var div = document.createElement('div');
-            var key = name + ' <' + email + '>';
-            div.dataset.commitCount = authorCommitCounts[key];
-            var nameSpan = span('author-name', name);
-            var emailSpan = span('author-email', email);
-            div.append(nameSpan, emailSpan);
-            div.onmousedown = function(ev) {
-                ev.preventDefault();
-                if (filteredByAuthor === this) {
-                    window.activeCommitSet = originalCommitSet;
-                    filteredByAuthor = false;
-                } else {
-                    window.activeCommitSet = originalCommitSet.filter(c => (c.author.name + ' <' + c.author.email + '>') === key);
-                    filteredByAuthor = this;
-                }
-                this.updateActiveCommitSetDiffs();
-            };
-            el.appendChild(div);
-        });
-    }
+	findCommitsForPath(path) {
+		path = path.substring(this.props.repoPrefix.length + 2);
+		return this.state.commitData.commits.filter(c => c.files.some(f => {
+			if (f.renamed && f.renamed.startsWith(path)) {
+				if (f.renamed === path) path = f.path;
+				return true;
+			}
+			if (f.path.startsWith(path)) return true;
+		}));
+	}
 
     showFileCommitsClick = (ev) => {
-        var fsEntry = getPathEntry(window.FileTree, this.state.navigationTarget);
-        if (fsEntry) {
-            window.activeCommitSet = this.findCommitsForPath(this.state.navigationTarget);
-            const authorList = window.activeCommitSet.map(c => c.author);
-            const authorCommitCounts = {};
-            authorList.forEach(author => {
-                const key = author.name + ' <' + author.email + '>';
-                if (!authorCommitCounts[key]) authorCommitCounts[key] = 0;
-                authorCommitCounts[key]++;
-            });
-            const authors = utils.uniq(authorList, this.authorCmp);
-            this.updateActiveCommitSetAuthors(authors, authorCommitCounts);
-            this.updateActiveCommitSetDiffs();
-            Promise.all(window.activeCommitSet.map(async c => {
-                if (!c.diff) {
-                    const diff = await (await fetch(apiPrefix + '/repo/diff', {method: 'POST', body: JSON.stringify({repo: repoPrefix, hash: c.sha})})).text();
-                    c.diff = diff;
-                }
-            })).then(this.updateActiveCommitSetDiffs);
-            this.showCommitsForFile(fsEntry);
-            this.requestFrame();
-        } else {
-            window.activeCommitSet = [];
-            this.updateActiveCommitSetAuthors([]);
-            this.updateActiveCommitSetDiffs();
-        }
+        this.setCommitFilter({path: this.state.navigationTarget});
+        this.requestFrame();
     };
-
-    setCommitFilter = commitFilter => this.setState({commitFilter});
-    setSearchQuery = searchQuery => {
-        this.setState({searchQuery});
-        this.searchString(searchQuery);
-    };
-    setActiveCommits = activeCommits => this.setState({activeCommits});
-    setCommits = commits => this.setState({commits, activeCommits: commits});
-    setFileTree = fileTree => this.setState({fileTree});
-    setCommitLog = commitLog => this.setState({commitLog});
-    setCommitChanges = commitChanges => this.setState({commitChanges});
-    setFiles = files => this.setState({files});
-    setNavigationTarget = navigationTarget => this.setState({navigationTarget});
-
-    parseCommits(commitLog, commitChanges, files) {
-        const {
-            authorTree, commitTree, commits, commitIndex, authors, commitsFSEntry, lineGeo, touchedFiles
-        } = parseCommits(commitLog, commitChanges, files);
-
-    }
-
-    shouldComponentUpdate(nextProps, nextState) {
-        if (nextState.commitLog && nextState.commitChanges && nextState.files &&
-            !(this.state.commitLog && this.state.commitChanges && this.state.files)) {
-            //this.parseCommits(nextState.commitLog, nextState.commitChanges, nextState.files);
-        }
-        return true;
-    }
 
     fullscreenOnClick(ev) {
         var d = document;
@@ -222,6 +183,16 @@ class MainApp extends React.Component {
         }
     }
 
+    loadFile = async (hash, path) => {
+        path = path.replace(/^\//, '');
+        var fileContents = await (await fetch(this.props.apiPrefix + "/repo/checkout", {
+            method: 'POST', body: JSON.stringify({repo: this.props.repoPrefix, hash, path})})).text();
+        this.setState({fileContents});
+    };
+
+    goToFSEntryTextAtLine = (fsEntry, line) => this.setState({goToTarget: {fsEntry, line}});
+    goToFSEntry = (fsEntry) => this.setState({goToTarget: {fsEntry}});
+
     render() {
         return (
             <div>
@@ -229,12 +200,60 @@ class MainApp extends React.Component {
                 {fullscreenSupported && <div id="fullscreen" onClick={this.fullscreenOnClick} />}
                 <div id="loader" />
 
-                <Search goToFSEntryTextAtLine={window.goToFSEntryTextAtLine} goToFSEntry={window.goToFSEntry} navigationTarget={this.state.navigationTarget} requestFrame={this.requestFrame} searchResults={this.state.searchResults}  setSearchQuery={this.setSearchQuery} searchQuery={this.state.searchQuery} commitFilter={this.state.commitFilter} setCommitFilter={this.setCommitFilter}/>
-                <Breadcrumb navigationTarget={this.state.navigationTarget} commitFilter={this.state.commitFilter} setCommitFilter={this.setCommitFilter} />
-                <CommitControls navigationTarget={this.state.navigationTarget} searchQuery={this.state.searchQuery} commitFilter={this.state.commitFilter} setCommitFilter={this.setCommitFilter} />
-                <CommitInfo activeCommits={window.activeCommitSet} navigationTarget={this.state.navigationTarget} searchQuery={this.state.searchQuery} commitFilter={this.state.commitFilter} setCommitFilter={this.setCommitFilter} />
+                <Search 
+                    goToFSEntryTextAtLine={this.goToFSEntryTextAtLine}
+                    goToFSEntry={this.goToFSEntry} 
+                    navigationTarget={this.state.navigationTarget} 
+                    requestFrame={this.requestFrame} 
+                    searchResults={this.state.searchResults} 
+                    setSearchQuery={this.setSearchQuery} 
+                    searchQuery={this.state.searchQuery} 
+                    commitFilter={this.state.commitFilter} 
+                    setCommitFilter={this.setCommitFilter} 
+                    activeCommitData={this.state.activeCommitData} 
+                    commitData={this.state.commitData}/>
+                <Breadcrumb 
+                    navigationTarget={this.state.navigationTarget} 
+                    commitFilter={this.state.commitFilter} 
+                    setCommitFilter={this.setCommitFilter} 
+                    showFileCommitsClick={this.showFileCommitsClick}
+                />
+                <CommitControls 
+                    activeCommitData={this.state.activeCommitData} 
+                    commitData={this.state.commitData} 
+                    navigationTarget={this.state.navigationTarget} 
+                    searchQuery={this.state.searchQuery} 
+                    diffsLoaded={this.state.diffsLoaded}
+                    commitFilter={this.state.commitFilter} 
+                    setCommitFilter={this.setCommitFilter} 
+                />
+                <CommitInfo 
+                    activeCommitData={this.state.activeCommitData} 
+                    commitData={this.state.commitData} 
+                    navigationTarget={this.state.navigationTarget} 
+                    searchQuery={this.state.searchQuery} 
+                    repoPrefix={this.props.repoPrefix}
+                    diffsLoaded={this.state.diffsLoaded}
+                    commitFilter={this.state.commitFilter} 
+                    setCommitFilter={this.setCommitFilter}
+                    fileContents={this.state.fileContents}
+                    loadFile={this.loadFile}
+                />
 
-                <MainView frameRequestTime={this.state.frameRequestTime} apiPrefix={apiPrefix} repoPrefix={repoPrefix} navigationTarget={this.state.navigationTarget} searchResults={this.state.searchResults} commitLog={this.state.commitLog} commitChanges={this.state.commitChanges} files={this.state.files} searchQuery={this.state.searchQuery} commitFilter={this.state.commitFilter} />
+                <MainView
+                    goToTarget={this.state.goToTarget}
+                    activeCommitData={this.state.activeCommitData}
+                    diffsLoaded={this.state.diffsLoaded}
+                    fileTree={this.state.fileTree}
+                    commitData={this.state.commitData}
+                    frameRequestTime={this.state.frameRequestTime}
+                    apiPrefix={this.props.apiPrefix}
+                    repoPrefix={this.props.repoPrefix}
+                    navigationTarget={this.state.navigationTarget}
+                    searchResults={this.state.searchResults}
+                    searchQuery={this.state.searchQuery} 
+                    commitFilter={this.state.commitFilter}
+                />
             </div>
         );
     }

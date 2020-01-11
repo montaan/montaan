@@ -45,6 +45,11 @@ class Tabletree {
 		this.authorModel = null;
 		this.processModel = null;
 		this.lineModel = null;
+
+		this.commitsPlaying = false;
+		this.searchResults = [];
+
+		this.initDone = false;
 	}
 
 	init(apiPrefix, repoPrefix) {
@@ -63,21 +68,22 @@ class Tabletree {
 		this.setupScene(); // Renderer, scene and camera setup.
 		this.setupTextModel(font, fontTexture); // Text model for files
 		this.setupSearchHighlighting(); // Search highlighting
-		setTimeout(() => { if (this._files) this.setFiles(this._files); }, 10); // Loading current repo data
 		this.setupEventListeners(); // UI event listeners
+		if (this._fileTree) this.setFileTree(this._fileTree); // Show possibly pre-loaded file tree.
+		if (this.commitData) this.setCommitData(this.commitData); // Set pre-loaded commit data.
 		this.tick(); // Main render loop
-		window.searchInput.focus(); // Focus the search at page load
+		if (window.searchInput) window.searchInput.focus(); // Focus the search at page load
 	}
 
 	setCommitLog = txt => this._commitLog = txt;
 	setCommitChanges = txt => this._commitChanges = txt;
 
-	setFiles(txt) {
-		this._files = txt;
+	setFileTree(fileTree) {
+		this._fileTree = fileTree;
 		if (this.renderer) {
-			// window.SearchIndex = loadLunrIndex(this.apiPrefix+'/repo/fs/'+this.repoPrefix+'/index.lunr.json');
-			this.navigateToList(txt);
+			this.showFileTree(fileTree);
 			this.setLoaded(true);
+			this._fileTree = null;
 		}
 	}
 
@@ -158,16 +164,16 @@ class Tabletree {
 	// processTick() {
 	// 	utils.loadFiles(this.apiPrefix + '/_/processes', function(processTree, processString) {
 	// 		this.ProcessTree = processTree.tree;
-	// 		if (window.processModel) {
-	// 			scene.remove(window.processModel);
-	// 			scene.remove(window.processModel.line);
-	// 			window.processModel.line.geometry.dispose();
-	// 			window.processModel.geometry.dispose();
+	// 		if (this.processModel) {
+	// 			scene.remove(this.processModel);
+	// 			scene.remove(this.processModel.line);
+	// 			this.processModel.line.geometry.dispose();
+	// 			this.processModel.geometry.dispose();
 	// 		}
-	// 		window.processModel = createFileTreeModel(processTree.count, processTree.tree);
-	// 		window.processModel.position.set(0.5, -0.25, 0.0);
-	// 		window.processModel.scale.multiplyScalar(0.5);
-	// 		scene.add(window.processModel);
+	// 		this.processModel = createFileTreeModel(processTree.count, processTree.tree);
+	// 		this.processModel.position.set(0.5, -0.25, 0.0);
+	// 		this.processModel.scale.multiplyScalar(0.5);
+	// 		scene.add(this.processModel);
 
 	// 		var geo = new THREE.Geometry();
 
@@ -180,7 +186,7 @@ class Tabletree {
 	// 		var line = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({
 	// 			color: 0xffffff, opacity: 0.1, blending: THREE.AdditiveBlending, transparent: true
 	// 		}));
-	// 		window.processModel.line = line;
+	// 		this.processModel.line = line;
 	// 		scene.add(line);
 
 	// 		// setTimeout(processTick, 1000);
@@ -217,6 +223,7 @@ class Tabletree {
 		} else {
 			this.highlightLater.push([fsEntry, line]);
 		}
+		this.changed = true;
 	}
 
 	clearSearchHighlights() {
@@ -243,6 +250,7 @@ class Tabletree {
 			if (fsEntry.entries !== null && results[i].line === 0) {
 				Geometry.setColor(ca.array, fsEntry.index, fsEntry.entries === null ? [1,0,0] : [0.6, 0, 0], 0);
 			} else if (fsEntry.entries === null && results[i].line > 0) {
+				console.log(fsEntry);
 				this.addHighlightedLine(fsEntry, results[i].line);
 			}
 		}
@@ -344,8 +352,10 @@ class Tabletree {
 			);
 		}
 		this.searchHighlights.ontick = () => {
+			this.searchHighlights.visible = this.searchResults.length > 0;
 			if (this.highlightLater.length > 0) {
-				this.highlightLater.splice(0).forEach(args => this.addHighlightedLine.apply(null, args));
+				const later = this.highlightLater.splice(0);
+				for (var i = 0; i < later.length; i++) this.addHighlightedLine(later[i][0], later[i][1]);
 			}
 		};
 
@@ -376,21 +386,31 @@ class Tabletree {
 
 		searchLine.hovered = false;
 		searchLine.ontick = () => {
+			searchLine.visible = this.searchResults.length > 0 && searchLine.hovered;
+			if (!window.searchResults) return;
 			if (window.searchResults.querySelector('.hover') || searchLine.hovered) {
 				this.updateSearchLines();
 			}
 		};
 
+		this.scene.add(this.searchLine);
+		this.scene.add(this.searchHighlights);
+
 	}
 
 	setSearchResults(searchResults) {
-		this.highlightResults(searchResults);
+		this.searchResults = searchResults || [];
+		this.highlightResults(searchResults || []);
 		this.updateSearchLines();
 	}
 
+	goToTarget(target) {
+		if (!target) return;
+		if (target.line !== undefined) this.goToFSEntryTextAtLine(target.fsEntry, target.line);
+		else this.goToFSEntry(target.fsEntry);
+	}
 
-
-	goToFSEntry(fsEntry, model) {
+	goToFSEntry(fsEntry, model=this.model) {
 		const { scene, camera } = this;
 		scene.updateMatrixWorld();
 		var fsPoint = new THREE.Vector3(fsEntry.x + fsEntry.scale/2, fsEntry.y + fsEntry.scale/2, fsEntry.z);
@@ -400,7 +420,7 @@ class Tabletree {
 		fsEntry.fov = camera.targetFOV;
 	}
 
-	goToFSEntryText(fsEntry, model) {
+	goToFSEntryText(fsEntry, model=this.model) {
 		const { scene, camera } = this;
 		scene.updateMatrixWorld();
 		var textX = fsEntry.textX;
@@ -412,11 +432,11 @@ class Tabletree {
 		fsEntry.textFOV = camera.targetFOV;
 	}
 
-	goToFSEntryTextAtLine(fsEntry, model, line) {
+	goToFSEntryTextAtLine(fsEntry, line, model=this.model) {
 		const { scene, camera } = this;
 		if (!fsEntry.textHeight) {
 			fsEntry.targetLine = {line};
-			return this.goToFSEntry(fsEntry, window.model);
+			return this.goToFSEntry(fsEntry, model);
 		}
 		const textYOff = ((line+0.5) / fsEntry.lineCount) * fsEntry.textHeight;
 		scene.updateMatrixWorld();
@@ -434,6 +454,7 @@ class Tabletree {
 		const self = this;
 		this.breadcrumbPath = path;
 		var el = document.getElementById('breadcrumb');
+		if (!el) return;
 		while (el.firstChild) el.removeChild(el.firstChild);
 		var segs = path.split("/");
 		el.onmouseout = function(ev) {
@@ -672,9 +693,8 @@ class Tabletree {
 													console.timeEnd('prettyPrint collectNodeStyles ' + self.currentFrame);
 												}
 
+												var text = _xhr.obj;
 
-												const text = _xhr.obj;
-												const fsEntry = _xhr.fsEntry;
 												text.visible = true;
 												console.time('createText ' + self.currentFrame);
 												text.geometry = createText({font: Layout.font, text: contents, mode: 'pre'});
@@ -711,33 +731,33 @@ class Tabletree {
 												};
 
 												var textScale = 1 / Math.max(text.geometry.layout.width+60, (text.geometry.layout.height+30)/0.75);
-												var scale = fsEntry.scale * textScale;
+												var scale = _xhr.fsEntry.scale * textScale;
 												var vAspect = Math.min(1, ((text.geometry.layout.height+30)/0.75) / (text.geometry.layout.width+60));
 												text.material.depthTest = false;
 												text.scale.multiplyScalar(scale);
 												text.scale.y *= -1;
-												text.position.copy(fsEntry);
-												text.fsEntry = fsEntry;
-												text.position.x += fsEntry.scale * textScale * 30;
-												text.position.y -= fsEntry.scale * textScale * 7.5;
-												text.position.y += fsEntry.scale * 0.25;
+												text.position.copy(_xhr.fsEntry);
+												text.fsEntry = _xhr.fsEntry;
+												text.position.x += _xhr.fsEntry.scale * textScale * 30;
+												text.position.y -= _xhr.fsEntry.scale * textScale * 7.5;
+												text.position.y += _xhr.fsEntry.scale * 0.25;
 												
-												fsEntry.textScale = textScale;
-												fsEntry.textXZero = text.position.x;
-												fsEntry.textX = text.position.x + scale * Math.min(40 * 30 + 60, text.geometry.layout.width + 60) * 0.5;
-												fsEntry.textYZero = text.position.y + fsEntry.scale * 0.75;
-												fsEntry.textY = text.position.y + fsEntry.scale * 0.75 - scale * 900;
-												fsEntry.textHeight = scale * text.geometry.layout.height;
+												_xhr.fsEntry.textScale = textScale;
+												_xhr.fsEntry.textXZero = text.position.x;
+												_xhr.fsEntry.textX = text.position.x + scale * Math.min(40 * 30 + 60, text.geometry.layout.width + 60) * 0.5;
+												_xhr.fsEntry.textYZero = text.position.y + _xhr.fsEntry.scale * 0.75;
+												_xhr.fsEntry.textY = text.position.y + _xhr.fsEntry.scale * 0.75 - scale * 900;
+												_xhr.fsEntry.textHeight = scale * text.geometry.layout.height;
 
-												text.position.y += fsEntry.scale * 0.75 * (1-vAspect);
+												text.position.y += _xhr.fsEntry.scale * 0.75 * (1-vAspect);
 
 												const lineCount = contents.split("\n").length;
-												fsEntry.lineCount = lineCount;
+												_xhr.fsEntry.lineCount = lineCount;
 
-												if (fsEntry.targetLine) {
-													const {line} = fsEntry.targetLine;
-													fsEntry.targetLine = null;
-													self.goToFSEntryTextAtLine(fsEntry, window.model, line, lineCount);
+												if (_xhr.fsEntry.targetLine) {
+													const {line} = _xhr.fsEntry.targetLine;
+													_xhr.fsEntry.targetLine = null;
+													self.goToFSEntryTextAtLine(_xhr.fsEntry, line);
 												}
 
 												console.timeEnd('tweakText ' + self.currentFrame);
@@ -941,10 +961,10 @@ class Tabletree {
 		var b = getPathEntry(this.FileTree, processPath.replace(/^\/\d+\/files/, '').replace(/\:/g, '/'));
 		if (a && b) {
 			var av = new THREE.Vector3(a.x, a.y, a.z);
-			av.multiply(window.processModel.scale);
-			av.add(window.processModel.position);
+			av.multiply(this.processModel.scale);
+			av.add(this.processModel.position);
 			var bv = new THREE.Vector3(b.x, b.y, b.z);
-			bv.add(window.model.position);
+			bv.add(this.model.position);
 			var aUp = new THREE.Vector3(av.x, av.y, Math.max(av.z, bv.z) + 0.1);
 			var bUp = new THREE.Vector3(bv.x, bv.y, Math.max(av.z, bv.z) + 0.1);
 
@@ -1013,8 +1033,8 @@ class Tabletree {
 		if (first) for (var i = 0; i < geo.vertices.length; i++) geo.vertices[i].set(-100,-100,-100);
 		if (entry.outgoingLines) {
 			entry.outgoingLines.forEach(l => {
-				if (l.dst.window.model !== avoidModel) this.updateLineBetweenEntries(geo, l.index, l.color, l.src.window.model, l.src.entry, l.dst.window.model, l.dst.entry);
-				if (depth > 0) this.showLinesForEntry(geo, l.dst.entry, depth-1, false, l.src.window.model, false);
+				if (l.dst.model !== avoidModel) this.updateLineBetweenEntries(geo, l.index, l.color, l.src.model, l.src.entry, l.dst.model, l.dst.entry);
+				if (depth > 0) this.showLinesForEntry(geo, l.dst.entry, depth-1, false, l.src.model, false);
 			});
 		}
 		if (recurse) {
@@ -1027,10 +1047,10 @@ class Tabletree {
 	showCommit(sha) {
 		var c = this.commitData.commitIndex[sha];
 		this.showLinesForEntry(this.lineGeo, this.commitData.commitsFSEntry.entries[sha], 0);
-		var commitDetails = document.getElementById('commitDetails');
-		commitDetails.textContent = `${sha}\n${c.date.toString()}\n${c.author.name} <${c.author.email}>\n\n${c.message}\n\n${c.files.map(
-			({action,path,renamed}) => `${action} ${path}${renamed ? ' '+renamed : ''}`
-		).join("\n")}`;
+		// var commitDetails = document.getElementById('commitDetails');
+		// commitDetails.textContent = `${sha}\n${c.date.toString()}\n${c.author.name} <${c.author.email}>\n\n${c.message}\n\n${c.files.map(
+		// 	({action,path,renamed}) => `${action} ${path}${renamed ? ' '+renamed : ''}`
+		// ).join("\n")}`;
 	}
 
 	showCommitsByAuthor(authorName) {
@@ -1041,21 +1061,15 @@ class Tabletree {
 		this.showLinesForEntry(this.lineGeo, fsEntry, 1);
 	}
 
-	findCommitsForPath(path) {
-		path = path.substring(this.repoPrefix.length + 2);
-		return this.commitData.commits.filter(c => c.files.some(f => {
-			if (f.renamed && f.renamed.startsWith(path)) {
-				if (f.renamed === path) path = f.path;
-				return true;
-			}
-			if (f.path.startsWith(path)) return true;
-		}));
+	setActiveCommits(activeCommits) {
+		this.activeCommits = activeCommits;
+		this.changed = true;
 	}
 
 	setCommitData(commitData) {
 		this.setLoaded(true);
-
 		this.commitData = commitData;
+		if (!this.initDone) return;
 		
 		// this.authorModel = createFileListModel(this.commitData.AuthorTree.count, this.commitData.AuthorTree.tree);
 		// this.authorModel.position.set(1.5, -0.5, 0.0);
@@ -1069,6 +1083,8 @@ class Tabletree {
 		// this.processModel.updateMatrix();
 		// this.authorModel.updateMatrix();
 
+		if (this.lineModel) this.modelPivot.remove(this.lineModel);
+
 		this.lineModel = new THREE.LineSegments(this.lineGeo, new THREE.LineBasicMaterial({
 			color: new THREE.Color(1.0, 1.0, 1.0), opacity: 1, transparent: true, depthWrite: false,
 			vertexColors: true
@@ -1077,7 +1093,7 @@ class Tabletree {
 		this.modelPivot.add(this.lineModel);
 
 		this.lineModel.ontick = () => {
-			var cf = (self.currentFrame / 2) | 0;
+			var cf = (this.currentFrame / 2) | 0;
 			if (false) {
 				var aks = Object.keys(this.commitData.authors);
 				this.showCommitsByAuthor(aks[cf % aks.length]);
@@ -1086,8 +1102,8 @@ class Tabletree {
 				this.showCommitsForFile(this.commitData.touchedFiles[cf % this.commitData.touchedFiles.length]);
 				this.changed = true;
 			} else if (this.commitsPlaying) {
-				var idx = this.activeCommitSet.length-1-(cf % this.activeCommitSet.length);
-				var c = this.activeCommitSet[idx];
+				var idx = this.activeCommits.length-1-(cf % this.activeCommits.length);
+				var c = this.activeCommits[idx];
 				var slider = document.getElementById('commitSlider');
 				slider.value = idx;
 				this.showCommit(c.sha);
@@ -1095,41 +1111,6 @@ class Tabletree {
 			}
 		};
 		this.changed = true;
-
-		this.activeCommitSet = this.commitData.commits;
-		
-		this.commitsPlaying = false;
-
-		const self = this;
-
-		document.getElementById('playCommits').onclick = function(ev) {
-			self.commitsPlaying = !self.commitsPlaying;
-			self.changed = true;
-		};
-
-		document.getElementById('commitSlider').oninput = function(ev) {
-			var v = parseInt(this.value);
-			if (self.activeCommitSet[v]) {
-				self.showCommit(self.activeCommitSet[v].sha);
-				self.changed = true;
-			}
-		};
-		document.getElementById('previousCommit').onclick = function(ev) {
-			var slider = document.getElementById('commitSlider');
-			var v = parseInt(slider.value) - 1;
-			if (self.activeCommitSet[v]) {
-				slider.value = v;
-				slider.oninput();
-			}
-		};
-		document.getElementById('nextCommit').onclick = function(ev) {
-			var slider = document.getElementById('commitSlider');
-			var v = parseInt(slider.value) + 1;
-			if (self.activeCommitSet[v]) {
-				slider.value = v;
-				slider.oninput();
-			}
-		};
 	}
 
 	zoomCamera(zf, cx, cy) {
@@ -1160,10 +1141,8 @@ class Tabletree {
 		var inGesture = false;
 
 		renderer.domElement.addEventListener('touchstart', function(ev) {
-			if (window.searchInput) {
-				window.searchInput.blur();
-			}
-			if (window.DocFrame) return;
+			if (window.searchInput) window.searchInput.blur();
+			if (self.DocFrame) return;
 			ev.preventDefault();
 			if (ev.touches.length === 1) {
 				renderer.domElement.onmousedown(ev.touches[0]);
@@ -1181,7 +1160,7 @@ class Tabletree {
 		}, false);
 
 		renderer.domElement.addEventListener('touchmove', function(ev) {
-			if (window.DocFrame) return;
+			if (self.DocFrame) return;
 			ev.preventDefault();
 			if (ev.touches.length === 1) {
 				if (!inGesture) {
@@ -1204,7 +1183,7 @@ class Tabletree {
 		}, false);
 
 		renderer.domElement.addEventListener('touchend', function(ev) {
-			if (window.DocFrame) return;
+			if (self.DocFrame) return;
 			ev.preventDefault();
 			if (ev.touches.length === 0) {
 				if (!inGesture) {
@@ -1218,7 +1197,7 @@ class Tabletree {
 		}, false);
 
 		renderer.domElement.addEventListener('touchcancel', function(ev) {
-			if (window.DocFrame) return;
+			if (self.DocFrame) return;
 			ev.preventDefault();
 			if (ev.touches.length === 0) {
 				if (!inGesture) {
@@ -1260,10 +1239,8 @@ class Tabletree {
 		};
 
 		renderer.domElement.onmousedown = function(ev) {
-			if (window.searchInput) {
-				window.searchInput.blur();
-			}
-			if (window.DocFrame) return;
+			if (window.searchInput) window.searchInput.blur();
+			if (self.DocFrame) return;
 			if (ev.preventDefault) ev.preventDefault();
 			down = true;
 			clickDisabled = false;
@@ -1272,7 +1249,7 @@ class Tabletree {
 		};
 
 		window.onmousemove = function(ev, factor) {
-			if (window.DocFrame) return;
+			if (self.DocFrame) return;
 			if (down) {
 				if (!factor) {
 					factor = 0.0001;
@@ -1304,7 +1281,7 @@ class Tabletree {
 		var wheelSnapTimer;
 		var wheelFreePan = false;
 		renderer.domElement.onwheel = function(ev) {
-			if (window.DocFrame) return;
+			if (self.DocFrame) return;
 			ev.preventDefault();
 
 			if (ev.ctrlKey) {
@@ -1417,14 +1394,41 @@ class Tabletree {
 				}
 			}
 		};
+
+
+		document.getElementById('playCommits').onclick = function(ev) {
+			self.commitsPlaying = !self.commitsPlaying;
+			self.changed = true;
+		};
+
+		document.getElementById('commitSlider').oninput = function(ev) {
+			var v = parseInt(this.value);
+			if (self.activeCommits[v]) {
+				self.showCommit(self.activeCommits[v].sha);
+				self.changed = true;
+			}
+		};
+		document.getElementById('previousCommit').onclick = function(ev) {
+			var slider = document.getElementById('commitSlider');
+			var v = parseInt(slider.value) - 1;
+			if (self.activeCommits[v]) {
+				slider.value = v;
+				slider.oninput();
+			}
+		};
+		document.getElementById('nextCommit').onclick = function(ev) {
+			var slider = document.getElementById('commitSlider');
+			var v = parseInt(slider.value) + 1;
+			if (self.activeCommits[v]) {
+				slider.value = v;
+				slider.oninput();
+			}
+		};
+
 	}
 
 	render() {
 		const { scene, camera, renderer } = this;
-		scene.remove(this.searchLine);
-		scene.add(this.searchLine);
-		scene.remove(this.searchHighlights);
-		scene.add(this.searchHighlights);
 		scene.updateMatrixWorld(true);
 		var t = performance.now();
 		scene.tick(t, t - this.lastFrameTime);

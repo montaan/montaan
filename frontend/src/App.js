@@ -191,7 +191,7 @@ class App extends React.Component {
                             }/>
                         </Switch>
 
-                        <MainApp/>
+                        <MainApp api={this.api} apiPrefix={this.api.server} repoPrefix={'v8/v8'}/>
                     </main>
                 </div>
             </Router>

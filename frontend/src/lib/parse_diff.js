@@ -92,7 +92,12 @@ export function parseDiff(diff) {
     return changes;
 }
 
-export function formatDiff(diff, trackedPaths, trackedIndex) {
+function showFileToggleOnClick(ev) {
+    ev.preventDefault();
+    this.showFile(this.sha, this.path, this);
+}
+
+export function formatDiff(sha, diff, trackedPaths, trackedIndex, showFile) {
     const container = span();
     const changes = parseDiff(diff);
     changes.forEach(change => {
@@ -113,7 +118,13 @@ export function formatDiff(diff, trackedPaths, trackedIndex) {
         }
         const changeEl = span(inPath ? '' : 'collapsed');
         container.append(changeEl);
+        const showFileToggle = span('commit-toggle-show', 'Show file');
+        showFileToggle.path = change.dstPath;
+        showFileToggle.sha = sha;
+        showFileToggle.showFile = showFile;
+        showFileToggle.onmousedown = showFileToggleOnClick;
         changeEl.append(
+            showFileToggle,
             span('prev', change.srcPath),
             span('cur', change.dstPath)
         );

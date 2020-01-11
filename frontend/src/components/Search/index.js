@@ -38,9 +38,9 @@ export default class CommitControls extends React.Component {
             ev.preventDefault();
             ev.stopPropagation();
             if (this.result.line > 0) {
-                self.props.goToFSEntryTextAtLine(this.result.fsEntry, window.model, this.result.line, this.result.fsEntry.lineCount);
+                self.props.goToFSEntryTextAtLine(this.result.fsEntry, this.result.line);
             } else {
-                self.props.goToFSEntry(this.result.fsEntry, window.model);
+                self.props.goToFSEntry(this.result.fsEntry);
             }
         };
         li.appendChild(title);

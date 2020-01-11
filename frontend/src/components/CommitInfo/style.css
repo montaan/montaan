@@ -79,6 +79,27 @@
 	font-size: 10px;
 }
 
+#fileView {
+	position: absolute;
+	background: #f8f8f8;
+
+	z-index: 1000;
+
+	right: 770px;
+	top: 126px;
+	bottom: 0px;
+
+	height: auto;
+	width: 500px;
+
+	padding: 10px;
+
+	overflow: auto;
+	font-size: 10px;
+
+	white-space: pre;
+}
+
 #commitList div.calendar-year {
 	padding-bottom: 0px;
 	margin-bottom: 0px;
