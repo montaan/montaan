@@ -1,10 +1,5 @@
 import { getPathEntry, getFullPath, getSiblings } from './lib/filetree';
-import { parseCommits } from './lib/parse_commits';
 import Colors from './lib/Colors';
-
-const apiPrefix = 'http://localhost:8008/_';
-const repoPrefix = 'kig/tabletree';
-const MAX_COMMITS = 1000000;
 
 const THREE = require('three');
 global.THREE = THREE;
@@ -15,15 +10,6 @@ var Layout = require('./lib/Layout.js');
 var createText = require('./lib/third_party/three-bmfont-text-modified');
 var SDFShader = require('./lib/third_party/three-bmfont-text-modified/shaders/sdf');
 var loadFont = require('load-bmfont');
-
-var lunr = require('./lib/third_party/lunr.js');
-window.lunr = lunr;
-
-window.changed = true;
-window.model = null;
-window.authorModel = null;
-window.processModel = null;
-window.connectionLines = null;
 
 THREE.Object3D.prototype.tick = function(t, dt) {
 	if (this.ontick) this.ontick(t, dt);
@@ -46,58 +32,458 @@ THREE.Object3D.prototype.tick = function(t, dt) {
 
 
 class Tabletree {
-	animating = false;
-	currentFrame = 0;
+
+	constructor() {
+		this.animating = false;
+		this.currentFrame = 0;
+
+		this.changed = true;
+		this.model = null;
+		this.authorModel = null;
+		this.processModel = null;
+		this.connectionLines = null;
+	}
 
 	setCommitLog = txt => this._commitLog = txt;
 	setCommitChanges = txt => this._commitChanges = txt;
-	setFiles = txt => this._files = txt;
 
-	init() {
+	init(apiPrefix, repoPrefix) {
+		this.apiPrefix = apiPrefix;
+		this.repoPrefix = repoPrefix;
 		loadFont('fnt/DejaVu-sdf.fnt', (err, font) => {
 			if (err) throw err;
 			new THREE.TextureLoader().load('fnt/DejaVu-sdf.png', (tex) => this.start(font, tex));
 		});
 	}
 
-	start(font, fontTexture) {
-		var animating = false;
-		var currentFrame = 0;
-
-		// Scene setup
-		{
-			var renderer = new THREE.WebGLRenderer({antialias: true, alpha: false});
-			renderer.domElement.id = 'renderCanvas';
-			renderer.setPixelRatio(window.devicePixelRatio || 1);
-			renderer.setClearColor(Colors.backgroundColor, 1);
-			document.body.appendChild(renderer.domElement);
-
-			var scene = new THREE.Scene();
-
-			var camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.5, 5);
-
-			camera.position.z = 2;
-
-			scene.add(camera);
-
-			window.onresize = function() {
-				camera.aspect = window.innerWidth / window.innerHeight;
-				camera.updateProjectionMatrix();
-				renderer.setSize(window.innerWidth, window.innerHeight);
-				window.changed = true;
-			};
-
-			window.onresize();
-
-			var modelTop = new THREE.Object3D();
-			modelTop.position.set(-0.5, -0.5, 0.0);
-			var modelPivot = new THREE.Object3D();
-			modelPivot.rotation.x = -0.5;
-			// modelPivot.rotation.z = 0;
-			modelPivot.position.set(0.5, 0.5, 0.0);
-			scene.add(modelTop);
-			modelTop.add(modelPivot);
+	setFiles(txt) {
+		this._files = txt;
+		if (this.renderer) {
+			// window.SearchIndex = loadLunrIndex(this.apiPrefix+'/repo/fs/'+this.repoPrefix+'/index.lunr.json');
+			this.navigateToList(txt);
+			this.setLoaded(true);
 		}
+	}
+
+	setLoaded(loaded) {
+		if (loaded) {
+			document.body.classList.add('loaded');
+			setTimeout(function() {
+				if (document.body.classList.contains('loaded')) {
+					document.getElementById('loader').style.display = 'none';
+				}
+			}, 1000);
+		} else {
+			document.getElementById('loader').style.display = 'block';
+			document.body.classList.remove('loaded');
+		}
+	}
+
+	navigateTo(url, onSuccess, onFailure) {
+		utils.loadFiles(url, (fileTree) => {
+			this.setLoaded(true);
+			this.showFileTree(fileTree);
+			if (onSuccess) onSuccess();
+		}, onFailure, this.repoPrefix+'/');
+	}
+
+	navigateToList(text, onSuccess, onFailure) {
+		utils.loadFromText(text, (fileTree) => {
+			this.setLoaded(true);
+			this.showFileTree(fileTree);
+			if (onSuccess) onSuccess();
+		}, onFailure, this.repoPrefix+'/');
+	}
+
+	onResize() {
+		this.camera.aspect = window.innerWidth / window.innerHeight;
+		this.camera.updateProjectionMatrix();
+		this.renderer.setSize(window.innerWidth, window.innerHeight);
+		this.changed = true;
+	}
+
+	setupScene() {
+		var renderer = new THREE.WebGLRenderer({antialias: true, alpha: false});
+		renderer.domElement.id = 'renderCanvas';
+		renderer.setPixelRatio(window.devicePixelRatio || 1);
+		renderer.setClearColor(Colors.backgroundColor, 1);
+		document.body.appendChild(renderer.domElement);
+
+		var scene = new THREE.Scene();
+
+		var camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.5, 5);
+
+		camera.position.z = 2;
+		camera.targetPosition = new THREE.Vector3().copy(camera.position);
+		camera.targetFOV = camera.fov;
+
+		scene.add(camera);
+
+		var modelTop = new THREE.Object3D();
+		modelTop.position.set(-0.5, -0.5, 0.0);
+		var modelPivot = new THREE.Object3D();
+		modelPivot.rotation.x = -0.5;
+		// modelPivot.rotation.z = 0;
+		modelPivot.position.set(0.5, 0.5, 0.0);
+		scene.add(modelTop);
+		modelTop.add(modelPivot);
+
+		this.renderer = renderer;
+		this.scene = scene;
+		this.camera = camera;
+		this.modelTop = modelTop;
+		this.modelPivot = modelPivot;
+
+		window.onresize = this.onResize.bind(this);
+		this.onResize();
+	}
+
+	// Running processes tree
+	// processTick() {
+	// 	utils.loadFiles(this.apiPrefix + '/_/processes', function(processTree, processString) {
+	// 		this.ProcessTree = processTree.tree;
+	// 		if (window.processModel) {
+	// 			scene.remove(window.processModel);
+	// 			scene.remove(window.processModel.line);
+	// 			window.processModel.line.geometry.dispose();
+	// 			window.processModel.geometry.dispose();
+	// 		}
+	// 		window.processModel = createFileTreeModel(processTree.count, processTree.tree);
+	// 		window.processModel.position.set(0.5, -0.25, 0.0);
+	// 		window.processModel.scale.multiplyScalar(0.5);
+	// 		scene.add(window.processModel);
+
+	// 		var geo = new THREE.Geometry();
+
+	// 		processString.split("\n").forEach(function(proc) {
+	// 			if (/^\/\d+\/files\/.+/.test(proc)) {
+	// 				addLine(geo, proc);
+	// 			}
+	// 		});
+
+	// 		var line = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({
+	// 			color: 0xffffff, opacity: 0.1, blending: THREE.AdditiveBlending, transparent: true
+	// 		}));
+	// 		window.processModel.line = line;
+	// 		scene.add(line);
+
+	// 		// setTimeout(processTick, 1000);
+	// 	});
+	// }
+
+	addHighlightedLine(fsEntry, line) {
+		if (fsEntry.textHeight) {
+			const lineCount = fsEntry.lineCount;
+			var geo = this.searchHighlights.geometry;
+			var index = this.searchHighlights.index;
+			this.searchHighlights.index++;
+
+			const lineBottom = fsEntry.textYZero - ((line+1) / lineCount) * fsEntry.textHeight;
+			const lineTop    = fsEntry.textYZero - (line     / lineCount) * fsEntry.textHeight;
+			var c0 = new THREE.Vector3(fsEntry.x, 					lineBottom, fsEntry.z);
+			var c1 = new THREE.Vector3(fsEntry.x + fsEntry.scale, 	lineBottom, fsEntry.z);
+			var c2 = new THREE.Vector3(fsEntry.x + fsEntry.scale, 	lineTop, 	fsEntry.z);
+			var c3 = new THREE.Vector3(fsEntry.x, 					lineTop, 	fsEntry.z);
+
+			c0.applyMatrix4(this.model.matrixWorld);
+			c1.applyMatrix4(this.model.matrixWorld);
+			c2.applyMatrix4(this.model.matrixWorld);
+			c3.applyMatrix4(this.model.matrixWorld);
+
+			var off = index * 4;
+
+			geo.vertices[off++].copy(c0);
+			geo.vertices[off++].copy(c1);
+			geo.vertices[off++].copy(c2);
+			geo.vertices[off++].copy(c3);
+
+			geo.verticesNeedUpdate = true;
+		} else {
+			this.highlightLater.push([fsEntry, line]);
+		}
+	}
+
+	clearSearchHighlights() {
+		var geo = this.searchHighlights.geometry;
+		var verts = geo.vertices;
+		for (var i=0; i<verts.length; i++){
+			var v = verts[i];
+			v.x = v.y = v.z = 0;
+		}
+		geo.verticesNeedUpdate = true;
+		this.searchHighlights.index = 0;
+		this.highlightLater = [];
+		this.changed = true;
+	}
+
+	highlightResults(results) {
+		var ca = this.model.geometry.attributes.color;
+		this.highlightedResults.forEach(function(highlighted) {
+			Geometry.setColor(ca.array, highlighted.fsEntry.index, Colors[highlighted.fsEntry.entries === null ? 'getFileColor' : 'getDirectoryColor'](highlighted.fsEntry), 0);
+		});
+		this.clearSearchHighlights();
+		for (var i = 0; i < results.length; i++) {
+			var fsEntry = results[i].fsEntry;
+			if (fsEntry.entries !== null && results[i].line === 0) {
+				Geometry.setColor(ca.array, fsEntry.index, fsEntry.entries === null ? [1,0,0] : [0.6, 0, 0], 0);
+			} else if (fsEntry.entries === null && results[i].line > 0) {
+				this.addHighlightedLine(fsEntry, results[i].line);
+			}
+		}
+		this.highlightedResults = results;
+		ca.needsUpdate = true;
+		this.changed = true;
+	}
+
+	addScreenLine(geo, fsEntry, bbox, index, line, lineCount) {
+		var a = new THREE.Vector3(fsEntry.x, fsEntry.y, fsEntry.z);
+		a.applyMatrix4(this.model.matrixWorld);
+		var b = a;
+
+		var av = new THREE.Vector3(a.x + 0.05 * fsEntry.scale, a.y + 0.05 * fsEntry.scale, a.z);
+
+		var off = index * 4;
+		if (!bbox || bbox.bottom < 0 || bbox.top > window.innerHeight) {
+			var bv = new THREE.Vector3(b.x - fsEntry.scale*0.5, av.y + 0.05*fsEntry.scale + fsEntry.scale*3.15, av.z - fsEntry.scale*0.5);
+			var aUp = new THREE.Vector3(av.x - fsEntry.scale*0.075, av.y + 0.05*fsEntry.scale, av.z);
+		} else {
+			this.screenPlane.visible = true;
+			var intersections = utils.findIntersectionsUnderEvent({clientX: bbox.left, clientY: bbox.top+24, target: this.renderer.domElement}, this.camera, [this.screenPlane]);
+			this.screenPlane.visible = false;
+			var b = intersections[0].point;
+			var bv = new THREE.Vector3(b.x, b.y, b.z);
+			var aUp = new THREE.Vector3(av.x, av.y, av.z);
+			if (line > 0 && fsEntry.textHeight) {
+				const textYOff = ((line+0.5) / lineCount) * fsEntry.textHeight;
+				const textLinePos = new THREE.Vector3(fsEntry.textXZero, fsEntry.textYZero - textYOff, fsEntry.z);
+				textLinePos.applyMatrix4(this.model.matrixWorld);
+				aUp = av = textLinePos;
+			}
+		}
+
+		geo.vertices[off++].copy(av);
+		geo.vertices[off++].copy(aUp);
+		geo.vertices[off++].copy(aUp);
+		geo.vertices[off++].copy(bv);
+	}
+
+	updateSearchLines() {
+		this.clearSearchLine();
+		this.searchLine.hovered = false;
+		var lis = [].slice.call(window.searchResults.querySelectorAll('li'));
+		if (lis.length <= this.searchLine.geometry.vertices.length/4) {
+			for (var i=0, l=lis.length; i<l; i++) {
+				var bbox = null;
+				var li = lis[i];
+				if (li && li.classList.contains('hover') && !li.result.lineResults) {
+					this.searchLine.hovered = true;
+					bbox = li.getBoundingClientRect();
+				}
+				if (li) {
+					this.addScreenLine(this.searchLine.geometry, li.result.fsEntry, bbox, i, li.result.line, li.result.fsEntry.lineCount);
+				}
+			}
+		}
+		if (i > 0 || i !== this.searchLine.lastUpdate) {
+			this.searchLine.geometry.verticesNeedUpdate = true;
+			this.changed = true;
+			this.searchLine.lastUpdate = i;
+		}
+		if (this.LineModel) {
+			this.LineModel.visible = this.highlightedResults.length === 0;
+		}
+	}
+
+	clearSearchLine() {
+		var geo = this.searchLine.geometry;
+		var verts = geo.vertices;
+		for (var i=0; i<verts.length; i++){
+			var v = verts[i];
+			v.x = v.y = v.z = 0;
+		}
+		geo.verticesNeedUpdate = true;
+		this.changed = true;
+	}
+	
+	setupSearchHighlighting() {
+		this.highlightedResults = [];
+		this.highlightLater = [];
+		this.searchHighlights = new THREE.Mesh(new THREE.Geometry(), new THREE.MeshBasicMaterial({
+			side: THREE.DoubleSide,
+			color: 0xff0000,
+			opacity: 0.33,
+			transparent: true,
+			depthTest: false,
+			depthWrite: false
+		}));
+		this.searchHighlights.frustumCulled = false;
+		for (var i=0; i<40000; i++) {
+			this.searchHighlights.geometry.vertices.push(new THREE.Vector3());
+		}
+		for (var i=0; i<10000; i++) {
+			var off = i * 4;
+			this.searchHighlights.geometry.faces.push(
+				new THREE.Face3(off, off+1, off+2),
+				new THREE.Face3(off, off+2, off+3)
+			);
+		}
+		this.searchHighlights.ontick = () => {
+			if (this.highlightLater.length > 0) {
+				this.highlightLater.splice(0).forEach(args => this.addHighlightedLine.apply(null, args));
+			}
+		};
+
+		var screenPlane = new THREE.Mesh(new THREE.PlaneBufferGeometry(2000,2000), new THREE.MeshBasicMaterial({ color: 0xff00ff }));
+		screenPlane.visible = false;
+		screenPlane.position.z = 0.75;
+		this.scene.add(screenPlane);
+
+		this.screenPlane = screenPlane;
+
+		var searchLine = new THREE.LineSegments(new THREE.Geometry(), new THREE.LineBasicMaterial({
+			color: 0xff0000,
+			opacity: 1,
+			transparent: true,
+			depthTest: false,
+			depthWrite: false
+			// linewidth: 2 * (window.devicePixelRatio || 1)
+		}));
+		this.searchLine = searchLine;
+		searchLine.frustumCulled = false;
+		searchLine.geometry.vertices.push(new THREE.Vector3());
+		searchLine.geometry.vertices.push(new THREE.Vector3());
+		for (var i=0; i<40000; i++) {
+			searchLine.geometry.vertices.push(new THREE.Vector3(
+				-100,-100,-100
+			));
+		}
+
+		searchLine.hovered = false;
+		searchLine.ontick = () => {
+			if (window.searchResults.querySelector('.hover') || searchLine.hovered) {
+				this.updateSearchLines();
+			}
+		};
+
+	}
+
+	setSearchResults(searchResults) {
+		this.highlightResults(searchResults);
+		this.updateSearchLines();
+	}
+
+
+
+	goToFSEntry(fsEntry, model) {
+		const { scene, camera } = this;
+		scene.updateMatrixWorld();
+		var fsPoint = new THREE.Vector3(fsEntry.x + fsEntry.scale/2, fsEntry.y + fsEntry.scale/2, fsEntry.z);
+		fsPoint.applyMatrix4(model.matrixWorld);
+		camera.targetPosition.copy(fsPoint);
+		camera.targetFOV = fsEntry.scale * 50;
+		fsEntry.fov = camera.targetFOV;
+	}
+
+	goToFSEntryText(fsEntry, model) {
+		const { scene, camera } = this;
+		scene.updateMatrixWorld();
+		var textX = fsEntry.textX;
+		textX += (fsEntry.scale * fsEntry.textScale) * window.innerWidth / 2 ;
+		var fsPoint = new THREE.Vector3(textX, fsEntry.textY, fsEntry.z);
+		fsPoint.applyMatrix4(model.matrixWorld);
+		camera.targetPosition.copy(fsPoint);
+		camera.targetFOV = fsEntry.scale * fsEntry.textScale * 1500 * 50;
+		fsEntry.textFOV = camera.targetFOV;
+	}
+
+	goToFSEntryTextAtLine(fsEntry, model, line) {
+		const { scene, camera } = this;
+		if (!fsEntry.textHeight) {
+			fsEntry.targetLine = {line};
+			return this.goToFSEntry(fsEntry, window.model);
+		}
+		const textYOff = ((line+0.5) / fsEntry.lineCount) * fsEntry.textHeight;
+		scene.updateMatrixWorld();
+		var textX = fsEntry.textX;
+		textX += (fsEntry.scale * fsEntry.textScale) * window.innerWidth / 2;
+		var fsPoint = new THREE.Vector3(textX, fsEntry.textYZero - textYOff, fsEntry.z);
+		fsPoint.applyMatrix4(model.matrixWorld);
+		camera.targetPosition.copy(fsPoint);
+		camera.targetFOV = fsEntry.scale * fsEntry.textScale * 1500 * 50;
+		fsEntry.textFOV = camera.targetFOV;
+	}
+
+	updateBreadCrumb(path) {
+		if (path === this.breadcrumbPath) return;
+		const self = this;
+		this.breadcrumbPath = path;
+		var el = document.getElementById('breadcrumb');
+		while (el.firstChild) el.removeChild(el.firstChild);
+		var segs = path.split("/");
+		el.onmouseout = function(ev) {
+			if (ev.target === this && !this.contains(ev.relatedTarget)) {
+				[].slice.call(this.querySelectorAll('ul')).forEach(u => u.parentNode.removeChild(u));
+			}
+		};
+		for (var i = 1; i < segs.length; i++) {
+			var prefix = segs.slice(0,i+1).join("/");
+			var name = segs[i];
+			var sep = document.createElement('span');
+			sep.className = 'separator';
+			sep.textContent = '/';
+			el.appendChild(sep);
+			var link = document.createElement('span');
+			link.path = prefix;
+			link.textContent = name;
+			link.onclick = function(ev) {
+				ev.preventDefault();
+				var fsEntry = getPathEntry(self.FileTree, this.path);
+				if (fsEntry) self.goToFSEntry(fsEntry, self.model);
+			};
+			link.onmouseover = function(ev) {
+				if (this.querySelector('ul')) return;
+				var siblings = getSiblings(self.FileTree, this.path);
+				var ul = document.createElement('ul');
+				siblings.splice(siblings.indexOf(this.path), 1);
+				siblings.forEach(path => {
+					var link = document.createElement('li');
+					link.path = path;
+					link.textContent = path.split("/").pop();
+					link.onclick = function(ev) {
+						ev.preventDefault();
+						ev.stopPropagation();
+						var fsEntry = getPathEntry(self.FileTree, this.path);
+						if (fsEntry) self.goToFSEntry(fsEntry, self.model);
+					};
+					ul.append(link);
+				});
+				ul.onmouseout = function(ev) {
+					if (ev.target === this && !this.parentNode.contains(ev.relatedTarget)) {
+						console.log('removed', link.path);
+						this.parentNode.removeChild(this);
+					}
+				};
+				[].slice.call(this.parentNode.querySelectorAll('ul')).forEach(u => u.parentNode.removeChild(u));
+				this.appendChild(ul);
+			};
+			link.onmouseout = function(ev) {
+				var ul = this.querySelector('ul');
+				if (ev.target === this && ev.relatedTarget !== this.parentNode &&
+					ul && !ul.contains(ev.relatedTarget)
+				) {
+					this.removeChild(ul);
+				}
+			};
+			el.appendChild(link);
+		}
+	};
+
+	start(font, fontTexture) {
+		this.lastFrameTime = performance.now();
+		this.previousFrameTime = performance.now();
+
+		this.setupScene();
+		const {renderer, scene, camera, modelPivot} = this;
 
 		// Text functions
 		{
@@ -182,6 +568,7 @@ class Tabletree {
 
 		// File tree functions
 		{
+			var self = this;
 			var createFileTreeModel = function(fileCount, fileTree) {
 				var geo = Geometry.makeGeometry(fileCount+1);
 
@@ -280,7 +667,7 @@ class Tabletree {
 											window.imageObj = obj3;
 											var img = new Image();
 											img.crossOrigin = 'anonymous';
-											img.src = apiPrefix+'/repo/file'+fullPath;
+											img.src = self.apiPrefix+'/repo/file'+fullPath;
 											img.obj = obj3;
 											img.onload = function() {
 												if (this.obj.parent) {
@@ -305,7 +692,7 @@ class Tabletree {
 											visibleFiles.visibleSet[fullPath] = true;
 											visibleFiles.add(obj3);
 											var xhr = new XMLHttpRequest();
-											xhr.open('GET', apiPrefix+'/repo/file'+fullPath, true);
+											xhr.open('GET', self.apiPrefix+'/repo/file'+fullPath, true);
 											xhr.obj = obj3;
 											xhr.fsEntry = o;
 											xhr.fullPath = fullPath;
@@ -314,10 +701,10 @@ class Tabletree {
 													var contents = this.responseText;
 													if (contents.length === 0) return;
 
-													var self = this;
+													var _xhr = this;
 													prettyPrintWorker.prettyPrint(contents, this.fsEntry.name, function(result) {
 														if (result.language) {
-															console.time('prettyPrint collectNodeStyles ' + currentFrame);
+															console.time('prettyPrint collectNodeStyles ' + self.currentFrame);
 															var doc = document.createElement('pre');
 															doc.className = 'hljs ' + result.language;
 															doc.style.display = 'none';
@@ -355,16 +742,17 @@ class Tabletree {
 															};
 															collectNodeStyles(doc, txt, palette, paletteIndex);
 															document.body.removeChild(doc);
-															console.timeEnd('prettyPrint collectNodeStyles ' + currentFrame);
+															console.timeEnd('prettyPrint collectNodeStyles ' + self.currentFrame);
 														}
 
 
-														var text = self.obj;
+														const text = _xhr.obj;
+														const fsEntry = _xhr.fsEntry;
 														text.visible = true;
-														console.time('createText ' + currentFrame);
+														console.time('createText ' + self.currentFrame);
 														text.geometry = createText({font: Layout.font, text: contents, mode: 'pre'});
-														console.timeEnd('createText ' + currentFrame);
-														console.time('tweakText ' + currentFrame);
+														console.timeEnd('createText ' + self.currentFrame);
+														console.time('tweakText ' + self.currentFrame);
 														if (result.language) {
 															var verts = text.geometry.attributes.position.array;
 															for (var i=0, off=3; i<txt.length; i++) {
@@ -392,40 +780,40 @@ class Tabletree {
 															if (this.material.uniforms.opacity.value > 1) {
 																this.material.uniforms.opacity.value = 1;
 															}
-															window.changed = true;
+															self.changed = true;
 														};
 
 														var textScale = 1 / Math.max(text.geometry.layout.width+60, (text.geometry.layout.height+30)/0.75);
-														var scale = self.fsEntry.scale * textScale;
+														var scale = fsEntry.scale * textScale;
 														var vAspect = Math.min(1, ((text.geometry.layout.height+30)/0.75) / (text.geometry.layout.width+60));
 														text.material.depthTest = false;
 														text.scale.multiplyScalar(scale);
 														text.scale.y *= -1;
-														text.position.copy(self.fsEntry);
-														text.fsEntry = self.fsEntry;
-														text.position.x += self.fsEntry.scale * textScale * 30;
-														text.position.y -= self.fsEntry.scale * textScale * 7.5;
-														text.position.y += self.fsEntry.scale * 0.25;
+														text.position.copy(fsEntry);
+														text.fsEntry = fsEntry;
+														text.position.x += fsEntry.scale * textScale * 30;
+														text.position.y -= fsEntry.scale * textScale * 7.5;
+														text.position.y += fsEntry.scale * 0.25;
 														
-														self.fsEntry.textScale = textScale;
-														self.fsEntry.textXZero = text.position.x;
-														self.fsEntry.textX = text.position.x + scale * Math.min(40 * 30 + 60, text.geometry.layout.width + 60) * 0.5;
-														self.fsEntry.textYZero = text.position.y + self.fsEntry.scale * 0.75;
-														self.fsEntry.textY = text.position.y + self.fsEntry.scale * 0.75 - scale * 900;
-														self.fsEntry.textHeight = scale * text.geometry.layout.height;
+														fsEntry.textScale = textScale;
+														fsEntry.textXZero = text.position.x;
+														fsEntry.textX = text.position.x + scale * Math.min(40 * 30 + 60, text.geometry.layout.width + 60) * 0.5;
+														fsEntry.textYZero = text.position.y + fsEntry.scale * 0.75;
+														fsEntry.textY = text.position.y + fsEntry.scale * 0.75 - scale * 900;
+														fsEntry.textHeight = scale * text.geometry.layout.height;
 
-														text.position.y += self.fsEntry.scale * 0.75 * (1-vAspect);
+														text.position.y += fsEntry.scale * 0.75 * (1-vAspect);
 
 														const lineCount = contents.split("\n").length;
-														self.fsEntry.lineCount = lineCount;
+														fsEntry.lineCount = lineCount;
 
-														if (self.fsEntry.targetLine) {
-															const {line} = self.fsEntry.targetLine;
-															self.fsEntry.targetLine = null;
-															goToFSEntryTextAtLine(self.fsEntry, window.model, line, lineCount);
+														if (fsEntry.targetLine) {
+															const {line} = fsEntry.targetLine;
+															fsEntry.targetLine = null;
+															self.goToFSEntryTextAtLine(fsEntry, window.model, line, lineCount);
 														}
 
-														console.timeEnd('tweakText ' + currentFrame);
+														console.timeEnd('tweakText ' + self.currentFrame);
 													});
 												}
 											};
@@ -438,7 +826,7 @@ class Tabletree {
 							}
 						}
 					}
-					updateBreadCrumb(navigationTarget);
+					self.updateBreadCrumb(navigationTarget);
 					window.setNavigationTarget(navigationTarget);
 					this.geometry.setDrawRange(smallestCovering.vertexIndex, smallestCovering.lastVertexIndex-smallestCovering.vertexIndex);
 					bigGeo.setDrawRange(smallestCovering.textVertexIndex, smallestCovering.lastTextVertexIndex - smallestCovering.textVertexIndex);
@@ -497,208 +885,49 @@ class Tabletree {
 				return mesh;
 			};
 
-			var showFileTree = function(fileTree) {
+			var showFileTree;
+			this.showFileTree = showFileTree = function(fileTree) {
 				if (processXHR) {
 					processXHR.onload = undefined;
 				}
-				window.changed = true;
-				if (window.model) {
-					window.model.parent.remove(window.model);
-					window.model.traverse(function(m) {
+				this.changed = true;
+				if (this.model) {
+					this.model.parent.remove(this.model);
+					this.model.traverse(function(m) {
 						if (m.geometry) {
 							m.geometry.dispose();
 						}
 					});
-					window.model = null;
+					this.model = null;
 				}
-				if (window.processModel) {
-					window.processModel.parent.remove(window.processModel);
-					window.processModel.traverse(function(m) {
+				if (this.processModel) {
+					this.processModel.parent.remove(this.processModel);
+					this.processModel.traverse(function(m) {
 						if (m.geometry) {
 							m.geometry.dispose();
 						}
 					});
-					window.processModel = null;
+					this.processModel = null;
 				}
-				if (window.authorModel) {
-					window.authorModel.visible = false;
-					window.authorModel.parent.remove(window.authorModel);
-					window.authorModel = null;
+				if (this.authorModel) {
+					this.authorModel.visible = false;
+					this.authorModel.parent.remove(this.authorModel);
+					this.authorModel = null;
 				}
-				if (window.connectionLines) {
-					window.connectionLines.visible = false;
-					window.connectionLines.parent.remove(window.connectionLines);
-					window.connectionLines = null;
+				if (this.connectionLines) {
+					this.connectionLines.visible = false;
+					this.connectionLines.parent.remove(this.connectionLines);
+					this.connectionLines = null;
 				}
-				window.FileTree = fileTree.tree;
-				window.model = createFileTreeModel(fileTree.count, fileTree.tree);
-				window.model.position.set(-0.5, -0.5, 0.0);
-				modelPivot.add(window.model);
+				this.FileTree = fileTree.tree;
+				this.model = createFileTreeModel(fileTree.count, fileTree.tree);
+				this.model.position.set(-0.5, -0.5, 0.0);
+				modelPivot.add(this.model);
 				// processTick();
 			};
-
-			var navigateTo = function(url, onSuccess, onFailure) {
-				window.SearchIndex = null;
-
-				utils.loadFiles(url, function(fileTree) {
-					setLoaded(true);
-					showFileTree(fileTree);
-					if (onSuccess) onSuccess();
-				}, onFailure, repoPrefix+'/');
-			};
-
-			var navigateToList = function(text, onSuccess, onFailure) {
-				window.SearchIndex = null;
-
-				utils.loadFromText(text, function(fileTree) {
-					setLoaded(true);
-					showFileTree(fileTree);
-					if (onSuccess) onSuccess();
-				}, onFailure, repoPrefix+'/');
-			};
-
-			var goToFSEntry = function(fsEntry, model) {
-				scene.updateMatrixWorld();
-				var fsPoint = new THREE.Vector3(fsEntry.x + fsEntry.scale/2, fsEntry.y + fsEntry.scale/2, fsEntry.z);
-				fsPoint.applyMatrix4(model.matrixWorld);
-				camera.targetPosition.copy(fsPoint);
-				camera.targetFOV = fsEntry.scale * 50;
-				fsEntry.fov = camera.targetFOV;
-			};
-
-			var goToFSEntryText = function(fsEntry, model) {
-				scene.updateMatrixWorld();
-				var textX = fsEntry.textX;
-				textX += (fsEntry.scale * fsEntry.textScale) * window.innerWidth / 2 ;
-				var fsPoint = new THREE.Vector3(textX, fsEntry.textY, fsEntry.z);
-				fsPoint.applyMatrix4(model.matrixWorld);
-				camera.targetPosition.copy(fsPoint);
-				camera.targetFOV = fsEntry.scale * fsEntry.textScale * 1500 * 50;
-				fsEntry.textFOV = camera.targetFOV;
-			};
-
-			var goToFSEntryTextAtLine = function(fsEntry, model, line) {
-				if (!fsEntry.textHeight) {
-					fsEntry.targetLine = {line};
-					return goToFSEntry(fsEntry, window.model);
-				}
-				const textYOff = ((line+0.5) / fsEntry.lineCount) * fsEntry.textHeight;
-				scene.updateMatrixWorld();
-				var textX = fsEntry.textX;
-				textX += (fsEntry.scale * fsEntry.textScale) * window.innerWidth / 2;
-				var fsPoint = new THREE.Vector3(textX, fsEntry.textYZero - textYOff, fsEntry.z);
-				fsPoint.applyMatrix4(model.matrixWorld);
-				camera.targetPosition.copy(fsPoint);
-				camera.targetFOV = fsEntry.scale * fsEntry.textScale * 1500 * 50;
-				fsEntry.textFOV = camera.targetFOV;
-			};
-			window.goToFSEntry = goToFSEntry;
-			window.goToFSEntryText = goToFSEntryText;
-			window.goToFSEntryTextAtLine = goToFSEntryTextAtLine;
 		}
 
-		// Running processes tree
-		var processTick = function() {
-			return;
-			utils.loadFiles('http://localhost:8080/?processes=1', function(processTree, processString) {
-				window.ProcessTree = processTree.tree;
-				if (window.processModel) {
-					scene.remove(window.processModel);
-					scene.remove(window.processModel.line);
-					window.processModel.line.geometry.dispose();
-					window.processModel.geometry.dispose();
-				}
-				window.processModel = createFileTreeModel(processTree.count, processTree.tree);
-				window.processModel.position.set(0.5, -0.25, 0.0);
-				window.processModel.scale.multiplyScalar(0.5);
-				scene.add(window.processModel);
-
-				var geo = new THREE.Geometry();
-
-				processString.split("\n").forEach(function(proc) {
-					if (/^\/\d+\/files\/.+/.test(proc)) {
-						addLine(geo, proc);
-					}
-				});
-
-				var line = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({
-					color: 0xffffff, opacity: 0.1, blending: THREE.AdditiveBlending, transparent: true
-				}));
-				window.processModel.line = line;
-				scene.add(line);
-
-				// setTimeout(processTick, 1000);
-			});
-		};
-
-		var breadcrumbPath = '';
 		// Breadcrumb
-		var updateBreadCrumb = function(path) {
-			if (path === breadcrumbPath) return;
-			breadcrumbPath = path;
-			var el = document.getElementById('breadcrumb');
-			while (el.firstChild) el.removeChild(el.firstChild);
-			var segs = path.split("/");
-			el.onmouseout = function(ev) {
-				if (ev.target === this && !this.contains(ev.relatedTarget)) {
-					[].slice.call(this.querySelectorAll('ul')).forEach(u => u.parentNode.removeChild(u));
-				}
-			};
-			for (var i = 1; i < segs.length; i++) {
-				var prefix = segs.slice(0,i+1).join("/");
-				var name = segs[i];
-				var sep = document.createElement('span');
-				sep.className = 'separator';
-				sep.textContent = '/';
-				el.appendChild(sep);
-				var link = document.createElement('span');
-				link.path = prefix;
-				link.textContent = name;
-				link.onclick = function(ev) {
-					ev.preventDefault();
-					var fsEntry = getPathEntry(window.FileTree, this.path);
-					if (fsEntry) goToFSEntry(fsEntry, window.model);
-				};
-				link.onmouseover = function(ev) {
-					if (this.querySelector('ul')) return;
-					var siblings = getSiblings(window.FileTree, this.path);
-					var ul = document.createElement('ul');
-					siblings.splice(siblings.indexOf(this.path), 1);
-					siblings.forEach(path => {
-						var link = document.createElement('li');
-						link.path = path;
-						link.textContent = path.split("/").pop();
-						link.onclick = function(ev) {
-							ev.preventDefault();
-							ev.stopPropagation();
-							var fsEntry = getPathEntry(window.FileTree, this.path);
-							if (fsEntry) goToFSEntry(fsEntry, window.model);
-						};
-						ul.append(link);
-					});
-					ul.onmouseout = function(ev) {
-						if (ev.target === this && !this.parentNode.contains(ev.relatedTarget)) {
-							console.log('removed', link.path);
-							this.parentNode.removeChild(this);
-						}
-						else if (ev.target === this) console.log("UL MOUSEOUT IGNORED LOL", ev.target, ev.relatedTarget);
-					};
-					[].slice.call(this.parentNode.querySelectorAll('ul')).forEach(u => u.parentNode.removeChild(u));
-					this.appendChild(ul);
-				};
-				link.onmouseout = function(ev) {
-					var ul = this.querySelector('ul');
-					if (ev.target === this && ev.relatedTarget !== this.parentNode &&
-						ul && !ul.contains(ev.relatedTarget)
-					) {
-						console.log('removed ul', link.path);
-						this.removeChild(ul);
-					}
-					else if (ev.target === this) console.log("LI MOUSEOUT IGNORED LOL", ev.target, ev.relatedTarget);
-				};
-				el.appendChild(link);
-			}
-		};
 
 		// Line drawing
 		{
@@ -795,8 +1024,8 @@ class Tabletree {
 		{
 			var processXHR;
 
-			window.setCommitData = function(commitData) {
-				setLoaded(true);
+			window.setCommitData = (commitData) => {
+				this.setLoaded(true);
 
 				window.AuthorTree = commitData.authorTree;
 				window.CommitTree = commitData.commitTree;
@@ -820,26 +1049,26 @@ class Tabletree {
 				}));
 				window.connectionLines.frustumCulled = false;
 				modelPivot.add(window.connectionLines);
-				window.LineModel = window.connectionLines;
-				window.connectionLines.ontick = function() {
-					var cf = (currentFrame / 2) | 0;
+				this.LineModel = window.connectionLines;
+				window.connectionLines.ontick = () => {
+					var cf = (self.currentFrame / 2) | 0;
 					if (false) {
 						var aks = Object.keys(authors);
 						showCommitsByAuthor(aks[cf % aks.length]);
-						window.changed = true;
+						this.changed = true;
 					} else if (false) {
 						showCommitsForFile(touchedFiles[cf % touchedFiles.length]);
-						window.changed = true;
+						this.changed = true;
 					} else if (commitsPlaying) {
 						var idx = window.activeCommitSet.length-1-(cf % window.activeCommitSet.length);
 						var c = window.activeCommitSet[idx];
 						var slider = document.getElementById('commitSlider');
 						slider.value = idx;
 						showCommit(c.sha);
-						window.changed = true;
+						this.changed = true;
 					}
 				};
-				window.changed = true;
+				this.changed = true;
 
 				window.activeCommitSet = commits;
 				
@@ -861,7 +1090,7 @@ class Tabletree {
 				};
 
 				var findCommitsForPath = function(path) {
-					path = path.substring(repoPrefix.length + 2);
+					path = path.substring(self.repoPrefix.length + 2);
 					return commits.filter(c => c.files.some(f => {
  						if (f.renamed && f.renamed.startsWith(path)) {
 							if (f.renamed === path) path = f.path;
@@ -872,17 +1101,18 @@ class Tabletree {
 				};
 
 				var commitsPlaying = false;
+				var self = this;
 
 				document.getElementById('playCommits').onclick = function(ev) {
 					commitsPlaying = !commitsPlaying;
-					window.changed = true;
+					self.changed = true;
 				};
 
 				document.getElementById('commitSlider').oninput = function(ev) {
 					var v = parseInt(this.value);
 					if (window.activeCommitSet[v]) {
 						showCommit(window.activeCommitSet[v].sha);
-						window.changed = true;
+						self.changed = true;
 					}
 				};
 				document.getElementById('previousCommit').onclick = function(ev) {
@@ -904,688 +1134,357 @@ class Tabletree {
 			};
 		}
 
-		this.setSearchResults = function(searchResults) {
-			window.highlightResults(searchResults);
-			updateSearchLines();
-		};
-
 		// Search highlighting
-		{
-			var highlightLater = [];
-			var addHighlightedLine = function(fsEntry, line) {
-				if (fsEntry.textHeight) {
-					const lineCount = fsEntry.lineCount;
-					var geo = searchHighlights.geometry;
-					var index = searchHighlights.index;
-					searchHighlights.index++;
-
-					const lineBottom = fsEntry.textYZero - ((line+1) / lineCount) * fsEntry.textHeight;
-					const lineTop    = fsEntry.textYZero - (line     / lineCount) * fsEntry.textHeight;
-					var c0 = new THREE.Vector3(fsEntry.x, 					lineBottom, fsEntry.z);
-					var c1 = new THREE.Vector3(fsEntry.x + fsEntry.scale, 	lineBottom, fsEntry.z);
-					var c2 = new THREE.Vector3(fsEntry.x + fsEntry.scale, 	lineTop, 	fsEntry.z);
-					var c3 = new THREE.Vector3(fsEntry.x, 					lineTop, 	fsEntry.z);
-
-					c0.applyMatrix4(window.model.matrixWorld);
-					c1.applyMatrix4(window.model.matrixWorld);
-					c2.applyMatrix4(window.model.matrixWorld);
-					c3.applyMatrix4(window.model.matrixWorld);
-
-					var off = index * 4;
-
-					geo.vertices[off++].copy(c0);
-					geo.vertices[off++].copy(c1);
-					geo.vertices[off++].copy(c2);
-					geo.vertices[off++].copy(c3);
-
-					geo.verticesNeedUpdate = true;
-				} else {
-					highlightLater.push([fsEntry, line]);
-				}
-			};
-			var searchHighlights = new THREE.Mesh(new THREE.Geometry(), new THREE.MeshBasicMaterial({
-				side: THREE.DoubleSide,
-				color: 0xff0000,
-				opacity: 0.33,
-				transparent: true,
-				depthTest: false,
-				depthWrite: false
-			}));
-			searchHighlights.frustumCulled = false;
-			for (var i=0; i<40000; i++) {
-				searchHighlights.geometry.vertices.push(new THREE.Vector3());
-			}
-			for (var i=0; i<10000; i++) {
-				var off = i * 4;
-				searchHighlights.geometry.faces.push(
-					new THREE.Face3(off, off+1, off+2),
-					new THREE.Face3(off, off+2, off+3)
-				);
-			}
-			searchHighlights.ontick = function() {
-				if (highlightLater.length > 0) {
-					highlightLater.splice(0).forEach(args => addHighlightedLine.apply(null, args));
-				}
-			};
-			var clearSearchHighlights = function() {
-				var geo = searchHighlights.geometry;
-				var verts = geo.vertices;
-				for (var i=0; i<verts.length; i++){
-					var v = verts[i];
-					v.x = v.y = v.z = 0;
-				}
-				geo.verticesNeedUpdate = true;
-				searchHighlights.index = 0;
-				highlightLater = [];
-				window.changed = true;
-			};
-
-			var highlightedResults = [];
-			window.highlightResults = function(results) {
-				var ca = window.model.geometry.attributes.color;
-				highlightedResults.forEach(function(highlighted) {
-					Geometry.setColor(ca.array, highlighted.fsEntry.index, Colors[highlighted.fsEntry.entries === null ? 'getFileColor' : 'getDirectoryColor'](highlighted.fsEntry), 0);
-				});
-				clearSearchHighlights();
-				for (var i = 0; i < results.length; i++) {
-					var fsEntry = results[i].fsEntry;
-					if (fsEntry.entries !== null && results[i].line === 0) {
-						Geometry.setColor(ca.array, fsEntry.index, fsEntry.entries === null ? [1,0,0] : [0.6, 0, 0], 0);
-					} else if (fsEntry.entries === null && results[i].line > 0) {
-						addHighlightedLine(fsEntry, results[i].line);
-					}
-				}
-				highlightedResults = results;
-				ca.needsUpdate = true;
-				window.changed = true;
-			};
-
-			var screenPlane = new THREE.Mesh(new THREE.PlaneBufferGeometry(2000,2000), new THREE.MeshBasicMaterial({ color: 0xff00ff }));
-			screenPlane.visible = false;
-			screenPlane.position.z = 0.75;
-			scene.add(screenPlane);
-
-			var addScreenLine = function(geo, fsEntry, bbox, index, line, lineCount) {
-				var a = new THREE.Vector3(fsEntry.x, fsEntry.y, fsEntry.z);
-				a.applyMatrix4(window.model.matrixWorld);
-				var b = a;
-
-				var av = new THREE.Vector3(a.x + 0.05 * fsEntry.scale, a.y + 0.05 * fsEntry.scale, a.z);
-
-				var off = index * 4;
-				if (!bbox || bbox.bottom < 0 || bbox.top > window.innerHeight) {
-					var bv = new THREE.Vector3(b.x - fsEntry.scale*0.5, av.y + 0.05*fsEntry.scale + fsEntry.scale*3.15, av.z - fsEntry.scale*0.5);
-					var aUp = new THREE.Vector3(av.x - fsEntry.scale*0.075, av.y + 0.05*fsEntry.scale, av.z);
-				} else {
-					screenPlane.visible = true;
-					var intersections = utils.findIntersectionsUnderEvent({clientX: bbox.left, clientY: bbox.top+24, target: renderer.domElement}, camera, [screenPlane]);
-					screenPlane.visible = false;
-					var b = intersections[0].point;
-					var bv = new THREE.Vector3(b.x, b.y, b.z);
-					var aUp = new THREE.Vector3(av.x, av.y, av.z);
-					if (line > 0 && fsEntry.textHeight) {
-						const textYOff = ((line+0.5) / lineCount) * fsEntry.textHeight;
-						const textLinePos = new THREE.Vector3(fsEntry.textXZero, fsEntry.textYZero - textYOff, fsEntry.z);
-						textLinePos.applyMatrix4(window.model.matrixWorld);
-						aUp = av = textLinePos;
-					}
-				}
-
-				geo.vertices[off++].copy(av);
-				geo.vertices[off++].copy(aUp);
-				geo.vertices[off++].copy(aUp);
-				geo.vertices[off++].copy(bv);
-			};
-			var searchLine = new THREE.LineSegments(new THREE.Geometry(), new THREE.LineBasicMaterial({
-				color: 0xff0000,
-				opacity: 1,
-				transparent: true,
-				depthTest: false,
-				depthWrite: false
-				// linewidth: 2 * (window.devicePixelRatio || 1)
-			}));
-			searchLine.frustumCulled = false;
-			searchLine.geometry.vertices.push(new THREE.Vector3());
-			searchLine.geometry.vertices.push(new THREE.Vector3());
-			for (var i=0; i<40000; i++) {
-				searchLine.geometry.vertices.push(new THREE.Vector3(
-					-100,-100,-100
-				));
-			}
-			var updateSearchLines = function() {
-				clearSearchLine();
-				searchLine.hovered = false;
-				var lis = [].slice.call(window.searchResults.querySelectorAll('li'));
-				if (lis.length <= searchLine.geometry.vertices.length/4) {
-					for (var i=0, l=lis.length; i<l; i++) {
-						var bbox = null;
-						var li = lis[i];
-						if (li && li.classList.contains('hover') && !li.result.lineResults) {
-							searchLine.hovered = true;
-							bbox = li.getBoundingClientRect();
-						}
-						if (li) {
-							addScreenLine(searchLine.geometry, li.result.fsEntry, bbox, i, li.result.line, li.result.fsEntry.lineCount);
-						}
-					}
-				}
-				if (i > 0 || i !== searchLine.lastUpdate) {
-					searchLine.geometry.verticesNeedUpdate = true;
-					window.changed = true;
-					searchLine.lastUpdate = i;
-				}
-				if (window.LineModel) {
-					window.LineModel.visible = highlightedResults.length === 0;
-				}
-			};
-			searchLine.hovered = false;
-			searchLine.ontick = function() {
-				if (window.searchResults.querySelector('.hover') || searchLine.hovered) {
-					updateSearchLines();
-				}
-			};
-			var clearSearchLine = function() {
-				var geo = searchLine.geometry;
-				var verts = geo.vertices;
-				for (var i=0; i<verts.length; i++){
-					var v = verts[i];
-					v.x = v.y = v.z = 0;
-				}
-				geo.verticesNeedUpdate = true;
-				window.changed = true;
-			};
-		}
-
-		// Lunr client-side search index
-		{
-			var filterByTrigrams = function(trigramIndex, token, smallestTrigram) {
-				if (smallestTrigram === []) {
-					return smallestTrigram;
-				}
-				for (var j=0; j<token.length-2; j++) {
-					var trigram = token.substring(j, j+3);
-					var tokens = trigramIndex[trigram];
-					if (!tokens) {
-						return [];
-					} else if (smallestTrigram === null || tokens.length < smallestTrigram.length) {
-						smallestTrigram = tokens;
-					}
-				}
-				return smallestTrigram;
-			};
-
-			async function loadLunrIndex(url) {
-				const idx = await (await fetch(url)).json();
-
-				idx.tokenizer = lunr.tokenizer.load(idx.tokenizer);
-				idx.pipeline = lunr.Pipeline.load(idx.pipeline);
-				var trigramIndex = idx.trigramIndex = {};
-
-				for (var i=0; i<idx.tokens.length; i++) {
-					var token = idx.tokens[i][0];
-					for (var j=0; j<token.length-2; j++) {
-						var trigram = token.substring(j, j+3);
-						if (!trigramIndex[trigram]) {
-							trigramIndex[trigram] = [];
-						}
-						trigramIndex[trigram].push(idx.tokens[i]);
-					}
-					idx.tokens[i][1] = lunr.Index.deltaUnpack(idx.tokens[i][1]);
-				};
-
-				idx.searchByToken = function(queryToken) {
-					var filteredTokens = filterByTrigrams(this.trigramIndex, queryToken, this.tokens);
-					var hits = [];
-					var hitIndex = {};
-					for (var i=0; i<filteredTokens.length; i++) {
-						var tokenDocTFs = filteredTokens[i];
-						var token = tokenDocTFs[0];
-						var docs = tokenDocTFs[1];
-						var tfs = tokenDocTFs[2];
-						var matchScore = 0;
-						if (token.includes(queryToken)) {
-							matchScore = Math.max(matchScore, 1 - (token.length - queryToken.length) / token.length);
-						}
-						if (matchScore > 0) {
-							for (var j=0; j<docs.length; j++) {
-								var doc = docs[j];
-								if (!hitIndex[doc]) {
-									hitIndex[doc] = {id: doc, ref: this.docs[doc], score: 0};
-									hits.push(hitIndex[doc]);
-								}
-								hitIndex[doc].score += matchScore * tfs[j];
-							}
-						}
-					}
-					hits.sort(function(a,b) { return a.id - b.id; });
-					return hits;
-				};
-
-				idx.mergeHits = function(a, b) {
-					var hits = [];
-					for (var i=0, j=0; i<a.length && j<b.length;) {
-						if (a[i].id === b[j].id) {
-							a[i].score += b[j].score;
-							hits.push(a[i]);
-							i++;
-							j++;
-						} else if (a[i].id < b[j].id) {
-							i++;
-						} else {
-							j++;
-						}
-					}
-					return hits;
-				};
-
-				idx.search = function(query) {
-					var queryTokens = this.pipeline.run(this.tokenizer(query));
-					if (queryTokens.length === 0) {
-						return [];
-					}
-					if (queryTokens.length === 1 && queryTokens[0].length < 3) return [];
-					var hits = this.searchByToken(queryTokens[0]);
-					for (var j=1; j<queryTokens.length; j++) {
-						hits = this.mergeHits(hits, this.searchByToken(queryTokens[j]));
-					}
-					hits.sort(function(a,b) { return b.score - a.score; });
-					return hits;
-				};
-
-				return idx;
-			}
-		}
+		this.setupSearchHighlighting();
 
 		// Loading current repo data
-		{
-			this.setFiles = txt => {
-				// window.SearchIndex = loadLunrIndex(apiPrefix+'/repo/fs/'+repoPrefix+'/index.lunr.json');
-				navigateToList(txt);
-				setLoaded(true);
-			};
-
-			setTimeout(() => {
-				if (this._files) this.setFiles(this._files);
-			}, 10);
-
-			var setLoaded = function(loaded) {
-				if (loaded) {
-					document.body.classList.add('loaded');
-					setTimeout(function() {
-						if (document.body.classList.contains('loaded')) {
-							document.getElementById('loader').style.display = 'none';
-						}
-					}, 1000);
-				} else {
-					document.getElementById('loader').style.display = 'block';
-					document.body.classList.remove('loaded');
-				}
-			};
-		}
+		setTimeout(() => { if (this._files) this.setFiles(this._files); }, 10);
 
 		// UI event listeners
-		{
-			var down = false;
-			var previousX, previousY, startX, startY;
-			var clickDisabled = false;
-
-			var pinchStart, pinchMid;
-
-			var inGesture = false;
-
-			renderer.domElement.addEventListener('touchstart', function(ev) {
-				if (window.searchInput) {
-					window.searchInput.blur();
-				}
-				if (window.DocFrame) return;
-				ev.preventDefault();
-				if (ev.touches.length === 1) {
-					renderer.domElement.onmousedown(ev.touches[0]);
-				} else if (ev.touches.length === 2) {
-					inGesture = true;
-					var dx = ev.touches[0].clientX - ev.touches[1].clientX;
-					var dy = ev.touches[0].clientY - ev.touches[1].clientY;
-					pinchStart = Math.sqrt(dx*dx + dy*dy);
-					pinchMid = {
-						clientX: ev.touches[1].clientX + dx/2,
-						clientY: ev.touches[1].clientY + dy/2,
-					};
-					renderer.domElement.onmousedown(pinchMid);
-				}
-			}, false);
-
-			renderer.domElement.addEventListener('touchmove', function(ev) {
-				if (window.DocFrame) return;
-				ev.preventDefault();
-				if (ev.touches.length === 1) {
-					if (!inGesture) {
-						window.onmousemove(ev.touches[0], 0.0000525);
-					}
-				} else if (ev.touches.length === 2) {
-					var dx = ev.touches[0].clientX - ev.touches[1].clientX;
-					var dy = ev.touches[0].clientY - ev.touches[1].clientY;
-					var zoom = pinchStart / Math.sqrt(dx*dx + dy*dy);
-					pinchStart = Math.sqrt(dx*dx + dy*dy);
-					pinchMid = {
-						clientX: ev.touches[1].clientX + dx/2,
-						clientY: ev.touches[1].clientY + dy/2,
-					};
-					var cx = (pinchMid.clientX - window.innerWidth / 2) * 0.0000575 * camera.fov;
-					var cy = (pinchMid.clientY - window.innerHeight / 2) * 0.0000575 * camera.fov;
-					zoomCamera(zoom, cx, cy);
-					window.onmousemove(pinchMid);
-				}
-			}, false);
-
-			renderer.domElement.addEventListener('touchend', function(ev) {
-				if (window.DocFrame) return;
-				ev.preventDefault();
-				if (ev.touches.length === 0) {
-					if (!inGesture) {
-						window.onmouseup(ev.changedTouches[0]);
-					} else {
-						inGesture = false;
-						window.onmouseup(pinchMid);
-					}
-				} else if (ev.touches.length === 1) {
-				}
-			}, false);
-
-			renderer.domElement.addEventListener('touchcancel', function(ev) {
-				if (window.DocFrame) return;
-				ev.preventDefault();
-				if (ev.touches.length === 0) {
-					if (!inGesture) {
-						window.onmouseup(ev.changedTouches[0]);
-					} else {
-						inGesture = false;
-						window.onmouseup(pinchMid);
-					}
-				} else if (ev.touches.length === 1) {
-
-				}
-			}, false);
-
-			window.onkeydown = function(ev) {
-				if (!ev.target || ev.target.tagName !== 'INPUT') {
-					var factor = 0.0001;
-					var dx = 0, dy = 0;
-					switch (ev.keyCode) {
-						case 39:
-							dx = -50;
-						break;
-
-						case 40:
-							dy = -50;
-						break;
-
-						case 37:
-							dx = 50;
-						break;
-
-						case 38:
-							dy = 50;
-						break;
-
-					}
-					camera.targetPosition.x -= factor*dx * camera.fov;
-					camera.targetPosition.y += factor*dy * camera.fov;
-				}
-			};
-
-			renderer.domElement.onmousedown = function(ev) {
-				if (window.searchInput) {
-					window.searchInput.blur();
-				}
-				if (window.DocFrame) return;
-				if (ev.preventDefault) ev.preventDefault();
-				down = true;
-				clickDisabled = false;
-				startX = previousX = ev.clientX;
-				startY = previousY = ev.clientY;
-			};
-
-			window.onmousemove = function(ev, factor) {
-				if (window.DocFrame) return;
-				if (down) {
-					if (!factor) {
-						factor = 0.0001;
-					}
-					window.changed = true;
-					if (ev.preventDefault) ev.preventDefault();
-					var dx = ev.clientX - previousX;
-					var dy = ev.clientY - previousY;
-					previousX = ev.clientX;
-					previousY = ev.clientY;
-					if (Math.abs(ev.clientX - startX) > 10 || Math.abs(ev.clientY - startY) > 10) {
-						clickDisabled = true;
-					}
-					if (ev.shiftKey) {
-						modelPivot.rotation.z += dx*0.01;
-						modelPivot.rotation.x += dy*0.01;
-					} else {
-						camera.position.x -= factor*dx * camera.fov;
-						camera.position.y += factor*dy * camera.fov;
-						camera.targetPosition.copy(camera.position);
-						camera.targetFOV = camera.fov;
-					}
-				}
-			};
-
-			var lastScroll = Date.now();
-			var zoomCamera = function(zf, cx, cy) {
-				if (zf < 1 || camera.fov < 120) {
-					camera.position.x += cx - cx * zf;
-					camera.position.y -= cy - cy * zf;
-					camera.fov *= zf;
-					if (camera.fov > 120) camera.fov = 120;
-					camera.targetFOV = camera.fov;
-					camera.targetPosition.copy(camera.position);
-					camera.updateProjectionMatrix();
-					window.changed = true;
-				}
-			};
-
-			var prevD = 0;
-			var wheelSnapTimer;
-			var wheelFreePan = false;
-			renderer.domElement.onwheel = function(ev) {
-				if (window.DocFrame) return;
-				ev.preventDefault();
-
-				if (ev.ctrlKey) {
-					// zoom on wheel
-					var cx = (ev.clientX - window.innerWidth / 2) / window.innerWidth / 34 * camera.fov;
-					var cy = (ev.clientY - window.innerHeight / 2) / window.innerHeight / 34 * camera.fov;
-					var d = ev.deltaY !== undefined ? ev.deltaY*3 : ev.wheelDelta;
-					if (Date.now() - lastScroll > 500) {
-						prevD = d;
-					}
-					if (d > 20 || d < -20) {
-						d = 20 * d / Math.abs(d);
-					}
-					if ((d < 0 && prevD > 0) || (d > 0 && prevD < 0)) {
-						d = 0;
-					}
-					prevD = d;
-					zoomCamera(Math.pow(1.003, d), cx, cy);
-					lastScroll = Date.now();
-				} else {
-					clearTimeout(wheelSnapTimer);
-					wheelSnapTimer = setTimeout(function() {wheelFreePan = false}, 1000);
-					
-					// pan on wheel
-					const factor = 0.0000575;
-					const adx = Math.abs(ev.deltaX);
-					const ady = Math.abs(ev.deltaY);
-					var xMove = false, yMove = true;
-					if (adx > ady) { xMove = true; yMove = false; }
-					wheelFreePan = wheelFreePan || (adx > 5 && ady > 5);
-					if (wheelFreePan || xMove) camera.position.x += factor*ev.deltaX * camera.fov;
-					if (wheelFreePan || yMove) camera.position.y -= factor*ev.deltaY * camera.fov;
-					camera.targetPosition.copy(camera.position);
-					camera.targetFOV = camera.fov;
-					window.changed = true;
-				}
-			};
-			
-			var gestureStartScale = 0;
-			window.addEventListener("gesturestart", function (e) {
-				e.preventDefault();
-				gestureStartScale = 1;
-			});
-			window.addEventListener("gesturechange", function (ev) {
-				ev.preventDefault();
-				var cx = (ev.clientX - window.innerWidth / 2) / window.innerWidth / 34 * camera.fov;
-				var cy = (ev.clientY - window.innerHeight / 2) / window.innerHeight / 34 * camera.fov;
-				var d = ev.scale / gestureStartScale;
-				gestureStartScale = ev.scale;
-				zoomCamera(1/d, cx, cy);
-			});
-			window.addEventListener("gestureend", function (e) {
-				e.preventDefault();
-			});
-
-			var highlighted = null;
-			window.onmouseup = function(ev) {
-				if (down && ev.preventDefault) ev.preventDefault();
-				if (clickDisabled) {
-					down = false;
-					return;
-				}
-				if (window.DocFrame) {
-					window.DocFrame.style.transform = 'translateY(-'+window.DocFrame.style.height+')';
-					var iframe = window.DocFrame;
-					setTimeout(function() {
-						iframe.parentNode.removeChild(iframe);
-					}, 500);
-					window.DocFrame = null;
-					down = false;
-					return;
-				}
-				if (down) {
-					down = false;
-					var models = [window.model];
-					if (window.processModel) {
-						models.push(window.processModel);
-					}
-					if (window.authorModel) {
-						models.push(window.authorModel);
-					}
-
-					var intersection = Geometry.findFSEntry(ev, camera, models, highlighted);
-					if (intersection) {
-						var fsEntry = intersection.fsEntry;
-						var ca = intersection.object.geometry.attributes.color;
-						var vs = intersection.object.geometry.attributes.position;
-						var tvs = intersection.object.children[1].geometry.attributes.position;
-						if (highlighted && highlighted.highlight) {
-							var obj = highlighted.highlight;
-							obj.parent.remove(obj);
-						}
-						if (highlighted !== fsEntry) {
-							highlighted = fsEntry;
-
-							goToFSEntry(fsEntry, intersection.object);
-						} else {
-							if (highlighted.entries === null) {
-								var fovDiff = (highlighted.scale * 50) / camera.fov;
-								if (fovDiff > 1 || !fsEntry.lineCount) {
-									goToFSEntry(highlighted, intersection.object);
-								} else {
-									goToFSEntryText(highlighted, intersection.object);
-								}
-							} else {
-								goToFSEntry(highlighted, intersection.object);
-							}
-						}
-						window.changed = true;
-
-						return;
-					}
-				}
-			};
-		}
+		this.setupEventListeners();
 
 		// Main render loop
-		{
-			var lastFrameTime = performance.now();
-			var render = function() {
-				scene.remove(searchLine);
-				scene.add(searchLine);
-				scene.remove(searchHighlights);
-				scene.add(searchHighlights);
-				scene.updateMatrixWorld(true);
-				var t = performance.now();
-				scene.tick(t, t - lastFrameTime);
-				lastFrameTime = t;
-				renderer.render(scene, camera);
-				currentFrame++;
-			};
-
-			camera.targetPosition = new THREE.Vector3().copy(camera.position);
-			camera.targetFOV = camera.fov;
-			var previousFrameTime = performance.now();
-			var tick = function() {
-				var currentFrameTime = performance.now();
-				var dt = currentFrameTime - previousFrameTime;
-				previousFrameTime += dt;
-				if (dt < 16) {
-					dt = 16;
-				}
-
-				if (camera.targetPosition.x !== camera.position.x || camera.targetPosition.y !== camera.position.y || camera.fov !== camera.targetFOV) {
-					camera.position.x += (camera.targetPosition.x - camera.position.x) * (1-Math.pow(0.85, dt/16));
-					camera.position.y += (camera.targetPosition.y - camera.position.y) * (1-Math.pow(0.85, dt/16));
-					if (Math.abs(camera.position.x - camera.targetPosition.x) < camera.fov*0.00001) {
-						camera.position.x = camera.targetPosition.x;
-					}
-					if (Math.abs(camera.position.y - camera.targetPosition.y) < camera.fov*0.00001) {
-						camera.position.y = camera.targetPosition.y;
-					}
-					camera.fov += (camera.targetFOV - camera.fov) * (1-Math.pow(0.85, dt/16));
-					if (Math.abs(camera.fov - camera.targetFOV) < camera.targetFOV / 1000) {
-						camera.fov = camera.targetFOV;
-					}
-					camera.updateProjectionMatrix();
-					window.changed = true;
-					animating = true;
-				} else {
-					animating = false;
-				}
-				var wasChanged = window.changed;
-				window.changed = false;
-				if (wasChanged || animating) render();
-				window.requestAnimationFrame(tick);
-			};
-
-			tick();
-		}
-
-		// Full screen button
-		{
-			var fullscreenButton = document.getElementById('fullscreen');
-			if (fullscreenButton && (document.exitFullscreen||document.webkitExitFullscreen||document.webkitExitFullScreen||document.mozCancelFullScreen||document.msExitFullscreen)) {
-				fullscreenButton.onclick = function() {
-					var d = document;
-					if (d.fullscreenElement||d.webkitFullscreenElement||d.webkitFullScreenElement||d.mozFullScreenElement||d.msFullscreenElement) {
-						(d.exitFullscreen||d.webkitExitFullscreen||d.webkitExitFullScreen||d.mozCancelFullScreen||d.msExitFullscreen).call(d);
-					} else {
-						var e = document.body;
-						(e.requestFullscreen||e.webkitRequestFullscreen||e.webkitRequestFullScreen||e.mozRequestFullScreen||e.msRequestFullscreen).call(e);
-					}
-				}
-				if (window.navigator.standalone === true) {
-					fullscreenButton.style.opacity = '0';
-				}
-			} else if (fullscreenButton) {
-				fullscreenButton.style.opacity = '0';
-			}
-		}
+		this.tick();
 
 		// Focus the search at page load
 		window.searchInput.focus();
 	}
+
+	zoomCamera(zf, cx, cy) {
+		const camera = this.camera;
+		if (zf < 1 || camera.fov < 120) {
+			camera.position.x += cx - cx * zf;
+			camera.position.y -= cy - cy * zf;
+			camera.fov *= zf;
+			if (camera.fov > 120) camera.fov = 120;
+			camera.targetFOV = camera.fov;
+			camera.targetPosition.copy(camera.position);
+			camera.updateProjectionMatrix();
+			this.changed = true;
+		}
+	}
+
+	setupEventListeners() {
+		const { renderer, camera, modelPivot } = this;
+
+		const self = this;
+
+		var down = false;
+		var previousX, previousY, startX, startY;
+		var clickDisabled = false;
+
+		var pinchStart, pinchMid;
+
+		var inGesture = false;
+
+		renderer.domElement.addEventListener('touchstart', function(ev) {
+			if (window.searchInput) {
+				window.searchInput.blur();
+			}
+			if (window.DocFrame) return;
+			ev.preventDefault();
+			if (ev.touches.length === 1) {
+				renderer.domElement.onmousedown(ev.touches[0]);
+			} else if (ev.touches.length === 2) {
+				inGesture = true;
+				var dx = ev.touches[0].clientX - ev.touches[1].clientX;
+				var dy = ev.touches[0].clientY - ev.touches[1].clientY;
+				pinchStart = Math.sqrt(dx*dx + dy*dy);
+				pinchMid = {
+					clientX: ev.touches[1].clientX + dx/2,
+					clientY: ev.touches[1].clientY + dy/2,
+				};
+				renderer.domElement.onmousedown(pinchMid);
+			}
+		}, false);
+
+		renderer.domElement.addEventListener('touchmove', function(ev) {
+			if (window.DocFrame) return;
+			ev.preventDefault();
+			if (ev.touches.length === 1) {
+				if (!inGesture) {
+					window.onmousemove(ev.touches[0], 0.0000525);
+				}
+			} else if (ev.touches.length === 2) {
+				var dx = ev.touches[0].clientX - ev.touches[1].clientX;
+				var dy = ev.touches[0].clientY - ev.touches[1].clientY;
+				var zoom = pinchStart / Math.sqrt(dx*dx + dy*dy);
+				pinchStart = Math.sqrt(dx*dx + dy*dy);
+				pinchMid = {
+					clientX: ev.touches[1].clientX + dx/2,
+					clientY: ev.touches[1].clientY + dy/2,
+				};
+				var cx = (pinchMid.clientX - window.innerWidth / 2) * 0.0000575 * camera.fov;
+				var cy = (pinchMid.clientY - window.innerHeight / 2) * 0.0000575 * camera.fov;
+				self.zoomCamera(zoom, cx, cy);
+				window.onmousemove(pinchMid);
+			}
+		}, false);
+
+		renderer.domElement.addEventListener('touchend', function(ev) {
+			if (window.DocFrame) return;
+			ev.preventDefault();
+			if (ev.touches.length === 0) {
+				if (!inGesture) {
+					window.onmouseup(ev.changedTouches[0]);
+				} else {
+					inGesture = false;
+					window.onmouseup(pinchMid);
+				}
+			} else if (ev.touches.length === 1) {
+			}
+		}, false);
+
+		renderer.domElement.addEventListener('touchcancel', function(ev) {
+			if (window.DocFrame) return;
+			ev.preventDefault();
+			if (ev.touches.length === 0) {
+				if (!inGesture) {
+					window.onmouseup(ev.changedTouches[0]);
+				} else {
+					inGesture = false;
+					window.onmouseup(pinchMid);
+				}
+			} else if (ev.touches.length === 1) {
+
+			}
+		}, false);
+
+		window.onkeydown = function(ev) {
+			if (!ev.target || ev.target.tagName !== 'INPUT') {
+				var factor = 0.0001;
+				var dx = 0, dy = 0;
+				switch (ev.keyCode) {
+					case 39:
+						dx = -50;
+					break;
+
+					case 40:
+						dy = -50;
+					break;
+
+					case 37:
+						dx = 50;
+					break;
+
+					case 38:
+						dy = 50;
+					break;
+
+				}
+				camera.targetPosition.x -= factor*dx * camera.fov;
+				camera.targetPosition.y += factor*dy * camera.fov;
+			}
+		};
+
+		renderer.domElement.onmousedown = function(ev) {
+			if (window.searchInput) {
+				window.searchInput.blur();
+			}
+			if (window.DocFrame) return;
+			if (ev.preventDefault) ev.preventDefault();
+			down = true;
+			clickDisabled = false;
+			startX = previousX = ev.clientX;
+			startY = previousY = ev.clientY;
+		};
+
+		window.onmousemove = function(ev, factor) {
+			if (window.DocFrame) return;
+			if (down) {
+				if (!factor) {
+					factor = 0.0001;
+				}
+				self.changed = true;
+				if (ev.preventDefault) ev.preventDefault();
+				var dx = ev.clientX - previousX;
+				var dy = ev.clientY - previousY;
+				previousX = ev.clientX;
+				previousY = ev.clientY;
+				if (Math.abs(ev.clientX - startX) > 10 || Math.abs(ev.clientY - startY) > 10) {
+					clickDisabled = true;
+				}
+				if (ev.shiftKey) {
+					modelPivot.rotation.z += dx*0.01;
+					modelPivot.rotation.x += dy*0.01;
+				} else {
+					camera.position.x -= factor*dx * camera.fov;
+					camera.position.y += factor*dy * camera.fov;
+					camera.targetPosition.copy(camera.position);
+					camera.targetFOV = camera.fov;
+				}
+			}
+		};
+
+		var lastScroll = Date.now();
+
+		var prevD = 0;
+		var wheelSnapTimer;
+		var wheelFreePan = false;
+		renderer.domElement.onwheel = function(ev) {
+			if (window.DocFrame) return;
+			ev.preventDefault();
+
+			if (ev.ctrlKey) {
+				// zoom on wheel
+				var cx = (ev.clientX - window.innerWidth / 2) / window.innerWidth / 34 * camera.fov;
+				var cy = (ev.clientY - window.innerHeight / 2) / window.innerHeight / 34 * camera.fov;
+				var d = ev.deltaY !== undefined ? ev.deltaY*3 : ev.wheelDelta;
+				if (Date.now() - lastScroll > 500) {
+					prevD = d;
+				}
+				if (d > 20 || d < -20) {
+					d = 20 * d / Math.abs(d);
+				}
+				if ((d < 0 && prevD > 0) || (d > 0 && prevD < 0)) {
+					d = 0;
+				}
+				prevD = d;
+				self.zoomCamera(Math.pow(1.003, d), cx, cy);
+				lastScroll = Date.now();
+			} else {
+				clearTimeout(wheelSnapTimer);
+				wheelSnapTimer = setTimeout(function() {wheelFreePan = false}, 1000);
+				
+				// pan on wheel
+				const factor = 0.0000575;
+				const adx = Math.abs(ev.deltaX);
+				const ady = Math.abs(ev.deltaY);
+				var xMove = false, yMove = true;
+				if (adx > ady) { xMove = true; yMove = false; }
+				wheelFreePan = wheelFreePan || (adx > 5 && ady > 5);
+				if (wheelFreePan || xMove) camera.position.x += factor*ev.deltaX * camera.fov;
+				if (wheelFreePan || yMove) camera.position.y -= factor*ev.deltaY * camera.fov;
+				camera.targetPosition.copy(camera.position);
+				camera.targetFOV = camera.fov;
+				self.changed = true;
+			}
+		};
+		
+		var gestureStartScale = 0;
+		window.addEventListener("gesturestart", function (e) {
+			e.preventDefault();
+			gestureStartScale = 1;
+		});
+		window.addEventListener("gesturechange", function (ev) {
+			ev.preventDefault();
+			var cx = (ev.clientX - window.innerWidth / 2) / window.innerWidth / 34 * camera.fov;
+			var cy = (ev.clientY - window.innerHeight / 2) / window.innerHeight / 34 * camera.fov;
+			var d = ev.scale / gestureStartScale;
+			gestureStartScale = ev.scale;
+			self.zoomCamera(1/d, cx, cy);
+		});
+		window.addEventListener("gestureend", function (e) {
+			e.preventDefault();
+		});
+
+		var highlighted = null;
+		window.onmouseup = function(ev) {
+			if (down && ev.preventDefault) ev.preventDefault();
+			if (clickDisabled) {
+				down = false;
+				return;
+			}
+			if (self.DocFrame) {
+				self.DocFrame.style.transform = 'translateY(-'+self.DocFrame.style.height+')';
+				var iframe = self.DocFrame;
+				setTimeout(() => iframe.parentNode.removeChild(iframe), 500);
+				self.DocFrame = null;
+				down = false;
+				return;
+			}
+			if (down) {
+				down = false;
+				var models = [self.model];
+				if (self.processModel) {
+					models.push(self.processModel);
+				}
+				if (self.authorModel) {
+					models.push(self.authorModel);
+				}
+
+				var intersection = Geometry.findFSEntry(ev, camera, models, highlighted);
+				if (intersection) {
+					var fsEntry = intersection.fsEntry;
+					var ca = intersection.object.geometry.attributes.color;
+					var vs = intersection.object.geometry.attributes.position;
+					var tvs = intersection.object.children[1].geometry.attributes.position;
+					if (highlighted && highlighted.highlight) {
+						var obj = highlighted.highlight;
+						obj.parent.remove(obj);
+					}
+					if (highlighted !== fsEntry) {
+						highlighted = fsEntry;
+
+						self.goToFSEntry(fsEntry, intersection.object);
+					} else {
+						if (highlighted.entries === null) {
+							var fovDiff = (highlighted.scale * 50) / camera.fov;
+							if (fovDiff > 1 || !fsEntry.lineCount) {
+								self.goToFSEntry(highlighted, intersection.object);
+							} else {
+								self.goToFSEntryText(highlighted, intersection.object);
+							}
+						} else {
+							self.goToFSEntry(highlighted, intersection.object);
+						}
+					}
+					self.changed = true;
+
+					return;
+				}
+			}
+		};
+	}
+
+	render() {
+		const { scene, camera, renderer } = this;
+		scene.remove(this.searchLine);
+		scene.add(this.searchLine);
+		scene.remove(this.searchHighlights);
+		scene.add(this.searchHighlights);
+		scene.updateMatrixWorld(true);
+		var t = performance.now();
+		scene.tick(t, t - this.lastFrameTime);
+		this.lastFrameTime = t;
+		renderer.render(scene, camera);
+		this.currentFrame++;
+	}
+
+	tick = () => {
+		const camera = this.camera;
+		const currentFrameTime = performance.now();
+		var dt = currentFrameTime - this.previousFrameTime;
+		this.previousFrameTime += dt;
+		if (dt < 16) {
+			dt = 16;
+		}
+
+		if (camera.targetPosition.x !== camera.position.x || camera.targetPosition.y !== camera.position.y || camera.fov !== camera.targetFOV) {
+			camera.position.x += (camera.targetPosition.x - camera.position.x) * (1-Math.pow(0.85, dt/16));
+			camera.position.y += (camera.targetPosition.y - camera.position.y) * (1-Math.pow(0.85, dt/16));
+			if (Math.abs(camera.position.x - camera.targetPosition.x) < camera.fov*0.00001) {
+				camera.position.x = camera.targetPosition.x;
+			}
+			if (Math.abs(camera.position.y - camera.targetPosition.y) < camera.fov*0.00001) {
+				camera.position.y = camera.targetPosition.y;
+			}
+			camera.fov += (camera.targetFOV - camera.fov) * (1-Math.pow(0.85, dt/16));
+			if (Math.abs(camera.fov - camera.targetFOV) < camera.targetFOV / 1000) {
+				camera.fov = camera.targetFOV;
+			}
+			camera.updateProjectionMatrix();
+			this.changed = true;
+			this.animating = true;
+		} else {
+			this.animating = false;
+		}
+		var wasChanged = this.changed;
+		this.changed = false;
+		if (wasChanged || this.animating) this.render();
+
+		window.requestAnimationFrame(this.tick);
+	};
 }
 
 export default new Tabletree();

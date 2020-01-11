@@ -13,6 +13,8 @@ import { getPathEntry, getFullPath, getSiblings } from './lib/filetree';
 const apiPrefix = 'http://localhost:8008/_';
 const repoPrefix = 'kig/tabletree';
 
+const fullscreenSupported = (document.exitFullscreen||document.webkitExitFullscreen||document.webkitExitFullScreen||document.mozCancelFullScreen||document.msExitFullscreen) && !window.navigator.standalone;
+
 var searchResultsTimeout;
 var searchQueryNumber = 0;
 
@@ -30,7 +32,8 @@ class MainApp extends React.Component {
             commitChanges: '',
             files: '',
             searchResults: [],
-            navigationTarget: ''
+            navigationTarget: '',
+            frameRequestTime: 0
         };
         window.setNavigationTarget = this.setNavigationTarget;
         fetch(apiPrefix+'/repo/fs/'+repoPrefix+'/log.txt').then(res => res.text()).then(this.setCommitLog);
@@ -38,7 +41,7 @@ class MainApp extends React.Component {
         fetch(apiPrefix+'/repo/fs/'+repoPrefix+'/files.txt').then(res => res.text()).then(this.setFiles);
     }
 
-    requestFrame = () => window.changed = true;
+    requestFrame = () => this.setState({frameRequestTime: this.state.frameRequestTime++ % 1048576});
 
     searchTree(query, fileTree, results) {
         if (query.every(function(re) { return re.test(fileTree.title); })) {
@@ -64,10 +67,10 @@ class MainApp extends React.Component {
                 if (lineNumberMatch) {
                     const [_, filename, lineStr, snippet] = lineNumberMatch;
                     const line = parseInt(lineStr);
-                    return {fsEntry: getPathEntry(window.FileTree, repoPrefix + "/" + filename), line, snippet};
+                    return {fsEntry: getPathEntry(this.state.fileTree, repoPrefix + "/" + filename), line, snippet};
                 }
             }).filter(l => l);
-            searchResults = this.searchTree(query, window.FileTree, codeSearchResults);
+            searchResults = this.searchTree(query, this.state.fileTree, codeSearchResults);
         }
         this.setState({searchResults});
         // if (window.SearchIndex) {
@@ -78,7 +81,7 @@ class MainApp extends React.Component {
         // 		const [_, lineStr, lineCountStr] = (lineNumberMatch || ['0','0','0']); 
         // 		const line = parseInt(lineStr);
         // 		const lineCount = parseInt(lineCountStr);
-        // 		return {fsEntry: getPathEntry(window.FileTree, r.ref.replace(/^\./, repoPrefix).replace(/:\d+\/\d+$/, '')), line, lineCount};
+        // 		return {fsEntry: getPathEntry(this.state.fileTree, r.ref.replace(/^\./, repoPrefix).replace(/:\d+\/\d+$/, '')), line, lineCount};
         // 	});
         // 	console.timeEnd('token search');
         // }
@@ -173,7 +176,7 @@ class MainApp extends React.Component {
                 }
             })).then(this.updateActiveCommitSetDiffs);
             this.showCommitsForFile(fsEntry);
-            window.changed = true;
+            this.requestFrame();
         } else {
             window.activeCommitSet = [];
             this.updateActiveCommitSetAuthors([]);
@@ -209,19 +212,29 @@ class MainApp extends React.Component {
         return true;
     }
 
+    fullscreenOnClick(ev) {
+        var d = document;
+        if (d.fullscreenElement||d.webkitFullscreenElement||d.webkitFullScreenElement||d.mozFullScreenElement||d.msFullscreenElement) {
+            (d.exitFullscreen||d.webkitExitFullscreen||d.webkitExitFullScreen||d.mozCancelFullScreen||d.msExitFullscreen).call(d);
+        } else {
+            var e = document.body;
+            (e.requestFullscreen||e.webkitRequestFullscreen||e.webkitRequestFullScreen||e.mozRequestFullScreen||e.msRequestFullscreen).call(e);
+        }
+    }
+
     render() {
         return (
             <div>
-                <div id="debug"></div>
-                <div id="fullscreen"></div>
-                <div id="loader"></div>
+                <div id="debug" />
+                {fullscreenSupported && <div id="fullscreen" onClick={this.fullscreenOnClick} />}
+                <div id="loader" />
 
                 <Search goToFSEntryTextAtLine={window.goToFSEntryTextAtLine} goToFSEntry={window.goToFSEntry} navigationTarget={this.state.navigationTarget} requestFrame={this.requestFrame} searchResults={this.state.searchResults}  setSearchQuery={this.setSearchQuery} searchQuery={this.state.searchQuery} commitFilter={this.state.commitFilter} setCommitFilter={this.setCommitFilter}/>
                 <Breadcrumb navigationTarget={this.state.navigationTarget} commitFilter={this.state.commitFilter} setCommitFilter={this.setCommitFilter} />
                 <CommitControls navigationTarget={this.state.navigationTarget} searchQuery={this.state.searchQuery} commitFilter={this.state.commitFilter} setCommitFilter={this.setCommitFilter} />
                 <CommitInfo activeCommits={window.activeCommitSet} navigationTarget={this.state.navigationTarget} searchQuery={this.state.searchQuery} commitFilter={this.state.commitFilter} setCommitFilter={this.setCommitFilter} />
 
-                <MainView navigationTarget={this.state.navigationTarget} searchResults={this.state.searchResults} commitLog={this.state.commitLog} commitChanges={this.state.commitChanges} files={this.state.files} searchQuery={this.state.searchQuery} commitFilter={this.state.commitFilter} />
+                <MainView frameRequestTime={this.state.frameRequestTime} apiPrefix={apiPrefix} repoPrefix={repoPrefix} navigationTarget={this.state.navigationTarget} searchResults={this.state.searchResults} commitLog={this.state.commitLog} commitChanges={this.state.commitChanges} files={this.state.files} searchQuery={this.state.searchQuery} commitFilter={this.state.commitFilter} />
             </div>
         );
     }

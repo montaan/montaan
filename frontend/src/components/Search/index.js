@@ -12,6 +12,7 @@ export default class CommitControls extends React.Component {
     searchOnInput = (ev) => this.props.setSearchQuery(ev.target.value);
 
     createResultLink(result) {
+        const self = this;
         const {fsEntry, line} = result;
         const li = document.createElement('li');
         li.fullPath = result.fullPath;
@@ -21,18 +22,17 @@ export default class CommitControls extends React.Component {
         if (line > 0) {
             title.textContent += ":" + line;
         }
-        const self = this;
         const fullPath = document.createElement('div');
         fullPath.className = 'searchFullPath';
         fullPath.textContent = li.fullPath.replace(/^\/[^\/]*\/[^\/]*\//, '/');
         li.result = result;
         li.addEventListener('mouseover', function(ev) {
             this.classList.add('hover');
-            window.changed = true;
+            self.props.requestFrame();
         }, false);
         li.addEventListener('mouseout', function(ev) {
             this.classList.remove('hover');
-            window.changed = true;
+            self.props.requestFrame();
         }, false);
         li.onclick = function(ev) {
             ev.preventDefault();
