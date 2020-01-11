@@ -27,7 +27,7 @@ class MainApp extends React.Component {
             searchQuery: '',
             commits: [],
             activeCommits: [],
-            fileTree: {},
+            fileTree: {name: '', entries: {}},
             commitLog: '',
             commitChanges: '',
             files: '',
@@ -73,9 +73,9 @@ class MainApp extends React.Component {
             searchResults = this.searchTree(query, this.state.fileTree, codeSearchResults);
         }
         this.setState({searchResults});
-        // if (window.SearchIndex) {
+        // if (this.state.searchIndex) {
         // 	console.time('token search');
-        // 	lunrResults = window.SearchIndex.search(rawQuery);
+        // 	lunrResults = this.state.searchIndex.search(rawQuery);
         // 	lunrResults = lunrResults.map(function(r) {
         // 		const lineNumberMatch = r.ref.match(/:(\d+)\/(\d+)$/);
         // 		const [_, lineStr, lineCountStr] = (lineNumberMatch || ['0','0','0']); 

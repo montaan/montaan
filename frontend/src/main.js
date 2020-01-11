@@ -36,16 +36,16 @@ class Tabletree {
 	constructor() {
 		this.animating = false;
 		this.currentFrame = 0;
+		
+		this.textMinScale = 1000;
+		this.textMaxScale = 0;
 
 		this.changed = true;
 		this.model = null;
 		this.authorModel = null;
 		this.processModel = null;
-		this.connectionLines = null;
+		this.lineModel = null;
 	}
-
-	setCommitLog = txt => this._commitLog = txt;
-	setCommitChanges = txt => this._commitChanges = txt;
 
 	init(apiPrefix, repoPrefix) {
 		this.apiPrefix = apiPrefix;
@@ -55,6 +55,22 @@ class Tabletree {
 			new THREE.TextureLoader().load('fnt/DejaVu-sdf.png', (tex) => this.start(font, tex));
 		});
 	}
+
+	start(font, fontTexture) {
+		this.lastFrameTime = performance.now();
+		this.previousFrameTime = performance.now();
+
+		this.setupScene(); // Renderer, scene and camera setup.
+		this.setupTextModel(font, fontTexture); // Text model for files
+		this.setupSearchHighlighting(); // Search highlighting
+		setTimeout(() => { if (this._files) this.setFiles(this._files); }, 10); // Loading current repo data
+		this.setupEventListeners(); // UI event listeners
+		this.tick(); // Main render loop
+		window.searchInput.focus(); // Focus the search at page load
+	}
+
+	setCommitLog = txt => this._commitLog = txt;
+	setCommitChanges = txt => this._commitChanges = txt;
 
 	setFiles(txt) {
 		this._files = txt;
@@ -289,8 +305,8 @@ class Tabletree {
 			this.changed = true;
 			this.searchLine.lastUpdate = i;
 		}
-		if (this.LineModel) {
-			this.LineModel.visible = this.highlightedResults.length === 0;
+		if (this.lineModel) {
+			this.lineModel.visible = this.highlightedResults.length === 0;
 		}
 	}
 
@@ -476,678 +492,644 @@ class Tabletree {
 			};
 			el.appendChild(link);
 		}
-	};
+	}
 
-	start(font, fontTexture) {
-		this.lastFrameTime = performance.now();
-		this.previousFrameTime = performance.now();
+	createFileTreeModel(fileCount, fileTree) {
+		const {font, camera, prettyPrintWorker, modelPivot} = this;
+		const self = this;
+		var geo = Geometry.makeGeometry(fileCount+1);
 
-		this.setupScene();
-		const {renderer, scene, camera, modelPivot} = this;
+		var fileIndex = 0;
 
-		// Text functions
-		{
-			Layout.font = font;
+		fileTree.fsIndex = [fileTree];
 
-			var makeTextMaterial = function(palette) {
-				if (!palette || palette.length < 8) {
-					palette = [].concat(palette || []);
-					while (palette.length < 8) {
-						palette.push(palette[palette.length-1] || Colors.textColor);
-					}
-				}
-				return new THREE.RawShaderMaterial(SDFShader({
-					map: fontTexture,
-					side: THREE.DoubleSide,
-					transparent: true,
-					color: 0xffffff,
-					palette: palette,
-					polygonOffset: true,
-					polygonOffsetFactor: -0.5,
-					polygonOffsetUnits: 0.5,
-					depthTest: false,
-					depthWrite: false
-				}));
-			};
+		var labels = new THREE.Object3D();
+		var thumbnails = new THREE.Object3D();
+		Layout.createFileTreeQuads(fileTree, fileIndex, geo.attributes.position.array, geo.attributes.color.array, 0, 0, 0, 1, 0, labels, thumbnails, fileTree.fsIndex);
 
-			var textMaterial = makeTextMaterial();
+		var bigGeo = createText({text:'', font: font});
+		var vertCount = 0;
+		labels.traverse(function(c) {
+			if (c.geometry) {
+				vertCount += c.geometry.attributes.position.array.length;
+			}
+		});
+		var parr = new Float32Array(vertCount);
+		var uarr = new Float32Array(vertCount/2);
+		var j = 0;
+		labels.traverse(function(c) {
+			if (c.geometry) {
+				parr.set(c.geometry.attributes.position.array, j);
+				uarr.set(c.geometry.attributes.uv.array, j/2);
+				j += c.geometry.attributes.position.array.length;
+			}
+		});
 
-			var minScale = 1000, maxScale = 0;
-			var textTick = function(t,dt) {
-				var m = this.children[0];
-				// console.log(m.scale.x);
-				var visCount = 0;
-				if (this.isFirst) {
-					minScale = 1000; maxScale = 0;
-				}
-				if (minScale > m.scale.x) minScale = m.scale.x;
-				if (maxScale < m.scale.x) maxScale = m.scale.x;
-				if (camera.projectionMatrix.elements[0]*m.scale.x < 0.00025) {
-					if (this.visible) {
-						this.visible = false;
-						// this.traverse(function(c) { c.visible = false; });
-					}
-				} else {
-					// if (!this.visible && visCount === 0) {
-					// 	// debugger;
-					// }
-					this.visible = true;
-					// m.visible = true;
-					visCount++;
-					for (var i=0; i<this.children.length; i++) {
-						visCount += (this.children[i].tick(t, dt) || 0);
-					}
-				}
-				if (this.isFirst) {
-					// window.debug.innerHTML = [camera.projectionMatrix.elements[0], m.scale.x*100, visCount, minScale, maxScale].join(" : ");
-				}
-				return visCount;
-			};
+		bigGeo.setAttribute('position', new THREE.BufferAttribute(parr, 4));
+		bigGeo.setAttribute('uv', new THREE.BufferAttribute(uarr, 2));
 
-			var countChars = function(s,charCode) {
-				var j = 0;
-				for (var i=0; i<s.length; i++) {
-					if (s.charCodeAt(i) === charCode) j++;
-				}
-				return j;
-			};
+		var bigMesh = new THREE.Mesh(bigGeo, this.textMaterial);
 
-			var prettyPrintWorker = new Worker('js/prettyPrintWorker.js');
-			prettyPrintWorker.callbacks = {};
-			prettyPrintWorker.callbackUID = 0;
-			prettyPrintWorker.onmessage = function(event) {
-				this.callbacks[event.data.id](event.data.result);
-				delete this.callbacks[event.data.id];
-			};
-			prettyPrintWorker.prettyPrint = function(string, filename, callback, mimeType) {
-				var id = this.callbackUID++;
-				this.callbacks[id] = callback;
-				this.postMessage({string: string, filename: filename, id: id, mimeType: mimeType});
-			};
-		}
+		var mesh = new THREE.Mesh(
+			geo,
+			new THREE.MeshBasicMaterial({ color: 0xffffff, vertexColors: THREE.VertexColors })
+		);
+		var visibleFiles = new THREE.Object3D();
+		window.VF = visibleFiles;
+		mesh.add(visibleFiles);
+		visibleFiles.visibleSet = {};
 
-		// File tree functions
-		{
-			var self = this;
-			var createFileTreeModel = function(fileCount, fileTree) {
-				var geo = Geometry.makeGeometry(fileCount+1);
-
-				var fileIndex = 0;
-
-				fileTree.fsIndex = [fileTree];
-
-				var labels = new THREE.Object3D();
-				var thumbnails = new THREE.Object3D();
-				Layout.createFileTreeQuads(fileTree, fileIndex, geo.attributes.position.array, geo.attributes.color.array, 0, 0, 0, 1, 0, labels, thumbnails, fileTree.fsIndex);
-
-				var bigGeo = createText({text:'', font: font});
-				var vertCount = 0;
-				labels.traverse(function(c) {
-					if (c.geometry) {
-						vertCount += c.geometry.attributes.position.array.length;
-					}
-				});
-				var parr = new Float32Array(vertCount);
-				var uarr = new Float32Array(vertCount/2);
-				var j = 0;
-				labels.traverse(function(c) {
-					if (c.geometry) {
-						parr.set(c.geometry.attributes.position.array, j);
-						uarr.set(c.geometry.attributes.uv.array, j/2);
-						j += c.geometry.attributes.position.array.length;
-					}
-				});
-
-				bigGeo.setAttribute('position', new THREE.BufferAttribute(parr, 4));
-				bigGeo.setAttribute('uv', new THREE.BufferAttribute(uarr, 2));
-
-				var bigMesh = new THREE.Mesh(bigGeo, textMaterial);
-
-				var mesh = new THREE.Mesh(
-					geo,
-					new THREE.MeshBasicMaterial({ color: 0xffffff, vertexColors: THREE.VertexColors })
-				);
-				var visibleFiles = new THREE.Object3D();
-				window.VF = visibleFiles;
-				mesh.add(visibleFiles);
-				visibleFiles.visibleSet = {};
-
-				mesh.ontick = function(t,dt) {
-					for (var i=0; i<visibleFiles.children.length; i++) {
-						var c = visibleFiles.children[i];
-						var fsEntry = c.fsEntry;
-						if (!Geometry.quadInsideFrustum(fsEntry.index, this, camera) || fsEntry.scale * 50 / Math.max(camera.fov, camera.targetFOV) < 0.2) {
-							if (!c.geometry.layout) {
-								if (c.material && c.material.map) {
-									c.material.map.dispose();
-								}
-							// } else if (c.material) {
-							// 	c.material.dispose();
-							}
-							if (c.geometry) {
-								c.geometry.dispose();
-							}
-							var fullPath = getFullPath(fsEntry);
-							visibleFiles.visibleSet[fullPath] = false;
-							visibleFiles.remove(c);
-							i--;
+		mesh.ontick = function(t,dt) {
+			for (var i=0; i<visibleFiles.children.length; i++) {
+				var c = visibleFiles.children[i];
+				var fsEntry = c.fsEntry;
+				if (!Geometry.quadInsideFrustum(fsEntry.index, this, camera) || fsEntry.scale * 50 / Math.max(camera.fov, camera.targetFOV) < 0.2) {
+					if (!c.geometry.layout) {
+						if (c.material && c.material.map) {
+							c.material.map.dispose();
 						}
+					// } else if (c.material) {
+					// 	c.material.dispose();
 					}
-					var stack = [this.fileTree];
-					var zoomedInPath = "";
-					var navigationTarget = "";
-					var smallestCovering = this.fileTree;
-					while (stack.length > 0) {
-						var obj = stack.pop();
-						for (var name in obj.entries) {
-							var o = obj.entries[name];
-							var idx = o.index;
-							if (!Geometry.quadInsideFrustum(idx, this, camera)) {
-							} else if (o.scale * 50 / Math.max(camera.fov, camera.targetFOV) > 0.2) {
-								if (Geometry.quadCoversFrustum(idx, this, camera)) {
-									zoomedInPath += '/' + o.name;
-									navigationTarget += '/' + o.name;
-									smallestCovering = o;
-								} else if (o.scale * 50 / Math.max(camera.fov, camera.targetFOV) > 0.9 && Geometry.quadAtFrustumCenter(idx, this, camera)) {
-									navigationTarget += '/' + o.name;
-								}
-								if (o.entries === null) {
-									var fullPath = getFullPath(o);
-									if (visibleFiles.children.length < 20 && !visibleFiles.visibleSet[fullPath]) {
-										if (Colors.imageRE.test(fullPath)) {
-											var obj3 = new THREE.Mesh();
-											obj3.visible = false;
-											obj3.fsEntry = o;
-											visibleFiles.visibleSet[fullPath] = true;
-											visibleFiles.add(obj3);
-											obj3.geometry = new THREE.PlaneBufferGeometry(1,1);
-											obj3.scale.multiplyScalar(o.scale);
-											obj3.position.set(o.x+o.scale*0.5, o.y+o.scale*0.5, o.z);
-											obj3.visible = false;
-											window.imageObj = obj3;
-											var img = new Image();
-											img.crossOrigin = 'anonymous';
-											img.src = self.apiPrefix+'/repo/file'+fullPath;
-											img.obj = obj3;
-											img.onload = function() {
-												if (this.obj.parent) {
-													var canvas = document.createElement('canvas');
-													var maxD = Math.max(this.width, this.height);
-													this.obj.scale.x *= this.width/maxD;
-													this.obj.scale.y *= this.height/maxD;
-													this.obj.material = new THREE.MeshBasicMaterial({
-														map: new THREE.Texture(this),
-														transparent: true,
-														depthTest: false,
-														depthWrite: false
-													});
-													this.obj.material.map.needsUpdate = true;
-													this.obj.visible = true;
-												}
-											};
-										} else {
-											var obj3 = new THREE.Mesh();
-											obj3.visible = false;
-											obj3.fsEntry = o;
-											visibleFiles.visibleSet[fullPath] = true;
-											visibleFiles.add(obj3);
-											var xhr = new XMLHttpRequest();
-											xhr.open('GET', self.apiPrefix+'/repo/file'+fullPath, true);
-											xhr.obj = obj3;
-											xhr.fsEntry = o;
-											xhr.fullPath = fullPath;
-											xhr.onload = function() {
-												if (this.responseText.length < 1e6 && this.obj.parent) {
-													var contents = this.responseText;
-													if (contents.length === 0) return;
-
-													var _xhr = this;
-													prettyPrintWorker.prettyPrint(contents, this.fsEntry.name, function(result) {
-														if (result.language) {
-															console.time('prettyPrint collectNodeStyles ' + self.currentFrame);
-															var doc = document.createElement('pre');
-															doc.className = 'hljs ' + result.language;
-															doc.style.display = 'none';
-															doc.innerHTML = result.value;
-															document.body.appendChild(doc);
-															var paletteIndex = {};
-															var palette = [];
-															var txt = [];
-															var collectNodeStyles = function(doc, txt, palette, paletteIndex) {
-																var style = getComputedStyle(doc);
-																var color = style.color;
-																if (!paletteIndex[color]) {
-																	paletteIndex[color] = palette.length;
-																	var c = new THREE.Color(color);
-																	palette.push(new THREE.Vector3(c.r, c.g, c.b));
-																}
-																var color = paletteIndex[color];
-																var bold = style.fontWeight !== 'normal';
-																var italic = style.fontStyle === 'italic';
-																var underline = style.textDecoration === 'underline';
-																for (var i=0; i<doc.childNodes.length; i++) {
-																	var cc = doc.childNodes[i];
-																	if (cc.tagName) {
-																		collectNodeStyles(cc, txt, palette, paletteIndex);
-																	} else {
-																		txt.push({
-																			color: color,
-																			bold: bold,
-																			italic: italic,
-																			underline: underline,
-																			text: cc.textContent
-																		});
-																	}
-																}
-															};
-															collectNodeStyles(doc, txt, palette, paletteIndex);
-															document.body.removeChild(doc);
-															console.timeEnd('prettyPrint collectNodeStyles ' + self.currentFrame);
-														}
-
-
-														const text = _xhr.obj;
-														const fsEntry = _xhr.fsEntry;
-														text.visible = true;
-														console.time('createText ' + self.currentFrame);
-														text.geometry = createText({font: Layout.font, text: contents, mode: 'pre'});
-														console.timeEnd('createText ' + self.currentFrame);
-														console.time('tweakText ' + self.currentFrame);
-														if (result.language) {
-															var verts = text.geometry.attributes.position.array;
-															for (var i=0, off=3; i<txt.length; i++) {
-																var t = txt[i];
-																for (var j=0; j<t.text.length; j++) {
-																	var c = t.text.charCodeAt(j);
-																	if (c === 10 || c === 32 || c === 9 || c === 13) continue;
-																	for (var k=0; k<6; k++) {
-																		if (t.italic) {
-																			verts[off-3] += ((k <= 3 && k !== 0) ? -1 : 1) * 2.5;
-																		}
-																		verts[off] = t.color + 256 * t.bold;
-																		off += 4;
-																	}
-																}
-															}
-															text.material = makeTextMaterial(palette);
-														} else {
-															text.material = makeTextMaterial(palette);
-														}
-														text.material.uniforms.opacity.value = 0;
-														text.ontick = function(t, dt) {
-															if (this.material.uniforms.opacity.value === 1) return;
-															this.material.uniforms.opacity.value += (dt/1000) / 0.5;
-															if (this.material.uniforms.opacity.value > 1) {
-																this.material.uniforms.opacity.value = 1;
-															}
-															self.changed = true;
-														};
-
-														var textScale = 1 / Math.max(text.geometry.layout.width+60, (text.geometry.layout.height+30)/0.75);
-														var scale = fsEntry.scale * textScale;
-														var vAspect = Math.min(1, ((text.geometry.layout.height+30)/0.75) / (text.geometry.layout.width+60));
-														text.material.depthTest = false;
-														text.scale.multiplyScalar(scale);
-														text.scale.y *= -1;
-														text.position.copy(fsEntry);
-														text.fsEntry = fsEntry;
-														text.position.x += fsEntry.scale * textScale * 30;
-														text.position.y -= fsEntry.scale * textScale * 7.5;
-														text.position.y += fsEntry.scale * 0.25;
-														
-														fsEntry.textScale = textScale;
-														fsEntry.textXZero = text.position.x;
-														fsEntry.textX = text.position.x + scale * Math.min(40 * 30 + 60, text.geometry.layout.width + 60) * 0.5;
-														fsEntry.textYZero = text.position.y + fsEntry.scale * 0.75;
-														fsEntry.textY = text.position.y + fsEntry.scale * 0.75 - scale * 900;
-														fsEntry.textHeight = scale * text.geometry.layout.height;
-
-														text.position.y += fsEntry.scale * 0.75 * (1-vAspect);
-
-														const lineCount = contents.split("\n").length;
-														fsEntry.lineCount = lineCount;
-
-														if (fsEntry.targetLine) {
-															const {line} = fsEntry.targetLine;
-															fsEntry.targetLine = null;
-															self.goToFSEntryTextAtLine(fsEntry, window.model, line, lineCount);
-														}
-
-														console.timeEnd('tweakText ' + self.currentFrame);
-													});
-												}
-											};
-											xhr.send();
+					if (c.geometry) {
+						c.geometry.dispose();
+					}
+					var fullPath = getFullPath(fsEntry);
+					visibleFiles.visibleSet[fullPath] = false;
+					visibleFiles.remove(c);
+					i--;
+				}
+			}
+			var stack = [this.fileTree];
+			var zoomedInPath = "";
+			var navigationTarget = "";
+			var smallestCovering = this.fileTree;
+			while (stack.length > 0) {
+				var obj = stack.pop();
+				for (var name in obj.entries) {
+					var o = obj.entries[name];
+					var idx = o.index;
+					if (!Geometry.quadInsideFrustum(idx, this, camera)) {
+					} else if (o.scale * 50 / Math.max(camera.fov, camera.targetFOV) > 0.2) {
+						if (Geometry.quadCoversFrustum(idx, this, camera)) {
+							zoomedInPath += '/' + o.name;
+							navigationTarget += '/' + o.name;
+							smallestCovering = o;
+						} else if (o.scale * 50 / Math.max(camera.fov, camera.targetFOV) > 0.9 && Geometry.quadAtFrustumCenter(idx, this, camera)) {
+							navigationTarget += '/' + o.name;
+						}
+						if (o.entries === null) {
+							var fullPath = getFullPath(o);
+							if (visibleFiles.children.length < 20 && !visibleFiles.visibleSet[fullPath]) {
+								if (Colors.imageRE.test(fullPath)) {
+									var obj3 = new THREE.Mesh();
+									obj3.visible = false;
+									obj3.fsEntry = o;
+									visibleFiles.visibleSet[fullPath] = true;
+									visibleFiles.add(obj3);
+									obj3.geometry = new THREE.PlaneBufferGeometry(1,1);
+									obj3.scale.multiplyScalar(o.scale);
+									obj3.position.set(o.x+o.scale*0.5, o.y+o.scale*0.5, o.z);
+									obj3.visible = false;
+									window.imageObj = obj3;
+									var img = new Image();
+									img.crossOrigin = 'anonymous';
+									img.src = self.apiPrefix+'/repo/file'+fullPath;
+									img.obj = obj3;
+									img.onload = function() {
+										if (this.obj.parent) {
+											var canvas = document.createElement('canvas');
+											var maxD = Math.max(this.width, this.height);
+											this.obj.scale.x *= this.width/maxD;
+											this.obj.scale.y *= this.height/maxD;
+											this.obj.material = new THREE.MeshBasicMaterial({
+												map: new THREE.Texture(this),
+												transparent: true,
+												depthTest: false,
+												depthWrite: false
+											});
+											this.obj.material.map.needsUpdate = true;
+											this.obj.visible = true;
 										}
-									}
+									};
 								} else {
-									stack.push(o);
+									var obj3 = new THREE.Mesh();
+									obj3.visible = false;
+									obj3.fsEntry = o;
+									visibleFiles.visibleSet[fullPath] = true;
+									visibleFiles.add(obj3);
+									var xhr = new XMLHttpRequest();
+									xhr.open('GET', self.apiPrefix+'/repo/file'+fullPath, true);
+									xhr.obj = obj3;
+									xhr.fsEntry = o;
+									xhr.fullPath = fullPath;
+									xhr.onload = function() {
+										if (this.responseText.length < 1e6 && this.obj.parent) {
+											var contents = this.responseText;
+											if (contents.length === 0) return;
+
+											var _xhr = this;
+											prettyPrintWorker.prettyPrint(contents, this.fsEntry.name, function(result) {
+												if (result.language) {
+													console.time('prettyPrint collectNodeStyles ' + self.currentFrame);
+													var doc = document.createElement('pre');
+													doc.className = 'hljs ' + result.language;
+													doc.style.display = 'none';
+													doc.innerHTML = result.value;
+													document.body.appendChild(doc);
+													var paletteIndex = {};
+													var palette = [];
+													var txt = [];
+													var collectNodeStyles = function(doc, txt, palette, paletteIndex) {
+														var style = getComputedStyle(doc);
+														var color = style.color;
+														if (!paletteIndex[color]) {
+															paletteIndex[color] = palette.length;
+															var c = new THREE.Color(color);
+															palette.push(new THREE.Vector3(c.r, c.g, c.b));
+														}
+														var color = paletteIndex[color];
+														var bold = style.fontWeight !== 'normal';
+														var italic = style.fontStyle === 'italic';
+														var underline = style.textDecoration === 'underline';
+														for (var i=0; i<doc.childNodes.length; i++) {
+															var cc = doc.childNodes[i];
+															if (cc.tagName) {
+																collectNodeStyles(cc, txt, palette, paletteIndex);
+															} else {
+																txt.push({
+																	color: color,
+																	bold: bold,
+																	italic: italic,
+																	underline: underline,
+																	text: cc.textContent
+																});
+															}
+														}
+													};
+													collectNodeStyles(doc, txt, palette, paletteIndex);
+													document.body.removeChild(doc);
+													console.timeEnd('prettyPrint collectNodeStyles ' + self.currentFrame);
+												}
+
+
+												const text = _xhr.obj;
+												const fsEntry = _xhr.fsEntry;
+												text.visible = true;
+												console.time('createText ' + self.currentFrame);
+												text.geometry = createText({font: Layout.font, text: contents, mode: 'pre'});
+												console.timeEnd('createText ' + self.currentFrame);
+												console.time('tweakText ' + self.currentFrame);
+												if (result.language) {
+													var verts = text.geometry.attributes.position.array;
+													for (var i=0, off=3; i<txt.length; i++) {
+														var t = txt[i];
+														for (var j=0; j<t.text.length; j++) {
+															var c = t.text.charCodeAt(j);
+															if (c === 10 || c === 32 || c === 9 || c === 13) continue;
+															for (var k=0; k<6; k++) {
+																if (t.italic) {
+																	verts[off-3] += ((k <= 3 && k !== 0) ? -1 : 1) * 2.5;
+																}
+																verts[off] = t.color + 256 * t.bold;
+																off += 4;
+															}
+														}
+													}
+													text.material = self.makeTextMaterial(palette);
+												} else {
+													text.material = self.makeTextMaterial(palette);
+												}
+												text.material.uniforms.opacity.value = 0;
+												text.ontick = function(t, dt) {
+													if (this.material.uniforms.opacity.value === 1) return;
+													this.material.uniforms.opacity.value += (dt/1000) / 0.5;
+													if (this.material.uniforms.opacity.value > 1) {
+														this.material.uniforms.opacity.value = 1;
+													}
+													self.changed = true;
+												};
+
+												var textScale = 1 / Math.max(text.geometry.layout.width+60, (text.geometry.layout.height+30)/0.75);
+												var scale = fsEntry.scale * textScale;
+												var vAspect = Math.min(1, ((text.geometry.layout.height+30)/0.75) / (text.geometry.layout.width+60));
+												text.material.depthTest = false;
+												text.scale.multiplyScalar(scale);
+												text.scale.y *= -1;
+												text.position.copy(fsEntry);
+												text.fsEntry = fsEntry;
+												text.position.x += fsEntry.scale * textScale * 30;
+												text.position.y -= fsEntry.scale * textScale * 7.5;
+												text.position.y += fsEntry.scale * 0.25;
+												
+												fsEntry.textScale = textScale;
+												fsEntry.textXZero = text.position.x;
+												fsEntry.textX = text.position.x + scale * Math.min(40 * 30 + 60, text.geometry.layout.width + 60) * 0.5;
+												fsEntry.textYZero = text.position.y + fsEntry.scale * 0.75;
+												fsEntry.textY = text.position.y + fsEntry.scale * 0.75 - scale * 900;
+												fsEntry.textHeight = scale * text.geometry.layout.height;
+
+												text.position.y += fsEntry.scale * 0.75 * (1-vAspect);
+
+												const lineCount = contents.split("\n").length;
+												fsEntry.lineCount = lineCount;
+
+												if (fsEntry.targetLine) {
+													const {line} = fsEntry.targetLine;
+													fsEntry.targetLine = null;
+													self.goToFSEntryTextAtLine(fsEntry, window.model, line, lineCount);
+												}
+
+												console.timeEnd('tweakText ' + self.currentFrame);
+											});
+										}
+									};
+									xhr.send();
 								}
 							}
+						} else {
+							stack.push(o);
 						}
 					}
-					self.updateBreadCrumb(navigationTarget);
-					window.setNavigationTarget(navigationTarget);
-					this.geometry.setDrawRange(smallestCovering.vertexIndex, smallestCovering.lastVertexIndex-smallestCovering.vertexIndex);
-					bigGeo.setDrawRange(smallestCovering.textVertexIndex, smallestCovering.lastTextVertexIndex - smallestCovering.textVertexIndex);
-				};
-				mesh.fileTree = fileTree;
-				mesh.material.side = THREE.DoubleSide;
-				mesh.add(bigMesh);
-				mesh.add(thumbnails);
-				// mesh.castShadow = true;
-				// mesh.receiveShadow = true;
-				return mesh;
-			};
-
-			var createFileListModel = function(fileCount, fileTree) {
-				var geo = Geometry.makeGeometry(fileCount);
-
-				var fileIndex = 0;
-
-				fileTree.index = [fileTree];
-
-				var labels = new THREE.Object3D();
-				var thumbnails = new THREE.Object3D();
-				Layout.createFileListQuads(fileTree, fileIndex, geo.attributes.position.array, geo.attributes.color.array, 0, 0, 0, 1, 0, labels, thumbnails, fileTree.index);
-
-				var bigGeo = createText({text:'', font: font});
-				var vertCount = 0;
-				labels.traverse(function(c) {
-					if (c.geometry) {
-						vertCount += c.geometry.attributes.position.array.length;
-					}
-				});
-				var parr = new Float32Array(vertCount);
-				var uarr = new Float32Array(vertCount/2);
-				var j = 0;
-				labels.traverse(function(c) {
-					if (c.geometry) {
-						parr.set(c.geometry.attributes.position.array, j);
-						uarr.set(c.geometry.attributes.uv.array, j/2);
-						j += c.geometry.attributes.position.array.length;
-					}
-				});
-
-				bigGeo.setAttribute('position', new THREE.BufferAttribute(parr, 4));
-				bigGeo.setAttribute('uv', new THREE.BufferAttribute(uarr, 2));
-
-				var bigMesh = new THREE.Mesh(bigGeo, textMaterial);
-
-				var mesh = new THREE.Mesh(
-					geo,
-					new THREE.MeshBasicMaterial({ color: 0xffffff, vertexColors: THREE.VertexColors })
-				);
-				mesh.fileTree = fileTree;
-				mesh.material.side = THREE.DoubleSide;
-				mesh.add(bigMesh);
-				mesh.add(thumbnails);
-				return mesh;
-			};
-
-			var showFileTree;
-			this.showFileTree = showFileTree = function(fileTree) {
-				if (processXHR) {
-					processXHR.onload = undefined;
 				}
+			}
+			self.updateBreadCrumb(navigationTarget);
+			window.setNavigationTarget(navigationTarget);
+			this.geometry.setDrawRange(smallestCovering.vertexIndex, smallestCovering.lastVertexIndex-smallestCovering.vertexIndex);
+			bigGeo.setDrawRange(smallestCovering.textVertexIndex, smallestCovering.lastTextVertexIndex - smallestCovering.textVertexIndex);
+		};
+		mesh.fileTree = fileTree;
+		mesh.material.side = THREE.DoubleSide;
+		mesh.add(bigMesh);
+		mesh.add(thumbnails);
+		// mesh.castShadow = true;
+		// mesh.receiveShadow = true;
+		return mesh;
+	}
+
+	createFileListModel(fileCount, fileTree) {
+		var geo = Geometry.makeGeometry(fileCount);
+
+		var fileIndex = 0;
+
+		fileTree.index = [fileTree];
+
+		var labels = new THREE.Object3D();
+		var thumbnails = new THREE.Object3D();
+		Layout.createFileListQuads(fileTree, fileIndex, geo.attributes.position.array, geo.attributes.color.array, 0, 0, 0, 1, 0, labels, thumbnails, fileTree.index);
+
+		var bigGeo = createText({text:'', font: this.font});
+		var vertCount = 0;
+		labels.traverse(function(c) {
+			if (c.geometry) {
+				vertCount += c.geometry.attributes.position.array.length;
+			}
+		});
+		var parr = new Float32Array(vertCount);
+		var uarr = new Float32Array(vertCount/2);
+		var j = 0;
+		labels.traverse(function(c) {
+			if (c.geometry) {
+				parr.set(c.geometry.attributes.position.array, j);
+				uarr.set(c.geometry.attributes.uv.array, j/2);
+				j += c.geometry.attributes.position.array.length;
+			}
+		});
+
+		bigGeo.setAttribute('position', new THREE.BufferAttribute(parr, 4));
+		bigGeo.setAttribute('uv', new THREE.BufferAttribute(uarr, 2));
+
+		var bigMesh = new THREE.Mesh(bigGeo, this.textMaterial);
+
+		var mesh = new THREE.Mesh(
+			geo,
+			new THREE.MeshBasicMaterial({ color: 0xffffff, vertexColors: THREE.VertexColors })
+		);
+		mesh.fileTree = fileTree;
+		mesh.material.side = THREE.DoubleSide;
+		mesh.add(bigMesh);
+		mesh.add(thumbnails);
+		return mesh;
+	}
+
+	showFileTree(fileTree) {
+		this.changed = true;
+		if (this.model) {
+			this.model.parent.remove(this.model);
+			this.model.traverse(function(m) {
+				if (m.geometry) {
+					m.geometry.dispose();
+				}
+			});
+			this.model = null;
+		}
+		if (this.processModel) {
+			this.processModel.parent.remove(this.processModel);
+			this.processModel.traverse(function(m) {
+				if (m.geometry) {
+					m.geometry.dispose();
+				}
+			});
+			this.processModel = null;
+		}
+		if (this.authorModel) {
+			this.authorModel.visible = false;
+			this.authorModel.parent.remove(this.authorModel);
+			this.authorModel = null;
+		}
+		if (this.lineModel) {
+			this.lineModel.visible = false;
+			this.lineModel.parent.remove(this.lineModel);
+			this.lineModel = null;
+		}
+		this.FileTree = fileTree.tree;
+		this.model = this.createFileTreeModel(fileTree.count, fileTree.tree);
+		this.model.position.set(-0.5, -0.5, 0.0);
+		this.modelPivot.add(this.model);
+		// processTick();
+	}
+
+	makeTextMaterial(palette=null, fontTexture=this.fontTexture) {
+		if (!palette || palette.length < 8) {
+			palette = [].concat(palette || []);
+			while (palette.length < 8) {
+				palette.push(palette[palette.length-1] || Colors.textColor);
+			}
+		}
+		return new THREE.RawShaderMaterial(SDFShader({
+			map: fontTexture,
+			side: THREE.DoubleSide,
+			transparent: true,
+			color: 0xffffff,
+			palette: palette,
+			polygonOffset: true,
+			polygonOffsetFactor: -0.5,
+			polygonOffsetUnits: 0.5,
+			depthTest: false,
+			depthWrite: false
+		}));
+	}
+
+	textTick = (() => {
+		const self = this;
+		return function(t,dt) {
+			var m = this.children[0];
+			// console.log(m.scale.x);
+			var visCount = 0;
+			if (this.isFirst) {
+				self.textMinScale = 1000;
+				self.textMaxScale = 0;
+			}
+			if (self.textMinScale > m.scale.x) self.textMinScale = m.scale.x;
+			if (self.textMaxScale < m.scale.x) self.textMaxScale = m.scale.x;
+			if (self.camera.projectionMatrix.elements[0]*m.scale.x < 0.00025) {
+				if (this.visible) {
+					this.visible = false;
+					// this.traverse(function(c) { c.visible = false; });
+				}
+			} else {
+				// if (!this.visible && visCount === 0) {
+				// 	// debugger;
+				// }
+				this.visible = true;
+				// m.visible = true;
+				visCount++;
+				for (var i=0; i<this.children.length; i++) {
+					visCount += (this.children[i].tick(t, dt) || 0);
+				}
+			}
+			if (this.isFirst) {
+				// window.debug.innerHTML = [camera.projectionMatrix.elements[0], m.scale.x*100, visCount, minScale, maxScale].join(" : ");
+			}
+			return visCount;
+		};
+	})();
+
+	setupTextModel(font, fontTexture) {
+		this.font = font;
+		this.fontTexture = fontTexture;
+		
+		Layout.font = font;
+
+		this.textMaterial = this.makeTextMaterial();
+
+		var prettyPrintWorker = new Worker('js/prettyPrintWorker.js');
+		prettyPrintWorker.callbacks = {};
+		prettyPrintWorker.callbackUID = 0;
+		prettyPrintWorker.onmessage = function(event) {
+			this.callbacks[event.data.id](event.data.result);
+			delete this.callbacks[event.data.id];
+		};
+		prettyPrintWorker.prettyPrint = function(string, filename, callback, mimeType) {
+			var id = this.callbackUID++;
+			this.callbacks[id] = callback;
+			this.postMessage({string: string, filename: filename, id: id, mimeType: mimeType});
+		};
+		this.prettyPrintWorker = prettyPrintWorker;
+	}
+
+	countChars(s,charCode) {
+		var j = 0;
+		for (var i=0; i<s.length; i++) {
+			if (s.charCodeAt(i) === charCode) j++;
+		}
+		return j;
+	}
+
+	addLine(geo, processPath) {
+		var a = getPathEntry(this.ProcessTree, processPath);
+		var b = getPathEntry(this.FileTree, processPath.replace(/^\/\d+\/files/, '').replace(/\:/g, '/'));
+		if (a && b) {
+			var av = new THREE.Vector3(a.x, a.y, a.z);
+			av.multiply(window.processModel.scale);
+			av.add(window.processModel.position);
+			var bv = new THREE.Vector3(b.x, b.y, b.z);
+			bv.add(window.model.position);
+			var aUp = new THREE.Vector3(av.x, av.y, Math.max(av.z, bv.z) + 0.1);
+			var bUp = new THREE.Vector3(bv.x, bv.y, Math.max(av.z, bv.z) + 0.1);
+
+			geo.vertices.push(av);
+			geo.vertices.push(aUp);
+			geo.vertices.push(aUp);
+			geo.vertices.push(bUp);
+			geo.vertices.push(bUp);
+			geo.vertices.push(bv);
+		}
+	}
+
+	addLineBetweenEntries(geo, color, modelA, entryA, modelB, entryB) {
+		var index = geo.vertices.length;
+
+		if (!entryA.outgoingLines) entryA.outgoingLines = [];
+		entryA.outgoingLines.push({src: {model: modelA, entry: entryA}, dst: {model:modelB, entry:entryB}, index, color});
+		if (!entryB.outgoingLines) entryB.outgoingLines = [];
+		entryB.outgoingLines.push({src: {model: modelB, entry: entryB}, dst: {model:modelA, entry:entryA}, index, color});
+
+		geo.vertices.push(new THREE.Vector3());
+		geo.vertices.push(new THREE.Vector3());
+		geo.vertices.push(new THREE.Vector3());
+		geo.vertices.push(new THREE.Vector3());
+		geo.vertices.push(new THREE.Vector3());
+		geo.vertices.push(new THREE.Vector3());
+
+		if (color) {
+			geo.colors.push(color, color, color, color, color, color);
+		}
+	}
+
+	updateLineBetweenEntries(geo, index, color, modelA, entryA, modelB, entryB) {
+		var a = entryA;
+		var b = entryB;
+
+		var av = new THREE.Vector3(a.x, a.y, a.z);
+		av.applyMatrix4(modelA.matrix);
+
+		var bv = new THREE.Vector3(b.x, b.y, b.z);
+		bv.applyMatrix4(modelB.matrix);
+
+		var aUp = new THREE.Vector3(av.x+(bv.x-av.x)*0.1, av.y+(bv.y-av.y)*0.1, Math.max(av.z, bv.z) + 0.1);
+		var bUp = new THREE.Vector3(bv.x-(bv.x-av.x)*0.1, bv.y-(bv.y-av.y)*0.1, Math.max(av.z, bv.z) + 0.1);
+
+		geo.vertices[index++].copy(av);
+		geo.vertices[index++].copy(aUp);
+		geo.vertices[index++].copy(aUp);
+		geo.vertices[index++].copy(bUp);
+		geo.vertices[index++].copy(bUp);
+		geo.vertices[index++].copy(bv);
+		geo.verticesNeedUpdate = true;
+
+		if (color) {
+			index -= 6;
+			geo.colors[index++].copy(color);
+			geo.colors[index++].copy(color);
+			geo.colors[index++].copy(color);
+			geo.colors[index++].copy(color);
+			geo.colors[index++].copy(color);
+			geo.colors[index++].copy(color);
+		}
+	}
+
+	showLinesForEntry(geo, entry, depth=0, recurse=true, avoidModel=null, first=true) {
+		if (first) for (var i = 0; i < geo.vertices.length; i++) geo.vertices[i].set(-100,-100,-100);
+		if (entry.outgoingLines) {
+			entry.outgoingLines.forEach(l => {
+				if (l.dst.window.model !== avoidModel) this.updateLineBetweenEntries(geo, l.index, l.color, l.src.window.model, l.src.entry, l.dst.window.model, l.dst.entry);
+				if (depth > 0) this.showLinesForEntry(geo, l.dst.entry, depth-1, false, l.src.window.model, false);
+			});
+		}
+		if (recurse) {
+			for (let e in entry.entries) {
+				this.showLinesForEntry(geo, entry.entries[e], depth, recurse, avoidModel, false);
+			}
+		}
+	}
+
+	showCommit(sha) {
+		var c = this.commitData.commitIndex[sha];
+		this.showLinesForEntry(this.lineGeo, this.commitData.commitsFSEntry.entries[sha], 0);
+		var commitDetails = document.getElementById('commitDetails');
+		commitDetails.textContent = `${sha}\n${c.date.toString()}\n${c.author.name} <${c.author.email}>\n\n${c.message}\n\n${c.files.map(
+			({action,path,renamed}) => `${action} ${path}${renamed ? ' '+renamed : ''}`
+		).join("\n")}`;
+	}
+
+	showCommitsByAuthor(authorName) {
+		this.showLinesForEntry(this.lineGeo, this.commitData.authors[authorName].fsEntry, 1);
+	}
+
+	showCommitsForFile(fsEntry) {
+		this.showLinesForEntry(this.lineGeo, fsEntry, 1);
+	}
+
+	findCommitsForPath(path) {
+		path = path.substring(this.repoPrefix.length + 2);
+		return this.commitData.commits.filter(c => c.files.some(f => {
+			if (f.renamed && f.renamed.startsWith(path)) {
+				if (f.renamed === path) path = f.path;
+				return true;
+			}
+			if (f.path.startsWith(path)) return true;
+		}));
+	}
+
+	setCommitData(commitData) {
+		this.setLoaded(true);
+
+		this.commitData = commitData;
+		
+		// this.authorModel = createFileListModel(this.commitData.AuthorTree.count, this.commitData.AuthorTree.tree);
+		// this.authorModel.position.set(1.5, -0.5, 0.0);
+		// modelPivot.add(this.authorModel);
+
+		// this.processModel = createFileListModel(this.commitData.CommitTree.count, this.commitData.CommitTree.tree);
+		// this.processModel.position.set(0.5, -0.5, 0.0);
+		// modelPivot.add(this.processModel);
+
+		this.model.updateMatrix();
+		// this.processModel.updateMatrix();
+		// this.authorModel.updateMatrix();
+
+		this.lineModel = new THREE.LineSegments(this.lineGeo, new THREE.LineBasicMaterial({
+			color: new THREE.Color(1.0, 1.0, 1.0), opacity: 1, transparent: true, depthWrite: false,
+			vertexColors: true
+		}));
+		this.lineModel.frustumCulled = false;
+		this.modelPivot.add(this.lineModel);
+
+		this.lineModel.ontick = () => {
+			var cf = (self.currentFrame / 2) | 0;
+			if (false) {
+				var aks = Object.keys(this.commitData.authors);
+				this.showCommitsByAuthor(aks[cf % aks.length]);
 				this.changed = true;
-				if (this.model) {
-					this.model.parent.remove(this.model);
-					this.model.traverse(function(m) {
-						if (m.geometry) {
-							m.geometry.dispose();
-						}
-					});
-					this.model = null;
-				}
-				if (this.processModel) {
-					this.processModel.parent.remove(this.processModel);
-					this.processModel.traverse(function(m) {
-						if (m.geometry) {
-							m.geometry.dispose();
-						}
-					});
-					this.processModel = null;
-				}
-				if (this.authorModel) {
-					this.authorModel.visible = false;
-					this.authorModel.parent.remove(this.authorModel);
-					this.authorModel = null;
-				}
-				if (this.connectionLines) {
-					this.connectionLines.visible = false;
-					this.connectionLines.parent.remove(this.connectionLines);
-					this.connectionLines = null;
-				}
-				this.FileTree = fileTree.tree;
-				this.model = createFileTreeModel(fileTree.count, fileTree.tree);
-				this.model.position.set(-0.5, -0.5, 0.0);
-				modelPivot.add(this.model);
-				// processTick();
-			};
-		}
-
-		// Breadcrumb
-
-		// Line drawing
-		{
-			var addLine = function(geo, processPath) {
-				var a = getPathEntry(window.ProcessTree, processPath);
-				var b = getPathEntry(window.FileTree, processPath.replace(/^\/\d+\/files/, '').replace(/\:/g, '/'));
-				if (a && b) {
-					var av = new THREE.Vector3(a.x, a.y, a.z);
-					av.multiply(window.processModel.scale);
-					av.add(window.processModel.position);
-					var bv = new THREE.Vector3(b.x, b.y, b.z);
-					bv.add(window.model.position);
-					var aUp = new THREE.Vector3(av.x, av.y, Math.max(av.z, bv.z) + 0.1);
-					var bUp = new THREE.Vector3(bv.x, bv.y, Math.max(av.z, bv.z) + 0.1);
-
-					geo.vertices.push(av);
-					geo.vertices.push(aUp);
-					geo.vertices.push(aUp);
-					geo.vertices.push(bUp);
-					geo.vertices.push(bUp);
-					geo.vertices.push(bv);
-				}
-			};
-
-			var addLineBetweenEntries = function(geo, color, modelA, entryA, modelB, entryB) {
-				var index = geo.vertices.length;
-
-				if (!entryA.outgoingLines) entryA.outgoingLines = [];
-				entryA.outgoingLines.push({src: {model: modelA, entry: entryA}, dst: {model:modelB, entry:entryB}, index, color});
-				if (!entryB.outgoingLines) entryB.outgoingLines = [];
-				entryB.outgoingLines.push({src: {model: modelB, entry: entryB}, dst: {model:modelA, entry:entryA}, index, color});
-
-				geo.vertices.push(new THREE.Vector3());
-				geo.vertices.push(new THREE.Vector3());
-				geo.vertices.push(new THREE.Vector3());
-				geo.vertices.push(new THREE.Vector3());
-				geo.vertices.push(new THREE.Vector3());
-				geo.vertices.push(new THREE.Vector3());
-
-				if (color) {
-					geo.colors.push(color, color, color, color, color, color);
-				}
-			};
-
-			var updateLineBetweenEntries =  function(geo, index, color, modelA, entryA, modelB, entryB) {
-				var a = entryA;
-				var b = entryB;
-
-				var av = new THREE.Vector3(a.x, a.y, a.z);
-				av.applyMatrix4(modelA.matrix);
-
-				var bv = new THREE.Vector3(b.x, b.y, b.z);
-				bv.applyMatrix4(modelB.matrix);
-
-				var aUp = new THREE.Vector3(av.x+(bv.x-av.x)*0.1, av.y+(bv.y-av.y)*0.1, Math.max(av.z, bv.z) + 0.1);
-				var bUp = new THREE.Vector3(bv.x-(bv.x-av.x)*0.1, bv.y-(bv.y-av.y)*0.1, Math.max(av.z, bv.z) + 0.1);
-
-				geo.vertices[index++].copy(av);
-				geo.vertices[index++].copy(aUp);
-				geo.vertices[index++].copy(aUp);
-				geo.vertices[index++].copy(bUp);
-				geo.vertices[index++].copy(bUp);
-				geo.vertices[index++].copy(bv);
-				geo.verticesNeedUpdate = true;
-
-				if (color) {
-					index -= 6;
-					geo.colors[index++].copy(color);
-					geo.colors[index++].copy(color);
-					geo.colors[index++].copy(color);
-					geo.colors[index++].copy(color);
-					geo.colors[index++].copy(color);
-					geo.colors[index++].copy(color);
-				}
-			};
-
-			var showLinesForEntry = function(geo, entry, depth=0, recurse=true, avoidModel=null, first=true) {
-				if (first) for (var i = 0; i < geo.vertices.length; i++) geo.vertices[i].set(-100,-100,-100);
-				if (entry.outgoingLines) {
-					entry.outgoingLines.forEach(l => {
-						if (l.dst.window.model !== avoidModel) updateLineBetweenEntries(geo, l.index, l.color, l.src.window.model, l.src.entry, l.dst.window.model, l.dst.entry);
-						if (depth > 0) showLinesForEntry(geo, l.dst.entry, depth-1, false, l.src.window.model, false);
-					});
-				}
-				if (recurse) {
-					for (let e in entry.entries) {
-						showLinesForEntry(geo, entry.entries[e], depth, recurse, avoidModel, false);
-					}
-				}
-			};
-		}
-
-		// Git commits and authors
-		{
-			var processXHR;
-
-			window.setCommitData = (commitData) => {
-				this.setLoaded(true);
-
-				window.AuthorTree = commitData.authorTree;
-				window.CommitTree = commitData.commitTree;
-				var {commits, commitIndex, authors, commitsFSEntry, lineGeo, touchedFiles} = commitData;
-				
-				// window.authorModel = createFileListModel(window.AuthorTree.count, window.AuthorTree.tree);
-				// window.authorModel.position.set(1.5, -0.5, 0.0);
-				// modelPivot.add(window.authorModel);
-
-				// window.processModel = createFileListModel(window.CommitTree.count, window.CommitTree.tree);
-				// window.processModel.position.set(0.5, -0.5, 0.0);
-				// modelPivot.add(window.processModel);
-
-				window.model.updateMatrix();
-				// window.processModel.updateMatrix();
-				// window.authorModel.updateMatrix();
-
-				window.connectionLines = new THREE.LineSegments(lineGeo, new THREE.LineBasicMaterial({
-					color: new THREE.Color(1.0, 1.0, 1.0), opacity: 1, transparent: true, depthWrite: false,
-					vertexColors: true
-				}));
-				window.connectionLines.frustumCulled = false;
-				modelPivot.add(window.connectionLines);
-				this.LineModel = window.connectionLines;
-				window.connectionLines.ontick = () => {
-					var cf = (self.currentFrame / 2) | 0;
-					if (false) {
-						var aks = Object.keys(authors);
-						showCommitsByAuthor(aks[cf % aks.length]);
-						this.changed = true;
-					} else if (false) {
-						showCommitsForFile(touchedFiles[cf % touchedFiles.length]);
-						this.changed = true;
-					} else if (commitsPlaying) {
-						var idx = window.activeCommitSet.length-1-(cf % window.activeCommitSet.length);
-						var c = window.activeCommitSet[idx];
-						var slider = document.getElementById('commitSlider');
-						slider.value = idx;
-						showCommit(c.sha);
-						this.changed = true;
-					}
-				};
+			} else if (false) {
+				this.showCommitsForFile(this.commitData.touchedFiles[cf % this.commitData.touchedFiles.length]);
 				this.changed = true;
+			} else if (this.commitsPlaying) {
+				var idx = this.activeCommitSet.length-1-(cf % this.activeCommitSet.length);
+				var c = this.activeCommitSet[idx];
+				var slider = document.getElementById('commitSlider');
+				slider.value = idx;
+				this.showCommit(c.sha);
+				this.changed = true;
+			}
+		};
+		this.changed = true;
 
-				window.activeCommitSet = commits;
-				
-				var showCommit = function(sha) {
-					var c = commitIndex[sha];
-					showLinesForEntry(lineGeo, commitsFSEntry.entries[sha], 0);
-					var commitDetails = document.getElementById('commitDetails');
-					commitDetails.textContent = `${sha}\n${c.date.toString()}\n${c.author.name} <${c.author.email}>\n\n${c.message}\n\n${c.files.map(
-						({action,path,renamed}) => `${action} ${path}${renamed ? ' '+renamed : ''}`
-					).join("\n")}`;
-				};
+		this.activeCommitSet = this.commitData.commits;
+		
+		this.commitsPlaying = false;
 
-				var showCommitsByAuthor = function(authorName) {
-					showLinesForEntry(lineGeo, authors[authorName].fsEntry, 1);
-				};
+		const self = this;
 
-				var showCommitsForFile = function(fsEntry) {
-					showLinesForEntry(lineGeo, fsEntry, 1);
-				};
+		document.getElementById('playCommits').onclick = function(ev) {
+			self.commitsPlaying = !self.commitsPlaying;
+			self.changed = true;
+		};
 
-				var findCommitsForPath = function(path) {
-					path = path.substring(self.repoPrefix.length + 2);
-					return commits.filter(c => c.files.some(f => {
- 						if (f.renamed && f.renamed.startsWith(path)) {
-							if (f.renamed === path) path = f.path;
-							return true;
-						}
-						if (f.path.startsWith(path)) return true;
-					}));
-				};
-
-				var commitsPlaying = false;
-				var self = this;
-
-				document.getElementById('playCommits').onclick = function(ev) {
-					commitsPlaying = !commitsPlaying;
-					self.changed = true;
-				};
-
-				document.getElementById('commitSlider').oninput = function(ev) {
-					var v = parseInt(this.value);
-					if (window.activeCommitSet[v]) {
-						showCommit(window.activeCommitSet[v].sha);
-						self.changed = true;
-					}
-				};
-				document.getElementById('previousCommit').onclick = function(ev) {
-					var slider = document.getElementById('commitSlider');
-					var v = parseInt(slider.value) - 1;
-					if (window.activeCommitSet[v]) {
-						slider.value = v;
-						slider.oninput();
-					}
-				};
-				document.getElementById('nextCommit').onclick = function(ev) {
-					var slider = document.getElementById('commitSlider');
-					var v = parseInt(slider.value) + 1;
-					if (window.activeCommitSet[v]) {
-						slider.value = v;
-						slider.oninput();
-					}
-				};
-			};
-		}
-
-		// Search highlighting
-		this.setupSearchHighlighting();
-
-		// Loading current repo data
-		setTimeout(() => { if (this._files) this.setFiles(this._files); }, 10);
-
-		// UI event listeners
-		this.setupEventListeners();
-
-		// Main render loop
-		this.tick();
-
-		// Focus the search at page load
-		window.searchInput.focus();
+		document.getElementById('commitSlider').oninput = function(ev) {
+			var v = parseInt(this.value);
+			if (self.activeCommitSet[v]) {
+				self.showCommit(self.activeCommitSet[v].sha);
+				self.changed = true;
+			}
+		};
+		document.getElementById('previousCommit').onclick = function(ev) {
+			var slider = document.getElementById('commitSlider');
+			var v = parseInt(slider.value) - 1;
+			if (self.activeCommitSet[v]) {
+				slider.value = v;
+				slider.oninput();
+			}
+		};
+		document.getElementById('nextCommit').onclick = function(ev) {
+			var slider = document.getElementById('commitSlider');
+			var v = parseInt(slider.value) + 1;
+			if (self.activeCommitSet[v]) {
+				slider.value = v;
+				slider.oninput();
+			}
+		};
 	}
 
 	zoomCamera(zf, cx, cy) {
