@@ -118,7 +118,7 @@ export function formatDiff(sha, diff, trackedPaths, trackedIndex, showFile) {
         }
         const changeEl = span(inPath ? '' : 'collapsed');
         container.append(changeEl);
-        const showFileToggle = span('commit-toggle-show', 'Show file');
+        const showFileToggle = span('commit-show-file', 'Show file');
         showFileToggle.path = change.dstPath;
         showFileToggle.sha = sha;
         showFileToggle.showFile = showFile;

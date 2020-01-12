@@ -1,5 +1,6 @@
 import { getPathEntry, getFullPath, getSiblings } from './lib/filetree';
 import Colors from './lib/Colors';
+import prettyPrintWorker from './lib/pretty_print';
 
 const THREE = require('three');
 global.THREE = THREE;
@@ -516,7 +517,7 @@ class Tabletree {
 	}
 
 	createFileTreeModel(fileCount, fileTree) {
-		const {font, camera, prettyPrintWorker, modelPivot} = this;
+		const {font, camera, modelPivot} = this;
 		const self = this;
 		var geo = Geometry.makeGeometry(fileCount+1);
 
@@ -646,7 +647,7 @@ class Tabletree {
 									xhr.fullPath = fullPath;
 									xhr.onload = function() {
 										if (this.responseText.length < 1e6 && this.obj.parent) {
-											var contents = this.responseText;
+											var contents = this.responseText.replace(/\r/g, "");
 											if (contents.length === 0) return;
 
 											var _xhr = this;
@@ -932,20 +933,6 @@ class Tabletree {
 		Layout.font = font;
 
 		this.textMaterial = this.makeTextMaterial();
-
-		var prettyPrintWorker = new Worker('js/prettyPrintWorker.js');
-		prettyPrintWorker.callbacks = {};
-		prettyPrintWorker.callbackUID = 0;
-		prettyPrintWorker.onmessage = function(event) {
-			this.callbacks[event.data.id](event.data.result);
-			delete this.callbacks[event.data.id];
-		};
-		prettyPrintWorker.prettyPrint = function(string, filename, callback, mimeType) {
-			var id = this.callbackUID++;
-			this.callbacks[id] = callback;
-			this.postMessage({string: string, filename: filename, id: id, mimeType: mimeType});
-		};
-		this.prettyPrintWorker = prettyPrintWorker;
 	}
 
 	countChars(s,charCode) {

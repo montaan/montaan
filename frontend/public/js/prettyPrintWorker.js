@@ -12,7 +12,7 @@ onmessage = function(ev) {
 	if (language) {
 		var result = self.hljs.highlight(ext, str, true);
 		result = {
-			value: result.value.substring(0),
+			value: result.value,
 			language: language.aliases ? language.aliases[0] : (result.language || ext)
 		};
 	} else {

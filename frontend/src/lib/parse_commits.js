@@ -19,7 +19,7 @@ export function parseCommits(commitLog, commitChanges, fileTree, repoPrefix) {
             idx++;
         }
         var author = lines[idx++].substring(8);
-        var email = author.match(/<([^>]+)>/)[1];
+        var email = (author.match(/<([^>]+)>/) || [null,''])[1];
         var authorName = author.substring(0, author.length - email.length - 3);
         var date = lines[idx++].substring(6);
         var message = lines.slice(idx+1).map(function(line) {

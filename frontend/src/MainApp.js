@@ -31,7 +31,8 @@ class MainApp extends React.Component {
         goToTarget: null,
         frameRequestTime: 0,
         diffsLoaded: 0,
-        fileContents: ''
+        fileContents: '',
+        links: []
     };
 
     constructor(props) {
@@ -74,13 +75,21 @@ class MainApp extends React.Component {
         });
         const authors = utils.uniq(authorList, authorCmp);
         const files = [];
-        Promise.all(activeCommits.map(async c => {
-            if (!c.diff) {
-                const diff = await (await fetch(this.props.apiPrefix + '/repo/diff', {method: 'POST', body: JSON.stringify({repo: this.props.repoPrefix, hash: c.sha})})).text();
-                c.diff = diff;
-            }
-        })).then(() => this.setState({diffsLoaded: ++this.state.diffsLoaded % 1048576}));
         this.setState({activeCommitData: {commits: activeCommits, authors, authorCommitCounts, files}});
+    };
+
+    loadFile = async (hash, path) => {
+        path = path.replace(/^\//, '');
+        var content = await (await fetch(this.props.apiPrefix + "/repo/checkout", {
+            method: 'POST', body: JSON.stringify({repo: this.props.repoPrefix, hash, path})})).text();
+        this.setState({fileContents: {path, content, hash}});
+    };
+
+    loadDiff = async (commit) => {
+        const diff = await (await fetch(this.props.apiPrefix + "/repo/diff", {
+            method: 'POST', body: JSON.stringify({repo: this.props.repoPrefix, hash: commit.sha})})).text();
+        commit.diff = diff;
+        this.setState({diffsLoaded: ++this.state.diffsLoaded % 1048576});
     };
 
     requestFrame = () => this.setState({frameRequestTime: ++this.state.frameRequestTime % 1048576});
@@ -183,15 +192,11 @@ class MainApp extends React.Component {
         }
     }
 
-    loadFile = async (hash, path) => {
-        path = path.replace(/^\//, '');
-        var fileContents = await (await fetch(this.props.apiPrefix + "/repo/checkout", {
-            method: 'POST', body: JSON.stringify({repo: this.props.repoPrefix, hash, path})})).text();
-        this.setState({fileContents});
-    };
-
     goToFSEntryTextAtLine = (fsEntry, line) => this.setState({goToTarget: {fsEntry, line}});
     goToFSEntry = (fsEntry) => this.setState({goToTarget: {fsEntry}});
+
+    setLinks = (links) => this.setState({links});
+    addLinks = (links) => this.setLinks(this.state.links.concat(links));
 
     render() {
         return (
@@ -211,12 +216,19 @@ class MainApp extends React.Component {
                     commitFilter={this.state.commitFilter} 
                     setCommitFilter={this.setCommitFilter} 
                     activeCommitData={this.state.activeCommitData} 
-                    commitData={this.state.commitData}/>
+                    commitData={this.state.commitData}
+                    addLinks={this.addLinks}
+                    setLinks={this.setLinks}
+                    links={this.state.links}
+                />
                 <Breadcrumb 
                     navigationTarget={this.state.navigationTarget} 
                     commitFilter={this.state.commitFilter} 
                     setCommitFilter={this.setCommitFilter} 
                     showFileCommitsClick={this.showFileCommitsClick}
+                    addLinks={this.addLinks}
+                    setLinks={this.setLinks}
+                    links={this.state.links}
                 />
                 <CommitControls 
                     activeCommitData={this.state.activeCommitData} 
@@ -225,7 +237,10 @@ class MainApp extends React.Component {
                     searchQuery={this.state.searchQuery} 
                     diffsLoaded={this.state.diffsLoaded}
                     commitFilter={this.state.commitFilter} 
-                    setCommitFilter={this.setCommitFilter} 
+                    setCommitFilter={this.setCommitFilter}
+                    addLinks={this.addLinks}
+                    setLinks={this.setLinks}
+                    links={this.state.links}
                 />
                 <CommitInfo 
                     activeCommitData={this.state.activeCommitData} 
@@ -238,6 +253,10 @@ class MainApp extends React.Component {
                     setCommitFilter={this.setCommitFilter}
                     fileContents={this.state.fileContents}
                     loadFile={this.loadFile}
+                    loadDiff={this.loadDiff}
+                    addLinks={this.addLinks}
+                    setLinks={this.setLinks}
+                    links={this.state.links}
                 />
 
                 <MainView
@@ -253,6 +272,9 @@ class MainApp extends React.Component {
                     searchResults={this.state.searchResults}
                     searchQuery={this.state.searchQuery} 
                     commitFilter={this.state.commitFilter}
+                    addLinks={this.addLinks}
+                    setLinks={this.setLinks}
+                    links={this.state.links}
                 />
             </div>
         );

@@ -51,6 +51,7 @@ class App extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
+            repoPrefix: 'microsoft/vscode',
             authHeaders: {},
             userInfo: {}
         };
@@ -191,7 +192,7 @@ class App extends React.Component {
                             }/>
                         </Switch>
 
-                        <MainApp api={this.api} apiPrefix={this.api.server} repoPrefix={'v8/v8'}/>
+                        <MainApp api={this.api} apiPrefix={this.api.server} repoPrefix={this.state.repoPrefix}/>
                     </main>
                 </div>
             </Router>
