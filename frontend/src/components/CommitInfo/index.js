@@ -24,17 +24,49 @@ export default class CommitInfo extends React.Component {
         while (el.firstChild) el.removeChild(el.firstChild);
         el.dataset.count = activeCommits.length;
 
-        el.appendChild(createCalendar(activeCommits.map(c => c.date)));
+        const calendar = createCalendar(activeCommits.map(c => c.date));
+        el.appendChild(calendar);
+
+        const commitHeight = 60;
+
+        const commitsEl = document.createElement('div');
+        commitsEl.className = 'commits';
+        commitsEl.style.position = 'relative';
+        commitsEl.style.height = commitHeight * activeCommits.length + 'px';
+
+
+        var visible = {};
+
+        el.parentNode.onscroll = function(ev) {
+            var bbox = el.parentNode.getBoundingClientRect();
+            var startIndex = Math.max(0, bbox.top - commitsEl.getBoundingClientRect().top) / commitHeight;
+            var startIndexInt = Math.floor(startIndex);
+            var endIndexInt = Math.min(activeCommits.length-1, Math.ceil(startIndex + (bbox.height / commitHeight)));
+            for (var i = startIndexInt; i <= endIndexInt; i++) {
+                if (!visible[i]) {
+                    visible[i] = makeCommit(activeCommits[i], i * commitHeight);
+                    commitsEl.appendChild(visible[i]);
+                }
+            }
+            for (var i in visible) {
+                if (i < startIndexInt || i > endIndexInt) {
+                    visible[i].remove();
+                    delete visible[i];
+                }
+            }
+        };
 
         const trackedPaths = [this.props.navigationTarget.substring(this.props.repoPrefix.length+1)];
         const trackedIndex = {};
         trackedIndex[this.props.navigationTarget] = true;
 
-        activeCommits.forEach(c => {
+        const makeCommit = (c, top) => {
             var div = document.createElement('div');
+            div.style.position = 'absolute';
+            div.style.top = top + 'px';
             var hashSpan = span('commit-hash', c.sha);
             var dateSpan = span('commit-date', c.date.toString());
-            var authorSpan = span('commit-author', `${c.author.name} <${c.author.email}>`);
+            var authorSpan = span('commit-author', c.author);
             var messageSpan = span('commit-message', c.message);
             var diffSpan = span('commit-diff', '');
             if (c.diff) c.diffEl = formatDiff(c.sha, c.diff, trackedPaths, trackedIndex, this.showFile);
@@ -52,8 +84,39 @@ export default class CommitInfo extends React.Component {
             };
             toggleDiffs.onmousedown = function(ev) { ev.preventDefault(); div.classList.toggle('expanded-diffs'); };
             div.append(toggle, hashSpan, dateSpan, authorSpan, messageSpan, toggleDiffs, diffSpan);
-            el.appendChild(div);
-        });
+            return div;
+        };
+
+        // const trackedPaths = [this.props.navigationTarget.substring(this.props.repoPrefix.length+1)];
+        // const trackedIndex = {};
+        // trackedIndex[this.props.navigationTarget] = true;
+
+        // activeCommits.forEach(c => {
+        //     var div = document.createElement('div');
+        //     var hashSpan = span('commit-hash', c.sha);
+        //     var dateSpan = span('commit-date', c.date.toString());
+        //     var authorSpan = span('commit-author', `${c.author.name} <${c.author.email}>`);
+        //     var messageSpan = span('commit-message', c.message);
+        //     var diffSpan = span('commit-diff', '');
+        //     if (c.diff) c.diffEl = formatDiff(c.sha, c.diff, trackedPaths, trackedIndex, this.showFile);
+        //     if (c.diffEl) diffSpan.appendChild(c.diffEl);
+        //     var toggle = span('commit-toggle', 'Full info');
+        //     var toggleDiffs = span('commit-toggle-diffs', 'All changes');
+        //     toggle.onmousedown = async (ev) => {
+        //         ev.preventDefault();
+        //         div.classList.toggle('expanded');
+        //         if (div.classList.contains('expanded') && !c.diffEl) {
+        //             if (c.diff == null) await this.props.loadDiff(c);
+        //             while (diffSpan.firstChild) diffSpan.removeChild(diffSpan.firstChild);
+        //             diffSpan.appendChild(formatDiff(c.sha, c.diff, trackedPaths, trackedIndex, this.showFile));
+        //         }
+        //     };
+        //     toggleDiffs.onmousedown = function(ev) { ev.preventDefault(); div.classList.toggle('expanded-diffs'); };
+        //     div.append(toggle, hashSpan, dateSpan, authorSpan, messageSpan, toggleDiffs, diffSpan);
+        //     commitsEl.appendChild(div);
+        // });
+        el.appendChild(commitsEl);
+        setTimeout(() => el.parentNode.onscroll(), 10);
     }
 
     updateActiveCommitSetAuthors(authors, authorCommitCounts, activeCommits) {
@@ -62,13 +125,10 @@ export default class CommitInfo extends React.Component {
         while (el.firstChild) el.removeChild(el.firstChild);
         el.dataset.count = authors.length;
         authors.forEach((author) => {
-            const {name, email} = author;
             var div = document.createElement('div');
-            var key = name + ' <' + email + '>';
-            div.dataset.commitCount = authorCommitCounts[key];
-            var nameSpan = span('author-name', name);
-            var emailSpan = span('author-email', email);
-            div.append(nameSpan, emailSpan);
+            div.dataset.commitCount = authorCommitCounts[author];
+            var nameSpan = span('author-name', author);
+            div.append(nameSpan);
             div.onmousedown = function(ev) {
                 ev.preventDefault();
                 if (self.props.commitFilter.author === author) self.props.setCommitFilter({...self.props.commitFilter, author: null});

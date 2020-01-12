@@ -51,7 +51,7 @@ class App extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
-            repoPrefix: 'microsoft/vscode',
+            repoPrefix: 'torvalds/linux',
             authHeaders: {},
             userInfo: {}
         };

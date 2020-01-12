@@ -1,6 +1,6 @@
 
 export function authorCmp(a, b) {
-    return a.name.localeCompare(b.name) || a.email.localeCompare(b.email);
+    return a.localeCompare(b);
 }
 
 export function span(className='', content='') {

@@ -7,13 +7,11 @@
     [] Register & Log in
     [] Add your own repos (supply repo URL -> pull repo -> add to repo list)
 
-## Data model
-    [] Use React to maintain current UI state
-        [] Slicing-dicing MegaQueryObject to pass down fileTree, highlights, connections
-        [x] Search query
-        [x] Search results
-        [] Commit filters
-        [] HTML UI elements
+# Data model
+    [] Links between objects
+        [] Element-FSEntry
+        [] FSEntry-FSEntry
+        [] Element-Element
 
 # Website engine
     [] Turn README.md into HTML and display it on top of directory
@@ -130,3 +128,11 @@
         [x] Snap scroll to vertical or horizontal, only do freeform after a diagonal swipe
         [x] Better y-x-snap
     [x] Use gestures to zoom on touchpad
+
+## Data model
+    [x] Use React to maintain current UI state
+        [x] Slicing-dicing MegaQueryObject to pass down fileTree, highlights, connections
+        [x] Search query
+        [x] Search results
+        [x] Commit filters
+        [x] HTML UI elements

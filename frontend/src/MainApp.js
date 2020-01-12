@@ -47,10 +47,11 @@ class MainApp extends React.Component {
     async setRepo(repoPrefix) {
         const files = await (await fetch(this.props.apiPrefix+'/repo/fs/'+repoPrefix+'/files.txt')).text();
         const fileTree = this.parseFiles(files);
+        this.setState({...this.emptyState, fileTree});
         const commitLog = await (await fetch(this.props.apiPrefix+'/repo/fs/'+repoPrefix+'/log.txt')).text();
         const commitChanges = await (await fetch(this.props.apiPrefix+'/repo/fs/'+repoPrefix+'/changes.txt')).text();
         const commitData = parseCommits(commitLog, commitChanges, fileTree.tree, repoPrefix);
-        this.setState({...this.emptyState, fileTree, commitData, activeCommits: commitData.commits});
+        this.setState({commitData, activeCommits: commitData.commits});
     }
     
     setCommitFilter = commitFilter => {
@@ -68,8 +69,7 @@ class MainApp extends React.Component {
     setActiveCommits = activeCommits => {
         const authorList = activeCommits.map(c => c.author);
         const authorCommitCounts = {};
-        authorList.forEach(author => {
-            const key = author.name + ' <' + author.email + '>';
+        authorList.forEach(key => {
             if (!authorCommitCounts[key]) authorCommitCounts[key] = 0;
             authorCommitCounts[key]++;
         });
@@ -97,6 +97,8 @@ class MainApp extends React.Component {
     filterCommits(commitFilter) {
 		var path = (commitFilter.path || '').substring(this.props.repoPrefix.length + 2);
         var author = commitFilter.author;
+
+        if (path.length === 0 && !author) return this.state.commitData.commits;
 
 		return this.state.commitData.commits.filter(c => {
             var pathHit = !path || c.files.some(f => {

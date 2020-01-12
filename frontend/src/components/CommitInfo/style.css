@@ -186,15 +186,21 @@
 	transition: 0.3s;
 }
 
-#commitList div:not(.expanded) .commit-hash, 
-#commitList div:not(.expanded) .commit-diff,
-#commitList div:not(.expanded) .commit-toggle-diffs
+#commitList .commits div:not(.expanded)
+{
+	height: 60px;
+	overflow: hidden;
+}
+
+#commitList .commits div:not(.expanded) .commit-hash, 
+#commitList .commits div:not(.expanded) .commit-diff,
+#commitList .commits div:not(.expanded) .commit-toggle-diffs
 {
 	height: 0;
 	overflow: hidden;
 }
 
-#commitList div:not(.expanded) .commit-message
+#commitList .commits div:not(.expanded) .commit-message
 {
 	height: 1.5em;
 	overflow: hidden;
