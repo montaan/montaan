@@ -143,7 +143,7 @@ export function formatDiff(sha, diff, trackedPaths, trackedIndex, showFile) {
     return container;
 }
 
-export function createCalendar(dates) {
+export function createCalendar(commits) {
     var createYear = function(year) {
         const el = document.createElement('div');
         el.className = 'calendar-year';
@@ -172,15 +172,15 @@ export function createCalendar(dates) {
     const el = document.createElement('div');
     el.className = 'calendar';
     var years = {};
-    dates.forEach(d => {
+    for (var i = 0; i < commits.length; i++) {
+        const d = commits[i].date;
+        if (!d) { console.log(commits[i]); continue; }
         const year = d.getUTCFullYear();
         const month = d.getUTCMonth();
         const date = d.getUTCDate();
-        if (!years[year]) {
-            years[year] = createYear(year);
-            el.appendChild(years[year]);
-        }
+        if (!years[year]) years[year] = createYear(year);
         years[year].childNodes[month].childNodes[date-1].dataset.commitCount++;
-    });
+    }
+    Object.keys(years).sort((a, b) => b-a).forEach(year => el.appendChild(years[year]));
     return el;
 }

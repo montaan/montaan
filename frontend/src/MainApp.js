@@ -45,12 +45,19 @@ class MainApp extends React.Component {
     parseFiles(text) { return utils.parseFileList(text, {}, undefined, this.props.repoPrefix+'/'); }
 
     async setRepo(repoPrefix) {
+        console.time('load files');
         const files = await (await fetch(this.props.apiPrefix+'/repo/fs/'+repoPrefix+'/files.txt')).text();
+        console.timeEnd('load files');
+        console.time('parse files');
         const fileTree = this.parseFiles(files);
+        console.timeEnd('parse files');
         this.setState({...this.emptyState, fileTree});
-        const commitLog = await (await fetch(this.props.apiPrefix+'/repo/fs/'+repoPrefix+'/log.txt')).text();
-        const commitChanges = await (await fetch(this.props.apiPrefix+'/repo/fs/'+repoPrefix+'/changes.txt')).text();
-        const commitData = parseCommits(commitLog, commitChanges, fileTree.tree, repoPrefix);
+        console.time('load commitObj');
+        const commitObj = await (await fetch(this.props.apiPrefix+'/repo/fs/'+repoPrefix+'/log.json')).json();
+        console.timeEnd('load commitObj');
+        console.time('parse commitObj');
+        const commitData = parseCommits(commitObj, fileTree.tree, repoPrefix);
+        console.timeEnd('parse commitObj');
         this.setState({commitData, activeCommits: commitData.commits});
     }
     
@@ -100,17 +107,27 @@ class MainApp extends React.Component {
 
         if (path.length === 0 && !author) return this.state.commitData.commits;
 
-		return this.state.commitData.commits.filter(c => {
-            var pathHit = !path || c.files.some(f => {
+        const commits = [];
+        const allCommits = this.state.commitData.commits;
+        const il = allCommits.length;
+        for (var i = 0; i < il; ++i) {
+            const c = allCommits[i];
+            const files = c.files;
+            const jl = files.length;
+            var pathHit = !path;
+            for (var j = 0; !pathHit && j < jl; ++j) {
+                const f = files[j];
                 if (f.renamed && f.renamed.startsWith(path)) {
                     if (f.renamed === path) path = f.path;
-                    return true;
+                    pathHit = true;
+                    break;
                 }
-                if (f.path.startsWith(path)) return true;
-		    });
-            var authorHit = !author || authorCmp(author, c.author) === 0;
-            return pathHit && authorHit;
-        });
+                pathHit = (f.path.startsWith(path));
+            }
+            const authorHit = !author || authorCmp(author, c.author) === 0;
+            if (pathHit && authorHit) commits.push(c);
+        }
+        return commits;
     }
 
     searchTree(query, fileTree, results) {

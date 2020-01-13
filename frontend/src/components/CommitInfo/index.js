@@ -24,7 +24,7 @@ export default class CommitInfo extends React.Component {
         while (el.firstChild) el.removeChild(el.firstChild);
         el.dataset.count = activeCommits.length;
 
-        const calendar = createCalendar(activeCommits.map(c => c.date));
+        const calendar = createCalendar(activeCommits);
         el.appendChild(calendar);
 
         const commitHeight = 60;
@@ -36,6 +36,10 @@ export default class CommitInfo extends React.Component {
 
 
         var visible = {};
+
+        // If div height > 1Mpx, switch over to 1Mpx high scroll div for jumping big chunks + onwheel to fine-tune.
+        // The scroll is pretty useless at that point anyhow, so it doesn't need "scroll this for long enough and you'll see all the commits"
+        // Deal with showing diff details, show them in a different element.
 
         el.parentNode.onscroll = function(ev) {
             var bbox = el.parentNode.getBoundingClientRect();

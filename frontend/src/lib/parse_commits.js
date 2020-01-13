@@ -4,127 +4,49 @@ import { getPathEntry } from './filetree';
 import { KeyCode } from 'monaco-editor';
 
 class Commit {
-    constructor(sha, author, message, date) {
+    constructor(sha, author, message, date, files) {
         this.sha = sha;
         this.author = author;
         this.message = message;
         this.date = date;
+        this.files = files;
         this.diff = '';
-        this.files = [];
     }
 }
 
-export function parseCommits(commitLog, commitChanges, fileTree, repoPrefix) {
-    console.time("commits");
-
-    const commits = [];
-    var authors = {};
-    var commitIndex = {};
-
-    var sha, author, message, date;
-    var lineStart = 0;
-
-    const commitRE = /^commit /;
-    const authorRE = /^Author:/;
-    const messagePrefixRE = /^    /g;
-
-    for (var i = 0; i < commitLog.length; ++i) {
-        while (commitLog.charCodeAt(i) !== 10 && i < commitLog.length) ++i;
-        const line = commitLog.substring(lineStart, i);
-        lineStart = i+1;
-        if (commitRE.test(line)) {
-            if (sha) {
-                const commit = new Commit(sha, author, message.slice(1).join("\n"), date)
-                commits.push(commit);
-                commitIndex[sha] = commit;
-                let authorCommits = authors[author];
-                if (!authorCommits) authors[author] = authorCommits = [];
-                authorCommits.push(commit);
-            }
-            sha = line.substring(7);
-            author = date = undefined;
-            message = [];
-        }
-        else if (authorRE.test(line)) author = line.substring(8);
-        else if (author && !date) date = new Date(line.substring(6));
-        else if (author && date) message.push(line.replace(messagePrefixRE, ''));
-    }
-
-    // var commits = commitLog.split(/^commit /m);
-    // var authors = {};
-    // var commitIndex = {};
-    // commits.shift();
-    // console.log(commits.length, 'commits');
-    // // commits.splice(MAX_COMMITS);
-    // commits = commits.map(function(c) {
-    //     var lines = c.split("\n");
-    //     var hash = lines[0];
-    //     var idx = 0;
-    //     while (lines[idx] && !/^Author:/.test(lines[idx])) {
-    //         idx++;
-    //     }
-    //     var author = lines[idx++].substring(8);
-    //     var email = (author.match(/<([^>]+)>/) || [null,''])[1];
-    //     var authorName = author.substring(0, author.length - email.length - 3);
-    //     var date = lines[idx++].substring(6);
-    //     var message = lines.slice(idx+1).map(function(line) {
-    //         return line.replace(/^    /, '');
-    //     }).join("\n");
-    //     var commit = {
-    //         sha: hash,
-    //         author: {
-    //             name: authorName,
-    //             email: email
-    //         },
-    //         message: message,
-    //         date: new Date(date),
-    //         files: []
-    //     };
-    //     var authorObj = authors[authorName];
-    //     if (!authorObj) {
-    //         authors[authorName] = authorObj = [];
-    //     }
-    //     authorObj.push(commit);
-    //     commitIndex[commit.sha] = commit;
-    //     return commit;
-    // });
-    console.timeLog("commits", "commits preparse");
+export function parseCommits(commits, fileTree, repoPrefix) {
 
     const touchedFilesIndex = {};
     const touchedFiles = [];
-    const hashRE = /^[a-f0-9]+$/;
+    const commitIndex = {};
+    const authors = {};
 
-    lineStart = 0;
-    sha = null;
-    for (let i = 0; i < commitChanges.length; i++) {
-        while (commitChanges.charCodeAt(i) !== 10 && i < commitChanges.length) ++i;
-        const line = commitChanges.substring(lineStart, i);
-        lineStart = i+1;
-        if (hashRE.test(line)) sha = line;
-        else if (line.length > 0 && commitIndex[sha]) {
-            let [action, path, renamed] = line.split("\t");
-            commitIndex[sha].files.push({action, path, renamed});
-            // {
-            //     let filePath = repoPrefix + path;
-            //     if (touchedFilesIndex[filePath] === undefined) {
-            //         let fileEntry = getPathEntry(fileTree, filePath);
-            //         if (fileEntry) {
-            //             touchedFilesIndex[filePath] = fileEntry;
-            //         }
-            //         else touchedFilesIndex[filePath] = false;
-            //     }
-            // }
-            // if (renamed) {
-            //     let filePath = repoPrefix + renamed;
-            //     if (touchedFilesIndex[filePath] === undefined) {
-            //         let fileEntry = getPathEntry(fileTree, filePath);
-            //         if (fileEntry) touchedFilesIndex[filePath] = fileEntry;
-            //         else touchedFilesIndex[filePath] = false;
-            //     }
-            // }
-        }
+    for (var i = 0; i < commits.length; i++) {
+        const commit = commits[i];
+        commit.date = new Date(commit.date);
+        commitIndex[commit.sha] = commit;
+        if (!authors[commit.author]) authors[commit.author] = [];
+        authors[commit.author].push(commit);
     }
 
+    // {
+    //     let filePath = repoPrefix + path;
+    //     if (touchedFilesIndex[filePath] === undefined) {
+    //         let fileEntry = getPathEntry(fileTree, filePath);
+    //         if (fileEntry) {
+    //             touchedFilesIndex[filePath] = fileEntry;
+    //         }
+    //         else touchedFilesIndex[filePath] = false;
+    //     }
+    // }
+    // if (renamed) {
+    //     let filePath = repoPrefix + renamed;
+    //     if (touchedFilesIndex[filePath] === undefined) {
+    //         let fileEntry = getPathEntry(fileTree, filePath);
+    //         if (fileEntry) touchedFilesIndex[filePath] = fileEntry;
+    //         else touchedFilesIndex[filePath] = false;
+    //     }
+    // }
 
     // var commitsFSEntry = {name: "Commits", title: "Commits", index: 0, entries: {}};
     // var commitsRoot = {name:"", title: "", index:0, entries:{"Commits": commitsFSEntry}};
@@ -225,17 +147,9 @@ export function parseCommits(commitLog, commitChanges, fileTree, repoPrefix) {
     //     }, commitsRoot.name+"/Commits/");
     // }
     // var touchedFiles = Object.keys(touchedFilesIndex).sort().map(k => touchedFilesIndex[k]);
-    console.timeLog("commits", "done with touchedFiles");
 
     lineGeo.vertices.push(new THREE.Vector3(0,0,0), new THREE.Vector3(0,0,0));
     lineGeo.colors.push(new THREE.Color(0,0,0), new THREE.Color(0,0,0));
 
-    console.timeEnd("commits");
-
-    return {
-        commits, commitIndex, authors, lineGeo, touchedFiles
-        // commitsFSEntry, authorsFSEntry, 
-        // commitTree: {tree: commitsRoot, count: commitsFSCount},
-        // authorTree: {tree: authorsRoot, count: authorsFSCount}
-    };
+    return {commits, commitIndex, authors, lineGeo, touchedFiles};
 }

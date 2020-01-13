@@ -3,17 +3,22 @@
 repo=$1
 path=$2
 
+echo 'Pull repo'
 if [[ -d repos/$path/repo ]]
 then
-    (cd repos/$path/repo && git pull)
+    time (cd repos/$path/repo && git pull)
 else
-    git clone $repo repos/$path/repo
+    time git clone $repo repos/$path/repo
 fi
 
 cd repos/$path/repo || exit
-find . -type d -exec sh -c 'printf "%s/\n" "$0"' {} \; -or -print | grep -v /.git/ | sort > ../files.txt
+echo 'Create file list'
+time find . -type d -exec sh -c 'printf "%s/\n" "$0"' {} \; -or -print | grep -v /.git/ | sort > ../files.txt
+echo 'Create search index'
 rm ../index.csearch
-CSEARCHINDEX=../index.csearch $HOME/go/bin/cindex .
+time CSEARCHINDEX=../index.csearch $HOME/go/bin/cindex .
 # node bin/build_index.js ../files.txt > ../index.lunr.json
-git log > ../log.txt
-git log --pretty="format:%H" --name-status > ../changes.txt
+echo 'Get git log'
+time git log --name-status > ../log.txt
+echo 'Parse log to JSON'
+time node ../../../../bin/parse_log.js < ../log.txt > ../log.json
