@@ -31,7 +31,7 @@ class MainApp extends React.Component {
         goToTarget: null,
         frameRequestTime: 0,
         diffsLoaded: 0,
-        fileContents: '',
+        fileContents: null,
         links: []
     };
 
@@ -91,6 +91,19 @@ class MainApp extends React.Component {
             method: 'POST', body: JSON.stringify({repo: this.props.repoPrefix, hash, path})})).text();
         this.setState({fileContents: {path, content, hash}});
     };
+
+    loadFileDiff = async (hash, previousHash, path) => {
+        path = path.replace(/^\//, '');
+        const contentF = (await fetch(this.props.apiPrefix + "/repo/checkout", {
+            method: 'POST', body: JSON.stringify({repo: this.props.repoPrefix, hash, path})})).text();
+        const originalF = (await fetch(this.props.apiPrefix + "/repo/checkout", {
+            method: 'POST', body: JSON.stringify({repo: this.props.repoPrefix, hash: previousHash, path})})).text();
+        const content = await contentF;
+        const original = await originalF;
+        this.setState({fileContents: {path, original, content, hash}});
+    };
+
+    closeFile = () => this.setState({fileContents: null});
 
     loadDiff = async (commit) => {
         const diff = await (await fetch(this.props.apiPrefix + "/repo/diff", {
@@ -272,6 +285,8 @@ class MainApp extends React.Component {
                     setCommitFilter={this.setCommitFilter}
                     fileContents={this.state.fileContents}
                     loadFile={this.loadFile}
+                    loadFileDiff={this.loadFileDiff}
+                    closeFile={this.closeFile}
                     loadDiff={this.loadDiff}
                     addLinks={this.addLinks}
                     setLinks={this.setLinks}

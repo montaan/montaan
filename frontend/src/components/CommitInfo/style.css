@@ -83,6 +83,26 @@
 	position: absolute;
 	background: #f8f8f8;
 
+	z-index: 1001;
+
+	left: 0px;
+	right: 770px;
+	top: 126px;
+	bottom: 0px;
+
+	height: auto;
+	width: auto;
+
+	padding: 10px;
+
+	overflow: auto;
+	font-size: 10px;
+}
+
+#diffView {
+	position: absolute;
+	background: #f8f8f8;
+
 	z-index: 1000;
 
 	right: 770px;
@@ -96,12 +116,21 @@
 
 	overflow: auto;
 	font-size: 10px;
+
+	transition: 0.3s;
 }
+#diffView:empty { width: 0px; }
 
 #fileView h4 {
 	font-size: 10px;
 	margin-bottom: 0;
+}
+#fileView h4 .hash {
+	margin-right: 4px;
 	color: rgb(8, 111, 143);
+}
+#fileView h4 .message {
+	margin-left: 4px;
 }
 
 #fileView h3 {
@@ -114,7 +143,19 @@
 	white-space: pre;
 }
 
+#fileView .close {
+	position: absolute;
+	right: 12px;
+	top: 12px;
+	cursor: pointer;
+}
+
+#commitList .calendar {
+	margin-bottom: 8px;
+}
+
 #commitList div.calendar-year {
+	vertical-align: top;
 	padding-bottom: 0px;
 	margin-bottom: 0px;
 	border-bottom: 0;
@@ -122,10 +163,18 @@
 
 .calendar-year:before {
 	content: attr(data-year);
-	display: block;
+	display: inline-block;
+	vertical-align: top;
+	width: 30px;
+	font-size: 14px;
+	font-weight: bold;
+	margin-right: 8px;
+	position: relative;
+	top: -3px;
 }
 
 #commitList .calendar-month {
+	vertical-align: top;
 	position: relative;
 	display: inline-block;
 	width: 20px;
@@ -161,27 +210,23 @@
 .calendar-day[data-commit-count="1"] { background: #62c43b; }
 .calendar-day[data-commit-count="2"] { background: #d860e6; }
 
-#commitList div {
-	/* padding-bottom: 10px;
-	margin-bottom: 10px;
-	border-bottom: 1px solid silver; */
-}
-
-#commitList span {
+#commitList span,
+#diffView span
+{
 	display: block;
 	white-space: pre;
 }
 
-#commitList .commit-toggle,
-#commitList .commit-toggle-diffs,
-#commitList .commit-show-file
+.commit-toggle,
+.commit-toggle-diffs,
+.commit-show-file
 {
 	font-weight: bold;
 	cursor: pointer;
 }
 
-#commitList div .commit-hash, 
-#commitList div .commit-diff
+.commit-hash, 
+.commit-diff
 {
 	transition: 0.3s;
 }
@@ -190,17 +235,18 @@
 {
 	height: 60px;
 	overflow: hidden;
+	white-space: nowrap;
 }
 
-#commitList .commits div:not(.expanded) .commit-hash, 
-#commitList .commits div:not(.expanded) .commit-diff,
-#commitList .commits div:not(.expanded) .commit-toggle-diffs
+div:not(.expanded) > .commit-hash, 
+div:not(.expanded) > .commit-diff,
+div:not(.expanded) > .commit-toggle-diffs
 {
 	height: 0;
 	overflow: hidden;
 }
 
-#commitList .commits div:not(.expanded) .commit-message
+div:not(.expanded) > .commit-message
 {
 	height: 1.5em;
 	overflow: hidden;
@@ -209,37 +255,42 @@
 }
 
 #commitList .commit-date,
-#commitList .commit-author
+#commitList .commit-author,
+#diffView .commit-date,
+#diffView .commit-author
 {
 	display: inline-block;
+	white-space: nowrap;
 }
 
-#commitList div .commit-toggle:before,
-#commitList div .commit-toggle-diffs:before
+.commit-toggle:before,
+.commit-toggle-diffs:before
 {
 	content: "+ ";
 }
 
-#commitList div.expanded .commit-toggle:before,
-#commitList div.expanded-diffs .commit-toggle-diffs:before
+div.expanded > .commit-toggle:before,
+div.expanded-diffs > .commit-toggle-diffs:before
 {
 	content: "- ";
 }
 
 .commit-author:before {
-	content: " — ";
+	content: "—";
+	margin-left: 4px;
+	margin-right: 4px;
 }
 
-#commitList div:not(.expanded-diffs) .collapsed {
+div:not(.expanded-diffs) > .collapsed {
 	height: 0;
 	overflow: hidden;
 }
-#commitList span.commit-diff > span > span {
+span.commit-diff > span > span {
 	border-bottom: 1px dotted silver;
 	margin-bottom: 1px;
 }
 
-#commitList span.commit-diff {
+span.commit-diff {
 	margin-top: 10px;
 }
 .commit-diff .add {

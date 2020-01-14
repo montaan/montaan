@@ -94,10 +94,10 @@ export function parseDiff(diff) {
 
 function showFileToggleOnClick(ev) {
     ev.preventDefault();
-    this.showFile(this.sha, this.path, this);
+    this.showFile(this.sha, this.previousSha, this.path, this);
 }
 
-export function formatDiff(sha, diff, trackedPaths, trackedIndex, showFile) {
+export function formatDiff(sha, diff, trackedPaths, trackedIndex, previousSha, showFile) {
     const container = span();
     const changes = parseDiff(diff);
     changes.forEach(change => {
@@ -121,6 +121,7 @@ export function formatDiff(sha, diff, trackedPaths, trackedIndex, showFile) {
         const showFileToggle = span('commit-show-file', 'Show file');
         showFileToggle.path = change.dstPath;
         showFileToggle.sha = sha;
+        showFileToggle.previousSha = previousSha;
         showFileToggle.showFile = showFile;
         showFileToggle.onmousedown = showFileToggleOnClick;
         changeEl.append(
