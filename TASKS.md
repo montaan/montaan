@@ -3,33 +3,42 @@
 
 ## Active
 
-# Backend
-    [] Register & Log in
-    [] Add your own repos (supply repo URL -> pull repo -> add to repo list)
-
-# Data model
+# Frontend data model
     [] Links between objects
+        [] Use URIs to refer to objects
+            [] commit:sha
+            [] author:authorString
+            [] file:filePath
+        [] When drawing a link, find all objects with the URI
         [] Element-FSEntry
         [] FSEntry-FSEntry
         [] Element-Element
+        [] Single line geometry for all lines (limit to ~10k lines in view, stratified random sampling, update line set when zooming and navigation)
+
+# UX tweaks
+    [] Keyboard zoom controls
+    [] Zoom text doc left side to screen left side (instead of middle of screen)
+    [] Snap scroll to document boundaries
+    [] Line numbers for text view
+    [] Kb navigation of search results
+    [] Hide search results without erasing search term
+
+# Performance
+    [] Pipeline text model creation to avoid frame stutter (probably coming from shader compile / geometry creation)
+    [] Handle unlimited number of lines by rendering only a portion
+    [] Handle a million commits somehow
 
 # Website engine
     [] Turn README.md into HTML and display it on top of directory
     [] Display images nicely - design system for directories
     [] Use a Blender scene as directory and models as files
 
-# Frontend data model
-    [] Move state to React app
-        [] Current navigation target
-        [] Active commit list
-        [] Current commit
-        [] Search results
-
 # Layout
     [] Navigation tags
         [] Commit date tags (show "2019-09-01" next to first commit on that date) 
             [] Commit dates in UTC
         [] Author alphabetical tags (show "C" next to first author starting with "C")
+    [] Layout text files as vertical [] (think of the minimap, source files are tall and narrow)
 
 # Font
     [] MSDF for sharp corners
@@ -37,19 +46,54 @@
 
 # Search
     [] Highlight found search token
-    [] Search in Commits and Authors
+    [] Search for Commits and Authors
+    [] Non-regexp search FFS. Exact string matching (case-sensitive).
+
+# Backend
+    [x] Register & Log in
+    [] Add your own repos (supply repo URL -> pull repo -> add to repo list)
+        [x] repo/create
+        [x] repo/list
+        [] UI for repo/list
+        [] UI for repo/create
+        [] Make App use repo/list
+        [] Public/private repos
+        [] Public repo/list
+    [] Better non-logged-in experience
+        [] Public repo MainApp view
+        [] Public repos explorer
+
+# Version history
+    [] Commit view
+        [] Show list of files after message (click file to open)
+        [] Collapse/expand individual diffs
+        [] Navigate 
+    [] Crop commits by date
+    [] Single-file version history + moving between versions
+    [] Show commit filter
+    [] Don't hide other authors when clicking an author
+    [] Sort authors by commit count
+    [] Editable commit filter
+        [] Select multiple authors with
+            + - = Author Name <email>
+        [] Select date range (ctrl/shift drag)
+        [] Crop / expand path filter
+    [] Parse change metadata like
+        [cleanup][CSA] TNodify InitializeAllocationMemento  
+        Bug: v8:10021
+        Change-Id: I78948e93ca61116a6a1a45ccbc1dfa7c27988c30
+        Reviewed-on: https://chromium-review.googlesource.com/c/v8/v8/+/1995391
+        Reviewed-by: Maya Lekova <mslekova@chromium.org>
+        Commit-Queue: Santiago Aboy Solanes <solanes@chromium.org>
+        Cr-Commit-Position: refs/heads/master@{#65730}
+    [] Parse URLs into links
 
 # Commits
     [x] Click on author to show commits by that author
-        [] Click handler for author timeline (raycast to scene, find closest author to ray if ray is in the active area for authors)
+        [/] Click handler for author timeline (raycast to scene, find closest author to ray if ray is in the active area for authors)
         [] Display list of files touched by author
-    [] Click handler for commit timeline (raycast to scene, find closest commit to ray if ray is in the active area for commits)
-    [] Link from commits list to files and authors in current active set
-
-# Performance
-    [] Pipeline text model creation to avoid frame stutter (probably coming from shader compile / geometry creation)
-    [] Handle unlimited number of lines by rendering only a portion
-    [] Handle a million commits somehow
+    [/] Click handler for commit timeline (raycast to scene, find closest commit to ray if ray is in the active area for commits)
+    [x] Link from commits list to files and authors in current active set
 
 # Visualization
     [] All files in repo by type (all the images, all the c, all the py, all the rs, all the js)
@@ -59,14 +103,6 @@
     [] Output a 3D model for rendering with a path tracer
     [] Sparkling precious particle diamonds like on Precious Nature map
     [] Design that makes you feel awesome
-
-# UX tweaks
-    [] Keyboard zoom controls
-    [] Zoom text doc left side to screen left side (instead of middle of screen)
-    [] Snap scroll to document boundaries
-    [] Line numbers for text view
-    [] Kb navigation of search results
-    [] Hide search results without erasing search term
 
 
 
