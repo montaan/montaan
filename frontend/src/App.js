@@ -3,6 +3,7 @@ import { Redirect, BrowserRouter as Router, Route, Switch, withRouter, Link } fr
 
 // import TopBar from './components/TopBar';
 import LoginForm from './components/LoginForm';
+import SignupForm from './components/SignupForm';
 import {RecoverForm, PasswordResetForm} from './components/RecoverForm';
 import UserActivation from './components/UserActivation';
 // import HelpOverlay from './components/HelpOverlay';
@@ -172,6 +173,11 @@ class App extends React.Component {
                                     ? <Redirect to="/"/>
                                     : <LoginForm api={this.api} onSuccess={this.setAuthHeaders} onCancel={this.goHome} />
                             }/>
+                            <Route exact path="/signup" component={(_match) =>
+                                loggedIn 
+                                    ? <Redirect to="/"/>
+                                    : <SignupForm api={this.api} onSuccess={this.setAuthHeaders} onCancel={this.goHome} />
+                            }/>
                             <Route exact path="/recoverAccount" component={(_match) =>
                                 loggedIn 
                                     ? <Redirect to="/"/>
@@ -190,9 +196,12 @@ class App extends React.Component {
                             <Route path="/activate/:activationToken" component={(match) => 
                                 <UserActivation api={this.api} />
                             }/>
+                            <Route exact path="/" component={(_match) => 
+                                loggedIn 
+                                    ? <MainApp api={this.api} apiPrefix={this.api.server} repoPrefix={this.state.repoPrefix}/> 
+                                    : <LoginForm api={this.api} onSuccess={this.setAuthHeaders} onCancel={this.goHome} />
+                            }/>
                         </Switch>
-
-                        <MainApp api={this.api} apiPrefix={this.api.server} repoPrefix={this.state.repoPrefix}/>
                     </main>
                 </div>
             </Router>

@@ -69,6 +69,31 @@ export default class CommitInfo extends React.Component {
         const trackedIndex = {};
         trackedIndex[this.props.navigationTarget] = true;
 
+        for (var i = 0; i < activeCommits.length; i++) {
+            const files = activeCommits[i].files;
+            for (var j = 0; j < files.length; j++) {
+                const file = files[j];
+                if (file.renamed === 'dev/null') continue;
+                const dstPath = file.renamed || file.path;
+                for (var k = 0; k < trackedPaths.length; k++) if (dstPath.startsWith(trackedPaths[k])) break;
+                const inPath = k !== trackedPaths.length;
+                if (inPath) {
+                    var path = dstPath;
+                    if (!trackedIndex[path]) {
+                        trackedPaths.push(path);
+                        trackedIndex[path] = true;
+                    }
+                    if (file.renamed) {
+                        path = file.path;
+                        if (!trackedIndex[path]) {
+                            trackedPaths.push(path);
+                            trackedIndex[path] = true;
+                        }
+                    }
+                }
+            }
+        }
+
         const makeCommit = (c, top, previousCommit) => {
             var div = document.createElement('div');
             div.style.position = 'absolute';
@@ -81,6 +106,7 @@ export default class CommitInfo extends React.Component {
             var toggleDiffs = span('commit-toggle-diffs', 'All changes');
             toggle.onmousedown = async (ev) => {
                 ev.preventDefault();
+                this.props.closeFile();
                 if (window.diffView.firstChild && window.diffView.firstChild.textContent === hashSpan.textContent) {
                     while (window.diffView.firstChild) window.diffView.removeChild(window.diffView.firstChild);
                     return;
@@ -90,7 +116,7 @@ export default class CommitInfo extends React.Component {
                 window.diffView.classList.remove('expanded-diffs');
                 window.diffView.classList.add('expanded');
                 const diffSpan = span('commit-diff');
-                diffSpan.appendChild(formatDiff(c.sha, c.diff, trackedPaths, trackedIndex, previousCommit && previousCommit.sha, this.showFile));
+                diffSpan.appendChild(formatDiff(c.sha, c.diff, trackedPaths, previousCommit && previousCommit.sha, this.showFile));
                 window.diffView.append(
                     hashSpan.cloneNode(true), 
                     dateSpan.cloneNode(true),

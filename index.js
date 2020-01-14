@@ -31,7 +31,11 @@ global.assertShape = function(shape, obj) {                                     
 global.isMaybe = x => o => typeof o === 'undefined' || x(o);                                         // Create a validator that allows undefined values.
 ['string', 'number', 'boolean', 'object', 'function'].forEach(n => global[`is${n[0].toUpperCase() + n.slice(1)}`] = o => typeof o === n); // Is the parameter a named type?
 global.isEmail = o => /@/.test(o) && o.length < 256;                                                 // Is the parameter a reasonable email address?
+global.isURL = o => /^https?:\/\//.test(o) && o.length < 1024;                                       // Is the parameter a reasonable URL?
 global.isStrlen = (min,max) => o => isString(o) && o.length <= max && o.length >= min;               // Create a validator that matches strings between min and max lengths (both inclusive).
+global.isRegExp = (re) => o => isString(o) && re.test(o);                                            // Create a validator that matches strings matching the given RegExp.
+global.isAll = (...validators) => o => validators.all(p => p(o));                                    // Create a validator that matches all the given validators.
+global.isSome = (...validators) => o => validators.all(p => p(o));                                   // Create a validator that matches some of the given validators.
 
 const config = {port: 8000, root: 'public', workerCount: numCPUs/2, saltRounds: 10, // Default config.
     pgport: '/tmp/.s.PGSQL.5432', pghost: undefined, pg: {user: process.env.USER, database: 'qframe'}, // Default database config.

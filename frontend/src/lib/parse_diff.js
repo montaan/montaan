@@ -97,25 +97,11 @@ function showFileToggleOnClick(ev) {
     this.showFile(this.sha, this.previousSha, this.path, this);
 }
 
-export function formatDiff(sha, diff, trackedPaths, trackedIndex, previousSha, showFile) {
+export function formatDiff(sha, diff, trackedPaths, previousSha, showFile) {
     const container = span();
     const changes = parseDiff(diff);
     changes.forEach(change => {
         const inPath = (change.dstPath !== 'dev/null') && trackedPaths.some(path => change.dstPath.startsWith(path));
-        if (inPath) {
-            var path = change.dstPath;
-            if (!trackedIndex[path]) {
-                trackedPaths.push(path);
-                trackedIndex[path] = true;
-            }
-            if (change.srcPath !== 'dev/null') {
-                path = change.srcPath;
-                if (!trackedIndex[path]) {
-                    trackedPaths.push(path);
-                    trackedIndex[path] = true;
-                }
-            }
-        }
         const changeEl = span(inPath ? '' : 'collapsed');
         container.append(changeEl);
         const showFileToggle = span('commit-show-file', 'Show file');

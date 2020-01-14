@@ -10,6 +10,10 @@ body
 	font-family: sans-serif;
 }
 
+#mainApp {
+	text-align: left;
+}
+
 #subscribe {
 	display: none;
 	background: rgba(255,255,255,1);

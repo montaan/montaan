@@ -232,7 +232,7 @@ class MainApp extends React.Component {
 
     render() {
         return (
-            <div>
+            <div id="mainApp">
                 <div id="debug" />
                 {fullscreenSupported && <div id="fullscreen" onClick={this.fullscreenOnClick} />}
                 <div id="loader" />

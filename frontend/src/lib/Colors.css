@@ -2,6 +2,13 @@ body {
     background: white;
     color: black;
 }
+#breadCrumb {
+	color: darkgrey;
+	background: rgba(255,255,255,0.9);
+}
+#breadCrumb ul {
+	background: rgba(255,255,255,0.9);
+}
 .musicDir { color: #c9ffa9; }
 .imageDir { color: #b1b7f1; }
 .documentDir { color: #f0baba; }

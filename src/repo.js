@@ -5,7 +5,10 @@ const ChildProcess = require('child_process');
 const Exec = ChildProcess.exec;
 const Mime = require('mime-types');
 
-const repoDataShape = { url:isStrlen(1,1024) };
+const repoDataShape = {
+    url: isMaybe(isURL), 
+    path: isRegExp(/^[a-zA-Z0-9_-]+$/)
+};
 
 function assertRepoFile(fsPath) {
     const filePath = Path.resolve('repos', fsPath);
@@ -30,8 +33,16 @@ function assertRepoDir(fsPath) {
 const Repos = {
     create: async function(req, res) {
         var [error, { user_id }] = await guardPostWithSession(req); if (error) return error;
-        var [error, json] = assertShape(repoDataShape, await bodyAsJson(req));
+        var [error, json] = assertShape(repoDataShape, await bodyAsJson(req)); if (error) return error;
+        const {url, path} = json;
         await DB.queryTo(res, `INSERT INTO repos (data, user_id) VALUES ($1, $2) RETURNING id`, [JSON.stringify(json), user_id]);
+        if (url) Exec(`${process.cwd()}/bin/process_bin '${url}' '${user_id}/${path}'`);
+        else Exec(`TEMP=$(mktemp -d) ((cd "$TEMP" && git init) && ${process.cwd()}/bin/process_bin "$TEMP" '${user_id}/${path}'; rm -r "$TEMP")`);
+    },
+
+    list: async function(req, res) {
+        var [error, { user_id }] = await guardPostWithSession(req); if (error) return error;
+        await DB.queryTo(res, `SELECT * FROM repos WHERE user_id = $1`, [user_id]);
     },
 
     delete: async function(req, res) {

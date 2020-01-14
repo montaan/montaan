@@ -1,6 +1,6 @@
 import './main.css';
-import './railscasts.min.css';
-import './ColorsDark.css';
+import './xcode.css';
+import './Colors.css';
 
 import * as THREE from 'three';
 

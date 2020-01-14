@@ -4,7 +4,13 @@ body {
     background: black;
     color: white;
 }
-
+#breadCrumb {
+    background: rgba(0,0,0,0.9);
+    color: #eee;
+}
+#breadCrumb ul {
+    background: rgba(0,0,0,0.9);
+}
 .musicDir { color: rgb(33, 86, 43); }
 .imageDir { color: rgb(33, 112, 165); }
 .documentDir { color: rgb(84, 61, 43); }

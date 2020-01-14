@@ -117,6 +117,10 @@ class LoginForm extends React.Component {
                                 </Form.Group>
 
                                 <Form.Group controlId="formBasicChecbox">
+                                    <Link to="/signup">Sign up for a new account</Link>
+                                </Form.Group>
+
+                                <Form.Group controlId="formBasicChecbox">
                                     <Form.Check name="rememberme" value={values.rememberme} onChange={handleChange} size="sm" type="checkbox" label="Remember me" />
                                 </Form.Group>
 

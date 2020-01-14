@@ -281,9 +281,13 @@ div.expanded-diffs > .commit-toggle-diffs:before
 	margin-right: 4px;
 }
 
-div:not(.expanded-diffs) > .collapsed {
+.commit-diff .collapsed {
 	height: 0;
 	overflow: hidden;
+}
+.expanded-diffs .commit-diff .collapsed {
+	height: auto;
+	overflow: visible;
 }
 span.commit-diff > span > span {
 	border-bottom: 1px dotted silver;
