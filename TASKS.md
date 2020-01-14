@@ -1,5 +1,20 @@
 ### Tasks
 
+# Strengths
+    Keep these in mind when deciding what to work on. Improving these increases project value for everyday use.
+    
+    [] Code browsing
+    [] Seeing through hierarchy
+    [] Understanding structure
+    [] Following links visually
+    [] Displaying large linkages
+    [] Comparing linkages
+    [] Lateral navigation
+    [] Cherry-picked revert of a file
+    [] Browsing large image collections
+    [] Opening content in-line
+    [] Editing content in-line
+    [] Fast filesystem browsing
 
 ## Active
 
@@ -64,6 +79,7 @@
         [] Public repos explorer
 
 # Version history
+    [] Compare file at any revision to HEAD in file diff view (so that you can first find a file with code you want to revert, then compare that with the current version to know what to revert.)
     [] Commit view
         [] Show list of files after message (click file to open)
         [] Collapse/expand individual diffs
