@@ -269,7 +269,7 @@ class Tabletree {
 
 		var off = index * 4;
 		if (!bbox || bbox.bottom < 0 || bbox.top > window.innerHeight) {
-			var bv = new THREE.Vector3(b.x - fsEntry.scale*0.5, av.y + 0.05*fsEntry.scale + fsEntry.scale*3.15, av.z - fsEntry.scale*0.5);
+			var bv = new THREE.Vector3(b.x - fsEntry.scale*0.5 - 0.02, av.y + 0.05*fsEntry.scale + 0.01*3.15, av.z - fsEntry.scale*0.5);
 			var aUp = new THREE.Vector3(av.x - fsEntry.scale*0.075, av.y + 0.05*fsEntry.scale, av.z);
 		} else {
 			this.screenPlane.visible = true;
@@ -293,6 +293,7 @@ class Tabletree {
 	}
 
 	updateSearchLines() {
+		console.log('updateSearchLines');
 		this.clearSearchLine();
 		this.searchLine.hovered = false;
 		var lis = [].slice.call(window.searchResults.querySelectorAll('li'));
@@ -387,7 +388,7 @@ class Tabletree {
 
 		searchLine.hovered = false;
 		searchLine.ontick = () => {
-			searchLine.visible = this.searchResults.length > 0 && searchLine.hovered;
+			searchLine.visible = this.searchResults.length > 0;
 			if (!window.searchResults) return;
 			if (window.searchResults.querySelector('.hover') || searchLine.hovered) {
 				this.updateSearchLines();
