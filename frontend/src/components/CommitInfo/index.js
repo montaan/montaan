@@ -4,7 +4,7 @@ import { span, formatDiff, authorCmp, createCalendar } from '../../lib/parse_dif
 // import prettyPrintWorker from '../../lib/pretty_print';
 import Editor, { DiffEditor, monaco } from '@monaco-editor/react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faTimes } from '@fortawesome/free-solid-svg-icons'
+import { faTimes, faArrowUp, faArrowDown } from '@fortawesome/free-solid-svg-icons'
 
 monaco.config({
     urls: {
@@ -271,6 +271,10 @@ export default class CommitInfo extends React.Component {
                             <span className="message">{this.props.commitData.commitIndex[this.props.fileContents.hash].message.split("\n")[0]}</span>
                         </h4>
                         <h3>{this.props.fileContents.path}</h3>
+                        <div className="file-version-nav">
+                            <button onClick={this.previousFileVersion}><FontAwesomeIcon icon={faArrowDown} /></button>
+                            <button onClick={this.nextFileVersion}><FontAwesomeIcon icon={faArrowUp} /></button>
+                        </div>
                         <div className="close" onClick={this.props.closeFile}><FontAwesomeIcon icon={faTimes} /></div>
                         {this.props.fileContents.original
                         ?
