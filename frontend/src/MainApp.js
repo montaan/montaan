@@ -71,7 +71,9 @@ class MainApp extends React.Component {
         this.searchString(searchQuery);
     };
 
-    setNavigationTarget = navigationTarget => this.setState({navigationTarget});
+    setNavigationTarget = navigationTarget => {
+        if (this.state.navigationTarget !== navigationTarget) this.setState({navigationTarget});
+    };
 
     setActiveCommits = activeCommits => {
         const authorList = activeCommits.map(c => c.author);

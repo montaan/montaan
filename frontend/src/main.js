@@ -251,7 +251,6 @@ class Tabletree {
 			if (fsEntry.entries !== null && results[i].line === 0) {
 				Geometry.setColor(ca.array, fsEntry.index, fsEntry.entries === null ? [1,0,0] : [0.6, 0, 0], 0);
 			} else if (fsEntry.entries === null && results[i].line > 0) {
-				console.log(fsEntry);
 				this.addHighlightedLine(fsEntry, results[i].line);
 			}
 		}
@@ -293,27 +292,40 @@ class Tabletree {
 	}
 
 	updateSearchLines() {
-		console.log('updateSearchLines');
-		this.clearSearchLine();
-		this.searchLine.hovered = false;
-		var lis = [].slice.call(window.searchResults.querySelectorAll('li'));
-		if (lis.length <= this.searchLine.geometry.vertices.length/4) {
-			for (var i=0, l=lis.length; i<l; i++) {
-				var bbox = null;
-				var li = lis[i];
-				if (li && li.classList.contains('hover') && !li.result.lineResults) {
-					this.searchLine.hovered = true;
-					bbox = li.getBoundingClientRect();
-				}
-				if (li) {
-					this.addScreenLine(this.searchLine.geometry, li.result.fsEntry, bbox, i, li.result.line, li.result.fsEntry.lineCount);
-				}
-			}
-		}
-		if (i > 0 || i !== this.searchLine.lastUpdate) {
+		var needUpdate = false;
+		if (this.searchResults !== this.previousSearchResults) {
+			this.clearSearchLine();
+			this.previousSearchResults = this.searchResults;
+			this.searchResultHoverIndex = -1;
+			needUpdate = true;
 			this.searchLine.geometry.verticesNeedUpdate = true;
 			this.changed = true;
-			this.searchLine.lastUpdate = i;
+			this.searchLis = [].slice.call(window.searchResults.querySelectorAll('li'));
+		}
+		const lis = this.searchLis;
+		this.searchLine.hovered = false;
+		if (lis.length <= this.searchLine.geometry.vertices.length/4) {
+			var hoverIndex = -1;
+			for (var i=0, l=lis.length; i<l; i++) {
+				var li = lis[i];
+				if (needUpdate) this.addScreenLine(this.searchLine.geometry, li.result.fsEntry, null, i, li.result.line, li.result.fsEntry.lineCount);
+				if (li.classList.contains('hover') && !li.result.lineResults) hoverIndex = i;
+			}
+			if (hoverIndex !== this.searchResultHoverIndex) {
+				if (this.searchResultHoverIndex !== -1) {
+					li = lis[this.searchResultHoverIndex];
+					this.addScreenLine(this.searchLine.geometry, li.result.fsEntry, null, i, li.result.line, li.result.fsEntry.lineCount);
+				}
+				if (hoverIndex !== -1) {
+					li = lis[hoverIndex];
+					this.searchLine.hovered = true;
+					const bbox = li.getBoundingClientRect();
+					this.addScreenLine(this.searchLine.geometry, li.result.fsEntry, bbox, i, li.result.line, li.result.fsEntry.lineCount);
+				}
+				this.searchResultHoverIndex = hoverIndex;
+				this.searchLine.geometry.verticesNeedUpdate = true;
+				this.changed = true;
+			}
 		}
 		if (this.lineModel) {
 			this.lineModel.visible = this.highlightedResults.length === 0;
@@ -401,6 +413,7 @@ class Tabletree {
 	}
 
 	setSearchResults(searchResults) {
+		console.log('setSearchResults');
 		this.searchResults = searchResults || [];
 		this.highlightResults(searchResults || []);
 		this.updateSearchLines();
@@ -1130,7 +1143,6 @@ class Tabletree {
 
 		renderer.domElement.addEventListener('touchstart', function(ev) {
 			if (window.searchInput) window.searchInput.blur();
-			if (self.DocFrame) return;
 			ev.preventDefault();
 			if (ev.touches.length === 1) {
 				renderer.domElement.onmousedown(ev.touches[0]);
@@ -1148,7 +1160,6 @@ class Tabletree {
 		}, false);
 
 		renderer.domElement.addEventListener('touchmove', function(ev) {
-			if (self.DocFrame) return;
 			ev.preventDefault();
 			if (ev.touches.length === 1) {
 				if (!inGesture) {
@@ -1171,7 +1182,6 @@ class Tabletree {
 		}, false);
 
 		renderer.domElement.addEventListener('touchend', function(ev) {
-			if (self.DocFrame) return;
 			ev.preventDefault();
 			if (ev.touches.length === 0) {
 				if (!inGesture) {
@@ -1185,7 +1195,6 @@ class Tabletree {
 		}, false);
 
 		renderer.domElement.addEventListener('touchcancel', function(ev) {
-			if (self.DocFrame) return;
 			ev.preventDefault();
 			if (ev.touches.length === 0) {
 				if (!inGesture) {
@@ -1223,12 +1232,12 @@ class Tabletree {
 				}
 				camera.targetPosition.x -= factor*dx * camera.fov;
 				camera.targetPosition.y += factor*dy * camera.fov;
+				self.changed = true;
 			}
 		};
 
 		renderer.domElement.onmousedown = function(ev) {
 			if (window.searchInput) window.searchInput.blur();
-			if (self.DocFrame) return;
 			if (ev.preventDefault) ev.preventDefault();
 			down = true;
 			clickDisabled = false;
@@ -1237,7 +1246,6 @@ class Tabletree {
 		};
 
 		window.onmousemove = function(ev, factor) {
-			if (self.DocFrame) return;
 			if (down) {
 				if (!factor) {
 					factor = 0.0001;
@@ -1269,7 +1277,6 @@ class Tabletree {
 		var wheelSnapTimer;
 		var wheelFreePan = false;
 		renderer.domElement.onwheel = function(ev) {
-			if (self.DocFrame) return;
 			ev.preventDefault();
 
 			if (ev.ctrlKey) {
@@ -1329,14 +1336,6 @@ class Tabletree {
 		window.onmouseup = function(ev) {
 			if (down && ev.preventDefault) ev.preventDefault();
 			if (clickDisabled) {
-				down = false;
-				return;
-			}
-			if (self.DocFrame) {
-				self.DocFrame.style.transform = 'translateY(-'+self.DocFrame.style.height+')';
-				var iframe = self.DocFrame;
-				setTimeout(() => iframe.parentNode.removeChild(iframe), 500);
-				self.DocFrame = null;
 				down = false;
 				return;
 			}
@@ -1427,10 +1426,11 @@ class Tabletree {
 
 	tick = () => {
 		const camera = this.camera;
+		if (!camera) return this.requestFrame();
 		const currentFrameTime = performance.now();
 		var dt = currentFrameTime - this.previousFrameTime;
 		this.previousFrameTime += dt;
-		if (dt < 16) {
+		if (dt < 16 || this.frameLoopPaused) {
 			dt = 16;
 		}
 
@@ -1456,9 +1456,26 @@ class Tabletree {
 		var wasChanged = this.changed;
 		this.changed = false;
 		if (wasChanged || this.animating) this.render();
-
-		window.requestAnimationFrame(this.tick);
+		this.frameRequested = false;
+		if (this.changed || this.animating) this.requestFrame();
+		this.frameLoopPaused = !this.frameRequested;
 	};
+
+	get changed() {
+		return this._changed;
+	}
+
+	set changed(v) {
+		this._changed = v;
+		this.requestFrame();
+	}
+
+	requestFrame() {
+		if (!this.frameRequested) {
+			this.frameRequested = true;
+			window.requestAnimationFrame(this.tick);
+		}
+	}
 }
 
 export default new Tabletree();
