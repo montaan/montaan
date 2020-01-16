@@ -457,6 +457,10 @@ module.exports = {
 					var fileScale = parentScale * (0.8 / squareSide) ;
 					for (var xf=0; xf<squareSidef; xf++) {
 						for (var yf=0; yf<squareSidef; yf++) {
+							// var fxOff = xf/4 * (1/squareSidef);
+							// var fyOff = 1 - ((yf+1)) * (1/squareSidef);
+							// var foff = xf * squareSidef + yf * 4;
+
 							var fxOff = xf * (1/squareSidef);
 							var fyOff = 1 - ((yf+1)) * (1/squareSidef);
 							var foff = xf * squareSidef + yf;

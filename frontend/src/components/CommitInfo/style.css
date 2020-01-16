@@ -328,3 +328,10 @@ span.commit-diff {
 	background: rgba(255, 236, 255, 0.562);
 	color: rgb(0, 0, 0);
 }
+
+#commitList .commits > div.collapsed,
+#authorList .collapsed
+{
+	height: 0px;
+	overflow: hidden;
+}

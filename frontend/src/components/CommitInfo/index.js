@@ -1,6 +1,7 @@
 import React from 'react';
 import './style.css';
 import { span, formatDiff, authorCmp, createCalendar } from '../../lib/parse_diff';
+import Form from "react-bootstrap/Form"
 // import prettyPrintWorker from '../../lib/pretty_print';
 import Editor, { DiffEditor, monaco } from '@monaco-editor/react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -250,16 +251,42 @@ export default class CommitInfo extends React.Component {
         }
     }
 
+    authorSearchOnChange = (ev) => {
+        // TODO should this crop commits as well?
+        const searchToken = ev.target.value.toLowerCase();
+        const authors = [].slice.call(window.authorList.childNodes);
+        for (var i = 0; i < authors.length; i++) {
+            const match = authors[i].textContent.toLowerCase().includes(searchToken);
+            authors[i].classList.toggle('collapsed', !match);
+        }
+    }
+
+    commitSearchOnChange = (ev) => {
+        // TODO this needs to be smarter (modify activeCommits...)
+        const searchToken = ev.target.value.toLowerCase();
+        const authors = [].slice.call(window.commitList.querySelector('.commits').childNodes);
+        for (var i = 0; i < authors.length; i++) {
+            const match = authors[i].textContent.toLowerCase().includes(searchToken);
+            authors[i].classList.toggle('collapsed', !match);
+        }
+    }
+
     render() {
         return (
             <div id="commitInfo" className={this.state.visible ? 'visible' : 'hidden'}>
                 <button onClick={this.toggleVisible}>{this.state.visible ? ">" : "<"}</button>
                 <div id="authors">
                     <h3>Authors</h3>
+                    <Form.Group id="authorSearch">
+                        <Form.Control onChange={this.authorSearchOnChange} />
+                    </Form.Group>
                     <div id="authorList"/>
                 </div>
                 <div id="activeCommits">
                     <h3>Commits</h3>
+                    <Form.Group id="commitSearch">
+                        <Form.Control onChange={this.commitSearchOnChange} />
+                    </Form.Group>
                     <div id="commitList"/>
                 </div>
                 <div id="diffView"/>

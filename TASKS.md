@@ -37,6 +37,9 @@
     [] Line numbers for text view
     [] Kb navigation of search results
     [] Hide search results without erasing search term
+    [] Better dashboard view
+        [] All my repos
+        [] Recent activity (commits, issues)
 
 # Performance
     [] Pipeline text model creation to avoid frame stutter (probably coming from shader compile / geometry creation)
@@ -60,22 +63,24 @@
     [] Full Unicode support
 
 # Search
+    [] Score results by relevancy (lunr-style)
     [] Highlight found search token
-    [] Search for Commits and Authors
+    [x] Search for Commits and Authors
     [] Non-regexp search FFS. Exact string matching (case-sensitive).
 
 # Backend
     [x] Register & Log in
-    [] Add your own repos (supply repo URL -> pull repo -> add to repo list)
+    [x] Add your own repos (supply repo URL -> pull repo -> add to repo list)
         [x] repo/create
         [x] repo/list
-        [] UI for repo/list
-        [] UI for repo/create
-        [] Make App use repo/list
+        [x] UI for repo/list
+        [x] UI for repo/create
+        [x] Make App use repo/list
+        [x] View public repo
         [] Public/private repos
         [] Public repo/list
     [] Better non-logged-in experience
-        [] Public repo MainApp view
+        [x] Public repo MainApp view
         [] Public repos explorer
 
 # Version history
