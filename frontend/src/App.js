@@ -52,7 +52,6 @@ class App extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
-            repoPrefix: 'v8/v8',
             authHeaders: {},
             userInfo: {}
         };
@@ -63,10 +62,13 @@ class App extends React.Component {
             return fetch(this.api.server + path, config);
         };
         this.api.server = APIServer;
-        this.api.parseResponse = async (res) => {
+        this.api.parseResponse = async (res, responseType) => {
             if (res.status !== 200) throw Error("Response failed: " + res.status + " " +  res.statusText);
+            if (responseType === 'raw') return res;
+            if (responseType) return res[responseType]();
             const mime = res.headers.get('content-type');
             if (mime === 'application/json') return res.json();
+            else if (mime === 'text/plain') return res.text();
             else if (mime === 'application/x-postgres') {
                 const arrayBuffer = await res.arrayBuffer();
                 const client = new Client(1);
@@ -75,6 +77,8 @@ class App extends React.Component {
             } else if (/^text/.test(mime)) return res.text();
             else return res.arrayBuffer();
         };
+        this.api.postType = async (path, body, config, responseType) => this.api.parseResponse(await this.api(path, {method: 'POST', body: JSON.stringify(body), ...config}), responseType); 
+        this.api.getType = async (path, config, responseType) => this.api.parseResponse(await this.api(path, config), responseType); 
         this.api.post = async (path, body, config) => this.api.parseResponse(await this.api(path, {method: 'POST', body: JSON.stringify(body), ...config}));
         this.api.get = async (path, config) => this.api.parseResponse(await this.api(path, config));
     }
@@ -196,9 +200,12 @@ class App extends React.Component {
                             <Route path="/activate/:activationToken" component={(match) => 
                                 <UserActivation api={this.api} />
                             }/>
+                            <Route exact path="/:user/:name" component={(_match) => 
+                                <MainApp api={this.api} apiPrefix={this.api.server} userInfo={this.state.userInfo} /> 
+                            }/>
                             <Route exact path="/" component={(_match) => 
                                 loggedIn 
-                                    ? <MainApp api={this.api} apiPrefix={this.api.server} repoPrefix={this.state.repoPrefix}/> 
+                                    ? <MainApp api={this.api} apiPrefix={this.api.server} userInfo={this.state.userInfo}/> 
                                     : <LoginForm api={this.api} onSuccess={this.setAuthHeaders} onCancel={this.goHome} />
                             }/>
                         </Switch>

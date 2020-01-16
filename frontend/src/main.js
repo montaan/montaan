@@ -56,9 +56,9 @@ class Tabletree {
 	init(apiPrefix, repoPrefix) {
 		this.apiPrefix = apiPrefix;
 		this.repoPrefix = repoPrefix;
-		loadFont('fnt/DejaVu-sdf.fnt', (err, font) => {
+		loadFont('/fnt/DejaVu-sdf.fnt', (err, font) => {
 			if (err) throw err;
-			new THREE.TextureLoader().load('fnt/DejaVu-sdf.png', (tex) => this.start(font, tex));
+			new THREE.TextureLoader().load('/fnt/DejaVu-sdf.png', (tex) => this.start(font, tex));
 		});
 	}
 
@@ -291,7 +291,7 @@ class Tabletree {
 		geo.vertices[off++].copy(bv);
 	}
 
-	updateSearchLines() {
+	updateSearchLines(forceUpdateHover) {
 		var needUpdate = false;
 		if (this.searchResults !== this.previousSearchResults) {
 			this.clearSearchLine();
@@ -311,16 +311,16 @@ class Tabletree {
 				if (needUpdate) this.addScreenLine(this.searchLine.geometry, li.result.fsEntry, null, i, li.result.line, li.result.fsEntry.lineCount);
 				if (li.classList.contains('hover') && !li.result.lineResults) hoverIndex = i;
 			}
-			if (hoverIndex !== this.searchResultHoverIndex) {
+			if (hoverIndex !== this.searchResultHoverIndex || forceUpdateHover) {
 				if (this.searchResultHoverIndex !== -1) {
 					li = lis[this.searchResultHoverIndex];
-					this.addScreenLine(this.searchLine.geometry, li.result.fsEntry, null, i, li.result.line, li.result.fsEntry.lineCount);
+					this.addScreenLine(this.searchLine.geometry, li.result.fsEntry, null, this.searchResultHoverIndex, li.result.line, li.result.fsEntry.lineCount);
 				}
 				if (hoverIndex !== -1) {
 					li = lis[hoverIndex];
 					this.searchLine.hovered = true;
 					const bbox = li.getBoundingClientRect();
-					this.addScreenLine(this.searchLine.geometry, li.result.fsEntry, bbox, i, li.result.line, li.result.fsEntry.lineCount);
+					this.addScreenLine(this.searchLine.geometry, li.result.fsEntry, bbox, hoverIndex, li.result.line, li.result.fsEntry.lineCount);
 				}
 				this.searchResultHoverIndex = hoverIndex;
 				this.searchLine.geometry.verticesNeedUpdate = true;

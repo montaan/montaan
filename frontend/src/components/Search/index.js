@@ -103,7 +103,7 @@ export default class CommitControls extends React.Component {
             <>
                 <input id="searchInput" autoCorrect="off" autoCapitalize="off" placeholder="Search files" value={this.props.searchQuery} onChange={this.searchOnInput}/>
                 <button id="searchButton" onClick={this.searchOnInput}>Search</button>
-                <ul id="searchResults" onScroll={this.props.requestFrame}></ul>
+                <ul id="searchResults" onScroll={this.props.updateSearchLines}></ul>
             </>
         );
     }

@@ -42,6 +42,19 @@ module.exports = [
             `CREATE INDEX users_activation_token_idx ON users (activation_token)`,
             'CREATE INDEX sessions_ref_idx ON sessions (ref)'
         ], down: [`DROP TABLE users, repos, sessions`]
+    },
+
+    {
+        name: 'Repos should have name and URL',
+        up: [ 
+            `DELETE FROM repos`,
+            `ALTER TABLE repos ADD COLUMN name TEXT NOT NULL UNIQUE`,
+            `ALTER TABLE repos ADD COLUMN url TEXT`,
+            `CREATE INDEX repos_name_idx ON repos (name)`
+        ], down: [
+            `DROP INDEX repos_name_idx`,
+            `ALTER TABLE repos DROP COLUMN name, url`
+        ]
     }
 
 ];

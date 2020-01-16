@@ -7,7 +7,7 @@ const Mime = require('mime-types');
 
 const repoDataShape = {
     url: isMaybe(isURL), 
-    path: isRegExp(/^[a-zA-Z0-9_-]+$/)
+    name: isRegExp(/^[a-zA-Z0-9_-]+$/)
 };
 
 function assertRepoFile(fsPath) {
@@ -34,10 +34,12 @@ const Repos = {
     create: async function(req, res) {
         var [error, { user_id }] = await guardPostWithSession(req); if (error) return error;
         var [error, json] = assertShape(repoDataShape, await bodyAsJson(req)); if (error) return error;
-        const {url, path} = json;
-        await DB.queryTo(res, `INSERT INTO repos (data, user_id) VALUES ($1, $2) RETURNING id`, [JSON.stringify(json), user_id]);
-        if (url) Exec(`${process.cwd()}/bin/process_bin '${url}' '${user_id}/${path}'`);
-        else Exec(`TEMP=$(mktemp -d) ((cd "$TEMP" && git init) && ${process.cwd()}/bin/process_bin "$TEMP" '${user_id}/${path}'; rm -r "$TEMP")`);
+        const {url, name} = json;
+        const dbRes = await DB.query('SELECT name FROM users WHERE id = $1', [user_id]);
+        const userName = dbRes.rows[0].name;
+        if (url) Exec(`${process.cwd()}/bin/process_tree '${url}' '${userName}/${name}'`);
+        else Exec(`TEMP=$(mktemp -d) ((cd "$TEMP" && git init) && ${process.cwd()}/bin/process_tree "$TEMP" '${userName}/${name}'; rm -r "$TEMP")`);
+        await DB.queryTo(res, `INSERT INTO repos (url, name, user_id) VALUES ($1, $2, $3) RETURNING id`, [url, name, user_id]);
     },
 
     list: async function(req, res) {

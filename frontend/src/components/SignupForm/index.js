@@ -8,6 +8,8 @@ import * as yup from "yup";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faArrowLeft, faKey } from '@fortawesome/free-solid-svg-icons'
 
+import FormGroupTextInput from '../../lib/FormGroupTextInput';
+
 import './style.css';
 
 const signUpSchema = yup.object({
@@ -26,34 +28,6 @@ const signUpSchema = yup.object({
     mobile: yup.string().optional(),
     rememberme: yup.bool().optional()
 });
-
-
-class FormGroupTextInput extends React.Component {
-    render() {
-        const { rows, label, type, control, placeholder, values, onChange, onBlur, touched, errors } = this.props;
-        return (
-            <Form.Group controlId={"formCard" + control}>
-                {label && <Form.Label size="lg">{label}</Form.Label>}
-                <ErrorMessage name={control}>{msg => 
-                    <div className="error error-message">{msg}</div>
-                }</ErrorMessage>
-                <Form.Control
-                    name={control}
-                    aria-label={label || placeholder}
-                    defaultValue={values[control]}
-                    onChange={onChange}
-                    onBlur={onBlur}
-                    isValid={touched[control] && !errors[control]}
-                    isInvalid={touched[control] && errors[control]}
-                    type={type || "text"}
-                    rows={rows}
-                    as={rows !== undefined ? "textarea" : undefined}
-                    placeholder={placeholder}
-                />
-            </Form.Group>
-        );
-    }
-}
 
 class SignupForm extends React.Component {
     constructor(props) {

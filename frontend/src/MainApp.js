@@ -1,11 +1,14 @@
 import React from 'react';
+import { withRouter } from "react-router-dom";
+
 import MainView from './components/MainView';
 import CommitControls from './components/CommitControls';
 import CommitInfo from './components/CommitInfo';
 import Search from './components/Search';
 import Breadcrumb from './components/Breadcrumb';
-import utils from './lib/utils';
+import RepoSelector from './components/RepoSelector';
 
+import utils from './lib/utils';
 import { parseCommits } from './lib/parse_commits';
 import { span, formatDiff, authorCmp, createCalendar } from './lib/parse_diff';
 import { getPathEntry, getFullPath, getSiblings } from './lib/filetree';
@@ -18,6 +21,7 @@ var searchQueryNumber = 0;
 class MainApp extends React.Component {
     
     emptyState = {
+        repoPrefix: '',
         commitFilter: {},
         searchQuery: '',
         commits: [],
@@ -30,6 +34,7 @@ class MainApp extends React.Component {
         navigationTarget: '',
         goToTarget: null,
         frameRequestTime: 0,
+        searchLinesRequest: 0,
         diffsLoaded: 0,
         fileContents: null,
         links: []
@@ -37,23 +42,28 @@ class MainApp extends React.Component {
 
     constructor(props) {
         super(props);
-        this.state = {...this.emptyState};
+        this.state = {...this.emptyState, repos: []};
         window.setNavigationTarget = this.setNavigationTarget;
-        this.setRepo(props.repoPrefix);
+        if (props.userInfo) this.updateUserRepos(props.userInfo);
+        if (props.match && props.match.params.user) {
+            this.state.repoPrefix = props.match.params.user + '/' + props.match.params.name;
+            this.setRepo(props.match.params.name, props.match.params.user);
+        }
     }
 
-    parseFiles(text) { return utils.parseFileList(text, {}, undefined, this.props.repoPrefix+'/'); }
+    parseFiles(text, repoPrefix) { return utils.parseFileList(text, {}, undefined, repoPrefix+'/'); }
 
-    async setRepo(repoPrefix) {
+    async setRepo(repoPath, userName=this.props.userInfo.name) {
+        const repoPrefix = userName + '/' + repoPath;
         console.time('load files');
-        const files = await (await fetch(this.props.apiPrefix+'/repo/fs/'+repoPrefix+'/files.txt')).text();
+        const files = await this.props.api.get('/repo/fs/'+repoPrefix+'/files.txt');
         console.timeEnd('load files');
         console.time('parse files');
-        const fileTree = this.parseFiles(files);
+        const fileTree = this.parseFiles(files, repoPrefix);
         console.timeEnd('parse files');
-        this.setState({...this.emptyState, fileTree});
+        this.setState({...this.emptyState, repoPrefix, fileTree});
         console.time('load commitObj');
-        const commitObj = await (await fetch(this.props.apiPrefix+'/repo/fs/'+repoPrefix+'/log.json')).json();
+        const commitObj = await this.props.api.getType('/repo/fs/'+repoPrefix+'/log.json', 'json');
         console.timeEnd('load commitObj');
         console.time('parse commitObj');
         const commitData = parseCommits(commitObj, fileTree.tree, repoPrefix);
@@ -89,17 +99,14 @@ class MainApp extends React.Component {
 
     loadFile = async (hash, path) => {
         path = path.replace(/^\//, '');
-        var content = await (await fetch(this.props.apiPrefix + "/repo/checkout", {
-            method: 'POST', body: JSON.stringify({repo: this.props.repoPrefix, hash, path})})).text();
+        var content = await this.props.api.post("/repo/checkout", {repo: this.state.repoPrefix, hash, path});
         this.setState({fileContents: {path, content, hash}});
     };
 
     loadFileDiff = async (hash, previousHash, path) => {
         path = path.replace(/^\//, '');
-        const contentF = (await fetch(this.props.apiPrefix + "/repo/checkout", {
-            method: 'POST', body: JSON.stringify({repo: this.props.repoPrefix, hash, path})})).text();
-        const originalF = (await fetch(this.props.apiPrefix + "/repo/checkout", {
-            method: 'POST', body: JSON.stringify({repo: this.props.repoPrefix, hash: previousHash, path})})).text();
+        const contentF = await this.props.api.post("/repo/checkout", {repo: this.state.repoPrefix, hash, path});
+        const originalF = await this.props.api.post("/repo/checkout", {repo: this.state.repoPrefix, hash: previousHash, path});
         const content = await contentF;
         const original = await originalF;
         this.setState({fileContents: {path, original, content, hash}});
@@ -108,16 +115,19 @@ class MainApp extends React.Component {
     closeFile = () => this.setState({fileContents: null});
 
     loadDiff = async (commit) => {
-        const diff = await (await fetch(this.props.apiPrefix + "/repo/diff", {
-            method: 'POST', body: JSON.stringify({repo: this.props.repoPrefix, hash: commit.sha})})).text();
+        const diff = await this.props.api.post("/repo/diff", {repo: this.state.repoPrefix, hash: commit.sha});
         commit.diff = diff;
         this.setState({diffsLoaded: ++this.state.diffsLoaded % 1048576});
     };
 
     requestFrame = () => this.setState({frameRequestTime: ++this.state.frameRequestTime % 1048576});
 
+    updateSearchLines = () => {
+        this.setState({searchLinesRequest: ++this.state.searchLinesRequest % 1048576});
+    }
+
     filterCommits(commitFilter) {
-		var path = (commitFilter.path || '').substring(this.props.repoPrefix.length + 2);
+		var path = (commitFilter.path || '').substring(this.state.repoPrefix.length + 2);
         var author = commitFilter.author;
 
         if (path.length === 0 && !author) return this.state.commitData.commits;
@@ -161,15 +171,15 @@ class MainApp extends React.Component {
         var searchResults = [];
         if (rawQuery.length > 2) {
             var myNumber = ++searchQueryNumber;
-            var res = await fetch(this.props.apiPrefix+'/repo/search', {method: "POST", body: JSON.stringify({repo:this.props.repoPrefix, query:rawQuery})});
-            var lines = (await res.text()).split("\n");
+            var text = await this.props.api.post('/repo/search', {repo:this.state.repoPrefix, query:rawQuery});
+            var lines = text.split("\n");
             if (searchQueryNumber !== myNumber) return;
             const codeSearchResults = lines.map(line => {
                 const lineNumberMatch = line.match(/^([^:]+):(\d+):(.*)$/);
                 if (lineNumberMatch) {
                     const [_, filename, lineStr, snippet] = lineNumberMatch;
                     const line = parseInt(lineStr);
-                    return {fsEntry: getPathEntry(this.state.fileTree.tree, this.props.repoPrefix + "/" + filename), line, snippet};
+                    return {fsEntry: getPathEntry(this.state.fileTree.tree, this.state.repoPrefix + "/" + filename), line, snippet};
                 }
             }).filter(l => l);
             searchResults = this.searchTree(query, this.state.fileTree.tree, codeSearchResults);
@@ -183,7 +193,7 @@ class MainApp extends React.Component {
         // 		const [_, lineStr, lineCountStr] = (lineNumberMatch || ['0','0','0']); 
         // 		const line = parseInt(lineStr);
         // 		const lineCount = parseInt(lineCountStr);
-        // 		return {fsEntry: getPathEntry(this.state.fileTree.tree, r.ref.replace(/^\./, this.props.repoPrefix).replace(/:\d+\/\d+$/, '')), line, lineCount};
+        // 		return {fsEntry: getPathEntry(this.state.fileTree.tree, r.ref.replace(/^\./, this.state.repoPrefix).replace(/:\d+\/\d+$/, '')), line, lineCount};
         // 	});
         // 	console.timeEnd('token search');
         // }
@@ -201,7 +211,7 @@ class MainApp extends React.Component {
     }
 
 	findCommitsForPath(path) {
-		path = path.substring(this.props.repoPrefix.length + 2);
+		path = path.substring(this.state.repoPrefix.length + 2);
 		return this.state.commitData.commits.filter(c => c.files.some(f => {
 			if (f.renamed && f.renamed.startsWith(path)) {
 				if (f.renamed === path) path = f.path;
@@ -232,6 +242,25 @@ class MainApp extends React.Component {
     setLinks = (links) => this.setState({links});
     addLinks = (links) => this.setLinks(this.state.links.concat(links));
 
+    async updateUserRepos(userInfo) {
+        if (!userInfo) return this.setState({repos: []});
+        const repos = await this.props.api.post('/repo/list');
+        this.setState({repos});
+        if (this.state.repoPrefix === '' && repos.length > 0) {
+            this.setRepo(repos[0].name, userInfo.name);
+        }
+    }
+
+    shouldComponentUpdate(nextProps, nextState) {
+        if (nextProps.userInfo !== this.props.userInfo) this.updateUserRepos(nextProps.userInfo);
+        return true;
+    }
+
+    createRepo = async (name, url) => {
+        const res = await this.props.api.post('/repo/create', {name, url});
+        this.updateUserRepos(this.props.userInfo);
+    }
+
     render() {
         return (
             <div id="mainApp">
@@ -239,6 +268,12 @@ class MainApp extends React.Component {
                 {fullscreenSupported && <div id="fullscreen" onClick={this.fullscreenOnClick} />}
                 <div id="loader" />
 
+                <RepoSelector
+                    setRepo={this.setRepo}
+                    repos={this.state.repos}
+                    createRepo={this.createRepo}
+                    userInfo={this.props.userInfo}
+                />
                 <Search 
                     goToFSEntryTextAtLine={this.goToFSEntryTextAtLine}
                     goToFSEntry={this.goToFSEntry} 
@@ -250,6 +285,7 @@ class MainApp extends React.Component {
                     commitFilter={this.state.commitFilter} 
                     setCommitFilter={this.setCommitFilter} 
                     activeCommitData={this.state.activeCommitData} 
+                    updateSearchLines={this.updateSearchLines}
                     commitData={this.state.commitData}
                     addLinks={this.addLinks}
                     setLinks={this.setLinks}
@@ -281,7 +317,7 @@ class MainApp extends React.Component {
                     commitData={this.state.commitData} 
                     navigationTarget={this.state.navigationTarget} 
                     searchQuery={this.state.searchQuery} 
-                    repoPrefix={this.props.repoPrefix}
+                    repoPrefix={this.state.repoPrefix}
                     diffsLoaded={this.state.diffsLoaded}
                     commitFilter={this.state.commitFilter} 
                     setCommitFilter={this.setCommitFilter}
@@ -303,8 +339,9 @@ class MainApp extends React.Component {
                     commitData={this.state.commitData}
                     frameRequestTime={this.state.frameRequestTime}
                     apiPrefix={this.props.apiPrefix}
-                    repoPrefix={this.props.repoPrefix}
+                    repoPrefix={this.state.repoPrefix}
                     navigationTarget={this.state.navigationTarget}
+                    searchLinesRequest={this.state.searchLinesRequest}
                     searchResults={this.state.searchResults}
                     searchQuery={this.state.searchQuery} 
                     commitFilter={this.state.commitFilter}
@@ -317,4 +354,4 @@ class MainApp extends React.Component {
     }
 }
 
-export default MainApp;
+export default withRouter(MainApp);

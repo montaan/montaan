@@ -33,7 +33,7 @@ const User = {
         const [error, { email, password, name }] = assertShape({
             email: validateEmail,
             password: validatePassword,
-            name: isString
+            name: isRegExp(/^[a-zA-Z0-9_-]{3,24}$/)
         }, await bodyAsJson(req)); if (error) return error;
 
         var cname = name.toString().toLowerCase().replace(/^(repo|activate|user|login|logout)$/, '$1_');
