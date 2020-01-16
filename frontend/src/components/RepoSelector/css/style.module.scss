@@ -1,0 +1,19 @@
+/* src/components/RepoSelector/css/style.module.css */
+@import '../../../css/partials/variables';
+@import '../../../css/partials/mixins';
+
+.RepoSelector {
+	position: absolute;
+	z-index: 1001;
+	top: 130px;
+	left: 10px;
+	width: 300px;
+	text-align: left;
+
+	form {
+		background: white;
+		padding: 10px;
+		text-align: center;
+		border-radius: 0px 4px 4px 4px;
+	}
+}
