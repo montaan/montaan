@@ -335,3 +335,13 @@ span.commit-diff {
 	height: 0px;
 	overflow: hidden;
 }
+
+#authorSort span {
+	margin-left: 4px;
+	cursor: pointer;
+	color: #444;
+}
+#authorSort span.selected {
+	color: black;
+	font-weight: 600;
+}

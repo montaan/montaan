@@ -17,7 +17,7 @@ monaco.config({
 export default class CommitInfo extends React.Component {
     constructor(props) {
         super(props);
-        this.state = {visible: false};
+        this.state = {visible: false, authorSort: 'commits'};
     }
 
     showFile = (sha, previousSha, path, el) => {
@@ -167,11 +167,17 @@ export default class CommitInfo extends React.Component {
         setTimeout(() => el.parentNode.onscroll(), 10);
     }
 
-    updateActiveCommitSetAuthors(authors, authorCommitCounts, activeCommits) {
+    updateActiveCommitSetAuthors(authors, authorCommitCounts, activeCommits, authorSort=this.state.authorSort) {
         var self = this;
         var el = document.getElementById('authorList');
         while (el.firstChild) el.removeChild(el.firstChild);
         el.dataset.count = authors.length;
+        switch (authorSort) {
+            case 'name': authors.sort((a, b) => a.localeCompare(b)); break;
+            case 'email': authors.sort((a, b) => a.localeCompare(b)); break;
+            case 'commits': authors.sort((a, b) => authorCommitCounts[b] - authorCommitCounts[a]); break;
+            case 'date': authors.sort((a, b) => a.localeCompare(b)); break;
+        }
         authors.forEach((author) => {
             var div = document.createElement('div');
             div.dataset.commitCount = authorCommitCounts[author];
@@ -198,27 +204,9 @@ export default class CommitInfo extends React.Component {
             while (window.diffView.firstChild) window.diffView.removeChild(window.diffView.firstChild);
             this.updateActiveCommitSetAuthors(authors, authorCommitCounts, commits);
             this.updateActiveCommitSetDiffs(commits);
-        // } else if (nextProps.diffsLoaded !== this.props.diffsLoaded) {
-        //     console.log(nextProps.diffsLoaded);
-        //     this.updateActiveCommitSetDiffs(nextProps.activeCommitData.commits);
-        } else if (nextProps.fileContents !== this.props.fileContents) {
-            // window.fileView.innerHTML = '';
-            // if (nextProps.fileContents) {
-            //     prettyPrintWorker.prettyPrint(nextProps.fileContents.content, nextProps.fileContents.path, function(result) {
-            //         window.fileView.innerHTML = '';
-
-            //         var title = document.createElement('h3');
-            //         title.textContent = nextProps.fileContents.path;
-            //         var hash = document.createElement('h4');
-            //         hash.textContent = nextProps.fileContents.hash;
-
-            //         var doc = document.createElement('pre');
-            //         doc.className = 'hljs ' + result.language;
-            //         doc.innerHTML = result.value;
-
-            //         window.fileView.append(hash, title, doc);
-            //     });
-            // }
+        } else if (nextState.authorSort !== this.state.authorSort) {
+            const { authors, commits, authorCommitCounts, files } = nextProps.activeCommitData;
+            this.updateActiveCommitSetAuthors(authors, authorCommitCounts, commits, nextState.authorSort);
         }
         return true;
     }
@@ -271,7 +259,13 @@ export default class CommitInfo extends React.Component {
         }
     }
 
+    sortByName = () => this.setState({authorSort: 'name'});
+    sortByEmail = () => this.setState({authorSort: 'email'});
+    sortByCommits = () => this.setState({authorSort: 'commits'});
+    sortByDate = () => this.setState({authorSort: 'date'});
+
     render() {
+        const {authorSort} = this.state;
         return (
             <div id="commitInfo" className={this.state.visible ? 'visible' : 'hidden'}>
                 <button onClick={this.toggleVisible}>{this.state.visible ? ">" : "<"}</button>
@@ -280,6 +274,13 @@ export default class CommitInfo extends React.Component {
                     <Form.Group id="authorSearch">
                         <Form.Control onChange={this.authorSearchOnChange} />
                     </Form.Group>
+                    <div id="authorSort">
+                        Sort by 
+                        <span onClick={this.sortByName} className={authorSort === 'name' && 'selected'}>Name</span>
+                        <span onClick={this.sortByEmail} className={authorSort === 'email' && 'selected'}>Email</span>
+                        <span onClick={this.sortByCommits} className={authorSort === 'commits' && 'selected'}>Commits</span>
+                        <span onClick={this.sortByDate} className={authorSort === 'date' && 'selected'}>Date</span>
+                    </div>
                     <div id="authorList"/>
                 </div>
                 <div id="activeCommits">
