@@ -53,7 +53,7 @@ class MainApp extends React.Component {
 
     parseFiles(text, repoPrefix) { return utils.parseFileList(text, {}, undefined, repoPrefix+'/'); }
 
-    async setRepo(repoPath, userName=this.props.userInfo.name) {
+    setRepo = async (repoPath, userName=this.props.userInfo.name) => {
         const repoPrefix = userName + '/' + repoPath;
         console.time('load files');
         const files = await this.props.api.get('/repo/fs/'+repoPrefix+'/files.txt');
