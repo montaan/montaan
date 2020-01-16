@@ -129,8 +129,12 @@ class MainApp extends React.Component {
     filterCommits(commitFilter) {
 		var path = (commitFilter.path || '').substring(this.state.repoPrefix.length + 2);
         var author = commitFilter.author;
+        var authorSearch = commitFilter.authorSearch;
+        var search = commitFilter.search;
 
-        if (path.length === 0 && !author) return this.state.commitData.commits;
+        if (authorSearch) authorSearch = authorSearch.toLowerCase();
+
+        if (path.length === 0 && !author && !search && !authorSearch) return this.state.commitData.commits;
 
         const commits = [];
         const allCommits = this.state.commitData.commits;
@@ -140,17 +144,19 @@ class MainApp extends React.Component {
             const files = c.files;
             const jl = files.length;
             var pathHit = !path;
-            for (var j = 0; !pathHit && j < jl; ++j) {
+            var searchHit = !search || c.message.includes(search);
+            for (var j = 0; j < jl; ++j) {
                 const f = files[j];
                 if (f.renamed && f.renamed.startsWith(path)) {
                     if (f.renamed === path) path = f.path;
                     pathHit = true;
-                    break;
                 }
-                pathHit = (f.path.startsWith(path));
+                pathHit = pathHit || (f.path.startsWith(path));
+                searchHit = searchHit || f.path.includes(search) || (f.renamed && f.renamed.includes(search));
             }
             const authorHit = !author || authorCmp(author, c.author) === 0;
-            if (pathHit && authorHit) commits.push(c);
+            const authorSearchHit = !authorSearch || c.author.toLowerCase().includes(authorSearch);
+            if (pathHit && authorHit && searchHit && authorSearchHit) commits.push(c);
         }
         return commits;
     }

@@ -240,23 +240,19 @@ export default class CommitInfo extends React.Component {
     }
 
     authorSearchOnChange = (ev) => {
-        // TODO should this crop commits as well?
-        const searchToken = ev.target.value.toLowerCase();
-        const authors = [].slice.call(window.authorList.childNodes);
-        for (var i = 0; i < authors.length; i++) {
-            const match = authors[i].textContent.toLowerCase().includes(searchToken);
-            authors[i].classList.toggle('collapsed', !match);
-        }
+        const authorSearch = ev.target.value;
+        clearTimeout(this.searchTimeout);
+        this.searchTimeout = setTimeout(
+            () => this.props.setCommitFilter({...this.state.commitFilter, authorSearch}),
+        200);
     }
 
     commitSearchOnChange = (ev) => {
-        // TODO this needs to be smarter (modify activeCommits...)
-        const searchToken = ev.target.value.toLowerCase();
-        const authors = [].slice.call(window.commitList.querySelector('.commits').childNodes);
-        for (var i = 0; i < authors.length; i++) {
-            const match = authors[i].textContent.toLowerCase().includes(searchToken);
-            authors[i].classList.toggle('collapsed', !match);
-        }
+        const search = ev.target.value;
+        clearTimeout(this.searchTimeout);
+        this.searchTimeout = setTimeout(
+            () => this.props.setCommitFilter({...this.state.commitFilter, search}),
+        200);
     }
 
     sortByName = () => this.setState({authorSort: 'name'});
