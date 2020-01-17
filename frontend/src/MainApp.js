@@ -339,7 +339,6 @@ class MainApp extends React.Component {
                     navigationTarget={this.state.navigationTarget} 
                     commitFilter={this.state.commitFilter} 
                     setCommitFilter={this.setCommitFilter} 
-                    showFileCommitsClick={this.showFileCommitsClick}
                     addLinks={this.addLinks}
                     setLinks={this.setLinks}
                     links={this.state.links}
@@ -360,6 +359,7 @@ class MainApp extends React.Component {
                     activeCommitData={this.state.activeCommitData} 
                     commitData={this.state.commitData} 
                     navigationTarget={this.state.navigationTarget} 
+                    showFileCommitsClick={this.showFileCommitsClick}
                     searchQuery={this.state.searchQuery} 
                     repoPrefix={this.state.repoPrefix}
                     diffsLoaded={this.state.diffsLoaded}

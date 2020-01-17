@@ -1,6 +1,7 @@
 import React from 'react';
 import './style.css';
 import { span, formatDiff, authorCmp, createCalendar } from '../../lib/parse_diff';
+import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form"
 // import prettyPrintWorker from '../../lib/pretty_print';
 import Editor, { DiffEditor, monaco } from '@monaco-editor/react';
@@ -47,7 +48,7 @@ export default class CommitInfo extends React.Component {
         const calendar = createCalendar(activeCommits, this.onYearClick, this.onMonthClick, this.onDayClick);
         el.appendChild(calendar);
 
-        const commitHeight = 60;
+        const commitHeight = 30;
 
         const commitsEl = document.createElement('div');
         commitsEl.className = 'commits';
@@ -114,12 +115,11 @@ export default class CommitInfo extends React.Component {
             div.style.position = 'absolute';
             div.style.top = top + 'px';
             var hashSpan = span('commit-hash', c.sha);
-            var dateSpan = span('commit-date', c.date.toString());
+            var dateSpan = span('commit-date', c.date.toUTCString());
             var authorSpan = span('commit-author', c.author);
             var messageSpan = span('commit-message', c.message);
-            var toggle = span('commit-toggle', 'Full info');
             var toggleDiffs = span('commit-toggle-diffs', 'All changes');
-            toggle.onmousedown = async (ev) => {
+            div.onmousedown = async (ev) => {
                 ev.preventDefault();
                 this.props.closeFile();
                 if (window.diffView.firstChild && window.diffView.firstChild.textContent === hashSpan.textContent) {
@@ -145,7 +145,7 @@ export default class CommitInfo extends React.Component {
                 ev.preventDefault(); 
                 this.parentNode.classList.toggle('expanded-diffs');
             };
-            div.append(toggle, hashSpan, dateSpan, authorSpan, messageSpan);
+            div.append(hashSpan, dateSpan, authorSpan, messageSpan);
             return div;
         };
 
@@ -279,6 +279,7 @@ export default class CommitInfo extends React.Component {
         const {authorSort} = this.state;
         return (
             <>
+                <Button id="showFileCommits" onClick={this.props.showFileCommitsClick}>Show commits</Button>
                 <div id="commitInfo" className={this.state.visible ? 'visible' : 'hidden'}>
                     <div className="close" onClick={this.hideCommitsPane}><FontAwesomeIcon icon={faTimes} /></div>
                     <div id="authors">

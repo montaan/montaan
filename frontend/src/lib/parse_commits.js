@@ -14,16 +14,28 @@ class Commit {
     }
 }
 
-export function parseCommits(commits, fileTree, repoPrefix) {
+export function parseCommits(commitData, fileTree, repoPrefix) {
 
     const touchedFilesIndex = {};
     const touchedFiles = [];
     const commitIndex = {};
     const authors = {};
+    const commits = commitData.commits;
+    const authorList = commitData.authors;
+    const fileList = commitData.files;
 
     for (var i = 0; i < commits.length; i++) {
-        const commit = commits[i];
+        const [sha, author, message, date, files] = commits[i];
+        const commit = {sha, author, message, date, files};
+        commits[i] = commit;
         commit.date = new Date(commit.date);
+        commit.author = authorList[commit.author];
+        for (var j = 0; j < commit.files.length; j++) {
+            var [action, path, renamed] = commit.files[j];
+            path = fileList[path];
+            renamed = renamed && fileList[renamed];
+            commit.files[j] = {action, path, renamed};
+        }
         commitIndex[commit.sha] = commit;
         if (!authors[commit.author]) authors[commit.author] = [];
         authors[commit.author].push(commit);

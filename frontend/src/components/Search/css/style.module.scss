@@ -8,9 +8,8 @@
 	z-index: 20001;
 	border:0;
 	height: 48px;
-	line-height: 24px;
 	box-sizing: border-box;
-	padding: 0;
+	padding: 6px;
 	padding-left: 12px;
 	padding-right: 12px;
 	border-radius: 2px;
@@ -19,8 +18,8 @@
 
 .searchResults {
 	position: absolute;
-	z-index: 9;
-	top: 60px;
+	z-index: 10;
+	top: 94px;
 	list-style: none;
 	margin: 0;
 	padding: 0;
@@ -31,6 +30,7 @@
 	width: 316px;
 	transition: 0.3s;
 	right: -316px;
+	border-top-left-radius: 4px;
 
 	&.visible {
 		right: 0px;

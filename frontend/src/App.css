@@ -1,6 +1,7 @@
 .App {
     padding: 20px;
     text-align: center;
+    font-family: Avenir Next, Segoe UI, Helvetica, sans-serif;
 }
 
 .App .login,
@@ -24,7 +25,11 @@
     cursor: pointer;
 }
 .App .logout {
-    margin-left: 92px;
+    left: auto;
+    right: 120px;
+    margin-left: 0;
+    z-index: 10;
+    /* margin-left: 92px; */
 }
 .App .scan {
     margin-left: -30px;

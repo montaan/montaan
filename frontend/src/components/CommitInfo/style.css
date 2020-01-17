@@ -1,3 +1,9 @@
+#showFileCommits {
+	position: absolute;
+	right: 10px;
+	top: 52px;
+	z-index: 9;
+}
 
 #commitInfo {
 	position: absolute;
@@ -105,6 +111,8 @@
 
 	padding: 10px;
 
+	border-top-left-radius: 4px;
+
 	overflow: auto;
 	font-size: 10px;
 
@@ -150,11 +158,11 @@
 	display: inline-block;
 	vertical-align: top;
 	width: 30px;
-	font-size: 14px;
+	font-size: 12px;
 	font-weight: bold;
 	margin-right: 8px;
 	position: relative;
-	top: -3px;
+	top: -2px;
 }
 
 .calendar-year:after {
@@ -226,6 +234,10 @@
 	white-space: pre;
 }
 
+#diffView span.commit-message {
+	white-space: pre-wrap;
+}
+
 .commit-toggle,
 .commit-toggle-diffs,
 .commit-show-file
@@ -242,7 +254,9 @@
 
 #commitList .commits div:not(.expanded)
 {
-	height: 60px;
+	cursor: pointer;
+	width: 100%;
+	height: 30px;
 	overflow: hidden;
 	white-space: nowrap;
 }
@@ -257,10 +271,11 @@ div:not(.expanded) > .commit-toggle-diffs
 
 div:not(.expanded) > .commit-message
 {
-	height: 1.5em;
 	overflow: hidden;
 	font-weight: bold;
 	font-size: 12px;
+	margin-top: -4px;
+	text-overflow: ellipsis;
 }
 
 #commitList .commit-date,
@@ -270,6 +285,8 @@ div:not(.expanded) > .commit-message
 {
 	display: inline-block;
 	white-space: nowrap;
+	text-overflow: ellipsis;
+	margin: 0;
 }
 
 .commit-toggle:before,
