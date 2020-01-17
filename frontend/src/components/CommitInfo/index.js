@@ -278,30 +278,32 @@ export default class CommitInfo extends React.Component {
     render() {
         const {authorSort} = this.state;
         return (
-            <div id="commitInfo" className={this.state.visible ? 'visible' : 'hidden'}>
-                <div className="close" onClick={this.hideCommitsPane}><FontAwesomeIcon icon={faTimes} /></div>
-                <div id="authors">
-                    <h3>Authors</h3>
-                    <Form.Group id="authorSearch">
-                        <Form.Control onChange={this.authorSearchOnChange} />
-                    </Form.Group>
-                    <div id="authorSort">
-                        Sort by 
-                        <span onClick={this.sortByName} className={authorSort === 'name' ? 'selected' : undefined}>Name</span>
-                        <span onClick={this.sortByEmail} className={authorSort === 'email' ? 'selected' : undefined}>Email</span>
-                        <span onClick={this.sortByCommits} className={authorSort === 'commits' ? 'selected' : undefined}>Commits</span>
-                        <span onClick={this.sortByDate} className={authorSort === 'date' ? 'selected' : undefined}>Date</span>
+            <>
+                <div id="commitInfo" className={this.state.visible ? 'visible' : 'hidden'}>
+                    <div className="close" onClick={this.hideCommitsPane}><FontAwesomeIcon icon={faTimes} /></div>
+                    <div id="authors">
+                        <h3>Authors</h3>
+                        <Form.Group id="authorSearch">
+                            <Form.Control onChange={this.authorSearchOnChange} />
+                        </Form.Group>
+                        <div id="authorSort">
+                            Sort by 
+                            <span onClick={this.sortByName} className={authorSort === 'name' ? 'selected' : undefined}>Name</span>
+                            <span onClick={this.sortByEmail} className={authorSort === 'email' ? 'selected' : undefined}>Email</span>
+                            <span onClick={this.sortByCommits} className={authorSort === 'commits' ? 'selected' : undefined}>Commits</span>
+                            <span onClick={this.sortByDate} className={authorSort === 'date' ? 'selected' : undefined}>Date</span>
+                        </div>
+                        <div id="authorList"/>
                     </div>
-                    <div id="authorList"/>
+                    <div id="activeCommits">
+                        <h3>Commits</h3>
+                        <Form.Group id="commitSearch">
+                            <Form.Control onChange={this.commitSearchOnChange} />
+                        </Form.Group>
+                        <div id="commitList"/>
+                    </div>
+                    <div id="diffView"/>
                 </div>
-                <div id="activeCommits">
-                    <h3>Commits</h3>
-                    <Form.Group id="commitSearch">
-                        <Form.Control onChange={this.commitSearchOnChange} />
-                    </Form.Group>
-                    <div id="commitList"/>
-                </div>
-                <div id="diffView"/>
                 {this.props.fileContents && 
                     <div id="fileView">
                         <h4>
@@ -333,7 +335,7 @@ export default class CommitInfo extends React.Component {
                         }
                     </div>
                 }
-            </div>
+            </>
         );
     }
 }

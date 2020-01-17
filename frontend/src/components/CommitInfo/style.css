@@ -6,7 +6,7 @@
 	top: 126px;
 	bottom: 0px;
 
-	z-index: 8;
+	z-index: 7;
 
 	height: auto;
 
@@ -89,7 +89,7 @@
 	position: absolute;
 	background: #f8f8f8;
 
-	z-index: 1001;
+	z-index: 8;
 
 	left: 0px;
 	right: 770px;
@@ -109,10 +109,8 @@
 	position: absolute;
 	background: #f8f8f8;
 
-	z-index: 1000;
-
 	right: 770px;
-	top: 126px;
+	top: 0px;
 	bottom: 0px;
 
 	height: auto;
