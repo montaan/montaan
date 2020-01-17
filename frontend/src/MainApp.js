@@ -131,10 +131,13 @@ class MainApp extends React.Component {
         var author = commitFilter.author;
         var authorSearch = commitFilter.authorSearch;
         var search = commitFilter.search;
+        var date = commitFilter.date;
+        var year, month, day;
 
+        if (date) [year, month, day] = date.split("-").map(v => parseInt(v));
         if (authorSearch) authorSearch = authorSearch.toLowerCase();
 
-        if (path.length === 0 && !author && !search && !authorSearch) return this.state.commitData.commits;
+        if (path.length === 0 && !author && !search && !authorSearch && !date) return this.state.commitData.commits;
 
         const commits = [];
         const allCommits = this.state.commitData.commits;
@@ -156,7 +159,17 @@ class MainApp extends React.Component {
             }
             const authorHit = !author || authorCmp(author, c.author) === 0;
             const authorSearchHit = !authorSearch || c.author.toLowerCase().includes(authorSearch);
-            if (pathHit && authorHit && searchHit && authorSearchHit) commits.push(c);
+            var dateHit = !date;
+            if (year !== undefined) {
+                dateHit = year === c.date.getUTCFullYear();
+                if (dateHit && month !== undefined) {
+                    dateHit = dateHit && month === (c.date.getUTCMonth()+1);
+                    if (dateHit && day !== undefined) {
+                        dateHit = dateHit && day === c.date.getUTCDate();
+                    }
+                }
+            }
+            if (pathHit && authorHit && searchHit && authorSearchHit && dateHit) commits.push(c);
         }
         return commits;
     }

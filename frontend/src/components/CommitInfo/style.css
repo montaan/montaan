@@ -173,13 +173,38 @@
 	top: -3px;
 }
 
+.calendar-year:after {
+	content: attr(data-commit-count) " commits, " attr(data-author-count) " authors";
+	display: inline-block;
+	vertical-align: top;
+	font-size: 10px;
+	margin-left: 8px;
+	position: relative;
+}
+
 #commitList .calendar-month {
 	vertical-align: top;
 	position: relative;
 	display: inline-block;
 	width: 20px;
-	min-height: 20px;
+	height: 38px;
 	margin-right: 2px;
+}
+
+#commitList .calendar-month:after {
+	content: attr(data-commit-count);
+	position: absolute;
+	font-size: 8px;
+	color: darkgray;
+	bottom: 8px;
+}
+
+#commitList .calendar-month:before {
+	content: attr(data-author-count);
+	position: absolute;
+	font-size: 8px;
+	color: darkgray;
+	bottom: 0px;
 }
 
 .calendar-day {

@@ -130,13 +130,22 @@ export function formatDiff(sha, diff, trackedPaths, previousSha, showFile) {
     return container;
 }
 
-export function createCalendar(commits) {
+export function createCalendar(commits, yearOnClick, monthOnClick, dayOnClick) {
     var createYear = function(year) {
         const el = document.createElement('div');
         el.className = 'calendar-year';
+        el.authors = {};
         el.dataset.year = year;
+        el.dataset.commitCount = 0;
+        el.dataset.authorCount = 0;
+        el.onclick = yearOnClick;
         for (var i = 0; i < 12; i++) {
             var monthEl = span('calendar-month');
+            monthEl.authors = {};
+            monthEl.dataset.month = i+1;
+            monthEl.dataset.commitCount = 0;
+            monthEl.dataset.authorCount = 0;
+            monthEl.onclick = monthOnClick;
             var week = 0;
             for (var j = 0; j < 31; j++) {
                 var dateString = `${year}-${i<9?'0':''}${i+1}-${j<9?'0':''}${j+1}`;
@@ -144,10 +153,12 @@ export function createCalendar(commits) {
                 if (date.getUTCMonth() === i) {
                     var day = date.getUTCDay();
                     var dayEl = span('calendar-day');
+                    dayEl.onclick = dayOnClick;
+                    dayEl.dataset.date = j+1;
                     dayEl.dataset.day = day;
                     dayEl.dataset.week = week;
                     dayEl.dataset.commitCount = 0;
-                    dayEl.dataset.date = dateString;
+                    dayEl.dataset.fullDate = dateString;
                     monthEl.appendChild(dayEl);
                     if (day === 0) week++;
                 }
@@ -160,13 +171,27 @@ export function createCalendar(commits) {
     el.className = 'calendar';
     var years = {};
     for (var i = 0; i < commits.length; i++) {
-        const d = commits[i].date;
-        if (!d) { console.log(commits[i]); continue; }
+        const c = commits[i];
+        const d = c.date;
+        if (!d) { console.log(c); continue; }
         const year = d.getUTCFullYear();
         const month = d.getUTCMonth();
         const date = d.getUTCDate();
         if (!years[year]) years[year] = createYear(year);
-        years[year].childNodes[month].childNodes[date-1].dataset.commitCount++;
+        const yearEl = years[year];
+        const monthEl = yearEl.childNodes[month];
+        const dateEl = monthEl.childNodes[date-1];
+        dateEl.dataset.commitCount++;
+        monthEl.dataset.commitCount++;
+        yearEl.dataset.commitCount++;
+        if (!yearEl.authors[c.author]) {
+            yearEl.authors[c.author] = true;
+            yearEl.dataset.authorCount++;
+        }
+        if (!monthEl.authors[c.author]) {
+            monthEl.authors[c.author] = true;
+            monthEl.dataset.authorCount++;
+        }
     }
     Object.keys(years).sort((a, b) => b-a).forEach(year => el.appendChild(years[year]));
     return el;

@@ -25,12 +25,26 @@ export default class CommitInfo extends React.Component {
         else this.props.loadFile(sha, path, el);
     }
 
+    pad2(v) {
+        if (v.length === 1) return '0'+v;
+        return v;
+    }
+
+    setDateFilter(date) {
+        if (this.props.commitFilter.date === date) this.props.setCommitFilter({...this.props.commitFilter, date: undefined});
+        else this.props.setCommitFilter({...this.props.commitFilter, date});
+    }
+
+    onYearClick = (ev) => (ev.target.classList.contains('calendar-year')) && this.setDateFilter(ev.target.dataset.year);
+    onMonthClick = (ev) => (ev.target.classList.contains('calendar-month')) && this.setDateFilter(ev.target.parentNode.dataset.year + '-' + this.pad2(ev.target.dataset.month));
+    onDayClick = (ev) => this.setDateFilter(ev.target.dataset.fullDate);
+
     updateActiveCommitSetDiffs(activeCommits) {
         const el = document.getElementById('commitList');
         while (el.firstChild) el.removeChild(el.firstChild);
         el.dataset.count = activeCommits.length;
 
-        const calendar = createCalendar(activeCommits);
+        const calendar = createCalendar(activeCommits, this.onYearClick, this.onMonthClick, this.onDayClick);
         el.appendChild(calendar);
 
         const commitHeight = 60;
@@ -272,10 +286,10 @@ export default class CommitInfo extends React.Component {
                     </Form.Group>
                     <div id="authorSort">
                         Sort by 
-                        <span onClick={this.sortByName} className={authorSort === 'name' && 'selected'}>Name</span>
-                        <span onClick={this.sortByEmail} className={authorSort === 'email' && 'selected'}>Email</span>
-                        <span onClick={this.sortByCommits} className={authorSort === 'commits' && 'selected'}>Commits</span>
-                        <span onClick={this.sortByDate} className={authorSort === 'date' && 'selected'}>Date</span>
+                        <span onClick={this.sortByName} className={authorSort === 'name' ? 'selected' : undefined}>Name</span>
+                        <span onClick={this.sortByEmail} className={authorSort === 'email' ? 'selected' : undefined}>Email</span>
+                        <span onClick={this.sortByCommits} className={authorSort === 'commits' ? 'selected' : undefined}>Commits</span>
+                        <span onClick={this.sortByDate} className={authorSort === 'date' ? 'selected' : undefined}>Date</span>
                     </div>
                     <div id="authorList"/>
                 </div>
