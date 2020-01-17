@@ -3,7 +3,7 @@
 	position: absolute;
 
 	right: 0px;
-	top: 126px;
+	top: 96px;
 	bottom: 0px;
 
 	z-index: 7;
@@ -15,19 +15,6 @@
 
 #commitInfo.hidden > div {
 	display: none;
-}
-
-#commitInfo > button {
-	position: absolute;
-	right: -10px;
-	top: 96px;
-	z-index: 1001;
-
-	height: 22px;
-	line-height: 22px;
-	padding: 0px 10px;
-	font-size: 8px;
-	vertical-align: top;
 }
 
 #authors {
@@ -93,7 +80,7 @@
 
 	left: 0px;
 	right: 770px;
-	top: 126px;
+	top: 96px;
 	bottom: 0px;
 
 	height: auto;

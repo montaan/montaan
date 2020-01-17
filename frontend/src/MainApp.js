@@ -18,6 +18,13 @@ const fullscreenSupported = (document.exitFullscreen||document.webkitExitFullscr
 var searchResultsTimeout;
 var searchQueryNumber = 0;
 
+const HitType = {
+    DOCUMENTATION: 0,
+    DEFINITION: 1,
+    USE: 2,
+    TEST: 3
+}
+
 class MainApp extends React.Component {
     
     emptyState = {
@@ -174,9 +181,10 @@ class MainApp extends React.Component {
         return commits;
     }
 
-    searchTree(query, fileTree, results) {
+    searchTree(query, fileTree, results, rawQueryRE) {
         if (query.every(function(re) { return re.test(fileTree.title); })) {
-            results.push({fsEntry: fileTree, line: 0});
+            const filename = getFullPath(fileTree);
+            results.push({fsEntry: fileTree, line: 0, filename, hitType: this.getHitType(rawQueryRE, filename, undefined)});
             // this.console.log(fileTree);
         }
         for (var i in fileTree.entries) {
@@ -185,10 +193,25 @@ class MainApp extends React.Component {
         return results;
     }
 
+    searchSort(a, b) {
+        var h = a.hitType - b.hitType;
+        if (h === 0) h = a.filename.localeCompare(b.filename);
+        if (h === 0) h = a.line - b.line;
+        return h;
+    }
+
+    getHitType(rawQueryRE, filename, snippet) {
+        if (/(^|\/)doc(s|umentation)?\//i.test(filename)) return HitType.DOCUMENTATION;
+        if (/(^|\/)tests?\//i.test(filename)) return HitType.TEST;
+        if (snippet && rawQueryRE.test(snippet)) return HitType.DEFINITION;
+        return HitType.USE;
+    }
+
     async search(query, rawQuery) {
         clearTimeout(searchResultsTimeout);
         var searchResults = [];
         if (rawQuery.length > 2) {
+            const rawQueryRE = new RegExp(rawQuery.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&') + "[a-zA-Z0-9_]*\\s*(\\([^\)]*\\)\\s*\\{|=([^=]|$))");
             var myNumber = ++searchQueryNumber;
             var text = await this.props.api.post('/repo/search', {repo:this.state.repoPrefix, query:rawQuery});
             var lines = text.split("\n");
@@ -198,11 +221,13 @@ class MainApp extends React.Component {
                 if (lineNumberMatch) {
                     const [_, filename, lineStr, snippet] = lineNumberMatch;
                     const line = parseInt(lineStr);
-                    return {fsEntry: getPathEntry(this.state.fileTree.tree, this.state.repoPrefix + "/" + filename), line, snippet};
+                    const hitType = this.getHitType(rawQueryRE, filename, snippet);
+                    return {fsEntry: getPathEntry(this.state.fileTree.tree, this.state.repoPrefix + "/" + filename), filename, line, snippet, hitType};
                 }
             }).filter(l => l);
-            searchResults = this.searchTree(query, this.state.fileTree.tree, codeSearchResults);
+            searchResults = this.searchTree(query, this.state.fileTree.tree, codeSearchResults, rawQueryRE);
         }
+        searchResults.sort(this.searchSort);
         this.setState({searchResults});
         // if (this.state.searchIndex) {
         // 	console.time('token search');
