@@ -1,0 +1,139 @@
+ .searchInput {
+	position: absolute;
+	left: 50%;
+	top: 20px;
+	width: 500px;
+	margin-left: -290px;
+	font-size: 24px;
+	z-index: 20001;
+	border:0;
+	height: 48px;
+	line-height: 24px;
+	box-sizing: border-box;
+	padding: 0;
+	padding-left: 12px;
+	padding-right: 12px;
+	border-radius: 2px;
+	box-shadow: 0px 2px 3px rgba(0,0,0,0.3);
+}
+
+.searchResults {
+	position: absolute;
+	z-index: 9;
+	top: 60px;
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	bottom: 0px;
+	height: auto;
+	color: black;
+	background: white;
+	width: 316px;
+	transition: 0.3s;
+	right: -316px;
+
+	&.visible {
+		right: 0px;
+	}
+
+	:global(.close) {
+		left: 12px;
+		right: auto;
+	}
+
+	> ul {
+		position: absolute;
+
+		top: 84px;
+		bottom: 0px;
+		left: 0px;
+		right: 0px;
+
+		width: auto;
+		height: auto;
+
+		overflow-y: auto;
+		border-top: 1px solid silver;
+	}
+
+	.searchInfo {
+		margin-top: 8px;
+		margin-right: 12px;
+		margin-bottom: 12px;
+		text-align: right;
+
+		h3 {
+			font-size: 18px;
+		}
+	}
+
+	.searchTitle {
+		font-family: sans-serif;
+		font-size: 18px;
+		text-align: left;
+	}
+	.searchSnippet {
+		font-size: 12px;
+		color: navy;
+		font-family: Source Sans, monospace;
+	}
+	.searchFullPath {
+		font-size: 12px;
+		font-family: sans-serif;
+		color: #aaa;
+		text-align: left;
+	}
+
+	li {
+		margin: 0;
+		padding: 0;
+		padding: 8px;
+		border-bottom: 1px solid #ccc;
+		width: 300px;
+		word-wrap: break-word;
+		transition: 0.3s;
+		overflow: hidden;
+		height: auto;
+	}
+
+	> ul > li {
+		&:not(.in-view) {
+			height: 0px;
+			padding: 0px;
+			white-space: nowrap;
+
+			> .searchTitle {
+				font-size: 10px;
+				display:inline;
+				vertical-align: top;
+			}
+			> .searchFullPath {
+				font-size: 10px;
+				display:inline;
+				vertical-align: top;
+				margin-left:4px;
+			}
+		}
+
+		> ul {
+			list-style: none;
+			margin: 0;
+			padding: 0;
+			
+			.searchTitle {
+				font-size: 12px;
+				font-weight: normal;
+			}
+			.searchFullPath {
+				display: none;
+			}
+			li {
+				padding-left: 16px;
+			}
+			li:last-child {
+				border-bottom: 0;
+			}
+		}
+	}
+
+}

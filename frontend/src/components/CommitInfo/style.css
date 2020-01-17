@@ -1,5 +1,15 @@
 
 #commitInfo {
+	position: absolute;
+
+	right: 0px;
+	top: 126px;
+	bottom: 0px;
+
+	z-index: 8;
+
+	height: auto;
+
 	color: black;
 }
 
@@ -24,10 +34,8 @@
 	position: absolute;
 	background: #f8f8f8;
 
-	z-index: 1000;
-
 	right: 0px;
-	top: 126px;
+	top: 0px;
 	bottom: 0px;
 
 	height: auto;
@@ -64,10 +72,8 @@
 	position: absolute;
 	background: #fff;
 
-	z-index: 1000;
-
 	right: 270px;
-	top: 126px;
+	top: 0px;
 	bottom: 0px;
 
 	height: auto;
@@ -141,13 +147,6 @@
 
 #fileView div {
 	white-space: pre;
-}
-
-#fileView .close {
-	position: absolute;
-	right: 12px;
-	top: 12px;
-	cursor: pointer;
 }
 
 #commitList .calendar {

@@ -73,7 +73,6 @@ class Tabletree {
 		if (this._fileTree) this.setFileTree(this._fileTree); // Show possibly pre-loaded file tree.
 		if (this.commitData) this.setCommitData(this.commitData); // Set pre-loaded commit data.
 		this.tick(); // Main render loop
-		if (window.searchInput) window.searchInput.focus(); // Focus the search at page load
 	}
 
 	setCommitLog = txt => this._commitLog = txt;
@@ -1142,7 +1141,7 @@ class Tabletree {
 		var inGesture = false;
 
 		renderer.domElement.addEventListener('touchstart', function(ev) {
-			if (window.searchInput) window.searchInput.blur();
+			document.activeElement.blur();
 			ev.preventDefault();
 			if (ev.touches.length === 1) {
 				renderer.domElement.onmousedown(ev.touches[0]);
@@ -1237,7 +1236,7 @@ class Tabletree {
 		};
 
 		renderer.domElement.onmousedown = function(ev) {
-			if (window.searchInput) window.searchInput.blur();
+			document.activeElement.blur();
 			if (ev.preventDefault) ev.preventDefault();
 			down = true;
 			clickDisabled = false;

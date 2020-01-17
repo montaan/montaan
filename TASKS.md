@@ -89,11 +89,11 @@
         [] Show list of files after message (click file to open)
         [] Collapse/expand individual diffs
         [] Navigate 
-    [] Crop commits by date
+    [x] Crop commits by date
     [] Single-file version history + moving between versions
     [] Show commit filter
     [] Don't hide other authors when clicking an author
-    [] Sort authors by commit count
+    [x] Sort authors by commit count
     [] Editable commit filter
         [] Select multiple authors with
             + - = Author Name <email>
@@ -115,6 +115,7 @@
         [] Display list of files touched by author
     [/] Click handler for commit timeline (raycast to scene, find closest commit to ray if ray is in the active area for commits)
     [x] Link from commits list to files and authors in current active set
+        [] Navigate to file in zoom view
 
 # Visualization
     [] All files in repo by type (all the images, all the c, all the py, all the rs, all the js)

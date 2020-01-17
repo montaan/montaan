@@ -273,12 +273,13 @@ export default class CommitInfo extends React.Component {
     sortByEmail = () => this.setState({authorSort: 'email'});
     sortByCommits = () => this.setState({authorSort: 'commits'});
     sortByDate = () => this.setState({authorSort: 'date'});
+    hideCommitsPane = () => this.setState({visible: false});
 
     render() {
         const {authorSort} = this.state;
         return (
             <div id="commitInfo" className={this.state.visible ? 'visible' : 'hidden'}>
-                <button onClick={this.toggleVisible}>{this.state.visible ? ">" : "<"}</button>
+                <div className="close" onClick={this.hideCommitsPane}><FontAwesomeIcon icon={faTimes} /></div>
                 <div id="authors">
                     <h3>Authors</h3>
                     <Form.Group id="authorSearch">

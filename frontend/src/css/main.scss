@@ -65,3 +65,11 @@ a {
 .svg-inline--fa {
   vertical-align: -0.06125em;
 }
+
+.close {
+	position: absolute;
+	right: 12px;
+	top: 12px;
+  z-index: 10;
+	cursor: pointer;
+}
