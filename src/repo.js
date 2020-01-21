@@ -49,6 +49,25 @@ const Repos = {
         } catch(err) { console.error("repos/create", err); }
     },
 
+    pull: async function(req, res) {
+        var [error, { user_id }] = await guardPostWithSession(req); if (error) return error;
+        var [error, { url, name }] = assertShape(repoDataShape, await bodyAsJson(req)); if (error) return error;
+        const {rows} = await DB.query(`SELECT r.id, r.url, u.name as userName FROM repos r, users u WHERE u.id = $1 AND r.user_id = $1 AND r.name = $2`, [user_id, name]);
+        if (rows.length === 0) return "404: Repo not found";
+        const repoData = rows[0];
+        await DB.queryTo(res, 'UPDATE repos SET processing = true WHERE id = $1', [repoData.id]);
+        const repoCreated = async function(error, stdout, stderr) {
+            try {
+                const log = "error:\n" + error + "\nSTDOUT:\n" + stdout + "\nSTDERR:\n" + stderr;
+                const dbRes = await DB.query('UPDATE repos SET processing = false, processing_log = $3 WHERE name = $1 AND user_id = $2', [name, user_id, log]);
+            } catch(err) { console.log("repos/pull", "repoCreated", err); }
+        };
+        try {
+            if (url) Exec(`${process.cwd()}/bin/process_tree '${url}' '${repoData.userName}/${name}' 2>&1`, repoCreated);
+            else Exec(`${process.cwd()}/bin/process_tree '${repoData.url}' '${repoData.userName}/${name}' 2>&1`, repoCreated);
+        } catch(err) { console.error("repos/pull", err); }
+    },
+
     list: async function(req, res) {
         var [error, { user_id }] = await guardPostWithSession(req); if (error) return error;
         await DB.queryTo(res, `SELECT r.name AS name, u.name AS owner, r.processing, r.created_time, r.updated_time, r.url, r.data FROM repos r, users u WHERE r.user_id = $1 AND u.id = r.user_id`, [user_id]);
