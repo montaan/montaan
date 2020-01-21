@@ -43,6 +43,7 @@ export default class CommitInfo extends React.Component {
     updateActiveCommitSetDiffs(activeCommits) {
         const el = document.getElementById('commitList');
         while (el.firstChild) el.removeChild(el.firstChild);
+        if (!activeCommits) return;
         el.dataset.count = activeCommits.length;
 
         const calendar = createCalendar(activeCommits, this.onYearClick, this.onMonthClick, this.onDayClick);
@@ -185,6 +186,7 @@ export default class CommitInfo extends React.Component {
         var self = this;
         var el = document.getElementById('authorList');
         while (el.firstChild) el.removeChild(el.firstChild);
+        if (!authors) return;
         el.dataset.count = authors.length;
         switch (authorSort) {
             case 'name': authors.sort((a, b) => a.localeCompare(b)); break;
@@ -213,8 +215,8 @@ export default class CommitInfo extends React.Component {
     shouldComponentUpdate(nextProps, nextState) {
         if (nextProps.activeCommitData !== this.props.activeCommitData) {
             // window.fileView.innerHTML = '';
-            if (!nextState.visible) this.setState({visible: true});
             const { authors, commits, authorCommitCounts, files } = nextProps.activeCommitData;
+            if (!nextState.visible && commits && commits !== nextProps.commitData.commits) this.setState({visible: true});
             while (window.diffView.firstChild) window.diffView.removeChild(window.diffView.firstChild);
             this.updateActiveCommitSetAuthors(authors, authorCommitCounts, commits);
             this.updateActiveCommitSetDiffs(commits);
@@ -275,11 +277,16 @@ export default class CommitInfo extends React.Component {
     sortByDate = () => this.setState({authorSort: 'date'});
     hideCommitsPane = () => this.setState({visible: false});
 
+    onShowFileCommits = (ev) => {
+        this.setState({visible: true});
+        this.props.showFileCommitsClick(ev);
+    }
+
     render() {
         const {authorSort} = this.state;
         return (
             <>
-                <Button id="showFileCommits" onClick={this.props.showFileCommitsClick}>Show commits</Button>
+                <Button id="showFileCommits" onClick={this.onShowFileCommits}>Show commits</Button>
                 <div id="commitInfo" className={this.state.visible ? 'visible' : 'hidden'}>
                     <div className="close" onClick={this.hideCommitsPane}><FontAwesomeIcon icon={faTimes} /></div>
                     <div id="authors">

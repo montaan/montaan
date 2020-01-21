@@ -55,6 +55,34 @@ module.exports = [
             `DROP INDEX repos_name_idx`,
             `ALTER TABLE repos DROP COLUMN name, url`
         ]
+    },
+
+    {
+        name: 'Repo (user_id, name) should be unique',
+        up: [ `ALTER TABLE repos ADD CONSTRAINT repos_unique_user_id_name UNIQUE (user_id, name)` ], 
+        down: [ `ALTER TABLE repos DROP CONSTRAINT repos_unique_user_id_name` ]
+    },
+
+    {
+        name: 'Repos take non-trivial time to import',
+        up: [ 
+            `ALTER TABLE repos ADD COLUMN processing BOOL`,
+            `ALTER TABLE repos ADD COLUMN processing_log TEXT`,
+        ], down: [
+            `ALTER TABLE repos DROP COLUMN processing, processing_log`
+        ]
+    },
+
+    {
+        name: 'Repo processing should default to TRUE',
+        up: [ `ALTER TABLE repos ALTER COLUMN processing SET DEFAULT true` ],
+        down: []
+    },
+
+    {
+        name: 'Repos can be private',
+        up: [ `ALTER TABLE repos ADD COLUMN private BOOL DEFAULT false` ],
+        down: [ `DROP COLUMN private` ]
     }
 
 ];

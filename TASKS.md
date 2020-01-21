@@ -18,6 +18,24 @@
 
 ## Active
 
+# Collaboration system
+    [] Instant editing
+        - Edit live version of app, see changes, push commit to repo
+    [] Anonymous contribution
+    [] Non-English contributor languages
+    [] Embarrassingly parallel architecture - imagine a million devs simultaneously working on the codebase
+        [] Commits to one component don't screw up others
+        [] Large number of simple individual components
+        [] Hot-patching architecture to allow loading components only when needed
+        [] No One Language -- well-defined API + WASM -- bring C/C++/Rust/Go libs into lang easily
+        [] High failure tolerance, high failure detection, high failure avoidance
+            [] Automatic fuzzer tests
+            [] Tests next to code
+            [] QuickCheck
+            [] Flag failures in individual components for quick review & fixing
+            [] Disable failed components from affecting rest of app
+            [] Runtime monitoring of failure causes & stack traces to replicate failure
+
 # Frontend data model
     [] Links between objects
         [] Use URIs to refer to objects
@@ -36,15 +54,15 @@
     [] Snap scroll to document boundaries
     [] Line numbers for text view
     [] Kb navigation of search results
-    [] Hide search results without erasing search term
+    [x] Hide search results without erasing search term
     [] Better dashboard view
-        [] All my repos
+        [x] All my repos
         [] Recent activity (commits, issues)
 
 # Performance
     [] Pipeline text model creation to avoid frame stutter (probably coming from shader compile / geometry creation)
     [] Handle unlimited number of lines by rendering only a portion
-    [] Handle a million commits somehow
+    [z] Handle a million commits somehow
 
 # Website engine
     [] Turn README.md into HTML and display it on top of directory

@@ -23,7 +23,7 @@ const schema = yup.object({
 	url: yup.string().optional()
 });
 
-export default class RepoSelector extends Component {
+class RepoSelector extends Component {
     constructor(props) {
         super(props);
 
@@ -55,7 +55,7 @@ export default class RepoSelector extends Component {
 
 	setRepo = (eventKey, event) => {
 		if (eventKey === '#new') this.setState({showCreate: true});
-		else this.props.setRepo(eventKey);
+		else this.props.history.push(eventKey);
 	}
 
 	onSubmit = async (values, { setSubmitting }) => {
@@ -64,14 +64,18 @@ export default class RepoSelector extends Component {
 		setSubmitting(false);
 	}
 
+    repoCmp(a, b) {
+        return a.name.localeCompare(b.name);
+    }
+
 	render() {
 		return (
 			<div className={styles.RepoSelector}>
-				<DropdownButton title="Your Repositories" onSelect={this.setRepo}>
+				<DropdownButton alignRight title="Your Repositories" onSelect={this.setRepo}>
 					<Dropdown.Item eventKey="#new">Create New</Dropdown.Item>
 					{this.props.repos.length > 0 && <>
 					<Dropdown.Divider />
-					{ this.props.repos.map(repo => <Dropdown.Item key={repo.id} eventKey={repo.name}>{repo.name}</Dropdown.Item>) }
+					{ this.props.repos.sort(this.repoCmp).map(repo => <Dropdown.Item key={repo.id} eventKey={"/" + this.props.userInfo.name + "/" + repo.name}>{this.props.userInfo.name + "/" +repo.name}</Dropdown.Item>) }
 					</>}
 				</DropdownButton>
 				{this.state.showCreate && 
@@ -108,3 +112,5 @@ export default class RepoSelector extends Component {
 	}
 
 }
+
+export default withRouter(RepoSelector);

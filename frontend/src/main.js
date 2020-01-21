@@ -83,6 +83,8 @@ class Tabletree {
 		if (this.renderer) {
 			this.showFileTree(fileTree);
 			this.setLoaded(true);
+			const topEntry = fileTree.tree.entries[Object.keys(fileTree.tree.entries)[0]];
+			if (topEntry) this.goToFSEntry(topEntry);
 			this._fileTree = null;
 		}
 	}
@@ -442,7 +444,7 @@ class Tabletree {
 		var fsPoint = new THREE.Vector3(textX, fsEntry.textY, fsEntry.z);
 		fsPoint.applyMatrix4(model.matrixWorld);
 		camera.targetPosition.copy(fsPoint);
-		camera.targetFOV = fsEntry.scale * fsEntry.textScale * 1500 * 50;
+		camera.targetFOV = fsEntry.scale * fsEntry.textScale * 2000 * 50;
 		fsEntry.textFOV = camera.targetFOV;
 	}
 
@@ -459,7 +461,7 @@ class Tabletree {
 		var fsPoint = new THREE.Vector3(textX, fsEntry.textYZero - textYOff, fsEntry.z);
 		fsPoint.applyMatrix4(model.matrixWorld);
 		camera.targetPosition.copy(fsPoint);
-		camera.targetFOV = fsEntry.scale * fsEntry.textScale * 1500 * 50;
+		camera.targetFOV = fsEntry.scale * fsEntry.textScale * 2000 * 50;
 		fsEntry.textFOV = camera.targetFOV;
 	}
 

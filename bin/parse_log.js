@@ -9,6 +9,30 @@ function getIndex(list, index, elem) {
     return idx;
 }
 
+function addElem(index, key, elem) {
+    var arr = index[key];
+    if (!arr) arr = index[key] = [];
+    arr.push(elem);
+}
+
+function addElemSet(index, key, elem, excludeIndex) {
+    if (!excludeIndex[key]) excludeIndex[key] = {};
+    if (!excludeIndex[key][elem]) {
+        excludeIndex[key][elem] = true;
+        addElem(index, key, elem);
+    }
+}
+
+function addDate(index, date, elem) {
+    const year = date.getUTCFullYear();
+    const month = date.getUTCMonth()+1;
+    const day = date.getUTCDate();
+    var yo = index[year]; if (!yo) yo = index[year] = {};
+    var mo = yo[month]; if (!mo) mo = yo[month] = {};
+    var dayo = mo[day]; if (!dayo) dayo = mo[day] = [];
+    dayo.push(elem);
+}
+
 function parseCommits(instream, outstream) {
 
     var sha, author, message, date, files = [];
@@ -25,12 +49,21 @@ function parseCommits(instream, outstream) {
     const allFiles = [];
     const allFilesIndex = {};
 
+    const authorCommits = {};
+    const authorFiles = {};
+    const authorFilesExclude = {};
+    const fileCommits = {};
+    const fileAuthors = {};
+    const fileAuthorsExclude = {};
+    const dateCommits = {};
+
     outstream.write('{"commits":[');
 
     var lineBufs = [];
     var lineBufSize = 0;
 
     var lineNum = 0;
+    var commitIdx = 0;
 
     function parseBlock(block) {
         for (var i = 0; i < block.length; ++i) {
@@ -48,20 +81,35 @@ function parseCommits(instream, outstream) {
                             const commit = [sha, author, message, date, files];
                             outstream.write(commitSep + JSON.stringify(commit));
                             commitSep = nextCommitSep;
+                            commitIdx++;
                         }
                         sha = line.substring(7);
                         author = date = message = undefined;
                         files = [];
                     }
-                    else if (authorRE.test(line)) author = getIndex(authors, authorsIndex, line.substring(8));
-                    else if (author !== undefined && date === undefined) date = new Date(line.substring(6)).getTime();
-                    else if (author !== undefined && date !== undefined) {
+                    else if (authorRE.test(line)) {
+                        author = getIndex(authors, authorsIndex, line.substring(8));
+                        addElem(authorCommits, author, commitIdx);
+                    }
+                    else if (author !== undefined && date === undefined) {
+                        const dateObj = new Date(line.substring(6));
+                        date = dateObj.getTime();
+                        addDate(dateCommits, dateObj, commitIdx);
+                    } else if (author !== undefined && date !== undefined) {
                         if (buf[lineStart] === 32) {
                             if (message === undefined) message = line.substring(4);
                         } else {
                             const fileObj = line.split("\t");
                             fileObj[1] = getIndex(allFiles, allFilesIndex, fileObj[1]);
-                            if (fileObj.length > 2) fileObj[2] = getIndex(allFiles, allFilesIndex, fileObj[2]);
+                            addElemSet(authorFiles, author, fileObj[1], authorFilesExclude);
+                            // addElemSet(fileAuthors, fileObj[1], author, fileAuthorsExclude);
+                            // addElem(fileCommits, fileObj[1], commitIdx);
+                            if (fileObj.length > 2) {
+                                fileObj[2] = getIndex(allFiles, allFilesIndex, fileObj[2]);
+                                addElemSet(authorFiles, author, fileObj[2], authorFilesExclude);
+                                // addElemSet(fileAuthors, fileObj[2], author, fileAuthorsExclude);
+                                // addElem(fileCommits, fileObj[2], commitIdx);
+                            }
                             files.push(fileObj);
                         }
                     }
@@ -83,7 +131,8 @@ function parseCommits(instream, outstream) {
             const commit = [sha, author, message, date, files];
             outstream.write(commitSep + JSON.stringify(commit));
         }
-        outstream.write(`],"authors":${JSON.stringify(authors)},"files":${JSON.stringify(allFiles)}}`);
+        const indexes = {authorFiles, authorCommits, dateCommits};
+        outstream.write(`],"authors":${JSON.stringify(authors)},"files":${JSON.stringify(allFiles)},"indexes":${JSON.stringify(indexes)}}`);
         outstream.end();
     });
 }

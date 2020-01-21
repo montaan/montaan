@@ -1,5 +1,6 @@
 import React from 'react';
 import { withRouter } from "react-router-dom";
+import { Helmet } from "react-helmet";
 
 import MainView from './components/MainView';
 import CommitControls from './components/CommitControls';
@@ -32,8 +33,8 @@ class MainApp extends React.Component {
         commitFilter: {},
         searchQuery: '',
         commits: [],
-        activeCommits: [],
-        fileTree: {title: '', entries: {}},
+        activeCommitData: {},
+        fileTree: {count: 0, tree: {title: '', entries: {}}},
         commitLog: '',
         commitChanges: '',
         files: '',
@@ -51,6 +52,7 @@ class MainApp extends React.Component {
         super(props);
         this.state = {...this.emptyState, repos: []};
         window.setNavigationTarget = this.setNavigationTarget;
+        this.repoTimeout = false;
         if (props.userInfo) this.updateUserRepos(props.userInfo);
         if (props.match && props.match.params.user) {
             this.state.repoPrefix = props.match.params.user + '/' + props.match.params.name;
@@ -61,13 +63,25 @@ class MainApp extends React.Component {
     parseFiles(text, repoPrefix) { return utils.parseFileList(text, {}, undefined, repoPrefix+'/'); }
 
     setRepo = async (repoPath, userName=this.props.userInfo.name) => {
+        clearTimeout(this.repoTimeout);
         const repoPrefix = userName + '/' + repoPath;
+        const repoInfo = await this.props.api.get('/repo/view/'+repoPrefix);
+        if (repoInfo.status) {
+            this.setState({repoError: repoInfo});
+            return;
+        }
+        this.setState({...this.emptyState, processing: true, repoPrefix});
+        if (repoInfo[0].processing) {
+            this.repoTimeout = setTimeout(() => this.setRepo(repoPath, userName), 1000);
+            return;
+        }
         console.time('load files');
         const files = await this.props.api.get('/repo/fs/'+repoPrefix+'/files.txt');
         console.timeEnd('load files');
         console.time('parse files');
         const fileTree = this.parseFiles(files, repoPrefix);
         console.timeEnd('parse files');
+        const commitsOpen = this.state.activeCommitData.commits;
         this.setState({...this.emptyState, repoPrefix, fileTree});
         console.time('load commitObj');
         const commitObj = await this.props.api.getType('/repo/fs/'+repoPrefix+'/log.json', 'json');
@@ -75,7 +89,8 @@ class MainApp extends React.Component {
         console.time('parse commitObj');
         const commitData = parseCommits(commitObj, fileTree.tree, repoPrefix);
         console.timeEnd('parse commitObj');
-        this.setState({commitData, activeCommits: commitData.commits});
+        this.setState({processing: false, commitData});
+        if (commitsOpen) this.setActiveCommits(commitData.commits);
     }
     
     setCommitFilter = commitFilter => {
@@ -297,6 +312,13 @@ class MainApp extends React.Component {
 
     shouldComponentUpdate(nextProps, nextState) {
         if (nextProps.userInfo !== this.props.userInfo) this.updateUserRepos(nextProps.userInfo);
+        if (nextProps.match && nextProps.match !== this.props.match) {
+            var repoPrefix = nextProps.match.params.user + '/' + nextProps.match.params.name;
+            if (repoPrefix !== this.state.repoPrefix) {
+                this.setRepo(nextProps.match.params.name, nextProps.match.params.user);
+            }
+        }
+
         return true;
     }
 
@@ -305,12 +327,34 @@ class MainApp extends React.Component {
         this.updateUserRepos(this.props.userInfo);
     }
 
+    dots() {
+        var s = '';
+        var count = (Date.now()/1000) % 3;
+        for (var i = 0; i < count; i++) {
+            s += '.';
+        }
+        return s;
+    }
+
     render() {
+        const title = this.state.repoPrefix ? '🏔 '+this.state.repoPrefix : 'Montaan 🏔';
         return (
             <div id="mainApp">
+                <Helmet
+                    meta={[
+                        { name: 'author', content: "Montaan" },
+                    ]}>
+                        <link rel="canonical" href="https://montaan.com/" />
+                        <meta name="description" content="Montaan." />
+                        <title>{title}</title>
+                </Helmet>
+
                 <div id="debug" />
                 {fullscreenSupported && <div id="fullscreen" onClick={this.fullscreenOnClick} />}
                 <div id="loader" />
+
+                {this.state.processing && <div id="processing"><div>{this.state.repoPrefix}</div><div>Processing{this.dots()}</div></div>}
+                {this.state.repoError && <div id="repoError">{this.state.repoError}</div>}
 
                 <RepoSelector
                     setRepo={this.setRepo}

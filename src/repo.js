@@ -33,19 +33,45 @@ function assertRepoDir(fsPath) {
 const Repos = {
     create: async function(req, res) {
         var [error, { user_id }] = await guardPostWithSession(req); if (error) return error;
-        var [error, json] = assertShape(repoDataShape, await bodyAsJson(req)); if (error) return error;
-        const {url, name} = json;
-        const dbRes = await DB.query('SELECT name FROM users WHERE id = $1', [user_id]);
-        const userName = dbRes.rows[0].name;
-        if (url) Exec(`${process.cwd()}/bin/process_tree '${url}' '${userName}/${name}'`);
-        else Exec(`TEMP=$(mktemp -d) ((cd "$TEMP" && git init) && ${process.cwd()}/bin/process_tree "$TEMP" '${userName}/${name}'; rm -r "$TEMP")`);
+        var [error, { url, name }] = assertShape(repoDataShape, await bodyAsJson(req)); if (error) return error;
         await DB.queryTo(res, `INSERT INTO repos (url, name, user_id) VALUES ($1, $2, $3) RETURNING id`, [url, name, user_id]);
+        const repoCreated = async function(error, stdout, stderr) {
+            try {
+                const log = "error:\n" + error + "\nSTDOUT:\n" + stdout + "\nSTDERR:\n" + stderr;
+                const dbRes = await DB.query('UPDATE repos SET processing = false, processing_log = $3 WHERE name = $1 AND user_id = $2', [name, user_id, log]);
+            } catch(err) { console.log("repos/create", "repoCreated", err); }
+        };
+        try {
+            const dbRes = await DB.query('SELECT name FROM users WHERE id = $1', [user_id]);
+            const userName = dbRes.rows[0].name;
+            if (url) Exec(`${process.cwd()}/bin/process_tree '${url}' '${userName}/${name}' 2>&1`, repoCreated);
+            else Exec(`TEMP=$(mktemp -d) ((cd "$TEMP" && git init) && ${process.cwd()}/bin/process_tree "$TEMP" '${userName}/${name}'; rm -r "$TEMP") 2>&1`, repoCreated);
+        } catch(err) { console.error("repos/create", err); }
     },
 
     list: async function(req, res) {
         var [error, { user_id }] = await guardPostWithSession(req); if (error) return error;
-        await DB.queryTo(res, `SELECT * FROM repos WHERE user_id = $1`, [user_id]);
+        await DB.queryTo(res, `SELECT r.name AS name, u.name AS owner, r.processing, r.created_time, r.updated_time, r.url, r.data FROM repos r, users u WHERE r.user_id = $1 AND u.id = r.user_id`, [user_id]);
     },
+
+    view: async function(req, res, repoPath) {
+        var session = await sessionGet(req);
+        const [userName, repoName] = repoPath.split("/");
+        if (!userName || !repoName) return "404: Repo not found";
+        if (session) {
+            const user_id = session.user_id;
+            await DB.queryTo(res, `
+                SELECT r.name AS name, u.name AS owner, r.processing, r.created_time, r.updated_time, r.url, r.data FROM repos r, users u 
+                WHERE r.user_id = u.id AND u.name = $1 AND r.name = $2 AND (NOT r.private OR r.user_id = $3)
+            `, [userName, repoName, user_id]);
+        } else {
+            await DB.queryTo(res, `
+                SELECT r.name AS name, u.name AS owner, r.processing, r.created_time, r.updated_time, r.url, r.data FROM repos r, users u 
+                WHERE r.user_id = u.id AND u.name = $1 AND r.name = $2 AND NOT r.private
+            `, [userName, repoName]);
+        }
+    },
+
 
     delete: async function(req, res) {
         var [error, { user_id }] = await guardPostWithSession(req); if (error) return error;
