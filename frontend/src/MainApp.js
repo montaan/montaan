@@ -71,7 +71,7 @@ class MainApp extends React.Component {
             return;
         }
         this.setState({...this.emptyState, processing: true, repoPrefix});
-        if (repoInfo[0].processing) {
+        if (repoInfo[0] && repoInfo[0].processing) {
             this.repoTimeout = setTimeout(() => this.setRepo(repoPath, userName), 1000);
             return;
         }
