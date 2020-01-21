@@ -16,20 +16,48 @@
     [] Editing content in-line
     [] Fast filesystem browsing
 
+
+## Quality targets
+
+    Total [300k]
+
+    World class:
+        - Collaboration system [120k]
+        - Structure vis [60k]
+        - Code understanding [50k]
+        - Art workflow [50k]
+
+    Successful:
+        - Content playback [5k]
+        - Content editing [5k]
+        - Repo activity vis [3k]
+
 ## Active
 
 # Collaboration system
+    [] Commit flow management best practices
+        [] Rust
+        [] Linux
+        [] LLVM
+        [] VSCode
+        [] Chromium (?)
     [] Instant editing
         - Edit live version of app, see changes, push commit to repo
     [] Anonymous contribution
+        [] Random 12-digit id numbers
+        [] High velocity reviews
+            [] Bors-NG to enforce that master works
+            [] Review automation to allow thousands of reviews per day
+            [] Find files for PR, find authors for files, distribute review request across authors with enough commits
     [] Non-English contributor languages
+    [] Competition around contribution amount and quality
     [] Embarrassingly parallel architecture - imagine a million devs simultaneously working on the codebase
         [] Commits to one component don't screw up others
         [] Large number of simple individual components
         [] Hot-patching architecture to allow loading components only when needed
         [] No One Language -- well-defined API + WASM -- bring C/C++/Rust/Go libs into lang easily
         [] High failure tolerance, high failure detection, high failure avoidance
-            [] Automatic fuzzer tests
+            [] Auto-generated fuzzer tests
             [] Tests next to code
             [] QuickCheck
             [] Flag failures in individual components for quick review & fixing
