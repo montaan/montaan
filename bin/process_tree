@@ -12,8 +12,8 @@ then
         time (cd repos/$path/repo && git pull -f)
     else
         echo 'Create repo'
-        mkdir -p repos/$path/repo/.git
-        time (cd repos/$path/repo/.git && git init --bare)
+        mkdir -p repos/$path/repo/
+        time (cd repos/$path/repo/ && git init)
     fi
 else
     if [[ -d repos/$path/repo ]]
