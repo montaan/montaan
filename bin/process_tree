@@ -5,22 +5,25 @@ path=$2
 
 if [[ -z "$path" ]]
 then
-    if [[ "$repo" =~ ([^/]+/+[^/]+)/*$ ]]
+    path=$repo
+    if [[ -d repos/$path/repo ]]
     then
-        path=${BASH_REMATCH[1]}
-        echo "Using path ${path}"
+        echo 'Pull repo'
+        time (cd repos/$path/repo && git pull -f)
     else
-        echo "Could not extract path from ${repo}"
-        exit 1
+        echo 'Create repo'
+        mkdir -p repos/$path/repo/.git
+        time (cd repos/$path/repo/.git && git init --bare)
     fi
-fi
-
-echo 'Pull repo'
-if [[ -d repos/$path/repo ]]
-then
-    time (cd repos/$path/repo && git pull -f)
 else
-    time git clone $repo repos/$path/repo
+    if [[ -d repos/$path/repo ]]
+    then
+        echo 'Pull repo'
+        time (cd repos/$path/repo && git pull -f)
+    else
+        echo 'Clone repo'
+        time git clone $repo repos/$path/repo
+    fi
 fi
 
 cd repos/$path/repo || exit
@@ -34,3 +37,6 @@ echo 'Get git log'
 time git log --name-status > ../log.txt
 echo 'Parse log to JSON'
 time node ../../../../bin/parse_log.js < ../log.txt > ../log.json
+echo 'Add log to DB'
+cd ../../../../;
+time node bin/parse_log_db.js $(dirname "$path") $(basename "$path")

@@ -75,7 +75,7 @@ class RepoSelector extends Component {
 					<Dropdown.Item eventKey="#new">Create New</Dropdown.Item>
 					{this.props.repos.length > 0 && <>
 					<Dropdown.Divider />
-					{ this.props.repos.sort(this.repoCmp).map(repo => <Dropdown.Item key={repo.id} eventKey={"/" + this.props.userInfo.name + "/" + repo.name}>{this.props.userInfo.name + "/" +repo.name}</Dropdown.Item>) }
+					{ this.props.repos.sort(this.repoCmp).map(repo => <Dropdown.Item key={repo.id} eventKey={"/" + this.props.userInfo.name + "/" + repo.name}>{this.props.userInfo.name + "/" +repo.name} ({repo.commit_count})</Dropdown.Item>) }
 					</>}
 				</DropdownButton>
 				{this.state.showCreate && 

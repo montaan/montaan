@@ -323,6 +323,7 @@ class MainApp extends React.Component {
     }
 
     createRepo = async (name, url) => {
+        if (!url) url = undefined;
         const res = await this.props.api.post('/repo/create', {name, url});
         this.updateUserRepos(this.props.userInfo);
     }

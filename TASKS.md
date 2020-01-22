@@ -34,6 +34,12 @@
 
 ## Active
 
+# "Payment" system
+    [] Ad magazine to pay for today's use
+    [] Commit prompt to pay for use via commit
+    [] Buy ads
+    [] Buy platform credits
+
 # Collaboration system
     [] Commit flow management best practices
         [] Rust
@@ -41,10 +47,19 @@
         [] LLVM
         [] VSCode
         [] Chromium (?)
+    [] Positive community mood
+        [] Like Fortnite &c online games deal with griefers and keeping it fun for all
+    [] Automatic formatting
+    [] Easy refactoring
+        [] TypeScript
+        [] js-i18n to multilang
+    [] Neutral naming policy
     [] Instant editing
         - Edit live version of app, see changes, push commit to repo
     [] Anonymous contribution
+        [] No chat, emoji/dance-based comms
         [] Random 12-digit id numbers
+        [] No gender pronouns
         [] High velocity reviews
             [] Bors-NG to enforce that master works
             [] Review automation to allow thousands of reviews per day

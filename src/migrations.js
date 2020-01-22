@@ -82,7 +82,44 @@ module.exports = [
     {
         name: 'Repos can be private',
         up: [ `ALTER TABLE repos ADD COLUMN private BOOL DEFAULT false` ],
-        down: [ `DROP COLUMN private` ]
+        down: [ `ALTER TABLE repos DROP COLUMN private` ]
+    },
+
+    {
+        name: 'Commit details table',
+        up: [
+            `CREATE TABLE commits (
+                repo_id UUID NOT NULL REFERENCES repos(id),
+                sha TEXT NOT NULL,
+                author TEXT NOT NULL,
+
+                date TIMESTAMP NOT NULL,
+                message TEXT NOT NULL,
+                files JSONB NOT NULL,
+                merge TEXT,
+
+                UNIQUE(repo_id, sha)
+            )`,
+            `CREATE INDEX commits_repo_id_idx ON commits (repo_id)`,
+            `CREATE INDEX commits_sha_idx ON commits (sha)`,
+            `CREATE INDEX commits_date_idx ON commits (date)`,
+            `CREATE INDEX commits_author_idx ON commits (author)`
+        ],
+        down: [ `DROP TABLE commits` ]
+    },
+
+    {
+        name: 'Branches',
+        up: [
+            `CREATE TABLE branches (
+                repo_id UUID NOT NULL REFERENCES repos(id),
+                name TEXT NOT NULL,
+                head TEXT NOT NULL,
+                commit_count INTEGER NOT NULL,
+                UNIQUE (repo_id, name)
+            )`,
+            `INSERT INTO branches (repo_id, name, head, commit_count) SELECT id, 'master', '', (SELECT COUNT(*) FROM commits WHERE repo_id = id) FROM repos`
+        ], down: [ `DROP TABLE branches` ]
     }
 
 ];

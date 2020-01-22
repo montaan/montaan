@@ -45,7 +45,7 @@ const Repos = {
             const dbRes = await DB.query('SELECT name FROM users WHERE id = $1', [user_id]);
             const userName = dbRes.rows[0].name;
             if (url) Exec(`${process.cwd()}/bin/process_tree '${url}' '${userName}/${name}' 2>&1`, repoCreated);
-            else Exec(`TEMP=$(mktemp -d) ((cd "$TEMP" && git init) && ${process.cwd()}/bin/process_tree "$TEMP" '${userName}/${name}'; rm -r "$TEMP") 2>&1`, repoCreated);
+            else Exec(`${process.cwd()}/bin/process_tree '${userName}/${name}' 2>&1`, repoCreated);
         } catch(err) { console.error("repos/create", err); }
     },
 
@@ -70,7 +70,7 @@ const Repos = {
 
     list: async function(req, res) {
         var [error, { user_id }] = await guardPostWithSession(req); if (error) return error;
-        await DB.queryTo(res, `SELECT r.name AS name, u.name AS owner, r.processing, r.created_time, r.updated_time, r.url, r.data FROM repos r, users u WHERE r.user_id = $1 AND u.id = r.user_id`, [user_id]);
+        await DB.queryTo(res, `SELECT r.name AS name, u.name AS owner, r.processing, r.created_time, r.updated_time, r.url, r.data, (SELECT b.commit_count FROM branches b WHERE b.repo_id = r.id) FROM repos r, users u WHERE r.user_id = $1 AND u.id = r.user_id`, [user_id]);
     },
 
     view: async function(req, res, repoPath) {

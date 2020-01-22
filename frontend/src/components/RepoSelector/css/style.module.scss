@@ -16,4 +16,10 @@
 		text-align: center;
 		border-radius: 0px 4px 4px 4px;
 	}
+
+	:global(.dropdown-menu) {
+		max-width: 95vw;
+		max-height: 90vh;
+		overflow: auto;
+	}
 }
