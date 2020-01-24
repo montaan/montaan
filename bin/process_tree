@@ -27,8 +27,8 @@ else
 fi
 
 cd repos/$path/repo || exit
-echo 'Create file list'
-time find . -type d -exec sh -c 'printf "%s/\n" "$0"' {} \; -or -print | grep -v /.git/ | sort > ../files.txt
+# echo 'Create file list'
+# time find . -type d -exec sh -c 'printf "%s/\n" "$0"' {} \; -or -print | grep -v /.git/ | sort > ../files.txt
 echo 'Create search index'
 rm ../index.csearch
 time CSEARCHINDEX=../index.csearch $HOME/go/bin/cindex .
