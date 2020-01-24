@@ -1047,13 +1047,13 @@ class Tabletree {
 
 	setLinks(links) {
 		if (this.lineGeo) {
-			this.links = links;
 			const geo = this.lineGeo;
-			for (var i = 0; i < geo.vertices.length; i++) geo.vertices[i].set(-100,-100,-100);
+			for (var i = links.length*6; i < this.links.length*6; i++) geo.vertices[i].set(-100,-100,-100);
+			this.links = links;
 			for (var i = 0; i < links.length; i++) {
 				const l = links[i];
 				const model = this.model;
-				this.updateLineBetweenEntries(geo, i, l.color, model, l.src, model, l.dst);
+				this.updateLineBetweenEntries(geo, i*6, l.color, model, l.src, model, l.dst);
 			}
 			this.changed = true;
 		}
