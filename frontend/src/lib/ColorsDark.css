@@ -31,3 +31,15 @@ body {
 .videoFile { color: rgb(33, 255, 204); }
 .hiddenFile { color: rgb(84, 86, 94); }
 .unknownFile { color: rgb(33, 35, 43); }
+
+.actionM { color: #ff3300; }
+.actionA { color: #99ff00; }
+.actionD { color: #000000; }
+.actionR { color: #ffcc00; }
+.actionC { color: #44aaff; }
+
+.actionDirM { color: #ff3300; }
+.actionDirA { color: #99ff00; }
+.actionDirD { color: #000000; }
+.actionDirR { color: #ffcc00; }
+.actionDirC { color: #44aaff; }

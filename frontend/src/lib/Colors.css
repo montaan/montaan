@@ -29,3 +29,15 @@ body {
 .videoFile { color: #cbebeb; }
 .hiddenFile { color: #d4d4d4; }
 .unknownFile { color: #ffffff; }
+
+.actionM { color: #ff3300; }
+.actionA { color: #99ff00; }
+.actionD { color: #000000; }
+.actionR { color: #ffcc00; }
+.actionC { color: #44aaff; }
+
+.actionDirM { color: #ff3300; }
+.actionDirA { color: #99ff00; }
+.actionDirD { color: #000000; }
+.actionDirR { color: #ffcc00; }
+.actionDirC { color: #44aaff; }

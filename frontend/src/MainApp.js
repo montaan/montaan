@@ -61,7 +61,15 @@ class MainApp extends React.Component {
         }
     }
 
-    parseFiles(text, repoPrefix) { return utils.parseFileList(text, {}, true, repoPrefix+'/'); }
+    parseFiles(text, repoPrefix, changedFiles=[]) { 
+        const fileTree = utils.parseFileList(text, {}, true, repoPrefix+'/');
+        for (var i = 0; i < changedFiles.length; i++) {
+            const {path, renamed, action} = changedFiles[i];
+            const fsEntry = getPathEntry(fileTree.tree, repoPrefix + '/' + (renamed||path));
+            if (fsEntry) fsEntry.action = action;
+        }
+        return fileTree;
+    }
 
     setRepo = async (repoPath, userName=this.props.userInfo.name) => {
         clearTimeout(this.repoTimeout);
@@ -92,11 +100,11 @@ class MainApp extends React.Component {
         console.timeEnd('parse commitObj');
         this.setState({processing: false, commitData});
         if (commitsOpen) this.setActiveCommits(commitData.commits);
-        return; // enable this when we have UI
+        return;
         clearInterval(this.animatedFiles);
         const fileTrees = await Promise.all(commitData.commits.map(async commit => {
             const files = await this.props.api.post('/repo/tree', {repo: repoPrefix, hash: commit.sha});
-            return this.parseFiles(files, repoPrefix);
+            return this.parseFiles(files, repoPrefix, commit.files);
         }));
         this.animatedFiles = setInterval(() => {
             const idx = commitData.commits.length - 1 - this.commitIndex;

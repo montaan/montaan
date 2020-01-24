@@ -86,14 +86,14 @@ class RepoSelector extends Component {
                             <Form.Control onChange={this.repoSearchOnChange} value={this.state.search} />
                         </Form.Group>
                     </Dropdown.Header>
-                    <Dropdown.Item eventKey="#new">Create New</Dropdown.Item>
+                    <Dropdown.Item key="new" eventKey="#new">Create New</Dropdown.Item>
                     {this.props.repos.length > 0 && <Dropdown.Divider />}
-                    <div className={styles.repoList}>
+                    <div key="repoList" className={styles.repoList}>
                         {this.props.repos.length > 0 && this.props.repos
                             .filter(this.repoFilter)
                             .sort(this.getRepoCmp(this.state.repoSort))
                             .map(repo => 
-                                <Dropdown.Item key={repo.id} eventKey={"/" + repo.owner + "/" + repo.name}>
+                                <Dropdown.Item key={repo.owner+'/'+repo.name} eventKey={"/" + repo.owner + "/" + repo.name}>
                                     <span className={styles.repoOwner}>{repo.owner}</span>
                                     <span className={styles.repoName}>{repo.name}</span>
                                     <span className={styles.repoCommits}>{repo.commit_count}</span>

@@ -28,6 +28,10 @@ var Colors = {
 	getFileColor: function(file) {
 		var name = file.name;
 		var mimeType = file.mimeType;
+		if (file.action) {
+			var actionColor = this['action'+file.action.slice(0,1)];
+			if (actionColor) return actionColor;
+		}
 		if (mimeType) {
 			if (/^image/.test(mimeType)) {
 				return this.imageFile;
@@ -66,6 +70,10 @@ var Colors = {
 	},
 
 	getDirectoryColor: function(file) {
+		if (file.action) {
+			var actionColor = this['actionDir'+file.action.slice(0,1)];
+			if (actionColor) return actionColor;
+		}
 		var name = file.name;
 		if (this.musicDirRE.test(name)) {
 			return this.musicDir;
@@ -109,7 +117,9 @@ var Colors = {
 		document.body.appendChild(div);
 		var types = [
 			'musicDir', 'imageDir', 'documentDir', 'archiveDir', 'videoDir', 'exeDir', 'hiddenDir', 'unknownDir',
-			'musicFile', 'configFile', 'legalFile', 'imageFile', 'headerFile', 'documentFile', 'archiveFile', 'exeFile', 'objectFile', 'videoFile', 'hiddenFile', 'unknownFile'
+			'musicFile', 'configFile', 'legalFile', 'imageFile', 'headerFile', 'documentFile', 'archiveFile', 'exeFile', 'objectFile', 'videoFile', 'hiddenFile', 'unknownFile',
+			'actionDirM', 'actionDirA', 'actionDirC', 'actionDirR', 'actionDirD',
+			'actionM', 'actionA', 'actionC', 'actionR', 'actionD'
 		];
 		types.forEach(t => {
 			div.className = t;
