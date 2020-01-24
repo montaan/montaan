@@ -370,6 +370,7 @@ var utils = module.exports = {
 
 	parseFileList_: function(fileString, includePrefix, prefix='') {
 		// console.log("Parsing file string", fileString.length);
+		var sep = fileString.substring(0, 4096).includes('\0') ? 0 : 10;
 		var fileTree = {name: "", title: "", entries: {}, index: 0};
 		var name = "";
 		var startIndex = 0;
@@ -378,7 +379,7 @@ var utils = module.exports = {
 		var skip = 0;
 		// console.log('prefix:', prefix);
 		for (var i=0; i<fileString.length; i++) {
-			if (fileString.charCodeAt(i) === 10) {
+			if (fileString.charCodeAt(i) === sep) {
 				if (first) {
 					var segs = fileString.substring(startIndex+1+skip, i).split("/");
 					name = segs[segs.length-2] + '/';

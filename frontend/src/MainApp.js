@@ -60,7 +60,7 @@ class MainApp extends React.Component {
         }
     }
 
-    parseFiles(text, repoPrefix) { return utils.parseFileList(text, {}, undefined, repoPrefix+'/'); }
+    parseFiles(text, repoPrefix) { return utils.parseFileList(text, {}, true, repoPrefix+'/'); }
 
     setRepo = async (repoPath, userName=this.props.userInfo.name) => {
         clearTimeout(this.repoTimeout);
@@ -76,7 +76,7 @@ class MainApp extends React.Component {
             return;
         }
         console.time('load files');
-        const files = await this.props.api.get('/repo/fs/'+repoPrefix+'/files.txt');
+        const files = await this.props.api.post('/repo/tree', {repo: repoPrefix, hash: 'HEAD'});
         console.timeEnd('load files');
         console.time('parse files');
         const fileTree = this.parseFiles(files, repoPrefix);
