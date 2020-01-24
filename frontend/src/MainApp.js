@@ -53,6 +53,7 @@ class MainApp extends React.Component {
         this.state = {...this.emptyState, repos: []};
         window.setNavigationTarget = this.setNavigationTarget;
         this.repoTimeout = false;
+        this.commitIndex = 0;
         if (props.userInfo) this.updateUserRepos(props.userInfo);
         if (props.match && props.match.params.user) {
             this.state.repoPrefix = props.match.params.user + '/' + props.match.params.name;
@@ -91,6 +92,17 @@ class MainApp extends React.Component {
         console.timeEnd('parse commitObj');
         this.setState({processing: false, commitData});
         if (commitsOpen) this.setActiveCommits(commitData.commits);
+        return; // enable this when we have UI
+        clearInterval(this.animatedFiles);
+        const fileTrees = await Promise.all(commitData.commits.map(async commit => {
+            const files = await this.props.api.post('/repo/tree', {repo: repoPrefix, hash: commit.sha});
+            return this.parseFiles(files, repoPrefix);
+        }));
+        this.animatedFiles = setInterval(() => {
+            const idx = commitData.commits.length - 1 - this.commitIndex;
+            this.commitIndex = (this.commitIndex + 1) % commitData.commits.length;
+            this.setState({fileTree: fileTrees[idx]});
+        }, 16);
     }
     
     setCommitFilter = commitFilter => {

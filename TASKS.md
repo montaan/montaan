@@ -215,6 +215,7 @@
     [x] Pull and display line snippet context somehow
 
 # Commits
+    [x] Animated file tree history
     [x] Animated commit history
     [x] Show files touched by single commit
     [x] Show files and commits for author
