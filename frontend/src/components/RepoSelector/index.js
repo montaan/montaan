@@ -30,7 +30,9 @@ class RepoSelector extends Component {
         this.state = {
 			showCreate: false,
             name: "",
-            url: ""
+            url: "",
+            search: "",
+            repoSort: "name"
         };
     }
 
@@ -64,19 +66,43 @@ class RepoSelector extends Component {
 		setSubmitting(false);
 	}
 
-    repoCmp(a, b) {
-        return a.name.localeCompare(b.name);
+    repoCmpName(a, b) { return a.name.localeCompare(b.name); }
+    repoCmpCommitCount(a, b) { return b.commit_count - a.commit_count; }
+
+    getRepoCmp(repoSort) {
+        if (repoSort === 'commits') return this.repoCmpCommitCount;
+        else return this.repoCmpName;
     }
+
+    repoSearchOnChange = (ev) => this.setState({search: ev.target.value});
+    repoFilter = (repo) => repo.name.includes(this.state.search);
 
 	render() {
 		return (
 			<div className={styles.RepoSelector}>
 				<DropdownButton alignRight title="Your Repositories" onSelect={this.setRepo}>
-					<Dropdown.Item eventKey="#new">Create New</Dropdown.Item>
-					{this.props.repos.length > 0 && <>
-					<Dropdown.Divider />
-					{ this.props.repos.sort(this.repoCmp).map(repo => <Dropdown.Item key={repo.id} eventKey={"/" + this.props.userInfo.name + "/" + repo.name}>{this.props.userInfo.name + "/" +repo.name} ({repo.commit_count})</Dropdown.Item>) }
-					</>}
+                    <Dropdown.Header>
+                        <Form.Group id="repoSearch">
+                            <Form.Control onChange={this.repoSearchOnChange} value={this.state.search} />
+                        </Form.Group>
+                    </Dropdown.Header>
+                    <Dropdown.Item eventKey="#new">Create New</Dropdown.Item>
+                    {this.props.repos.length > 0 && <Dropdown.Divider />}
+                    <div className={styles.repoList}>
+                        {this.props.repos.length > 0 && this.props.repos
+                            .filter(this.repoFilter)
+                            .sort(this.getRepoCmp(this.state.repoSort))
+                            .map(repo => 
+                                <Dropdown.Item key={repo.id} eventKey={"/" + repo.owner + "/" + repo.name}>
+                                    <span className={styles.repoOwner}>{repo.owner}</span>
+                                    <span className={styles.repoName}>{repo.name}</span>
+                                    <span className={styles.repoCommits}>{repo.commit_count}</span>
+                                    {repo.processing && <span className={styles.repoProcessing}>[processing]</span>}
+                                    <span className={styles.repoUrl}>{repo.url}</span>
+                                </Dropdown.Item>
+                            ) 
+                        }
+                    </div>
 				</DropdownButton>
 				{this.state.showCreate && 
                 <Formik

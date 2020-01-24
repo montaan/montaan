@@ -17,9 +17,31 @@
 		border-radius: 0px 4px 4px 4px;
 	}
 
-	:global(.dropdown-menu) {
-		max-width: 95vw;
-		max-height: 90vh;
-		overflow: auto;
+	.repoList {
+		width: 440px;
+		max-height: 80vh;
+		overflow-y: auto;
+		overflow-x: hidden;
+		a { white-space: normal; }
+	}
+	.repoOwner {
+		display: none;
+	}
+	.repoName {
+		font-size: 100%;
+	}
+	.repoCommits {
+		font-size: 80%;
+		&:before { content: "("; }
+		&:after { content: " commits)"; }
+		margin-left: 8px;
+	}
+	.repoProcessing {
+		font-size: 80%;
+		margin-left: 8px;
+	}
+	.repoUrl {
+		display: block;
+		font-size: 80%;
 	}
 }
