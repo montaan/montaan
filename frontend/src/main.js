@@ -406,7 +406,6 @@ class Tabletree {
 	}
 
 	setSearchResults(searchResults) {
-		console.log('setSearchResults');
 		this.searchResults = searchResults || [];
 		this.highlightResults(searchResults || []);
 		this.updateSearchLines();
@@ -972,48 +971,79 @@ class Tabletree {
 		return j;
 	}
 
-	addLine(geo, processPath) {
-		var a = getPathEntry(this.ProcessTree, processPath);
-		var b = getPathEntry(this.FileTree, processPath.replace(/^\/\d+\/files/, '').replace(/\:/g, '/'));
-		if (a && b) {
-			var av = new THREE.Vector3(a.x, a.y, a.z);
-			av.multiply(this.processModel.scale);
-			av.add(this.processModel.position);
-			var bv = new THREE.Vector3(b.x, b.y, b.z);
-			bv.add(this.model.position);
-			var aUp = new THREE.Vector3(av.x, av.y, Math.max(av.z, bv.z) + 0.1);
-			var bUp = new THREE.Vector3(bv.x, bv.y, Math.max(av.z, bv.z) + 0.1);
+	updateLineBetweenElements(geo, index, color, bboxA, bboxB) {
+		this.screenPlane.visible = true;
+		var intersectionsA = utils.findIntersectionsUnderEvent({clientX: bboxA.left, clientY: bboxA.top+24, target: this.renderer.domElement}, this.camera, [this.screenPlane]);
+		var intersectionsB = utils.findIntersectionsUnderEvent({clientX: bboxB.left, clientY: bboxB.top+24, target: this.renderer.domElement}, this.camera, [this.screenPlane]);
+		this.screenPlane.visible = false;
+		var a = intersectionsA[0].point;
+		var av = new THREE.Vector3(b.x, b.y, b.z);
+		var b = intersectionsB[0].point;
+		var bv = new THREE.Vector3(b.x, b.y, b.z);
 
-			geo.vertices.push(av);
-			geo.vertices.push(aUp);
-			geo.vertices.push(aUp);
-			geo.vertices.push(bUp);
-			geo.vertices.push(bUp);
-			geo.vertices.push(bv);
-		}
-	}
 
-	addLineBetweenEntries(geo, color, modelA, entryA, modelB, entryB) {
-		var index = geo.vertices.length;
-
-		if (!entryA.outgoingLines) entryA.outgoingLines = [];
-		entryA.outgoingLines.push({src: {model: modelA, entry: entryA}, dst: {model:modelB, entry:entryB}, index, color});
-		if (!entryB.outgoingLines) entryB.outgoingLines = [];
-		entryB.outgoingLines.push({src: {model: modelB, entry: entryB}, dst: {model:modelA, entry:entryA}, index, color});
-
-		geo.vertices.push(new THREE.Vector3());
-		geo.vertices.push(new THREE.Vector3());
-		geo.vertices.push(new THREE.Vector3());
-		geo.vertices.push(new THREE.Vector3());
-		geo.vertices.push(new THREE.Vector3());
-		geo.vertices.push(new THREE.Vector3());
+		geo.vertices[index++].copy(av);
+		geo.vertices[index++].copy(av);
+		geo.vertices[index++].copy(av);
+		geo.vertices[index++].copy(bv);
+		geo.vertices[index++].copy(bv);
+		geo.vertices[index++].copy(bv);
 
 		if (color) {
-			geo.colors.push(color, color, color, color, color, color);
+			index -= 6;
+			geo.colors[index++].copy(color);
+			geo.colors[index++].copy(color);
+			geo.colors[index++].copy(color);
+			geo.colors[index++].copy(color);
+			geo.colors[index++].copy(color);
+			geo.colors[index++].copy(color);
 		}
 	}
 
-	updateLineBetweenEntries(geo, index, color, modelA, entryA, modelB, entryB) {
+	updateLineBetweenEntryAndElement(geo, index, color, model, fsEntry, line, lineCount, bbox) {
+		var a = new THREE.Vector3(fsEntry.x, fsEntry.y, fsEntry.z);
+		a.applyMatrix4(model.matrixWorld);
+		var b = a;
+
+		var av = new THREE.Vector3(a.x + 0.05 * fsEntry.scale, a.y + 0.05 * fsEntry.scale, a.z);
+
+		if (!bbox || bbox.bottom < 0 || bbox.top > window.innerHeight) {
+			var bv = new THREE.Vector3(b.x - fsEntry.scale*0.5 - 0.02, av.y + 0.05*fsEntry.scale + 0.01*3.15, av.z - fsEntry.scale*0.5);
+			var aUp = new THREE.Vector3(av.x - fsEntry.scale*0.075, av.y + 0.05*fsEntry.scale, av.z);
+		} else {
+			this.screenPlane.visible = true;
+			var intersections = utils.findIntersectionsUnderEvent({clientX: bbox.left, clientY: bbox.top+24, target: this.renderer.domElement}, this.camera, [this.screenPlane]);
+			this.screenPlane.visible = false;
+			var b = intersections[0].point;
+			var bv = new THREE.Vector3(b.x, b.y, b.z);
+			var aUp = new THREE.Vector3(av.x, av.y, av.z);
+			if (line > 0 && fsEntry.textHeight) {
+				const textYOff = ((line+0.5) / lineCount) * fsEntry.textHeight;
+				const textLinePos = new THREE.Vector3(fsEntry.textXZero, fsEntry.textYZero - textYOff, fsEntry.z);
+				textLinePos.applyMatrix4(this.model.matrixWorld);
+				aUp = av = textLinePos;
+			}
+		}
+
+		geo.vertices[index++].copy(av);
+		geo.vertices[index++].copy(aUp);
+		geo.vertices[index++].copy(aUp);
+		geo.vertices[index++].copy(bv);
+		geo.vertices[index++].copy(bv);
+		geo.vertices[index++].copy(bv);
+
+		if (color) {
+			index -= 6;
+			geo.colors[index++].copy(color);
+			geo.colors[index++].copy(color);
+			geo.colors[index++].copy(color);
+			geo.colors[index++].copy(color);
+			geo.colors[index++].copy(color);
+			geo.colors[index++].copy(color);
+		}
+	}
+
+	updateLineBetweenEntries(geo, index, color, modelA, entryA, lineA, lineCountA, modelB, entryB, lineB, lineCountB) {
 		var a = entryA;
 		var b = entryB;
 
@@ -1023,8 +1053,22 @@ class Tabletree {
 		var bv = new THREE.Vector3(b.x, b.y, b.z);
 		bv.applyMatrix4(modelB.matrix);
 
+		if (lineA > 0 && entryA.textHeight) {
+			const textYOff = ((lineA+0.5) / lineCountA) * entryA.textHeight;
+			const textLinePos = new THREE.Vector3(entryA.textXZero, entryA.textYZero - textYOff, entryA.z);
+			textLinePos.applyMatrix4(modelA.matrixWorld);
+			av = textLinePos;
+		}
+		if (lineB > 0 && entryB.textHeight) {
+			const textYOff = ((lineB+0.5) / lineCountB) * entryB.textHeight;
+			const textLinePos = new THREE.Vector3(entryB.textXZero, entryB.textYZero - textYOff, entryB.z);
+			textLinePos.applyMatrix4(modelB.matrixWorld);
+			av = textLinePos;
+		}
+
 		var aUp = new THREE.Vector3(av.x+(bv.x-av.x)*0.1, av.y+(bv.y-av.y)*0.1, Math.max(av.z, bv.z) + 0.1);
 		var bUp = new THREE.Vector3(bv.x-(bv.x-av.x)*0.1, bv.y-(bv.y-av.y)*0.1, Math.max(av.z, bv.z) + 0.1);
+
 
 		geo.vertices[index++].copy(av);
 		geo.vertices[index++].copy(aUp);
@@ -1053,7 +1097,22 @@ class Tabletree {
 			for (var i = 0; i < links.length; i++) {
 				const l = links[i];
 				const model = this.model;
-				this.updateLineBetweenEntries(geo, i*6, l.color, model, l.src, model, l.dst);
+				const srcIsElem = l.src instanceof Element;
+				const dstIsElem = l.dst instanceof Element;
+				
+				if (srcIsElem && dstIsElem) {
+					const bboxA = l.src.getBoundingClientRect();
+					const bboxB = l.dst.getBoundingClientRect();
+					this.updateLineBetweenElements(geo, i*6, l.color, bboxA, bboxB);
+				} else if (srcIsElem) {
+					const bbox = l.src.getBoundingClientRect();
+					this.updateLineBetweenEntryAndElement(geo, i*6, l.color, model, l.dst, l.dstLine, l.dst.lineCount, bbox);
+				} else if (dstIsElem) {
+					const bbox = l.dst.getBoundingClientRect();
+					this.updateLineBetweenEntryAndElement(geo, i*6, l.color, model, l.src, l.srcLine, l.src.lineCount, bbox);
+				} else {
+					this.updateLineBetweenEntries(geo, i*6, l.color, model, l.src, l.srcLine, l.src.lineCount, model, l.dst, l.dstLine, l.dst.lineCount);
+				}
 			}
 			this.changed = true;
 		}
@@ -1113,24 +1172,24 @@ class Tabletree {
 		// this.processModel.updateMatrix();
 		// this.authorModel.updateMatrix();
 
-		this.lineModel.ontick = () => {
-			var cf = (this.currentFrame / 2) | 0;
-			if (false) {
-				var aks = Object.keys(this.commitData.authors);
-				this.showCommitsByAuthor(aks[cf % aks.length]);
-				this.changed = true;
-			} else if (false) {
-				this.showCommitsForFile(this.commitData.touchedFiles[cf % this.commitData.touchedFiles.length]);
-				this.changed = true;
-			} else if (this.commitsPlaying) {
-				var idx = this.activeCommits.length-1-(cf % this.activeCommits.length);
-				var c = this.activeCommits[idx];
-				var slider = document.getElementById('commitSlider');
-				slider.value = idx;
-				this.showCommit(c.sha);
-				this.changed = true;
-			}
-		};
+		// this.lineModel.ontick = () => {
+		// 	var cf = (this.currentFrame / 2) | 0;
+		// 	if (false) {
+		// 		var aks = Object.keys(this.commitData.authors);
+		// 		this.showCommitsByAuthor(aks[cf % aks.length]);
+		// 		this.changed = true;
+		// 	} else if (false) {
+		// 		this.showCommitsForFile(this.commitData.touchedFiles[cf % this.commitData.touchedFiles.length]);
+		// 		this.changed = true;
+		// 	} else if (this.commitsPlaying) {
+		// 		var idx = this.activeCommits.length-1-(cf % this.activeCommits.length);
+		// 		var c = this.activeCommits[idx];
+		// 		var slider = document.getElementById('commitSlider');
+		// 		slider.value = idx;
+		// 		this.showCommit(c.sha);
+		// 		this.changed = true;
+		// 	}
+		// };
 		this.changed = true;
 	}
 
