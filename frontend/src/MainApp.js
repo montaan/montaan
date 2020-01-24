@@ -73,6 +73,9 @@ class MainApp extends React.Component {
 
     setRepo = async (repoPath, userName=this.props.userInfo.name) => {
         clearTimeout(this.repoTimeout);
+        clearInterval(this.animatedFiles);
+        clearInterval(this.randomLinksInterval);
+        this.commitIndex = 0;
         const repoPrefix = userName + '/' + repoPath;
         const repoInfo = await this.props.api.get('/repo/view/'+repoPrefix);
         if (repoInfo.status) {
@@ -100,15 +103,32 @@ class MainApp extends React.Component {
         console.timeEnd('parse commitObj');
         this.setState({processing: false, commitData});
         if (commitsOpen) this.setActiveCommits(commitData.commits);
-        return;
+        this.animateRandomLinks(fileTree.tree, files.split("\0"), repoPrefix);
+    }
+
+    animateRandomLinks(fileTree, files, repoPrefix) {
+        this.randomLinksInterval = setInterval(() => {
+            const links = [];
+            for (var i=0,l=Math.random()*100; i<l; i++) {
+                const src = getPathEntry(fileTree, repoPrefix + '/' + files[(Math.random()*files.length) | 0]);
+                const dst = getPathEntry(fileTree, repoPrefix + '/' + files[(Math.random()*files.length) | 0]);
+                const rnd = Math.random();
+                const color = {r: 1, g: rnd, b: 1-rnd};
+                links.push({src, dst, color});
+            }
+            this.setLinks(links);
+        }, 100);
+    }
+
+    async animateFileTreeHistory(commits, repoPrefix) {
         clearInterval(this.animatedFiles);
-        const fileTrees = await Promise.all(commitData.commits.map(async commit => {
+        const fileTrees = await Promise.all(commits.map(async commit => {
             const files = await this.props.api.post('/repo/tree', {repo: repoPrefix, hash: commit.sha});
             return this.parseFiles(files, repoPrefix, commit.files);
         }));
         this.animatedFiles = setInterval(() => {
-            const idx = commitData.commits.length - 1 - this.commitIndex;
-            this.commitIndex = (this.commitIndex + 1) % commitData.commits.length;
+            const idx = commits.length - 1 - this.commitIndex;
+            this.commitIndex = (this.commitIndex + 1) % commits.length;
             this.setState({fileTree: fileTrees[idx]});
         }, 16);
     }

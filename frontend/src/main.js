@@ -46,6 +46,8 @@ class Tabletree {
 		this.authorModel = null;
 		this.processModel = null;
 		this.lineModel = null;
+		this.lineGeo = null;
+		this.links = [];
 
 		this.commitsPlaying = false;
 		this.searchResults = [];
@@ -90,17 +92,7 @@ class Tabletree {
 	}
 
 	setLoaded(loaded) {
-		if (loaded) {
-			document.body.classList.add('loaded');
-			setTimeout(function() {
-				if (document.body.classList.contains('loaded')) {
-					document.getElementById('loader').style.display = 'none';
-				}
-			}, 1000);
-		} else {
-			document.getElementById('loader').style.display = 'block';
-			document.body.classList.remove('loaded');
-		}
+		document.body.classList.toggle('loaded', loaded);
 	}
 
 	navigateTo(url, onSuccess, onFailure) {
@@ -883,6 +875,28 @@ class Tabletree {
 		this.model.position.set(-0.5, -0.5, 0.0);
 		this.modelPivot.add(this.model);
 		// processTick();
+
+		this.lineGeo = new THREE.Geometry();
+		this.lineModel = new THREE.LineSegments(this.lineGeo, new THREE.LineBasicMaterial({
+			color: new THREE.Color(1.0, 1.0, 1.0), opacity: 1, transparent: true, depthWrite: false,
+			vertexColors: true
+		}));
+		for (var i=0; i<40000; i++) {
+			this.lineGeo.vertices.push(new THREE.Vector3());
+			this.lineGeo.colors.push(new THREE.Color());
+		}
+		for (var i=0; i<10000; i++) {
+			var off = i * 4;
+			this.lineGeo.faces.push(
+				new THREE.Face3(off, off+1, off+2),
+				new THREE.Face3(off, off+2, off+3)
+			);
+		}
+		this.lineModel.frustumCulled = false;
+		this.lineModel.ontick = () => {
+			this.lineModel.visible = this.links.length > 0;
+		};
+		this.modelPivot.add(this.lineModel);
 	}
 
 	makeTextMaterial(palette=null, fontTexture=this.fontTexture) {
@@ -1031,6 +1045,20 @@ class Tabletree {
 		}
 	}
 
+	setLinks(links) {
+		if (this.lineGeo) {
+			this.links = links;
+			const geo = this.lineGeo;
+			for (var i = 0; i < geo.vertices.length; i++) geo.vertices[i].set(-100,-100,-100);
+			for (var i = 0; i < links.length; i++) {
+				const l = links[i];
+				const model = this.model;
+				this.updateLineBetweenEntries(geo, i, l.color, model, l.src, model, l.dst);
+			}
+			this.changed = true;
+		}
+	}
+
 	showLinesForEntry(geo, entry, depth=0, recurse=true, avoidModel=null, first=true) {
 		if (first) for (var i = 0; i < geo.vertices.length; i++) geo.vertices[i].set(-100,-100,-100);
 		if (entry.outgoingLines) {
@@ -1084,15 +1112,6 @@ class Tabletree {
 		this.model.updateMatrix();
 		// this.processModel.updateMatrix();
 		// this.authorModel.updateMatrix();
-
-		if (this.lineModel) this.modelPivot.remove(this.lineModel);
-
-		this.lineModel = new THREE.LineSegments(this.lineGeo, new THREE.LineBasicMaterial({
-			color: new THREE.Color(1.0, 1.0, 1.0), opacity: 1, transparent: true, depthWrite: false,
-			vertexColors: true
-		}));
-		this.lineModel.frustumCulled = false;
-		this.modelPivot.add(this.lineModel);
 
 		this.lineModel.ontick = () => {
 			var cf = (this.currentFrame / 2) | 0;
