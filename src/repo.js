@@ -69,12 +69,12 @@ const Repos = {
     },
 
     list: async function(req, res) {
-        var [error, { user_id }] = await guardPostWithSession(req); if (error) return error;
+        const [error, { user_id }] = await guardPostWithSession(req); if (error) return error;
         await DB.queryTo(res, `SELECT r.name AS name, u.name AS owner, r.processing, r.created_time, r.updated_time, r.url, r.data, (SELECT b.commit_count FROM branches b WHERE b.repo_id = r.id) FROM repos r, users u WHERE r.user_id = $1 AND u.id = r.user_id`, [user_id]);
     },
 
     view: async function(req, res, repoPath) {
-        var session = await sessionGet(req);
+        const session = await sessionGet(req);
         const [userName, repoName] = repoPath.split("/");
         if (!userName || !repoName) return "404: Repo not found";
         if (session) {
@@ -99,7 +99,7 @@ const Repos = {
     },
 
     fs: async function(req, res, fsPath) {
-        var [error, { filePath, stat }] = assertRepoFile(decodeURIComponent(fsPath)); if (error) return error;
+        const [error, { filePath, stat }] = assertRepoFile(decodeURIComponent(fsPath)); if (error) return error;
         res.writeHeader(200, {'Content-Type': Mime.lookup(filePath) || 'text/plain', 'Content-Length': stat.size});
         const stream = FS.createReadStream(filePath);
         stream.on('open', () => stream.pipe(res));

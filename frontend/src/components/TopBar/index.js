@@ -1,9 +1,9 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+// import { Link } from 'react-router-dom';
 import { withRouter } from 'react-router-dom';
 import Button from "react-bootstrap/Button";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faKey, faSignOutAlt, faAddressBook, faQrcode, faBars } from '@fortawesome/free-solid-svg-icons'
+import { faKey, faSignOutAlt, faBars } from '@fortawesome/free-solid-svg-icons'
 
 import './style.css';
 

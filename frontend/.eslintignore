@@ -1,0 +1,10 @@
+# don't lint frontend build
+build
+built
+public
+node_modules
+coverage
+templates
+src/sw-epilog.js
+*.min.*
+src/lib/third_party

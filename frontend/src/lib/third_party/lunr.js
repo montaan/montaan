@@ -43,7 +43,7 @@
  *
  */
 var lunr = function (config) {
-  var idx = new lunr.Index
+  var idx = new lunr.Index()
 
   idx.pipeline.add(
     lunr.trimmer,
@@ -346,7 +346,7 @@ lunr.Pipeline.warnIfFunctionNotRegistered = function (fn) {
  * @memberOf Pipeline
  */
 lunr.Pipeline.load = function (serialised) {
-  var pipeline = new lunr.Pipeline
+  var pipeline = new lunr.Pipeline()
 
   serialised.forEach(function (fnName) {
     var fn = lunr.Pipeline.registeredFunctions[fnName]
@@ -642,7 +642,7 @@ lunr.SortedSet = function () {
  * @memberOf SortedSet
  */
 lunr.SortedSet.load = function (serialisedData) {
-  var set = new this
+  var set = new this()
 
   set.elements = serialisedData
   set.length = serialisedData.length
@@ -782,7 +782,7 @@ lunr.SortedSet.prototype.locationFor = function (elem) {
  * @memberOf SortedSet
  */
 lunr.SortedSet.prototype.intersect = function (otherSet) {
-  var intersectSet = new lunr.SortedSet,
+  var intersectSet = new lunr.SortedSet(),
       i = 0, j = 0,
       a_len = this.length, b_len = otherSet.length,
       a = this.elements, b = otherSet.elements
@@ -817,7 +817,7 @@ lunr.SortedSet.prototype.intersect = function (otherSet) {
  * @memberOf SortedSet
  */
 lunr.SortedSet.prototype.clone = function () {
-  var clone = new lunr.SortedSet
+  var clone = new lunr.SortedSet()
 
   clone.elements = this.toArray()
   clone.length = clone.elements.length
@@ -875,11 +875,11 @@ lunr.SortedSet.prototype.toJSON = function () {
 lunr.Index = function () {
   this._fields = []
   this._ref = 'id'
-  this.pipeline = new lunr.Pipeline
-  this.documentStore = new lunr.Store
-  this.tokenStore = new lunr.TokenStore
-  this.corpusTokens = new lunr.SortedSet
-  this.eventEmitter =  new lunr.EventEmitter
+  this.pipeline = new lunr.Pipeline()
+  this.documentStore = new lunr.Store()
+  this.tokenStore = new lunr.TokenStore()
+  this.corpusTokens = new lunr.SortedSet()
+  this.eventEmitter =  new lunr.EventEmitter()
   this.tokenizerFn = lunr.tokenizer
 
   this._idfCache = {}
@@ -934,7 +934,7 @@ lunr.Index.load = function (serialisedData) {
     return this.loadPacked(serialisedData);
   }
 
-  var idx = new this
+  var idx = new this()
 
   idx._fields = serialisedData.fields
   idx._ref = serialisedData.ref
@@ -957,13 +957,13 @@ lunr.Index.load = function (serialisedData) {
  * @memberOf Index
  */
 lunr.Index.loadPacked = function(serialisedData) {
-  var idx = new this
+  var idx = new this()
 
   idx._fields = serialisedData.fields
   idx._ref = serialisedData.ref
   idx.tokenizer = lunr.tokenizer.load(serialisedData.tokenizer)
   idx.pipeline = lunr.Pipeline.load(serialisedData.pipeline)
-  idx.tokenStore = new lunr.TokenStore
+  idx.tokenStore = new lunr.TokenStore()
 
   var tfQuantisationFactor = 1 / (serialisedData.tfQuantisationFactor || 1);
 
@@ -1124,7 +1124,7 @@ lunr.Index.prototype.tokenizer = function (fn) {
  */
 lunr.Index.prototype.add = function (doc, emitEvent) {
   var docTokens = {},
-      allDocumentTokens = new lunr.SortedSet,
+      allDocumentTokens = new lunr.SortedSet(),
       docRef = doc[this._ref],
       emitEvent = emitEvent === undefined ? true : emitEvent
 
@@ -1281,7 +1281,7 @@ lunr.Index.prototype.idf = function (term) {
  */
 lunr.Index.prototype.search = function (query) {
   var queryTokens = this.pipeline.run(this.tokenizerFn(query)),
-      queryVector = new lunr.Vector,
+      queryVector = new lunr.Vector(),
       documentSets = [],
       fieldBoosts = this._fields.reduce(function (memo, f) { return memo + f.boost }, 0)
 
@@ -1300,7 +1300,7 @@ lunr.Index.prototype.search = function (query) {
         var pos = self.corpusTokens.indexOf(key),
             idf = self.idf(key),
             similarityBoost = 1,
-            set = new lunr.SortedSet
+            set = new lunr.SortedSet()
 
         // if the expanded key is not an exact match to the token then
         // penalise the score for this key by how different the key is
@@ -1326,7 +1326,7 @@ lunr.Index.prototype.search = function (query) {
         }
 
         return memo.union(set)
-      }, new lunr.SortedSet)
+      }, new lunr.SortedSet())
 
       documentSets.push(set)
     }, this)
@@ -1361,7 +1361,7 @@ lunr.Index.prototype.search = function (query) {
 lunr.Index.prototype.documentVector = function (documentRef) {
   var documentTokens = this.documentStore.get(documentRef),
       documentTokensLength = documentTokens.length,
-      documentVector = new lunr.Vector
+      documentVector = new lunr.Vector()
 
   for (var i = 0; i < documentTokensLength; i++) {
     var token = documentTokens.elements[i],
@@ -1508,7 +1508,7 @@ lunr.Store = function () {
  * @memberOf Store
  */
 lunr.Store.load = function (serialisedData) {
-  var store = new this
+  var store = new this()
 
   store.length = serialisedData.length
   store.store = Object.keys(serialisedData.store).reduce(function (memo, key) {
@@ -2010,7 +2010,7 @@ lunr.TokenStore = function () {
  * @memberOf TokenStore
  */
 lunr.TokenStore.load = function (serialisedData) {
-  var store = new this
+  var store = new this()
 
   store.root = serialisedData.root
   store.length = serialisedData.length

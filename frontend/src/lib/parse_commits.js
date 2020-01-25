@@ -1,22 +1,7 @@
 import * as THREE from 'three';
-import utils from './utils';
-import { getPathEntry } from './filetree';
-import { KeyCode } from 'monaco-editor';
 
-class Commit {
-    constructor(sha, author, message, date, files) {
-        this.sha = sha;
-        this.author = author;
-        this.message = message;
-        this.date = date;
-        this.files = files;
-        this.diff = '';
-    }
-}
+export function parseCommits(commitData) {
 
-export function parseCommits(commitData, fileTree, repoPrefix) {
-
-    const touchedFilesIndex = {};
     const touchedFiles = [];
     const commitIndex = {};
     const authors = {};

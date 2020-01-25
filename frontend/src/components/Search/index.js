@@ -1,9 +1,9 @@
 import React from 'react';
 import Button from "react-bootstrap/Button";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faTimes, faArrowUp, faArrowDown } from '@fortawesome/free-solid-svg-icons'
+import { faTimes } from '@fortawesome/free-solid-svg-icons'
 
-import { getPathEntry, getFullPath, getSiblings } from '../../lib/filetree';
+import { getFullPath } from '../../lib/filetree';
 
 import strict from '../../lib/strictProxy.js'
 import styles_ from './css/style.module.scss';
@@ -37,7 +37,7 @@ export default class CommitControls extends React.Component {
         }
         const fullPath = document.createElement('div');
         fullPath.className = styles.searchFullPath;
-        fullPath.textContent = li.fullPath.replace(/^\/[^\/]*\/[^\/]*\//, '/');
+        fullPath.textContent = li.fullPath.replace(/^\/[^/]*\/[^/]*\//, '/');
         li.result = result;
         li.addEventListener('mouseover', function(ev) {
             this.classList.add('hover');
@@ -70,10 +70,11 @@ export default class CommitControls extends React.Component {
 
     getHitTypeName(hitType) {
         switch (hitType) {
-            case 0: return "Documentation"; break;
-            case 1: return "Definitions"; break;
-            case 2: return "Uses"; break;
-            case 3: return "Tests"; break;
+            case 0: return "Documentation";
+            case 1: return "Definitions";
+            case 2: return "Uses";
+            case 3: return "Tests";
+            default: throw Error("Unknown hit type " + hitType);
         }
     }
 
@@ -108,7 +109,7 @@ export default class CommitControls extends React.Component {
         window.searchResults.innerHTML = '';
         const results = [];
         const resIndex = {0:{}, 1:{}, 2:{}, 3:{}};
-        for (var i=0; i<searchResults.length; i++) {
+        for (let i=0; i<searchResults.length; i++) {
             const r = searchResults[i];
             const fullPath = getFullPath(r.fsEntry);
             r.fullPath = fullPath;
@@ -120,7 +121,7 @@ export default class CommitControls extends React.Component {
             if (r.line > 0) resIndex[r.hitType][fullPath].lineResults.push(r);
         }
         var hitType = -1;
-        for (var i=0; i<results.length; i++) {
+        for (let i=0; i<results.length; i++) {
             const result = results[i];
             if (result.hitType !== hitType) {
                 hitType = result.hitType;

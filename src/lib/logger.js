@@ -6,7 +6,7 @@ module.exports = function(accessLog='log/access.log', errorLog='log/error.log') 
     const errorFd = fs.openSync(errorLog, 'a+');
 
     const logRequest = function(obj, error) {
-        var str, fd;
+        let str, fd;
         if (error) {
             str = JSON.stringify(obj.concat([error])) + '\n';
             fd = errorFd;

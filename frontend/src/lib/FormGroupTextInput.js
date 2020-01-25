@@ -1,7 +1,7 @@
 import React from 'react';
 
 import Form from "react-bootstrap/Form"
-import { Formik, ErrorMessage } from "formik";
+import { ErrorMessage } from "formik";
 
 export default class FormGroupTextInput extends React.Component {
     render() {

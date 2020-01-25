@@ -27,12 +27,12 @@ async function parseCommits(userName, repoName) {
     await DB.connect(config.pgport, config.pghost);
     const {rows: [{repo_id}]} = await DB.query(`SELECT r.id as repo_id FROM repos r, users u WHERE u.name = $1 AND r.user_id = u.id AND r.name = $2`, [userName, repoName]);
     const commitsRes = await DB.query(`SELECT sha FROM commits WHERE repo_id = $1`, [repo_id]);
-    var shaIdx = {};
+    const shaIdx = {};
 
     commitsRes.rows.forEach(r => shaIdx[r.sha] = true);
 
-    var sha;
-    var lineStart = 0;
+    let sha;
+    let lineStart = 0;
 
     const commitRE = /^commit /;
     const authorRE = /^Author:/;
@@ -40,8 +40,8 @@ async function parseCommits(userName, repoName) {
     const dateRE = /^Date:/;
     const fileRE = /^[A-Z]\d*\t/;
 
-    var lineBufs = [];
-    var lineBufSize = 0;
+    const lineBufs = [];
+    let lineBufSize = 0;
 
     const commitQuery = `
         INSERT INTO commits (repo_id, sha, author, merge, date, message, files) 
@@ -49,18 +49,18 @@ async function parseCommits(userName, repoName) {
     `;
     const commitQueryValues = [repo_id];
 
-    var head = '';
+    let head = '';
 
     await DB.query(`BEGIN`);
 
-    var commitIdx = 0;
+    let commitIdx = 0;
 
     function parseBlock(block) {
-        for (var i = 0; i < block.length; ++i) {
+        for (let i = 0; i < block.length; ++i) {
             while (block[i] !== 10 && i < block.length) ++i;
             if (i < block.length) {
                 if ((lineBufSize + i) > lineStart) {
-                    var buf = block;
+                    let buf = block;
                     if (lineBufs.length > 0) {
                         lineBufs.push(block);
                         buf = Buffer.concat(lineBufs);

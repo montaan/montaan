@@ -11,10 +11,5 @@ toys
 # don't lint repos
 repos
 
-# don't lint frontend build
-frontend/build
-frontend/built
-frontend/public
-frontend/node_modules
-frontend/templates
-frontend/src/sw-epilog.js
+# don't lint frontend
+frontend

@@ -59,8 +59,8 @@ class Client { // The Client class wraps a connection socket to a PostgreSQL dat
             return this._queryHandlers[0].resolve(); // Tell the cancel promise that we're done here.
         }
         this._connection.on('data', this.onData.bind(this)); // Start listening to what the server is saying.
-        let chunks = [Buffer.from([0,0,0,0,0,3,0,0])]; // Startup message for protocol version 3.0, we fill in the first four message-length bytes later.
-        for (let n in this.config) if (n !== 'password') chunks.push(Buffer.from(`${n}\0${this.config[n]}\0`)); // Send config to the server, except for the password. It is handled in the Authentication flow.
+        const chunks = [Buffer.from([0,0,0,0,0,3,0,0])]; // Startup message for protocol version 3.0, we fill in the first four message-length bytes later.
+        for (const n in this.config) if (n !== 'password') chunks.push(Buffer.from(`${n}\0${this.config[n]}\0`)); // Send config to the server, except for the password. It is handled in the Authentication flow.
         chunks.push(Buffer.alloc(1)); // Send a zero byte to tell the server that there are no more config params.
         const msg = Buffer.concat(chunks); // Turn the chunks into one big message buffer.
         w32(msg, msg.byteLength, 0); // Write the length of the message at the beginning of the message.
@@ -413,7 +413,7 @@ class RowParser { // RowParser parses DataRow buffers into objects and arrays.
 }
 RowParser.parserPrototype = {
     toArray: function() { // Convert the row into a proper Array.
-        let off = 7, buf = this.rowBuffer, dst = new Array(this.columnCount); // Create parsing state and result array.
+        const off = 7, buf = this.rowBuffer, dst = new Array(this.columnCount); // Create parsing state and result array.
         for (let i = 0; i < this.columnCount; i++) { // Go through the columns.
             const columnLength = r32(buf, off); off += 4; // Each column has an i32 length, followed by the column data.
             if (columnLength >= 0) { dst[i] = this.parseColumn(off, off+columnLength); off += columnLength; } // Store the column data into the result array.
@@ -422,7 +422,7 @@ RowParser.parserPrototype = {
         return dst; // Return the result array.
     },
     toObject: function() { // Convert the row into a column name -> column value hash table object.
-        let off = 7, buf = this.rowBuffer, dst = {}; // Set up parsing state and result object. Off 7 skips over the header and column count (which we know already.)
+        const off = 7, buf = this.rowBuffer, dst = {}; // Set up parsing state and result object. Off 7 skips over the header and column count (which we know already.)
         for (let i = 0; i < this.columnCount; i++) { // Go through the columns.
             const columnLength = r32(buf, off); off += 4; // Read the length of the column.
             if (columnLength >= 0) { dst[this.rowColumns[i].name] = this.parseColumn(off, off+columnLength); off += columnLength; } // Parse column into result object property.

@@ -84,7 +84,7 @@ export function parseDiff(diff) {
         else if (/^rename to /.test(line)) currentChange.dstPath = '/'+line.substring(10);
         else if (/^index /.test(line)) currentChange.index = line;
         else if (/^Binary /.test(line)) parsePos(['', 0, 0, 0, 0, 0, 0], line);
-        else if (!pos && /^\-\-\- /.test(line)) currentChange.srcPath = line.substring(5);
+        else if (!pos && /^--- /.test(line)) currentChange.srcPath = line.substring(5);
         else if (!pos && /^\+\+\+ /.test(line)) currentChange.dstPath = line.substring(5);
         else if (pos) currentChange.changes[currentChange.changes.length-1].lines.push(line);
     });

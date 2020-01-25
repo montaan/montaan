@@ -1,6 +1,6 @@
 import React from 'react';
 import './style.css';
-import { span, formatDiff, authorCmp, createCalendar } from '../../lib/parse_diff';
+import { span, formatDiff, createCalendar } from '../../lib/parse_diff';
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form"
 // import prettyPrintWorker from '../../lib/pretty_print';
@@ -74,10 +74,10 @@ export default class CommitInfo extends React.Component {
                     commitsEl.appendChild(visible[i]);
                 }
             }
-            for (var i in visible) {
-                if (i < startIndexInt || i > endIndexInt) {
-                    visible[i].remove();
-                    delete visible[i];
+            for (var n in visible) {
+                if (n < startIndexInt || n > endIndexInt) {
+                    visible[n].remove();
+                    delete visible[n];
                 }
             }
         };
@@ -193,6 +193,7 @@ export default class CommitInfo extends React.Component {
             case 'email': authors.sort((a, b) => a.localeCompare(b)); break;
             case 'commits': authors.sort((a, b) => authorCommitCounts[b] - authorCommitCounts[a]); break;
             case 'date': authors.sort((a, b) => a.localeCompare(b)); break;
+            default: authors.sort((a, b) => a.localeCompare(b));
         }
         authors.forEach((author) => {
             var div = document.createElement('div');
@@ -215,13 +216,13 @@ export default class CommitInfo extends React.Component {
     shouldComponentUpdate(nextProps, nextState) {
         if (nextProps.activeCommitData !== this.props.activeCommitData) {
             // window.fileView.innerHTML = '';
-            const { authors, commits, authorCommitCounts, files } = nextProps.activeCommitData;
+            const { authors, commits, authorCommitCounts } = nextProps.activeCommitData;
             if (!nextState.visible && commits && commits !== nextProps.commitData.commits) this.setState({visible: true});
             while (window.diffView.firstChild) window.diffView.removeChild(window.diffView.firstChild);
             this.updateActiveCommitSetAuthors(authors, authorCommitCounts, commits);
             this.updateActiveCommitSetDiffs(commits);
         } else if (nextState.authorSort !== this.state.authorSort) {
-            const { authors, commits, authorCommitCounts, files } = nextProps.activeCommitData;
+            const { authors, commits, authorCommitCounts } = nextProps.activeCommitData;
             this.updateActiveCommitSetAuthors(authors, authorCommitCounts, commits, nextState.authorSort);
         }
         return true;

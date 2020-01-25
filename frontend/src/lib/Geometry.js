@@ -63,7 +63,7 @@ module.exports = {
 	},
 
 	quadCoversFrustum: function(quadIndex, model, camera) {
-		var vertexOff = quadIndex * 6 * this.quadCount;
+		// var vertexOff = quadIndex * 6 * this.quadCount;
 		var a = this.qTmp1;
 		var b = this.qTmp2;
 		var c = this.qTmp3;

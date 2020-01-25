@@ -36,12 +36,12 @@ const User = {
             name: isRegExp(/^[a-zA-Z0-9_-]{3,24}$/)
         }, await bodyAsJson(req)); if (error) return error;
 
-        var cname = name.toString().toLowerCase().replace(/^(repo|activate|user|login|logout)$/, '$1_');
+        let cname = name.toString().toLowerCase().replace(/^(repo|activate|user|login|logout)$/, '$1_');
         if (cname.length === 0) cname = 'user-'+Math.random().toString().slice(2);
         if (!validateName(cname)) return "400: Invalid name";
 
         const passwordHash = await bcrypt.hash(password, saltRounds);
-        var cindex = 0;
+        let cindex = 0;
 
         const nameRes = DB.query(`
             SELECT name FROM users WHERE name ~ $1
@@ -53,7 +53,7 @@ const User = {
         await DB.query('BEGIN');
         while (true) {
             try {
-                var { rows: [user] } = await DB.query(
+                const { rows: [user] } = await DB.query(
                     'INSERT INTO users (email, password, name) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING RETURNING email, name, activation_token', 
                     [email, passwordHash, cname]);
                 try {
@@ -68,7 +68,7 @@ const User = {
             } catch(e) {
                 cindex++;
                 cname = name + '.' + cindex; 
-                var { rowCount } = await client.query('SELECT FROM users WHERE email = $1', [email]);
+                const { rowCount } = await client.query('SELECT FROM users WHERE email = $1', [email]);
                 if (rowCount > 0) return '400: Email address already registered';
             }
         }
@@ -97,9 +97,9 @@ const User = {
     recover: async function(req, res) {
         if (req.method !== 'POST') return "405: Only POST accepted";
         const [error, {email}] = assertShape({email:isEmail}, await bodyAsJson(req)); if (error) return error;
-        var {rows: [user]} = await DB.query('SELECT id FROM users WHERE email = $1', [email]);
+        const {rows: [user]} = await DB.query('SELECT id FROM users WHERE email = $1', [email]);
         if (!user) return '404: User not found';
-        var {rows: [userAct]} = await DB.query(
+        const {rows: [userAct]} = await DB.query(
             'UPDATE users SET activation_token = gen_random_uuid() WHERE id = $1 RETURNING activation_token, email',
             [user.id]);
         await Mailer.sendRecoveryEmail(userAct.email, userAct.activation_token);
@@ -111,7 +111,7 @@ const User = {
         const [error, {email, recoveryToken, password, rememberme}] = assertShape({
             email:isEmail, recoveryToken:isStrlen(36,36), password:validatePassword, rememberme:isMaybe(isBoolean)
         }, await bodyAsJson(req)); if (error) return error;
-        var {rows: [user]} = await DB.query('SELECT id FROM users WHERE email = $1 AND activation_token = $2', [email, recoveryToken]);
+        const {rows: [user]} = await DB.query('SELECT id FROM users WHERE email = $1 AND activation_token = $2', [email, recoveryToken]);
         if (!user) return '401: Invalid recoveryToken';
 
         const passwordHash = await bcrypt.hash(password, saltRounds);
@@ -128,9 +128,9 @@ const User = {
     requestAuthenticationEmail: async function(req, res) {
         if (req.method !== 'POST') return "405: Only POST accepted";
         const [error, {email}] = assertShape({email:isEmail}, await bodyAsJson(req)); if (error) return error;
-        var {rows: [user]} = await DB.query('SELECT id FROM users WHERE email = $1', [email]);
+        const {rows: [user]} = await DB.query('SELECT id FROM users WHERE email = $1', [email]);
         if (!user) return '404: User not found';
-        var {rows: [userAct]} = await DB.query(
+        const {rows: [userAct]} = await DB.query(
             'UPDATE users SET activation_token = gen_random_uuid() WHERE id = $1 RETURNING activation_token, email',
             [user.id]);
         await Mailer.sendAuthenticationEmail(userAct.email, userAct.activation_token);
@@ -142,7 +142,7 @@ const User = {
         const [error, {email, authenticationToken, rememberme}] = assertShape({
             email:isEmail, authenticationToken:isStrlen(36,36), rememberme:isMaybe(isBoolean)
         }, await bodyAsJson(req)); if (error) return error;
-        var {rows: [user]} = await DB.query('SELECT id FROM users WHERE email = $1 AND activation_token = $2', [email, authenticationToken]);
+        const {rows: [user]} = await DB.query('SELECT id FROM users WHERE email = $1 AND activation_token = $2', [email, authenticationToken]);
         if (!user) return '401: Invalid authenticationToken';
         
         const session = await sessionCreate(user.id);
@@ -172,7 +172,7 @@ const User = {
     },
 
     logoutAll: async function(req, res) {
-        var [error, session] = await guardPostWithSession(req); if (error) return error;
+        const [error, session] = await guardPostWithSession(req); if (error) return error;
         const {rows} = await sessionDeleteAll(session.user_id)
         const secure = (req.CORSRequest) ? '' : 'Secure; SameSite=strict; ';
         res.setHeader('Set-Cookie', [`session=; Path=/_/; ${secure}expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly`]);

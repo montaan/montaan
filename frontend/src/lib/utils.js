@@ -159,7 +159,7 @@ var utils = module.exports = {
 			mat.elements[12] = parseFloat(elems[4]);
 			mat.elements[13] = parseFloat(elems[5]);
 		} else if (/^matrix3d\(/i.test(elementTransform)) {
-			var elems = elementTransform.replace(/^matrix3d\(|\)$/ig, '').split(' ');
+			elems = elementTransform.replace(/^matrix3d\(|\)$/ig, '').split(' ');
 			for (var i=0; i<16; i++) {
 				mat.elements[i] = parseFloat(elems[i]);
 			}
@@ -209,7 +209,6 @@ var utils = module.exports = {
 			segments.pop();
 		}
 		var branch = tree;
-		var parent;
 		var addCount = 0;
 		for (var i=0; i<segments.length-1; i++) {
 			var segment = segments[i];
@@ -252,13 +251,13 @@ var utils = module.exports = {
 		var obj = {name: uid.value++, title: node.tagName || 'document', index: 0, entries: {}};
 		var files = [];
 		if (node.attributes) {
-			for (var i=0; i<node.attributes.length; i++) {
+			for (let i=0; i<node.attributes.length; i++) {
 				var attr = node.attributes[i];
 				files.push({name: uid.value++, title: attr.name + '=' + attr.value, index: 0, entries: null});
 			}
 		}
 		var file;
-		for (var i=0, l=node.childNodes.length; i<l; i++) {
+		for (let i=0, l=node.childNodes.length; i<l; i++) {
 			var c = node.childNodes[i];
 			if (c.tagName) {
 				file = this.convertXMLToTree(c, uid);
@@ -269,7 +268,7 @@ var utils = module.exports = {
 				}
 			}
 		}
-		for (var i=0; i<files.length; i++) {
+		for (let i=0; i<files.length; i++) {
 			file = files[i];
 			obj.entries[file.name] = file;
 		}
@@ -290,7 +289,7 @@ var utils = module.exports = {
 			var obj = {name: uid.value++, title: title, index: 0, entries: {}};
 			var file;
 			var files = [];
-			for (var i=0, l=node.childNodes.length; i<l; i++) {
+			for (let i=0, l=node.childNodes.length; i<l; i++) {
 				var c = node.childNodes[i];
 				file = this.convertBookmarksToTree(c, uid);
 				if (file) {
@@ -301,14 +300,14 @@ var utils = module.exports = {
 					}
 				}
 			}
-			for (var i=0; i<files.length; i++) {
+			for (let i=0; i<files.length; i++) {
 				file = files[i];
 				obj.entries[file.name] = file;
 			}
 			return obj;
 		} else {
-			for (var i=0, l=node.childNodes.length; i<l; i++) {
-				var file = this.convertBookmarksToTree(node.childNodes[i], uid);
+			for (let i=0, l=node.childNodes.length; i<l; i++) {
+				file = this.convertBookmarksToTree(node.childNodes[i], uid);
 				if (file) {
 					return file;
 				}
@@ -321,7 +320,7 @@ var utils = module.exports = {
 		if (!xml) {
 			var parser = new DOMParser();
 			var type = undefined;
-			if (/^\s*<\!DOCTYPE /i.test(fileString)) {
+			if (/^\s*<!DOCTYPE /i.test(fileString)) {
 				type = 'text/html';
 			} else if (/^\s*<\?xml /.test(fileString)) {
 				type = 'application/xml';
@@ -338,16 +337,16 @@ var utils = module.exports = {
 
 		if (xml) {
 			// This is some XML here.
-			if (/^\s*\<\!DOCTYPE NETSCAPE-Bookmark-file-1>/.test(fileString)) {
+			if (/^\s*<!DOCTYPE NETSCAPE-Bookmark-file-1>/.test(fileString)) {
 				// Bookmarks! Let's parse them!
-				var uid = {value: 0};
-				var tree = this.convertBookmarksToTree(xml, uid);
+				let uid = {value: 0};
+				let tree = this.convertBookmarksToTree(xml, uid);
 				return {tree: {name: -1, title: '', index: 0, entries: {'Bookmarks': tree}}, count: uid.value+1};
 			} else {
 				// XML visualization is go.
-				var uid = {value: 0};
+				let uid = {value: 0};
 				window.xml =xml;
-				var tree = this.convertXMLToTree(xml, uid);
+				let tree = this.convertXMLToTree(xml, uid);
 				return {tree: {name: -1, title: '', index: 0, entries: {'XML': tree}}, count: uid.value+1};
 			}
 		} else {
@@ -399,7 +398,7 @@ var utils = module.exports = {
 	},
 
 	parseGitHubTree: function(githubResult) {
-		var repoName = githubResult.url.match(/^https:\/\/api\.github\.com\/repos\/([^\/]+)\/([^\/]+)/);
+		var repoName = githubResult.url.match(/^https:\/\/api\.github\.com\/repos\/([^/]+)\/([^/]+)/);
 		var userName = "";
 		if (repoName) {
 			userName = repoName[1];

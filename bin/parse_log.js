@@ -1,7 +1,7 @@
 function getIndex(list, index, elem) {
     if (elem === undefined) return undefined;
 
-    var idx = index[elem];
+    let idx = index[elem];
     if (idx === undefined) {
         idx = index[elem] = list.length;
         list.push(elem);
@@ -10,7 +10,7 @@ function getIndex(list, index, elem) {
 }
 
 function addElem(index, key, elem) {
-    var arr = index[key];
+    let arr = index[key];
     if (!arr) arr = index[key] = [];
     arr.push(elem);
 }
@@ -27,20 +27,20 @@ function addDate(index, date, elem) {
     const year = date.getUTCFullYear();
     const month = date.getUTCMonth()+1;
     const day = date.getUTCDate();
-    var yo = index[year]; if (!yo) yo = index[year] = {};
-    var mo = yo[month]; if (!mo) mo = yo[month] = {};
-    var dayo = mo[day]; if (!dayo) dayo = mo[day] = [];
+    let yo = index[year]; if (!yo) yo = index[year] = {};
+    let mo = yo[month]; if (!mo) mo = yo[month] = {};
+    let dayo = mo[day]; if (!dayo) dayo = mo[day] = [];
     dayo.push(elem);
 }
 
 function parseCommits(instream, outstream) {
 
-    var sha, author, message, date, files = [];
-    var lineStart = 0;
+    let sha, author, message, date, files = [];
+    let lineStart = 0;
 
     const commitRE = /^commit /;
     const authorRE = /^Author:/;
-    var commitSep = '\n';
+    let commitSep = '\n';
     const nextCommitSep = '\n,';
 
     const authors = [];
@@ -59,18 +59,18 @@ function parseCommits(instream, outstream) {
 
     outstream.write('{"commits":[');
 
-    var lineBufs = [];
-    var lineBufSize = 0;
+    const lineBufs = [];
+    let lineBufSize = 0;
 
-    var lineNum = 0;
-    var commitIdx = 0;
+    let lineNum = 0;
+    let commitIdx = 0;
 
     function parseBlock(block) {
-        for (var i = 0; i < block.length; ++i) {
+        for (let i = 0; i < block.length; ++i) {
             while (block[i] !== 10 && i < block.length) ++i;
             if (i < block.length) {
                 if ((lineBufSize + i) > lineStart) {
-                    var buf = block;
+                    let buf = block;
                     if (lineBufs.length > 0) {
                         lineBufs.push(block);
                         buf = Buffer.concat(lineBufs);

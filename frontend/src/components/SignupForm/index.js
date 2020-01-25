@@ -1,12 +1,12 @@
 
 import React from 'react';
-import { withRouter, Link } from "react-router-dom";
+import { withRouter } from "react-router-dom";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form"
-import { Formik, ErrorMessage } from "formik";
+import { Formik } from "formik";
 import * as yup from "yup";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faArrowLeft, faKey } from '@fortawesome/free-solid-svg-icons'
+import { faArrowLeft } from '@fortawesome/free-solid-svg-icons'
 
 import FormGroupTextInput from '../../lib/FormGroupTextInput';
 

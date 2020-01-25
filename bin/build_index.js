@@ -6,7 +6,7 @@ const path = require('path');
 
 const fileList = process.argv.pop();
 
-var idx = lunr(function() {
+const idx = lunr(function() {
     this.field('name');
     this.field('type');
     this.field('body');
@@ -18,7 +18,7 @@ const readInterface = readline.createInterface(fs.createReadStream(fileList));
 readInterface.on('line', function(filename) {
     console.error(filename);
     const stat = fs.statSync(filename);
-    var type, name, body = '';
+    let type, name, body = '';
     name = path.basename(filename);
     if (stat.isDirectory()) {
         type = 'directory';
@@ -39,7 +39,7 @@ readInterface.on('line', function(filename) {
 });
 
 readInterface.on('close', function() {
-    var packed = idx.toPackedJSON(32);
+    const packed = idx.toPackedJSON(32);
     process.stdout.write(JSON.stringify(packed));
     process.stdout.end();
 });

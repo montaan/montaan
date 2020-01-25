@@ -167,7 +167,9 @@ var scope = {Proxy: global.Proxy};
     return {'proxy': p, 'revoke': lastRevokeFn};
   };
 
+  // eslint-disable-next-line
   scope.Proxy['revocable'] = scope.Proxy.revocable;
+  // eslint-disable-next-line
   scope['Proxy'] = scope.Proxy;
 })(scope);
 

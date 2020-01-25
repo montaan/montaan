@@ -18,10 +18,10 @@ global.getOwnProperty = (o,p) => Object.prototype.hasOwnProperty.call(o, p) ? o[
 global.assertShape = function(shape, obj) {                                                          // Asserts that obj matches shape and leaves out unmatched parts.
     const result = {};
     if (typeof obj !== 'object') return [`400: Missing property`, {}];                               // If obj isn't an object, it fails to match.
-    for (let n in shape) {                                                                           // Go through every property matcher in shape.
+    for (const n in shape) {                                                                           // Go through every property matcher in shape.
         if (typeof shape[n] === 'function') if (!shape[n](obj[n])) return [`400: Invalid property: ${n}`, {}]; // A function shape property should return true when called with the obj property.
         if (typeof shape[n] === 'object') { // Validate object property.
-            let [error, res] = assertShape(shape[n], obj[n]);
+            const [error, res] = assertShape(shape[n], obj[n]);
             if (error) return [error + ` ${n}`, res];
             result[n] = res;
         } else result[n] = obj[n]; // Copy the validated obj property to result.
@@ -215,7 +215,7 @@ global.sessionList = async (userId) =>                                          
 
 // Migration runner
 async function migrate(migrations, migrationTarget) {                                                // Migrate the database to migrationTarget in migrations.
-    var targetMigrationIndex = migrations.findIndex(m => m.name === migrationTarget);                // Find the index of the migration named migrationTarget.
+    let targetMigrationIndex = migrations.findIndex(m => m.name === migrationTarget);                // Find the index of the migration named migrationTarget.
     if (targetMigrationIndex === -1) targetMigrationIndex = migrationTarget === 0 ? migrationTarget : (migrationTarget || migrations.length-1); // If there's no migration to be found, treat migrationTarget as an index, or go to the last migration.
     const client = global.DB;                                                                        // Grab a single connection from the pool for the migration transaction.
     try {                                                                                            // This might not work because I may have made a mistake in writing SQL. In which case we should ROLLBACK.
@@ -320,7 +320,7 @@ class DBPassThrough {
 
 // Body JSON parsing
 HTTP.ServerResponse.prototype.json = HTTP2.Http2ServerResponse.prototype.json = function(obj, statusCode=200, headers=undefined) { // Let's monkey-patch the HTTP response object for easier JSON responses! Turns obj into JSON and sends that in the response, using the given statusCode and extra headers if any.
-    var json = Buffer.from(JSON.stringify(obj));                                                     // Turn obj into a Buffer of JSON.
+    let json = Buffer.from(JSON.stringify(obj));                                                     // Turn obj into a Buffer of JSON.
     if (this.targetEncoding && json.byteLength > 860) {                                              // Compress the response if the JSON is longer than a single IP packet and the client supports compressed responses.
         json = this.targetEncoding === 'br' ? zlib.brotliCompressSync(json, {params: {[zlib.constants.BROTLI_PARAM_QUALITY]: 1}}) : zlib.gzipSync(json, {level: 1}); // Use brotli at quality 5 if supported, otherwise use gzip at quality 8 (brotli is generally smaller at similar encoding speed here.)
         this.setHeader('content-encoding', this.targetEncoding);                                     // Tell the client what kind of compression we're using.
@@ -329,7 +329,7 @@ HTTP.ServerResponse.prototype.json = HTTP2.Http2ServerResponse.prototype.json = 
     this.end(json);                                                                                  // And write out the (possibly compressed) JSON buffer.
 };
 global.bodyAsBuffer = (req, maxLen=10e6) => new Promise(function (resolve, reject) {                 // Reads the body of a request into a buffer. If the body is longer than maxLen, throws a 413: Body too large.
-    var totalByteLength = 0, buffers = [];                                                           // Keep track of how many bytes we've received and the actual bytes too.
+    let totalByteLength = 0, buffers = [];                                                           // Keep track of how many bytes we've received and the actual bytes too.
     req.on('data', function(buffer) {                                                                // When the request gives us some data.
         totalByteLength += buffer.byteLength;                                                        // Add its byteLength to the total received bytes.
         if (totalByteLength > maxLen) reject(Error('413: Body too large'));                          // Too many bytes, Mr. Hacker. Good-bye.
