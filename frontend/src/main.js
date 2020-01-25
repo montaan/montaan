@@ -1199,6 +1199,49 @@ class Tabletree {
 		}
 	}
 
+	getEntryAtMouse(ev) {
+		var models = [this.model];
+		if (this.processModel) models.push(this.processModel);
+		if (this.authorModel) models.push(this.authorModel);
+		return Geometry.findFSEntry({clientX: ev.clientX, clientY: ev.clientY, target: this.renderer.domElement}, this.camera, models, this.highlighted);
+	}
+
+	zoomToEntry(ev) {
+		const intersection = this.getEntryAtMouse(ev);
+		if (intersection) {
+			var fsEntry = intersection.fsEntry;
+			var ca = intersection.object.geometry.attributes.color;
+			var vs = intersection.object.geometry.attributes.position;
+			var tvs = intersection.object.children[1].geometry.attributes.position;
+			if (this.highlighted && this.highlighted.highlight) {
+				var obj = this.highlighted.highlight;
+				obj.parent.remove(obj);
+			}
+			if (this.highlighted !== fsEntry) {
+				this.highlighted = fsEntry;
+				this.goToFSEntry(fsEntry, intersection.object);
+			} else {
+				if (this.highlighted.entries === null) {
+					var fovDiff = (this.highlighted.scale * 50) / this.camera.fov;
+					if (fovDiff > 1 || !fsEntry.lineCount) {
+						this.goToFSEntry(this.highlighted, intersection.object);
+					} else {
+						this.goToFSEntryText(this.highlighted, intersection.object);
+					}
+				} else {
+					this.goToFSEntry(this.highlighted, intersection.object);
+				}
+			}
+			this.changed = true;
+		}
+	}
+
+	fsEntryCmp(a, b) {
+		if (!!a.entries === !!b.entries) return a.title < b.title ? -1 : (a.title > b.title) ? 1 : 0;
+		else if (a.entries) return -1;
+		else return 1;
+	}
+	
 	setupEventListeners() {
 		const { renderer, camera, modelPivot } = this;
 
@@ -1282,7 +1325,7 @@ class Tabletree {
 		window.onkeydown = function(ev) {
 			if (!ev.target || ev.target.tagName !== 'INPUT') {
 				var factor = 0.0001;
-				var dx = 0, dy = 0;
+				var dx = 0, dy = 0, dz = 0;
 				switch (ev.keyCode) {
 					case 39:
 						dx = -50;
@@ -1301,8 +1344,62 @@ class Tabletree {
 					break;
 
 				}
+				// Arrow keys pan normally, WASD is context-sensitive scroll (next file, etc.)
+				switch (ev.key) {
+					case 'w': // scroll up
+						var fsEntry = getPathEntry(self.FileTree, self.breadcrumbPath);
+						if (fsEntry) {
+							var files = Object.values(fsEntry.parent.entries).sort(self.fsEntryCmp);
+							var fn = files[files.indexOf(fsEntry)-1];
+							if (fn) self.goToFSEntry(fn);
+						}
+						break;
+					case 's': // scroll down
+						var fsEntry = getPathEntry(self.FileTree, self.breadcrumbPath);
+						if (fsEntry) {
+							var files = Object.values(fsEntry.parent.entries).sort(self.fsEntryCmp);
+							var fn = files[files.indexOf(fsEntry)+1];
+							if (fn) self.goToFSEntry(fn);
+						}
+						break;
+					case 'a': // scroll left
+						break;
+					case 'd': // scroll right
+						break;
+					case 'e': // zoom in
+						dz = -50;
+						break;
+					case 'q': // zoom out
+						dz = 50;
+						break;
+					case 'z': // zoom in to object
+						const intersection = self.getEntryAtMouse({clientX: window.innerWidth/2, clientY: window.innerHeight/2});
+						if (intersection) {
+							var fsEntry = intersection.fsEntry;
+							var fovDiff = (fsEntry.scale * 50) / self.camera.fov;
+							if (self.highlighted === fsEntry) {
+								if (fsEntry.textScale) self.goToFSEntryText(fsEntry);
+								else dz = -50;
+							} else {
+								if (fovDiff > 0.95) {
+									if (fsEntry.textScale) self.goToFSEntryText(fsEntry);
+									else dz = -50;
+								} else self.goToFSEntry(fsEntry);
+							}
+							self.highlighted = fsEntry;
+						} else {
+							dz = -50;
+						}
+						// self.zoomToEntry({clientX: window.innerWidth/2, clientY: window.innerHeight/2});
+						break;
+					case 'x': // zoom out of object
+						var fsEntry = getPathEntry(self.FileTree, self.breadcrumbPath.replace(/\/[^/]+$/,''));
+						if (fsEntry && fsEntry.title) self.goToFSEntry(fsEntry, self.model);
+						break;
+				}
 				camera.targetPosition.x -= factor*dx * camera.fov;
 				camera.targetPosition.y += factor*dy * camera.fov;
+				camera.targetFOV *= Math.pow(1.01, dz);
 				self.changed = true;
 			}
 		};
@@ -1403,7 +1500,7 @@ class Tabletree {
 			e.preventDefault();
 		});
 
-		var highlighted = null;
+		this.highlighted = null;
 		window.onmouseup = function(ev) {
 			if (down && ev.preventDefault) ev.preventDefault();
 			if (clickDisabled) {
@@ -1412,44 +1509,7 @@ class Tabletree {
 			}
 			if (down) {
 				down = false;
-				var models = [self.model];
-				if (self.processModel) {
-					models.push(self.processModel);
-				}
-				if (self.authorModel) {
-					models.push(self.authorModel);
-				}
-
-				var intersection = Geometry.findFSEntry(ev, camera, models, highlighted);
-				if (intersection) {
-					var fsEntry = intersection.fsEntry;
-					var ca = intersection.object.geometry.attributes.color;
-					var vs = intersection.object.geometry.attributes.position;
-					var tvs = intersection.object.children[1].geometry.attributes.position;
-					if (highlighted && highlighted.highlight) {
-						var obj = highlighted.highlight;
-						obj.parent.remove(obj);
-					}
-					if (highlighted !== fsEntry) {
-						highlighted = fsEntry;
-
-						self.goToFSEntry(fsEntry, intersection.object);
-					} else {
-						if (highlighted.entries === null) {
-							var fovDiff = (highlighted.scale * 50) / camera.fov;
-							if (fovDiff > 1 || !fsEntry.lineCount) {
-								self.goToFSEntry(highlighted, intersection.object);
-							} else {
-								self.goToFSEntryText(highlighted, intersection.object);
-							}
-						} else {
-							self.goToFSEntry(highlighted, intersection.object);
-						}
-					}
-					self.changed = true;
-
-					return;
-				}
+				self.zoomToEntry(ev);
 			}
 		};
 

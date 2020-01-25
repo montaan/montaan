@@ -40,13 +40,18 @@
     [] Buy ads
     [] Buy platform credits
 
+# Make a pleasant place
+    [] Party
+    [] Theme music for tasks / parts of project
+    [] Artwork
+
 # Collaboration system
     [] Commit flow management best practices
         [] Rust
         [] Linux
         [] LLVM
         [] VSCode
-        [] Chromium (?)
+        [] Chromium
     [] Positive community mood
         [] Like Fortnite &c online games deal with griefers and keeping it fun for all
     [] Automatic formatting
@@ -86,13 +91,20 @@
             [] author:authorString
             [] file:filePath
         [] When drawing a link, find all objects with the URI
-        [] Element-FSEntry
-        [] FSEntry-FSEntry
-        [] Element-Element
-        [] Single line geometry for all lines (limit to ~10k lines in view, stratified random sampling, update line set when zooming and navigation)
+        [x] Element-FSEntry
+        [x] FSEntry-FSEntry
+        [x] Element-Element
+        [] Single line geometry for all lines 
+            [x] Links
+            [] Search results
+        [] Optimize lines
+            [] Limit to ~10k lines in view
+            [] Stratified random sampling
+            [] Update visible lines when navigating
 
 # UX tweaks
-    [] Keyboard zoom controls
+    [x] Keyboard zoom controls
+    [x] Kb navigation in dir contents
     [] Zoom text doc left side to screen left side (instead of middle of screen)
     [] Snap scroll to document boundaries
     [] Line numbers for text view
