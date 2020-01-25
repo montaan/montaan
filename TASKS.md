@@ -34,18 +34,30 @@
 
 ## Active
 
-# "Payment" system
-    [] Ad magazine to pay for today's use
-    [] Commit prompt to pay for use via commit
-    [] Buy ads
-    [] Buy platform credits
 
-# Make a pleasant place
-    [] Party
-    [] Theme music for tasks / parts of project
-    [] Artwork
+# "Payment" system
+    [] Commit prompt to pay for use via commit
 
 # Collaboration system
+    [] Codebase easy to contribute to
+        [] TypeScript for IntelliSense
+        [] Documentation
+        [] Getting Started 
+        [] Book with deep knowledge
+        [] Self-contained components
+        [] Bors to keep master a-OK
+        [] Tests to keep things working
+        [] Issue dispatcher
+        [] Translation project
+        [] Documentation project
+        [] Artwork / theme project
+        [] Music / audio project
+        [] Fun project
+        [] Optimization project
+        [] Quality project
+        [] Prettier in CI hook to enforce coding style
+    [] Actively prompt for commits
+        [] Issue dispatcher
     [] Commit flow management best practices
         [] Rust
         [] Linux
@@ -83,6 +95,11 @@
             [] Flag failures in individual components for quick review & fixing
             [] Disable failed components from affecting rest of app
             [] Runtime monitoring of failure causes & stack traces to replicate failure
+
+# Make a pleasant place
+    [] Party
+    [] Theme music for tasks / parts of project
+    [] Artwork
 
 # Frontend data model
     [] Links between objects
@@ -198,6 +215,11 @@
     [] Output a 3D model for rendering with a path tracer
     [] Sparkling precious particle diamonds like on Precious Nature map
     [] Design that makes you feel awesome
+
+# Payment system
+    [] Ad magazine to pay for today's use
+    [] Buy ads
+    [] Buy platform credits
 
 
 
