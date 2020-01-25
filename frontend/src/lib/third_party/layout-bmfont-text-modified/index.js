@@ -1,6 +1,5 @@
 var wordWrap = require('../word-wrapper-modified')
 var xtend = require('xtend')
-var number = require('as-number')
 
 var X_HEIGHTS = ['x', 'e', 'a', 'o', 'n', 's', 'r', 'c', 'u', 'm', 'v', 'w', 'z']
 var M_WIDTHS = ['m', 'w']
@@ -28,7 +27,7 @@ TextLayout.prototype.update = function(opt) {
     measure: this._measure
   }, opt)
   this._opt = opt
-  this._opt.tabSize = number(this._opt.tabSize, 4)
+  if (this._opt.tabSize === undefined) this._opt.tabSize = 4;
 
   if (!opt.font)
     throw new Error('must provide a valid bitmap font')
@@ -54,7 +53,8 @@ TextLayout.prototype.update = function(opt) {
   //the pen position
   var x = 0
   var y = 0
-  var lineHeight = number(opt.lineHeight, font.common.lineHeight)
+  var lineHeight = opt.lineHeight;
+  if (lineHeight === undefined) lineHeight = font.common.lineHeight;
   var baseline = font.common.base
   var descender = lineHeight-baseline
   var letterSpacing = opt.letterSpacing || 0
