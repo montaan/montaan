@@ -1,17 +1,12 @@
 UI notes
 
 - Dark background is not inviting, especially as it's not accented by glosses and colors
-- Low contrast with yellow + white text -> either use black text or darker bg
 - Small font size labels are not easily readable 
 - Pinch zoom feels unstable (jitter caused by the 2-finger centerpoint pan, exaggerated zoom at end of pinch)
-- Inertia scroll is missing, which makes touch navigation feel slow
 - File & folder coloring is not very helpful for source directories
 	- Different PLs should look different
 	- Different doc types should look different
 	- Icons for different types of files
-- The file contents are not shown when looking close at a file
-- Thumbnails for images are missing
-- Have to leave the explorer to view details of a file (in a new window too!)
 - No tools to create, delete and edit files and folders
 - No tools to select files and folders
 - Float jitter when zooming close on MacBook Air :-(

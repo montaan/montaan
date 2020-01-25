@@ -29,11 +29,11 @@ Your information dashboard. See everything that's going on at a glance, every ti
 
 1. Filesystem structure visualizer
 	- [x] Build a model from list of files
-	- [x] [ ] Render 1 Mtri geometry + screenful of text at different font sizes
+	- [x] [x] Render 1 Mtri geometry + screenful of text at different font sizes
 	- [ ] Color files and dirs based on user tags
 	- [x] Show thumbnails for files
 	- [x] [ ] Be able to zoom into the geometry / blow up parts of it
-	- [ ] Run whole thing at 60 fps
+	- [x] Run whole thing at 60 fps
 	- [ ] Streaming geometry build so that the first things appear in 100 ms
 	- [ ] Cached geometry & renders so that the previous state appears instantly and updates as changes stream in
 	- [ ] Dynamic geometry to maintain framerate and visualization depth
