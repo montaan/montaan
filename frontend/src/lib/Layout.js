@@ -1,9 +1,11 @@
-var THREE = require('three');
-var Geometry = require('./Geometry.js');
-var Colors = require('./Colors.js').default;
-var createText = require('./third_party/three-bmfont-text-modified');
+import createText from './third_party/three-bmfont-text-modified';
+import Colors from './Colors.js';
 
-module.exports = {
+const Geometry = require('./Geometry.js');
+
+const THREE = require('three');
+
+export default {
 
 	thumbnailGeo: new THREE.PlaneBufferGeometry(1,1,1,1),
 	font: null,

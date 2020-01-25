@@ -1,5 +1,3 @@
-var assign = require('object-assign')
-
 module.exports = function createBasicShader (opt) {
   opt = opt || {}
   var opacity = typeof opt.opacity === 'number' ? opt.opacity : 1
@@ -14,7 +12,7 @@ module.exports = function createBasicShader (opt) {
   delete opt.precision
   delete opt.opacity
 
-  return assign({
+  return {
     uniforms: {
       opacity: { type: 'f', value: opacity },
       map: { type: 't', value: map || new THREE.Texture() },
@@ -44,6 +42,6 @@ module.exports = function createBasicShader (opt) {
         ? ''
         : '  if (gl_FragColor.a < ' + alphaTest + ') discard;',
       '}'
-    ].join('\n')
-  }, opt)
+    ].join('\n'),
+    ...opt};
 }

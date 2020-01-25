@@ -1,7 +1,6 @@
-var assign = require('object-assign')
 var THREE = require('three');
 
-module.exports = function createSDFShader (opt) {
+export default function createSDFShader (opt) {
   opt = opt || {}
   var opacity = typeof opt.opacity === 'number' ? opt.opacity : 1
   var alphaTest = typeof opt.alphaTest === 'number' ? opt.alphaTest : 0.0001
@@ -29,7 +28,7 @@ module.exports = function createSDFShader (opt) {
     paletteElseIfs.push('    else if (pIdx == '+i+'.0) pColor = palette['+i+'];');
   }
 
-  return assign({
+  return {
     uniforms: {
       opacity: { type: 'f', value: opacity },
       map: { type: 't', value: map || new THREE.Texture() },
@@ -106,6 +105,6 @@ module.exports = function createSDFShader (opt) {
         ? ''
         : '  if (gl_FragColor.a < ' + alphaTest + ') discard;',
       '}'
-    ].join('\n')
-  }, opt)
+    ].join('\n'),
+    ...opt};
 }

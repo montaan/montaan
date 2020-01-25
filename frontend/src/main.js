@@ -1,15 +1,15 @@
 import { getPathEntry, getFullPath, getSiblings } from './lib/filetree';
 import Colors from './lib/Colors';
 import prettyPrintWorker from './lib/pretty_print';
+import createText from './lib/third_party/three-bmfont-text-modified';
+import SDFShader from './lib/third_party/three-bmfont-text-modified/shaders/sdf';
+import Layout from './lib/Layout.js';
 
 const THREE = require('three');
 global.THREE = THREE;
 
 var utils = require('./lib/utils.js');
 var Geometry = require('./lib/Geometry.js');
-var Layout = require('./lib/Layout.js');
-var createText = require('./lib/third_party/three-bmfont-text-modified');
-var SDFShader = require('./lib/third_party/three-bmfont-text-modified/shaders/sdf');
 var loadFont = require('load-bmfont');
 
 THREE.Object3D.prototype.tick = function(t, dt) {

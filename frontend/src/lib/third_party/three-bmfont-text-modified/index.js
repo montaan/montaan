@@ -1,17 +1,15 @@
-var createLayout = require('../layout-bmfont-text-modified')
-var inherits = require('inherits')
-var createIndices = require('quad-indices')
-var buffer = require('../three-buffer-vertex-data-modified')
-var assign = require('object-assign')
+var createLayout = require('../layout-bmfont-text-modified');
+var inherits = require('inherits');
+var buffer = require('../three-buffer-vertex-data-modified');
 var THREE = require('three');
 
-var vertices = require('./lib/vertices')
-var utils = require('./lib/utils')
+var vertices = require('./lib/vertices');
+var utils = require('./lib/utils');
 
-var Base = THREE.BufferGeometry
+var Base = THREE.BufferGeometry;
 
-module.exports = function createTextGeometry (opt) {
-  return new TextGeometry(opt)
+export default function createTextGeometry (opt) {
+  return new TextGeometry(opt);
 }
 
 function TextGeometry (opt) {
@@ -23,8 +21,8 @@ function TextGeometry (opt) {
 
   // use these as default values for any subsequent
   // calls to update()
-  this._opt = assign({}, opt)
-
+  this._opt = {...opt};
+  
   // also do an initial setup...
   if (opt) this.update(opt)
 }
@@ -37,7 +35,7 @@ TextGeometry.prototype.update = function (opt) {
   }
 
   // use constructor defaults
-  opt = assign({}, this._opt, opt);
+  opt = {...this._opt, ...opt};
 
   if (!opt.font) {
     throw new TypeError('must specify a { font } in options');

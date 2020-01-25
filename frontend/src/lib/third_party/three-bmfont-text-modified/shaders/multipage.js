@@ -1,5 +1,3 @@
-var assign = require('object-assign')
-
 module.exports = function createMultipageShader (opt) {
   opt = opt || {}
   var opacity = typeof opt.opacity === 'number' ? opt.opacity : 1
@@ -47,11 +45,12 @@ module.exports = function createMultipageShader (opt) {
     attributes = undefined
   }
 
-  return assign({
-    uniforms: assign({}, baseUniforms, {
+  return {
+    uniforms: {
+      ...baseUniforms,
       opacity: { type: 'f', value: opacity },
       color: { type: 'c', value: new THREE.Color(color) }
-    }),
+    },
     vertexShader: [
       'attribute vec4 position;',
       'attribute vec2 uv;',
@@ -81,6 +80,7 @@ module.exports = function createMultipageShader (opt) {
         ? ''
         : '  if (gl_FragColor.a < ' + alphaTest + ') discard;',
       '}'
-    ].join('\n')
-  }, attributes, opt)
+    ].join('\n'),
+    ...attributes, 
+    ...opt};
 }

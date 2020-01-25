@@ -43,10 +43,7 @@
   },
   "dependencies": {
     "inherits": "^2.0.1",
-    "layout-bmfont-text": "^1.2.0",
-    "object-assign": "^4.0.1",
-    "quad-indices": "^2.0.1",
-    "three-buffer-vertex-data": "^1.0.0"
+    "layout-bmfont-text": "^1.2.0"
   },
   "description": "renders BMFont files in ThreeJS with word-wrapping",
   "devDependencies": {
