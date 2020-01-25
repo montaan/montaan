@@ -19,19 +19,6 @@ THREE.Object3D.prototype.tick = function(t, dt) {
 	}
 };
 
-(function() {
-	var input = document.createElement('input');
-	input.type = 'file';
-	if ((input.webkitdirectory === undefined && input.directory === undefined)) {
-		document.body.classList.add('no-directory');
-	}
-	if ((/mobile/i).test(window.navigator.userAgent)) {
-		document.body.classList.add('no-directory');
-		document.body.classList.add('mobile');
-	}
-})();
-
-
 class Tabletree {
 
 	constructor() {
@@ -403,6 +390,27 @@ class Tabletree {
 		this.scene.add(this.searchLine);
 		this.scene.add(this.searchHighlights);
 
+		this.lineGeo = new THREE.Geometry();
+		this.lineModel = new THREE.LineSegments(this.lineGeo, new THREE.LineBasicMaterial({
+			color: new THREE.Color(1.0, 1.0, 1.0), opacity: 1, transparent: true, depthWrite: false,
+			vertexColors: true
+		}));
+		for (var i=0; i<40000; i++) {
+			this.lineGeo.vertices.push(new THREE.Vector3());
+			this.lineGeo.colors.push(new THREE.Color());
+		}
+		for (var i=0; i<10000; i++) {
+			var off = i * 4;
+			this.lineGeo.faces.push(
+				new THREE.Face3(off, off+1, off+2),
+				new THREE.Face3(off, off+2, off+3)
+			);
+		}
+		this.lineModel.frustumCulled = false;
+		this.lineModel.ontick = () => {
+			this.lineModel.visible = this.links.length > 0;
+		};
+		this.scene.add(this.lineModel);
 	}
 
 	setSearchResults(searchResults) {
@@ -864,38 +872,11 @@ class Tabletree {
 			this.authorModel.parent.remove(this.authorModel);
 			this.authorModel = null;
 		}
-		if (this.lineModel) {
-			this.lineModel.visible = false;
-			this.lineModel.parent.remove(this.lineModel);
-			this.lineModel = null;
-		}
 		this.FileTree = fileTree.tree;
 		this.model = this.createFileTreeModel(fileTree.count, fileTree.tree);
 		this.model.position.set(-0.5, -0.5, 0.0);
 		this.modelPivot.add(this.model);
 		// processTick();
-
-		this.lineGeo = new THREE.Geometry();
-		this.lineModel = new THREE.LineSegments(this.lineGeo, new THREE.LineBasicMaterial({
-			color: new THREE.Color(1.0, 1.0, 1.0), opacity: 1, transparent: true, depthWrite: false,
-			vertexColors: true
-		}));
-		for (var i=0; i<40000; i++) {
-			this.lineGeo.vertices.push(new THREE.Vector3());
-			this.lineGeo.colors.push(new THREE.Color());
-		}
-		for (var i=0; i<10000; i++) {
-			var off = i * 4;
-			this.lineGeo.faces.push(
-				new THREE.Face3(off, off+1, off+2),
-				new THREE.Face3(off, off+2, off+3)
-			);
-		}
-		this.lineModel.frustumCulled = false;
-		this.lineModel.ontick = () => {
-			this.lineModel.visible = this.links.length > 0;
-		};
-		this.modelPivot.add(this.lineModel);
 	}
 
 	makeTextMaterial(palette=null, fontTexture=this.fontTexture) {
@@ -973,11 +954,11 @@ class Tabletree {
 
 	updateLineBetweenElements(geo, index, color, bboxA, bboxB) {
 		this.screenPlane.visible = true;
-		var intersectionsA = utils.findIntersectionsUnderEvent({clientX: bboxA.left, clientY: bboxA.top+24, target: this.renderer.domElement}, this.camera, [this.screenPlane]);
-		var intersectionsB = utils.findIntersectionsUnderEvent({clientX: bboxB.left, clientY: bboxB.top+24, target: this.renderer.domElement}, this.camera, [this.screenPlane]);
+		var intersectionsA = utils.findIntersectionsUnderEvent({clientX: bboxA.left, clientY: bboxA.top, target: this.renderer.domElement}, this.camera, [this.screenPlane]);
+		var intersectionsB = utils.findIntersectionsUnderEvent({clientX: bboxB.left, clientY: bboxB.top, target: this.renderer.domElement}, this.camera, [this.screenPlane]);
 		this.screenPlane.visible = false;
 		var a = intersectionsA[0].point;
-		var av = new THREE.Vector3(b.x, b.y, b.z);
+		var av = new THREE.Vector3(a.x, a.y, a.z);
 		var b = intersectionsB[0].point;
 		var bv = new THREE.Vector3(b.x, b.y, b.z);
 
@@ -1012,7 +993,7 @@ class Tabletree {
 			var aUp = new THREE.Vector3(av.x - fsEntry.scale*0.075, av.y + 0.05*fsEntry.scale, av.z);
 		} else {
 			this.screenPlane.visible = true;
-			var intersections = utils.findIntersectionsUnderEvent({clientX: bbox.left, clientY: bbox.top+24, target: this.renderer.domElement}, this.camera, [this.screenPlane]);
+			var intersections = utils.findIntersectionsUnderEvent({clientX: bbox.left, clientY: bbox.top, target: this.renderer.domElement}, this.camera, [this.screenPlane]);
 			this.screenPlane.visible = false;
 			var b = intersections[0].point;
 			var bv = new THREE.Vector3(b.x, b.y, b.z);
@@ -1048,10 +1029,10 @@ class Tabletree {
 		var b = entryB;
 
 		var av = new THREE.Vector3(a.x, a.y, a.z);
-		av.applyMatrix4(modelA.matrix);
+		av.applyMatrix4(modelA.matrixWorld);
 
 		var bv = new THREE.Vector3(b.x, b.y, b.z);
-		bv.applyMatrix4(modelB.matrix);
+		bv.applyMatrix4(modelB.matrixWorld);
 
 		if (lineA > 0 && entryA.textHeight) {
 			const textYOff = ((lineA+0.5) / lineCountA) * entryA.textHeight;
@@ -1066,8 +1047,10 @@ class Tabletree {
 			av = textLinePos;
 		}
 
-		var aUp = new THREE.Vector3(av.x+(bv.x-av.x)*0.1, av.y+(bv.y-av.y)*0.1, Math.max(av.z, bv.z) + 0.1);
-		var bUp = new THREE.Vector3(bv.x-(bv.x-av.x)*0.1, bv.y-(bv.y-av.y)*0.1, Math.max(av.z, bv.z) + 0.1);
+		var aUp = new THREE.Vector3(a.x+(b.x-a.x)*0.1, a.y+(b.y-a.y)*0.1, Math.max(a.z, b.z) + 0.1);
+		aUp.applyMatrix4(modelA.matrixWorld);
+		var bUp = new THREE.Vector3(b.x-(b.x-a.x)*0.1, b.y-(b.y-a.y)*0.1, Math.max(a.z, b.z) + 0.1);
+		bUp.applyMatrix4(modelB.matrixWorld);
 
 
 		geo.vertices[index++].copy(av);
@@ -1076,7 +1059,6 @@ class Tabletree {
 		geo.vertices[index++].copy(bUp);
 		geo.vertices[index++].copy(bUp);
 		geo.vertices[index++].copy(bv);
-		geo.verticesNeedUpdate = true;
 
 		if (color) {
 			index -= 6;
@@ -1092,9 +1074,17 @@ class Tabletree {
 	setLinks(links) {
 		if (this.lineGeo) {
 			const geo = this.lineGeo;
-			for (var i = links.length*6; i < this.links.length*6; i++) geo.vertices[i].set(-100,-100,-100);
+			for (let i = links.length; i < this.links.length; i++) {
+				let j = i * 6;
+				geo.vertices[j++].set(-100,-100,-100);
+				geo.vertices[j++].set(-100,-100,-100);
+				geo.vertices[j++].set(-100,-100,-100);
+				geo.vertices[j++].set(-100,-100,-100);
+				geo.vertices[j++].set(-100,-100,-100);
+				geo.vertices[j++].set(-100,-100,-100);
+			}
 			this.links = links;
-			for (var i = 0; i < links.length; i++) {
+			for (let i = 0; i < links.length; i++) {
 				const l = links[i];
 				const model = this.model;
 				const srcIsElem = l.src instanceof Element;
@@ -1114,6 +1104,8 @@ class Tabletree {
 					this.updateLineBetweenEntries(geo, i*6, l.color, model, l.src, l.srcLine, l.src.lineCount, model, l.dst, l.dstLine, l.dst.lineCount);
 				}
 			}
+			geo.verticesNeedUpdate = true;
+			geo.colorsNeedUpdate = true;
 			this.changed = true;
 		}
 	}

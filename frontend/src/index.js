@@ -8,6 +8,8 @@ import './css/main.scss';
 import App from './App';
 import * as serviceWorker from './serviceWorker';
 
+document.body.classList.add((/mobile/i).test(window.navigator.userAgent) ? 'mobile' : 'desktop');
+
 ReactDOM.render(<App />, document.getElementById('root'));
 
 // If you want your app to work offline and load faster, you can change

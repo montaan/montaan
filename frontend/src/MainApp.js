@@ -103,21 +103,35 @@ class MainApp extends React.Component {
         console.timeEnd('parse commitObj');
         this.setState({processing: false, commitData});
         if (commitsOpen) this.setActiveCommits(commitData.commits);
-        this.animateRandomLinks(fileTree.tree, files.split("\0"), repoPrefix);
+        // this.animateRandomLinks(fileTree.tree, files.split("\0"), repoPrefix);
     }
 
     animateRandomLinks(fileTree, files, repoPrefix) {
+        const del = document.createElement('div');
+        for (var i = 0; i < 2; i++)
+        for (var j = 0; j < 200; j++) {
+            var el = document.createElement('div');
+            el.style.border = '1px solid red';
+            el.style.width = '4px';
+            el.style.height = '1px';
+            el.style.top = 2 + (j * 4) + 'px';
+            if (i) el.style.right = '10px';
+            else el.style.left = '10px';
+            el.style.zIndex = 20000;
+            el.style.position = 'fixed';
+            del.appendChild(el);
+        }
+        document.body.appendChild(del);
         this.randomLinksInterval = setInterval(() => {
             const links = [];
             for (var i=0,l=Math.random()*100; i<l; i++) {
-                const src = getPathEntry(fileTree, repoPrefix + '/' + files[(Math.random()*files.length) | 0]);
-                const dst = getPathEntry(fileTree, repoPrefix + '/' + files[(Math.random()*files.length) | 0]);
-                const rnd = Math.random();
-                const color = {r: 1, g: rnd, b: 1-rnd};
+                const src = Math.random() > 0.5 ? del.childNodes[Math.random()*400 | 0] : getPathEntry(fileTree, repoPrefix + '/' + files[(Math.random()*files.length) | 0]);
+                const dst = Math.random() > 0.5 ? del.childNodes[Math.random()*400 | 0] : getPathEntry(fileTree, repoPrefix + '/' + files[(Math.random()*files.length) | 0]);
+                const color = {r: Math.random(), g: Math.random(), b: Math.random()};
                 links.push({src, dst, color});
             }
             this.setLinks(links);
-        }, 100);
+        }, 16);
     }
 
     async animateFileTreeHistory(commits, repoPrefix) {
