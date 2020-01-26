@@ -8,11 +8,11 @@ export default function strictProxy(obj, objName) {
 			if (name in receiver) {
 				return receiver[name];
 			} else {
-				throw new Error(`Property ${name} not defined in ${objName || receiver}`)
+				throw new Error(`Property ${name} not defined in ${objName || receiver}`);
 			}
-		}
+		},
 	});
-};
+}
 
 export function warnProxy(obj, objName) {
 	return new Proxy(obj, {
@@ -20,8 +20,8 @@ export function warnProxy(obj, objName) {
 			if (name in receiver) {
 				return receiver[name];
 			} else {
-				console.error(`Property ${name} not defined in ${receiver}`)
+				console.error(`Property ${name} not defined in ${receiver}`);
 			}
-		}
+		},
 	});
-};
+}

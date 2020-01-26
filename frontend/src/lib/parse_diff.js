@@ -1,17 +1,16 @@
-
 export function authorCmp(a, b) {
-    return a.localeCompare(b);
+	return a.localeCompare(b);
 }
 
-export function span(className='', content='') {
-    var el = document.createElement('span');
-    el.className = className;
-    el.textContent = content;
-    return el;
+export function span(className = '', content = '') {
+	var el = document.createElement('span');
+	el.className = className;
+	el.textContent = content;
+	return el;
 }
 
 export function parseDiff(diff) {
-    /*
+	/*
     1. It is preceded with a "git diff" header that looks like this:
 
         diff --git a/file1 b/file2
@@ -49,150 +48,156 @@ export function parseDiff(diff) {
     the file mode does not change; otherwise, separate lines indicate the old and the new mode.
 
     */
-    const lines = diff.split("\n");
-    const changes = [];
-    var currentChange = { cmd: '', newMode: '', index: '', srcPath: '', dstPath: '', changes: [] };
-    var pos = null;
-    var parsePos = function(posMatch, line) {
-        if (!posMatch) console.log(line, lines);
-        pos = {
-            previous: {line: parseInt(posMatch[1]), lineCount: parseInt(posMatch[3])},
-            current: {line: parseInt(posMatch[4]), lineCount: parseInt(posMatch[6])},
-        };
-        currentChange.changes.push({pos, lines: [line.substring(posMatch[0].length)]});
-    };
-    var parseCmd = function(line) {
-        currentChange = { cmd: '', newMode: '', index: '', srcPath: '', dstPath: '', changes: [] };
-        pos = null;
-        currentChange.cmd = line;
-    };
-    lines.forEach(line => {
-        if (/^diff/.test(line)) {
-            if (currentChange.cmd) changes.push(currentChange);
-            parseCmd(line);
-        }
-        else if (line.charCodeAt(0) === 64) {
-            var posMatch = line.match(/^@@ -(\d+)(,(\d+))? \+(\d+)(,(\d+))? @@/);
-            if (!posMatch) posMatch = ['', 0, 0, 0, 0, 0, 0];
-            parsePos(posMatch, line);
-        }
-        else if (/^(dis)?similarity index /.test(line)) currentChange.similarity = line;
-        else if (/^(new|deleted|old) /.test(line)) currentChange.newMode = line;
-        else if (/^copy from /.test(line)) currentChange.srcPath = '/'+line.substring(10);
-        else if (/^copy to /.test(line)) currentChange.dstPath = '/'+line.substring(8);
-        else if (/^rename from /.test(line)) currentChange.srcPath = '/'+line.substring(12);
-        else if (/^rename to /.test(line)) currentChange.dstPath = '/'+line.substring(10);
-        else if (/^index /.test(line)) currentChange.index = line;
-        else if (/^Binary /.test(line)) parsePos(['', 0, 0, 0, 0, 0, 0], line);
-        else if (!pos && /^--- /.test(line)) currentChange.srcPath = line.substring(5);
-        else if (!pos && /^\+\+\+ /.test(line)) currentChange.dstPath = line.substring(5);
-        else if (pos) currentChange.changes[currentChange.changes.length-1].lines.push(line);
-    });
-    if (currentChange.cmd) changes.push(currentChange);
-    return changes;
+	const lines = diff.split('\n');
+	const changes = [];
+	var currentChange = { cmd: '', newMode: '', index: '', srcPath: '', dstPath: '', changes: [] };
+	var pos = null;
+	var parsePos = function(posMatch, line) {
+		if (!posMatch) console.log(line, lines);
+		pos = {
+			previous: { line: parseInt(posMatch[1]), lineCount: parseInt(posMatch[3]) },
+			current: { line: parseInt(posMatch[4]), lineCount: parseInt(posMatch[6]) },
+		};
+		currentChange.changes.push({ pos, lines: [line.substring(posMatch[0].length)] });
+	};
+	var parseCmd = function(line) {
+		currentChange = { cmd: '', newMode: '', index: '', srcPath: '', dstPath: '', changes: [] };
+		pos = null;
+		currentChange.cmd = line;
+	};
+	lines.forEach((line) => {
+		if (/^diff/.test(line)) {
+			if (currentChange.cmd) changes.push(currentChange);
+			parseCmd(line);
+		} else if (line.charCodeAt(0) === 64) {
+			var posMatch = line.match(/^@@ -(\d+)(,(\d+))? \+(\d+)(,(\d+))? @@/);
+			if (!posMatch) posMatch = ['', 0, 0, 0, 0, 0, 0];
+			parsePos(posMatch, line);
+		} else if (/^(dis)?similarity index /.test(line)) currentChange.similarity = line;
+		else if (/^(new|deleted|old) /.test(line)) currentChange.newMode = line;
+		else if (/^copy from /.test(line)) currentChange.srcPath = '/' + line.substring(10);
+		else if (/^copy to /.test(line)) currentChange.dstPath = '/' + line.substring(8);
+		else if (/^rename from /.test(line)) currentChange.srcPath = '/' + line.substring(12);
+		else if (/^rename to /.test(line)) currentChange.dstPath = '/' + line.substring(10);
+		else if (/^index /.test(line)) currentChange.index = line;
+		else if (/^Binary /.test(line)) parsePos(['', 0, 0, 0, 0, 0, 0], line);
+		else if (!pos && /^--- /.test(line)) currentChange.srcPath = line.substring(5);
+		else if (!pos && /^\+\+\+ /.test(line)) currentChange.dstPath = line.substring(5);
+		else if (pos) currentChange.changes[currentChange.changes.length - 1].lines.push(line);
+	});
+	if (currentChange.cmd) changes.push(currentChange);
+	return changes;
 }
 
 function showFileToggleOnClick(ev) {
-    ev.preventDefault();
-    this.showFile(this.sha, this.previousSha, this.path, this);
+	ev.preventDefault();
+	this.showFile(this.sha, this.previousSha, this.path, this);
 }
 
 export function formatDiff(sha, diff, trackedPaths, previousSha, showFile) {
-    const container = span();
-    const changes = parseDiff(diff);
-    changes.forEach(change => {
-        const inPath = (change.dstPath !== 'dev/null') && trackedPaths.some(path => change.dstPath.startsWith(path));
-        const changeEl = span(inPath ? '' : 'collapsed');
-        container.append(changeEl);
-        const showFileToggle = span('commit-show-file', 'Show file');
-        showFileToggle.path = change.dstPath;
-        showFileToggle.sha = sha;
-        showFileToggle.previousSha = previousSha;
-        showFileToggle.showFile = showFile;
-        showFileToggle.onmousedown = showFileToggleOnClick;
-        changeEl.append(
-            showFileToggle,
-            span('prev', change.srcPath),
-            span('cur', change.dstPath)
-        );
-        change.changes.forEach(({pos, lines}) => {
-            changeEl.append(span('pos', `-${pos.previous.line},${pos.previous.lineCount} +${pos.current.line},${pos.current.lineCount}`));
-            if (change.dstPath !== 'dev/null') {
-                lines.forEach(line => {
-                    var lineClass = '';
-                    if (line.startsWith("+")) lineClass = 'add';
-                    else if (line.startsWith("-")) lineClass = 'sub';
-                    changeEl.appendChild(span(lineClass, line));
-                });
-            }
-        });
-    });
-    return container;
+	const container = span();
+	const changes = parseDiff(diff);
+	changes.forEach((change) => {
+		const inPath =
+			change.dstPath !== 'dev/null' &&
+			trackedPaths.some((path) => change.dstPath.startsWith(path));
+		const changeEl = span(inPath ? '' : 'collapsed');
+		container.append(changeEl);
+		const showFileToggle = span('commit-show-file', 'Show file');
+		showFileToggle.path = change.dstPath;
+		showFileToggle.sha = sha;
+		showFileToggle.previousSha = previousSha;
+		showFileToggle.showFile = showFile;
+		showFileToggle.onmousedown = showFileToggleOnClick;
+		changeEl.append(showFileToggle, span('prev', change.srcPath), span('cur', change.dstPath));
+		change.changes.forEach(({ pos, lines }) => {
+			changeEl.append(
+				span(
+					'pos',
+					`-${pos.previous.line},${pos.previous.lineCount} +${pos.current.line},${pos.current.lineCount}`
+				)
+			);
+			if (change.dstPath !== 'dev/null') {
+				lines.forEach((line) => {
+					var lineClass = '';
+					if (line.startsWith('+')) lineClass = 'add';
+					else if (line.startsWith('-')) lineClass = 'sub';
+					changeEl.appendChild(span(lineClass, line));
+				});
+			}
+		});
+	});
+	return container;
 }
 
 export function createCalendar(commits, yearOnClick, monthOnClick, dayOnClick) {
-    var createYear = function(year) {
-        const el = document.createElement('div');
-        el.className = 'calendar-year';
-        el.authors = {};
-        el.dataset.year = year;
-        el.dataset.commitCount = 0;
-        el.dataset.authorCount = 0;
-        el.onclick = yearOnClick;
-        for (var i = 0; i < 12; i++) {
-            var monthEl = span('calendar-month');
-            monthEl.authors = {};
-            monthEl.dataset.month = i+1;
-            monthEl.dataset.commitCount = 0;
-            monthEl.dataset.authorCount = 0;
-            monthEl.onclick = monthOnClick;
-            var week = 0;
-            for (var j = 0; j < 31; j++) {
-                var dateString = `${year}-${i<9?'0':''}${i+1}-${j<9?'0':''}${j+1}`;
-                var date = new Date(Date.parse(dateString));
-                if (date.getUTCMonth() === i) {
-                    var day = date.getUTCDay();
-                    var dayEl = span('calendar-day');
-                    dayEl.onclick = dayOnClick;
-                    dayEl.dataset.date = j+1;
-                    dayEl.dataset.day = day;
-                    dayEl.dataset.week = week;
-                    dayEl.dataset.commitCount = 0;
-                    dayEl.dataset.fullDate = dateString;
-                    monthEl.appendChild(dayEl);
-                    if (day === 0) week++;
-                }
-            }
-            el.appendChild(monthEl);
-        }
-        return el;
-    };
-    const el = document.createElement('div');
-    el.className = 'calendar';
-    var years = {};
-    for (var i = 0; i < commits.length; i++) {
-        const c = commits[i];
-        const d = c.date;
-        if (!d) { console.log(c); continue; }
-        const year = d.getUTCFullYear();
-        const month = d.getUTCMonth();
-        const date = d.getUTCDate();
-        if (!years[year]) years[year] = createYear(year);
-        const yearEl = years[year];
-        const monthEl = yearEl.childNodes[month];
-        const dateEl = monthEl.childNodes[date-1];
-        dateEl.dataset.commitCount++;
-        monthEl.dataset.commitCount++;
-        yearEl.dataset.commitCount++;
-        if (!yearEl.authors[c.author]) {
-            yearEl.authors[c.author] = true;
-            yearEl.dataset.authorCount++;
-        }
-        if (!monthEl.authors[c.author]) {
-            monthEl.authors[c.author] = true;
-            monthEl.dataset.authorCount++;
-        }
-    }
-    Object.keys(years).sort((a, b) => b-a).forEach(year => el.appendChild(years[year]));
-    return el;
+	var createYear = function(year) {
+		const el = document.createElement('div');
+		el.className = 'calendar-year';
+		el.authors = {};
+		el.dataset.year = year;
+		el.dataset.commitCount = 0;
+		el.dataset.authorCount = 0;
+		el.onclick = yearOnClick;
+		for (var i = 0; i < 12; i++) {
+			var monthEl = span('calendar-month');
+			monthEl.authors = {};
+			monthEl.dataset.month = i + 1;
+			monthEl.dataset.commitCount = 0;
+			monthEl.dataset.authorCount = 0;
+			monthEl.onclick = monthOnClick;
+			var week = 0;
+			for (var j = 0; j < 31; j++) {
+				var dateString = `${year}-${i < 9 ? '0' : ''}${i + 1}-${j < 9 ? '0' : ''}${j + 1}`;
+				var date = new Date(Date.parse(dateString));
+				if (date.getUTCMonth() === i) {
+					var day = date.getUTCDay();
+					var dayEl = span('calendar-day');
+					dayEl.onclick = dayOnClick;
+					dayEl.dataset.date = j + 1;
+					dayEl.dataset.day = day;
+					dayEl.dataset.week = week;
+					dayEl.dataset.commitCount = 0;
+					dayEl.dataset.fullDate = dateString;
+					monthEl.appendChild(dayEl);
+					if (day === 0) week++;
+				}
+			}
+			el.appendChild(monthEl);
+		}
+		return el;
+	};
+	const el = document.createElement('div');
+	el.className = 'calendar';
+	var years = {};
+	for (var i = 0; i < commits.length; i++) {
+		const c = commits[i];
+		const d = c.date;
+		if (!d) {
+			console.log(c);
+			continue;
+		}
+		const year = d.getUTCFullYear();
+		const month = d.getUTCMonth();
+		const date = d.getUTCDate();
+		if (!years[year]) years[year] = createYear(year);
+		const yearEl = years[year];
+		const monthEl = yearEl.childNodes[month];
+		const dateEl = monthEl.childNodes[date - 1];
+		dateEl.dataset.commitCount++;
+		monthEl.dataset.commitCount++;
+		yearEl.dataset.commitCount++;
+		if (!yearEl.authors[c.author]) {
+			yearEl.authors[c.author] = true;
+			yearEl.dataset.authorCount++;
+		}
+		if (!monthEl.authors[c.author]) {
+			monthEl.authors[c.author] = true;
+			monthEl.dataset.authorCount++;
+		}
+	}
+	Object.keys(years)
+		.sort((a, b) => b - a)
+		.forEach((year) => el.appendChild(years[year]));
+	return el;
 }

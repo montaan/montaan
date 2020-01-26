@@ -8,7 +8,7 @@ import './css/main.scss';
 import App from './App';
 import * as serviceWorker from './serviceWorker';
 
-document.body.classList.add((/mobile/i).test(window.navigator.userAgent) ? 'mobile' : 'desktop');
+document.body.classList.add(/mobile/i.test(window.navigator.userAgent) ? 'mobile' : 'desktop');
 
 ReactDOM.render(<App />, document.getElementById('root'));
 

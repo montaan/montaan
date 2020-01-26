@@ -127,23 +127,20 @@ var slash = '/'.charCodeAt(0);
 
 // }
 
-
-var utils = module.exports = {
-
+var utils = (module.exports = {
 	uniq: function(array, cmp) {
-		return array.sort(cmp).reduce(function(s,a) {
-			if (s.length === 0 || cmp(s[s.length-1], a) !== 0) s.push(a);
+		return array.sort(cmp).reduce(function(s, a) {
+			if (s.length === 0 || cmp(s[s.length - 1], a) !== 0) s.push(a);
 			return s;
 		}, []);
 	},
 
 	findIntersectionsUnderEvent: function(ev, camera, objects) {
-
 		var style = getComputedStyle(ev.target);
 		var elementTransform = style.getPropertyValue('transform');
 		var elementTransformOrigin = style.getPropertyValue('transform-origin');
 
-		var xyz = elementTransformOrigin.replace(/px/g, '').split(" ");
+		var xyz = elementTransformOrigin.replace(/px/g, '').split(' ');
 		xyz[0] = parseFloat(xyz[0]);
 		xyz[1] = parseFloat(xyz[1]);
 		xyz[2] = parseFloat(xyz[2] || 0);
@@ -159,8 +156,8 @@ var utils = module.exports = {
 			mat.elements[12] = parseFloat(elems[4]);
 			mat.elements[13] = parseFloat(elems[5]);
 		} else if (/^matrix3d\(/i.test(elementTransform)) {
-			elems = elementTransform.replace(/^matrix3d\(|\)$/ig, '').split(' ');
-			for (var i=0; i<16; i++) {
+			elems = elementTransform.replace(/^matrix3d\(|\)$/gi, '').split(' ');
+			for (var i = 0; i < 16; i++) {
 				mat.elements[i] = parseFloat(elems[i]);
 			}
 		}
@@ -172,51 +169,47 @@ var utils = module.exports = {
 		mat2.multiply(mat);
 
 		var bbox = ev.target.getBoundingClientRect();
-		var vec = new THREE.Vector3(ev.clientX-bbox.left, ev.clientY-bbox.top, 0);
+		var vec = new THREE.Vector3(ev.clientX - bbox.left, ev.clientY - bbox.top, 0);
 		vec.applyMatrix4(mat2);
 
 		var width = parseFloat(style.getPropertyValue('width'));
 		var height = parseFloat(style.getPropertyValue('height'));
 
-		var mouse3D = new THREE.Vector3(
-			( vec.x / width ) * 2 - 1,
-			-( vec.y / height ) * 2 + 1,
-			0.5
-		);
-		mouse3D.unproject( camera );
-		mouse3D.sub( camera.position );
+		var mouse3D = new THREE.Vector3((vec.x / width) * 2 - 1, -(vec.y / height) * 2 + 1, 0.5);
+		mouse3D.unproject(camera);
+		mouse3D.sub(camera.position);
 		mouse3D.normalize();
-		var raycaster = new THREE.Raycaster( camera.position, mouse3D );
-		var intersects = raycaster.intersectObjects( objects );
+		var raycaster = new THREE.Raycaster(camera.position, mouse3D);
+		var intersects = raycaster.intersectObjects(objects);
 		return intersects;
 	},
 
 	findObjectUnderEvent: function(ev, camera, objects) {
 		var intersects = this.findIntersectionsUnderEvent(ev, camera, objects);
-		if ( intersects.length > 0 ) {
-			var obj = intersects[ 0 ].object
+		if (intersects.length > 0) {
+			var obj = intersects[0].object;
 			return obj;
 		}
 	},
 
 	addFileTreeEntry: function(path, tree) {
 		var dir = false;
-		if (path.charCodeAt(path.length-1) === slash) {
+		if (path.charCodeAt(path.length - 1) === slash) {
 			dir = true;
 		}
-		var segments = path.split("/");
+		var segments = path.split('/');
 		if (dir) {
 			segments.pop();
 		}
 		var branch = tree;
 		var addCount = 0;
-		for (var i=0; i<segments.length-1; i++) {
+		for (var i = 0; i < segments.length - 1; i++) {
 			var segment = segments[i];
 			if (branch.entries === null) {
 				branch.entries = {};
 			}
 			if (typeof branch.entries[segment] !== 'object') {
-				branch.entries[segment] = {name: segment, title: segment, entries: {}, index: 0};
+				branch.entries[segment] = { name: segment, title: segment, entries: {}, index: 0 };
 				addCount++;
 			}
 			branch = branch.entries[segment];
@@ -225,7 +218,12 @@ var utils = module.exports = {
 			branch.entries = {};
 		}
 		if (typeof branch.entries[segments[i]] !== 'object') {
-			branch.entries[segments[i]] = {name: segments[i], title: segments[i], entries: dir ? {} : null, index: 0};
+			branch.entries[segments[i]] = {
+				name: segments[i],
+				title: segments[i],
+				entries: dir ? {} : null,
+				index: 0,
+			};
 			addCount++;
 		}
 		return addCount;
@@ -233,7 +231,7 @@ var utils = module.exports = {
 
 	traverseTree: function(tree, callback) {
 		var entry = tree.tree;
-		this.traverseFSEntry(entry, callback, "");
+		this.traverseFSEntry(entry, callback, '');
 	},
 
 	traverseFSEntry: function(fsEntry, callback, fullPath) {
@@ -248,27 +246,37 @@ var utils = module.exports = {
 	},
 
 	convertXMLToTree: function(node, uid) {
-		var obj = {name: uid.value++, title: node.tagName || 'document', index: 0, entries: {}};
+		var obj = { name: uid.value++, title: node.tagName || 'document', index: 0, entries: {} };
 		var files = [];
 		if (node.attributes) {
-			for (let i=0; i<node.attributes.length; i++) {
+			for (let i = 0; i < node.attributes.length; i++) {
 				var attr = node.attributes[i];
-				files.push({name: uid.value++, title: attr.name + '=' + attr.value, index: 0, entries: null});
+				files.push({
+					name: uid.value++,
+					title: attr.name + '=' + attr.value,
+					index: 0,
+					entries: null,
+				});
 			}
 		}
 		var file;
-		for (let i=0, l=node.childNodes.length; i<l; i++) {
+		for (let i = 0, l = node.childNodes.length; i < l; i++) {
 			var c = node.childNodes[i];
 			if (c.tagName) {
 				file = this.convertXMLToTree(c, uid);
 				obj.entries[file.name] = file;
 			} else {
 				if (c.textContent && /\S/.test(c.textContent)) {
-					files.push({name: uid.value++, title: c.textContent, index: 0, entries: null});
+					files.push({
+						name: uid.value++,
+						title: c.textContent,
+						index: 0,
+						entries: null,
+					});
 				}
 			}
 		}
-		for (let i=0; i<files.length; i++) {
+		for (let i = 0; i < files.length; i++) {
 			file = files[i];
 			obj.entries[file.name] = file;
 		}
@@ -278,18 +286,24 @@ var utils = module.exports = {
 	convertBookmarksToTree: function(node, uid) {
 		if (node.tagName === 'A') {
 			// Bookmark
-			return {name: uid.value++, title: node.textContent, index: 0, entries: null, href: node.href};
+			return {
+				name: uid.value++,
+				title: node.textContent,
+				index: 0,
+				entries: null,
+				href: node.href,
+			};
 		} else if (node.tagName === 'DL') {
 			// List of bookmarks
-			var titleEl = node.parentNode.querySelector("H1,H2,H3,H4,H5,H6");
+			var titleEl = node.parentNode.querySelector('H1,H2,H3,H4,H5,H6');
 			var title = '';
 			if (titleEl) {
 				title = titleEl.textContent;
 			}
-			var obj = {name: uid.value++, title: title, index: 0, entries: {}};
+			var obj = { name: uid.value++, title: title, index: 0, entries: {} };
 			var file;
 			var files = [];
-			for (let i=0, l=node.childNodes.length; i<l; i++) {
+			for (let i = 0, l = node.childNodes.length; i < l; i++) {
 				var c = node.childNodes[i];
 				file = this.convertBookmarksToTree(c, uid);
 				if (file) {
@@ -300,13 +314,13 @@ var utils = module.exports = {
 					}
 				}
 			}
-			for (let i=0; i<files.length; i++) {
+			for (let i = 0; i < files.length; i++) {
 				file = files[i];
 				obj.entries[file.name] = file;
 			}
 			return obj;
 		} else {
-			for (let i=0, l=node.childNodes.length; i<l; i++) {
+			for (let i = 0, l = node.childNodes.length; i < l; i++) {
 				file = this.convertBookmarksToTree(node.childNodes[i], uid);
 				if (file) {
 					return file;
@@ -339,15 +353,21 @@ var utils = module.exports = {
 			// This is some XML here.
 			if (/^\s*<!DOCTYPE NETSCAPE-Bookmark-file-1>/.test(fileString)) {
 				// Bookmarks! Let's parse them!
-				let uid = {value: 0};
+				let uid = { value: 0 };
 				let tree = this.convertBookmarksToTree(xml, uid);
-				return {tree: {name: -1, title: '', index: 0, entries: {'Bookmarks': tree}}, count: uid.value+1};
+				return {
+					tree: { name: -1, title: '', index: 0, entries: { Bookmarks: tree } },
+					count: uid.value + 1,
+				};
 			} else {
 				// XML visualization is go.
-				let uid = {value: 0};
-				window.xml =xml;
+				let uid = { value: 0 };
+				window.xml = xml;
 				let tree = this.convertXMLToTree(xml, uid);
-				return {tree: {name: -1, title: '', index: 0, entries: {'XML': tree}}, count: uid.value+1};
+				return {
+					tree: { name: -1, title: '', index: 0, entries: { XML: tree } },
+					count: uid.value + 1,
+				};
 			}
 		} else {
 			try {
@@ -356,58 +376,68 @@ var utils = module.exports = {
 				if (list && list.sha && list.url && /\/git\//.test(list.url) && list.tree) {
 					return this.parseGitHubTree(list);
 				} else if (list && list instanceof Array) {
-					if (list.every(function(it) { return typeof it === 'string'; })) {
-						fileString = list.join("\n") + "\n";
+					if (
+						list.every(function(it) {
+							return typeof it === 'string';
+						})
+					) {
+						fileString = list.join('\n') + '\n';
 					}
 				}
-			} catch(e) {
+			} catch (e) {
 				// Not JSON.
 			}
 		}
 		return this.parseFileList_(fileString, includePrefix, prefix);
 	},
 
-	parseFileList_: function(fileString, includePrefix, prefix='') {
+	parseFileList_: function(fileString, includePrefix, prefix = '') {
 		// console.log("Parsing file string", fileString.length);
 		var sep = fileString.substring(0, 4096).includes('\0') ? 0 : 10;
-		var fileTree = {name: "", title: "", entries: {}, index: 0};
-		var name = "";
+		var fileTree = { name: '', title: '', entries: {}, index: 0 };
+		var name = '';
 		var startIndex = 0;
 		var fileCount = 0;
 		var first = includePrefix ? false : true;
 		var skip = 0;
 		// console.log('prefix:', prefix);
-		for (var i=0; i<fileString.length; i++) {
+		for (var i = 0; i < fileString.length; i++) {
 			if (fileString.charCodeAt(i) === sep) {
 				if (first) {
-					var segs = fileString.substring(startIndex+1+skip, i).split("/");
-					name = segs[segs.length-2] + '/';
+					var segs = fileString.substring(startIndex + 1 + skip, i).split('/');
+					name = segs[segs.length - 2] + '/';
 					skip = i - name.length + 1;
 					name = prefix;
 					first = false;
 				} else {
-					name = prefix + fileString.substring(startIndex+skip, i);
+					name = prefix + fileString.substring(startIndex + skip, i);
 					// console.log(name);
 				}
-				startIndex = i+1;
+				startIndex = i + 1;
 				fileCount += utils.addFileTreeEntry(name, fileTree);
 			}
 		}
 		// console.log("Parsed files", fileCount);
-		return {tree: fileTree, count: fileCount};
+		return { tree: fileTree, count: fileCount };
 	},
 
 	parseGitHubTree: function(githubResult) {
-		var repoName = githubResult.url.match(/^https:\/\/api\.github\.com\/repos\/([^/]+)\/([^/]+)/);
-		var userName = "";
+		var repoName = githubResult.url.match(
+			/^https:\/\/api\.github\.com\/repos\/([^/]+)\/([^/]+)/
+		);
+		var userName = '';
 		if (repoName) {
 			userName = repoName[1];
-			repoName = repoName[1] + "/" + repoName[2];
+			repoName = repoName[1] + '/' + repoName[2];
 		} else {
-			return this.parseFileList_("");
+			return this.parseFileList_('');
 		}
-		var paths = githubResult.tree.map(function(file) { return '/' + repoName + '/' + file.path + (file.type === 'tree' ? '/' : ''); });
-		return this.parseFileList_('/' + userName + '/\n/' + repoName + '/\n' + paths.join("\n") + '\n');
+		var paths = githubResult.tree.map(function(file) {
+			return '/' + repoName + '/' + file.path + (file.type === 'tree' ? '/' : '');
+		});
+		return this.parseFileList_(
+			'/' + userName + '/\n/' + repoName + '/\n' + paths.join('\n') + '\n'
+		);
 	},
 
 	loadFromText: function(text, onSuccess, onError, prefix) {
@@ -423,9 +453,12 @@ var utils = module.exports = {
 		var xhr = new XMLHttpRequest();
 		xhr.open('GET', url);
 		xhr.onload = function(ev) {
-			onSuccess(utils.parseFileList(ev.target.responseText, ev.target, undefined, prefix), ev.target.responseText);
+			onSuccess(
+				utils.parseFileList(ev.target.responseText, ev.target, undefined, prefix),
+				ev.target.responseText
+			);
 		};
 		xhr.onerror = onError;
 		xhr.send();
-	}
-};
+	},
+});

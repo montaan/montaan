@@ -2,16 +2,22 @@ var utils = require('./utils.js');
 var THREE = require('three');
 
 module.exports = {
-
 	quadCount: 2,
 
 	vertsPerFile: 6 * 2,
 
 	findFSEntry: function(ev, camera, models, highlighted) {
-		var intersections = utils.findIntersectionsUnderEvent(ev, camera, (models instanceof Array) ? models : [models]);
+		var intersections = utils.findIntersectionsUnderEvent(
+			ev,
+			camera,
+			models instanceof Array ? models : [models]
+		);
 		if (intersections.length > 0) {
 			var faceIndex = intersections[0].faceIndex;
-			var fsEntry = intersections[0].object.fileTree.fsIndex[Math.floor(faceIndex / (2 * this.quadCount))];
+			var fsEntry =
+				intersections[0].object.fileTree.fsIndex[
+					Math.floor(faceIndex / (2 * this.quadCount))
+				];
 			while (fsEntry && fsEntry.scale * camera.projectionMatrix.elements[0] < 0.2) {
 				if (fsEntry.parent === highlighted) {
 					break;
@@ -35,14 +41,14 @@ module.exports = {
 		var c = this.qTmp3;
 		var d = this.qTmp4;
 		this.projectVertexToFrustum(a, vertexOff, model, camera);
-		this.projectVertexToFrustum(b, vertexOff+1, model, camera);
-		this.projectVertexToFrustum(c, vertexOff+2, model, camera);
-		this.projectVertexToFrustum(d, vertexOff+5, model, camera);
+		this.projectVertexToFrustum(b, vertexOff + 1, model, camera);
+		this.projectVertexToFrustum(c, vertexOff + 2, model, camera);
+		this.projectVertexToFrustum(d, vertexOff + 5, model, camera);
 		var minX = Math.min(a.x, b.x, c.x, d.x);
 		var maxX = Math.max(a.x, b.x, c.x, d.x);
 		var minY = Math.min(a.y, b.y, c.y, d.y);
 		var maxY = Math.max(a.y, b.y, c.y, d.y);
-		return (maxX > -1 && minX < 1 && maxY > -1 && minY < 1);
+		return maxX > -1 && minX < 1 && maxY > -1 && minY < 1;
 	},
 
 	quadAtFrustumCenter: function(quadIndex, model, camera) {
@@ -52,14 +58,14 @@ module.exports = {
 		var c = this.qTmp3;
 		var d = this.qTmp4;
 		this.projectVertexToFrustum(a, vertexOff, model, camera);
-		this.projectVertexToFrustum(b, vertexOff+1, model, camera);
-		this.projectVertexToFrustum(c, vertexOff+2, model, camera);
-		this.projectVertexToFrustum(d, vertexOff+5, model, camera);
+		this.projectVertexToFrustum(b, vertexOff + 1, model, camera);
+		this.projectVertexToFrustum(c, vertexOff + 2, model, camera);
+		this.projectVertexToFrustum(d, vertexOff + 5, model, camera);
 		var minX = Math.min(a.x, b.x, c.x, d.x);
 		var maxX = Math.max(a.x, b.x, c.x, d.x);
 		var minY = Math.min(a.y, b.y, c.y, d.y);
 		var maxY = Math.max(a.y, b.y, c.y, d.y);
-		return (maxX > 0 && minX < 0 && maxY > 0 && minY < 0);
+		return maxX > 0 && minX < 0 && maxY > 0 && minY < 0;
 	},
 
 	quadCoversFrustum: function(quadIndex, model, camera) {
@@ -88,10 +94,10 @@ module.exports = {
 			return false;
 		}
 		return !(
-			this.lineIntersectsFrustum(a,b) ||
-			this.lineIntersectsFrustum(b,d) ||
-			this.lineIntersectsFrustum(c,d) ||
-			this.lineIntersectsFrustum(c,a)
+			this.lineIntersectsFrustum(a, b) ||
+			this.lineIntersectsFrustum(b, d) ||
+			this.lineIntersectsFrustum(c, d) ||
+			this.lineIntersectsFrustum(c, a)
 		);
 	},
 
@@ -112,21 +118,20 @@ module.exports = {
 		);
 	},
 
-	lineIntersect: function(x1, y1, x2, y2, x3, y3, x4, y4)
-	{
-		var mua,mub,x,y;
-		var denom,numera,numerb;
+	lineIntersect: function(x1, y1, x2, y2, x3, y3, x4, y4) {
+		var mua, mub, x, y;
+		var denom, numera, numerb;
 		var EPS = 1e-6;
 
-		denom  = (y4-y3) * (x2-x1) - (x4-x3) * (y2-y1);
-		numera = (x4-x3) * (y1-y3) - (y4-y3) * (x1-x3);
-		numerb = (x2-x1) * (y1-y3) - (y2-y1) * (x1-x3);
+		denom = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1);
+		numera = (x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3);
+		numerb = (x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3);
 
 		/* Are the line coincident? */
 		if (Math.abs(numera) < EPS && Math.abs(numerb) < EPS && Math.abs(denom) < EPS) {
 			x = (x1 + x2) / 2;
 			y = (y1 + y2) / 2;
-			return {x: x, y: y};
+			return { x: x, y: y };
 		}
 
 		/* Are the line parallel */
@@ -142,7 +147,7 @@ module.exports = {
 		}
 		x = x1 + mua * (x2 - x1);
 		y = y1 + mua * (y2 - y1);
-		return {x: x, y: y};
+		return { x: x, y: y };
 	},
 
 	projectVertexToFrustum: function(u, vertexIndex, model, camera) {
@@ -158,7 +163,7 @@ module.exports = {
 		var u = this.vertexInsideFrustumTmp;
 		this.projectVertexToFrustum(u, vertexIndex, model, camera);
 		// window.debug.textContent = ([u.x, u.y, u.z]).join(", ");
-		return (u.x < 1 && u.x > -1 && u.y < 1 && u.y > -1 && u.z < 1 && u.z > -1);
+		return u.x < 1 && u.x > -1 && u.y < 1 && u.y > -1 && u.z < 1 && u.z > -1;
 	},
 
 	makeGeometry: function(fileCount) {
@@ -181,19 +186,22 @@ module.exports = {
 
 	setColor: function(verts, index, color, depth) {
 		var i = index * 18 * this.quadCount; //(index * 2 + 1) * 18;
-		var dx = color[0], dy = color[1], dz = color[2];
+		var dx = color[0],
+			dy = color[1],
+			dz = color[2];
 		var f = 1; //((2 + (depth+3) % 8) / 16);
 		dx *= f;
 		dy *= f;
 		dz *= f;
-		var x = dx, y = dy, z = dz;
+		var x = dx,
+			y = dy,
+			z = dz;
 		if (color.length === 3) {
-			x = 1-((1-dx) * 0.85); 
-			y = 1-((1-dy) * 0.85); 
-			z = 1-((1-dz) * 0.85); 
+			x = 1 - (1 - dx) * 0.85;
+			y = 1 - (1 - dy) * 0.85;
+			z = 1 - (1 - dz) * 0.85;
 		}
 
-
 		verts[i++] = dx;
 		verts[i++] = dy;
 		verts[i++] = dz;
@@ -214,31 +222,30 @@ module.exports = {
 		verts[i++] = y;
 		verts[i++] = z;
 
-		for (var j=1; j<this.quadCount; j++) {
-			verts[i++] = dx*0.5;
-			verts[i++] = dy*0.5;
-			verts[i++] = dz*0.5;
-			verts[i++] = dx*0.5;
-			verts[i++] = dy*0.5;
-			verts[i++] = dz*0.5;
-			verts[i++] = dx*0.73;
-			verts[i++] = dy*0.73;
-			verts[i++] = dz*0.73;
+		for (var j = 1; j < this.quadCount; j++) {
+			verts[i++] = dx * 0.5;
+			verts[i++] = dy * 0.5;
+			verts[i++] = dz * 0.5;
+			verts[i++] = dx * 0.5;
+			verts[i++] = dy * 0.5;
+			verts[i++] = dz * 0.5;
+			verts[i++] = dx * 0.73;
+			verts[i++] = dy * 0.73;
+			verts[i++] = dz * 0.73;
 
-			verts[i++] = dx*0.73;
-			verts[i++] = dy*0.73;
-			verts[i++] = dz*0.73;
-			verts[i++] = dx*0.5;
-			verts[i++] = dy*0.5;
-			verts[i++] = dz*0.5;
-			verts[i++] = dx*0.73;
-			verts[i++] = dy*0.73;
-			verts[i++] = dz*0.73;
+			verts[i++] = dx * 0.73;
+			verts[i++] = dy * 0.73;
+			verts[i++] = dz * 0.73;
+			verts[i++] = dx * 0.5;
+			verts[i++] = dy * 0.5;
+			verts[i++] = dz * 0.5;
+			verts[i++] = dx * 0.73;
+			verts[i++] = dy * 0.73;
+			verts[i++] = dz * 0.73;
 		}
 	},
 
 	makeQuad: function(verts, index, x, y, w, h, z) {
-
 		var i = index * 18 * this.quadCount;
 
 		verts[i++] = x;
@@ -261,12 +268,12 @@ module.exports = {
 		verts[i++] = y + h;
 		verts[i++] = z;
 
-		verts[i++] = x + w*0.1;
+		verts[i++] = x + w * 0.1;
 		verts[i++] = y;
-		verts[i++] = z-h*0.2;
-		verts[i++] = x + w*0.9;
+		verts[i++] = z - h * 0.2;
+		verts[i++] = x + w * 0.9;
 		verts[i++] = y;
-		verts[i++] = z-h*0.2;
+		verts[i++] = z - h * 0.2;
 		verts[i++] = x;
 		verts[i++] = y;
 		verts[i++] = z;
@@ -274,9 +281,9 @@ module.exports = {
 		verts[i++] = x;
 		verts[i++] = y;
 		verts[i++] = z;
-		verts[i++] = x + w*0.9;
+		verts[i++] = x + w * 0.9;
 		verts[i++] = y;
-		verts[i++] = z-h*0.2;
+		verts[i++] = z - h * 0.2;
 		verts[i++] = x + w;
 		verts[i++] = y;
 		verts[i++] = z;
@@ -342,6 +349,5 @@ module.exports = {
 		// verts[i++] = z;
 
 		return i / 3;
-	}
-
+	},
 };
