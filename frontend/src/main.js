@@ -4,6 +4,7 @@ import prettyPrintWorker from './lib/pretty_print';
 import createText from './lib/third_party/three-bmfont-text-modified';
 import SDFShader from './lib/third_party/three-bmfont-text-modified/shaders/sdf';
 import Layout from './lib/Layout.js';
+import { LoadingManager } from 'three';
 
 const THREE = require('three');
 global.THREE = THREE;
@@ -38,6 +39,8 @@ class Tabletree {
 
 		this.commitsPlaying = false;
 		this.searchResults = [];
+
+		this.frameFibers = [];
 
 		this.initDone = false;
 	}
@@ -571,8 +574,8 @@ class Tabletree {
 			geo,
 			new THREE.MeshBasicMaterial({ color: 0xffffff, vertexColors: THREE.VertexColors })
 		);
-		var visibleFiles = new THREE.Object3D();
-		window.VF = visibleFiles;
+		const visibleFiles = new THREE.Object3D();
+		this.visibleFiles = visibleFiles;
 		mesh.add(visibleFiles);
 		visibleFiles.visibleSet = {};
 
@@ -615,175 +618,13 @@ class Tabletree {
 						} else if (o.scale * 50 / Math.max(camera.fov, camera.targetFOV) > 0.9 && Geometry.quadAtFrustumCenter(idx, this, camera)) {
 							navigationTarget += '/' + o.name;
 						}
-						if (o.entries === null) {
+						if (o.entries) stack.push(o);
+						else {
 							let fullPath = getFullPath(o);
 							if (visibleFiles.children.length < 20 && !visibleFiles.visibleSet[fullPath]) {
-								if (Colors.imageRE.test(fullPath)) {
-									var obj3 = new THREE.Mesh();
-									obj3.visible = false;
-									obj3.fsEntry = o;
-									visibleFiles.visibleSet[fullPath] = true;
-									visibleFiles.add(obj3);
-									obj3.geometry = new THREE.PlaneBufferGeometry(1,1);
-									obj3.scale.multiplyScalar(o.scale);
-									obj3.position.set(o.x+o.scale*0.5, o.y+o.scale*0.5, o.z);
-									obj3.visible = false;
-									window.imageObj = obj3;
-									var img = new Image();
-									img.crossOrigin = 'anonymous';
-									img.src = self.apiPrefix+'/repo/file'+fullPath;
-									img.obj = obj3;
-									img.onload = function() {
-										if (this.obj.parent) {
-											var maxD = Math.max(this.width, this.height);
-											this.obj.scale.x *= this.width/maxD;
-											this.obj.scale.y *= this.height/maxD;
-											this.obj.material = new THREE.MeshBasicMaterial({
-												map: new THREE.Texture(this),
-												transparent: true,
-												depthTest: false,
-												depthWrite: false
-											});
-											this.obj.material.map.needsUpdate = true;
-											this.obj.visible = true;
-										}
-									};
-								} else {
-									let obj3 = new THREE.Mesh();
-									obj3.visible = false;
-									obj3.fsEntry = o;
-									visibleFiles.visibleSet[fullPath] = true;
-									visibleFiles.add(obj3);
-									var xhr = new XMLHttpRequest();
-									xhr.open('GET', self.apiPrefix+'/repo/file'+fullPath, true);
-									xhr.obj = obj3;
-									xhr.fsEntry = o;
-									xhr.fullPath = fullPath;
-									xhr.onload = function() {
-										if (this.responseText.length < 1e6 && this.obj.parent) {
-											var contents = this.responseText.replace(/\r/g, "");
-											if (contents.length === 0) return;
-
-											var _xhr = this;
-											prettyPrintWorker.prettyPrint(contents, this.fsEntry.name, function(result) {
-												if (result.language) {
-													console.time('prettyPrint collectNodeStyles ' + self.currentFrame);
-													var doc = document.createElement('pre');
-													doc.className = 'hljs ' + result.language;
-													doc.style.display = 'none';
-													doc.innerHTML = result.value;
-													document.body.appendChild(doc);
-													var paletteIndex = {};
-													var palette = [];
-													var txt = [];
-													var collectNodeStyles = function(doc, txt, palette, paletteIndex) {
-														var style = getComputedStyle(doc);
-														var color = style.color;
-														if (!paletteIndex[color]) {
-															paletteIndex[color] = palette.length;
-															var c = new THREE.Color(color);
-															palette.push(new THREE.Vector3(c.r, c.g, c.b));
-														}
-														color = paletteIndex[color];
-														var bold = style.fontWeight !== 'normal';
-														var italic = style.fontStyle === 'italic';
-														var underline = style.textDecoration === 'underline';
-														for (var i=0; i<doc.childNodes.length; i++) {
-															var cc = doc.childNodes[i];
-															if (cc.tagName) {
-																collectNodeStyles(cc, txt, palette, paletteIndex);
-															} else {
-																txt.push({
-																	color: color,
-																	bold: bold,
-																	italic: italic,
-																	underline: underline,
-																	text: cc.textContent
-																});
-															}
-														}
-													};
-													collectNodeStyles(doc, txt, palette, paletteIndex);
-													document.body.removeChild(doc);
-													console.timeEnd('prettyPrint collectNodeStyles ' + self.currentFrame);
-												}
-
-												var text = _xhr.obj;
-
-												text.visible = true;
-												console.time('createText ' + self.currentFrame);
-												text.geometry = createText({font: Layout.font, text: contents, mode: 'pre'});
-												console.timeEnd('createText ' + self.currentFrame);
-												console.time('tweakText ' + self.currentFrame);
-												if (result.language) {
-													var verts = text.geometry.attributes.position.array;
-													for (var i=0, off=3; i<txt.length; i++) {
-														var t = txt[i];
-														for (var j=0; j<t.text.length; j++) {
-															var c = t.text.charCodeAt(j);
-															if (c === 10 || c === 32 || c === 9 || c === 13) continue;
-															for (var k=0; k<6; k++) {
-																if (t.italic) {
-																	verts[off-3] += ((k <= 3 && k !== 0) ? -1 : 1) * 2.5;
-																}
-																verts[off] = t.color + 256 * t.bold;
-																off += 4;
-															}
-														}
-													}
-													text.material = self.makeTextMaterial(palette);
-												} else {
-													text.material = self.makeTextMaterial(palette);
-												}
-												text.material.uniforms.opacity.value = 0;
-												text.ontick = function(t, dt) {
-													if (this.material.uniforms.opacity.value === 1) return;
-													this.material.uniforms.opacity.value += (dt/1000) / 0.5;
-													if (this.material.uniforms.opacity.value > 1) {
-														this.material.uniforms.opacity.value = 1;
-													}
-													self.changed = true;
-												};
-
-												var textScale = 1 / Math.max(text.geometry.layout.width+60, (text.geometry.layout.height+30)/0.75);
-												var scale = _xhr.fsEntry.scale * textScale;
-												var vAspect = Math.min(1, ((text.geometry.layout.height+30)/0.75) / (text.geometry.layout.width+60));
-												text.material.depthTest = false;
-												text.scale.multiplyScalar(scale);
-												text.scale.y *= -1;
-												text.position.copy(_xhr.fsEntry);
-												text.fsEntry = _xhr.fsEntry;
-												text.position.x += _xhr.fsEntry.scale * textScale * 30;
-												text.position.y -= _xhr.fsEntry.scale * textScale * 7.5;
-												text.position.y += _xhr.fsEntry.scale * 0.25;
-												
-												_xhr.fsEntry.textScale = textScale;
-												_xhr.fsEntry.textXZero = text.position.x;
-												_xhr.fsEntry.textX = text.position.x + scale * Math.min(40 * 30 + 60, text.geometry.layout.width + 60) * 0.5;
-												_xhr.fsEntry.textYZero = text.position.y + _xhr.fsEntry.scale * 0.75;
-												_xhr.fsEntry.textY = text.position.y + _xhr.fsEntry.scale * 0.75 - scale * 900;
-												_xhr.fsEntry.textHeight = scale * text.geometry.layout.height;
-
-												text.position.y += _xhr.fsEntry.scale * 0.75 * (1-vAspect);
-
-												const lineCount = contents.split("\n").length;
-												_xhr.fsEntry.lineCount = lineCount;
-
-												if (_xhr.fsEntry.targetLine) {
-													const {line} = _xhr.fsEntry.targetLine;
-													_xhr.fsEntry.targetLine = null;
-													self.goToFSEntryTextAtLine(_xhr.fsEntry, line);
-												}
-
-												console.timeEnd('tweakText ' + self.currentFrame);
-											});
-										}
-									};
-									xhr.send();
-								}
+								if (Colors.imageRE.test(fullPath)) self.loadImage(fullPath, o)
+								else self.loadTextFile(fullPath, o);
 							}
-						} else {
-							stack.push(o);
 						}
 					}
 				}
@@ -797,9 +638,189 @@ class Tabletree {
 		mesh.material.side = THREE.DoubleSide;
 		mesh.add(bigMesh);
 		mesh.add(thumbnails);
-		// mesh.castShadow = true;
-		// mesh.receiveShadow = true;
 		return mesh;
+	}
+
+	loadImage(fullPath, o) {
+		var obj3 = new THREE.Mesh();
+		obj3.visible = false;
+		obj3.fsEntry = o;
+		this.visibleFiles.visibleSet[fullPath] = true;
+		this.visibleFiles.add(obj3);
+		obj3.geometry = new THREE.PlaneBufferGeometry(1,1);
+		obj3.scale.multiplyScalar(o.scale);
+		obj3.position.set(o.x+o.scale*0.5, o.y+o.scale*0.5, o.z);
+		obj3.visible = false;
+		var img = new Image();
+		img.crossOrigin = 'anonymous';
+		img.src = this.apiPrefix+'/repo/file'+fullPath;
+		img.obj = obj3;
+		img.onload = function() {
+			if (this.obj.parent) {
+				var maxD = Math.max(this.width, this.height);
+				this.obj.scale.x *= this.width/maxD;
+				this.obj.scale.y *= this.height/maxD;
+				this.obj.material = new THREE.MeshBasicMaterial({
+					map: new THREE.Texture(this),
+					transparent: true,
+					depthTest: false,
+					depthWrite: false
+				});
+				this.obj.material.map.needsUpdate = true;
+				this.obj.visible = true;
+			}
+		};
+	}
+
+	yield() {
+		if (performance.now() - this.frameStart > 10) {
+			return new Promise((resolve, reject) => {
+				const resolver = () => {
+					if (performance.now() - this.frameStart > 10) this.frameFibers.push(resolver);
+					else resolve();
+				};
+				this.frameFibers.push(resolver);
+			});
+		}
+	}
+
+	loadTextFile(fullPath, o) {
+		let obj3 = new THREE.Mesh();
+		obj3.visible = false;
+		obj3.fsEntry = o;
+		this.visibleFiles.visibleSet[fullPath] = true;
+		this.visibleFiles.add(obj3);
+		const self = this;
+		var xhr = new XMLHttpRequest();
+		xhr.open('GET', this.apiPrefix+'/repo/file'+fullPath, true);
+		xhr.obj = obj3;
+		xhr.fsEntry = o;
+		xhr.fullPath = fullPath;
+		xhr.onload = function() {
+			if (this.responseText.length < 1e6 && this.obj.parent) {
+				var contents = this.responseText.replace(/\r/g, "");
+				if (contents.length === 0) return;
+
+				var _xhr = this;
+				prettyPrintWorker.prettyPrint(contents, this.fsEntry.name, async function(result) {
+					if (result.language) {
+						await self.yield();
+						console.time('prettyPrint collectNodeStyles ' + self.currentFrame);
+						var doc = document.createElement('pre');
+						doc.className = 'hljs ' + result.language;
+						doc.style.display = 'none';
+						doc.innerHTML = result.value;
+						document.body.appendChild(doc);
+						await self.yield();
+						var paletteIndex = {};
+						var palette = [];
+						var txt = [];
+						var collectNodeStyles = async function(doc, txt, palette, paletteIndex) {
+							await self.yield();
+							var style = getComputedStyle(doc);
+							var color = style.color;
+							if (!paletteIndex[color]) {
+								paletteIndex[color] = palette.length;
+								var c = new THREE.Color(color);
+								palette.push(new THREE.Vector3(c.r, c.g, c.b));
+							}
+							color = paletteIndex[color];
+							var bold = style.fontWeight !== 'normal';
+							var italic = style.fontStyle === 'italic';
+							var underline = style.textDecoration === 'underline';
+							for (var i=0; i<doc.childNodes.length; i++) {
+								var cc = doc.childNodes[i];
+								if (cc.tagName) {
+									await collectNodeStyles(cc, txt, palette, paletteIndex);
+								} else {
+									txt.push({
+										color: color,
+										bold: bold,
+										italic: italic,
+										underline: underline,
+										text: cc.textContent
+									});
+								}
+							}
+						};
+						await collectNodeStyles(doc, txt, palette, paletteIndex);
+						document.body.removeChild(doc);
+						console.timeEnd('prettyPrint collectNodeStyles ' + self.currentFrame);
+					}
+
+					var text = _xhr.obj;
+
+					text.visible = true;
+					await self.yield();
+					console.time('createText ' + self.currentFrame);
+					text.geometry = createText({font: Layout.font, text: contents, mode: 'pre'});
+					console.timeEnd('createText ' + self.currentFrame);
+					console.time('tweakText ' + self.currentFrame);
+					if (result.language) {
+						var verts = text.geometry.attributes.position.array;
+						for (var i=0, off=3; i<txt.length; i++) {
+							var t = txt[i];
+							for (var j=0; j<t.text.length; j++) {
+								var c = t.text.charCodeAt(j);
+								if (c === 10 || c === 32 || c === 9 || c === 13) continue;
+								for (var k=0; k<6; k++) {
+									if (t.italic) {
+										verts[off-3] += ((k <= 3 && k !== 0) ? -1 : 1) * 2.5;
+									}
+									verts[off] = t.color + 256 * t.bold;
+									off += 4;
+								}
+							}
+						}
+						text.material = self.makeTextMaterial(palette);
+					} else {
+						text.material = self.makeTextMaterial(palette);
+					}
+					text.material.uniforms.opacity.value = 0;
+					text.ontick = function(t, dt) {
+						if (this.material.uniforms.opacity.value === 1) return;
+						this.material.uniforms.opacity.value += (dt/1000) / 0.5;
+						if (this.material.uniforms.opacity.value > 1) {
+							this.material.uniforms.opacity.value = 1;
+						}
+						self.changed = true;
+					};
+
+					var textScale = 1 / Math.max(text.geometry.layout.width+60, (text.geometry.layout.height+30)/0.75);
+					var scale = _xhr.fsEntry.scale * textScale;
+					var vAspect = Math.min(1, ((text.geometry.layout.height+30)/0.75) / (text.geometry.layout.width+60));
+					text.material.depthTest = false;
+					text.scale.multiplyScalar(scale);
+					text.scale.y *= -1;
+					text.position.copy(_xhr.fsEntry);
+					text.fsEntry = _xhr.fsEntry;
+					text.position.x += _xhr.fsEntry.scale * textScale * 30;
+					text.position.y -= _xhr.fsEntry.scale * textScale * 7.5;
+					text.position.y += _xhr.fsEntry.scale * 0.25;
+					
+					_xhr.fsEntry.textScale = textScale;
+					_xhr.fsEntry.textXZero = text.position.x;
+					_xhr.fsEntry.textX = text.position.x + scale * Math.min(40 * 30 + 60, text.geometry.layout.width + 60) * 0.5;
+					_xhr.fsEntry.textYZero = text.position.y + _xhr.fsEntry.scale * 0.75;
+					_xhr.fsEntry.textY = text.position.y + _xhr.fsEntry.scale * 0.75 - scale * 900;
+					_xhr.fsEntry.textHeight = scale * text.geometry.layout.height;
+
+					text.position.y += _xhr.fsEntry.scale * 0.75 * (1-vAspect);
+
+					const lineCount = contents.split("\n").length;
+					_xhr.fsEntry.lineCount = lineCount;
+
+					if (_xhr.fsEntry.targetLine) {
+						const {line} = _xhr.fsEntry.targetLine;
+						_xhr.fsEntry.targetLine = null;
+						self.goToFSEntryTextAtLine(_xhr.fsEntry, line);
+					}
+
+					console.timeEnd('tweakText ' + self.currentFrame);
+				});
+			}
+		};
+		xhr.send();
 	}
 
 	createFileListModel(fileCount, fileTree) {
@@ -1565,6 +1586,8 @@ class Tabletree {
 	}
 
 	tick = () => {
+		this.frameStart = performance.now();
+		this.frameFibers.splice(0).map(f => f());
 		const camera = this.camera;
 		if (!camera) return this.requestFrame();
 		const currentFrameTime = performance.now();
