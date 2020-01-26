@@ -31,7 +31,6 @@
         "reactour": "^1.15.0",
         "styled-components": "^4.0.0",
         "three": "^0.111.0",
-        "typescript": "^3.7.5",
         "uncontrollable": "^7.0.0",
         "yup": "^0.27.0"
     },
