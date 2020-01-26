@@ -606,6 +606,7 @@ class Tabletree {
 		var labels = new THREE.Object3D();
 		var thumbnails = new THREE.Object3D();
 		await Layout.createFileTreeQuads(
+			this.yield,
 			fileTree,
 			fileIndex,
 			geo.attributes.position.array,
@@ -620,7 +621,7 @@ class Tabletree {
 			fileTree.fsIndex
 		);
 
-		var bigGeo = await createText({ text: '', font: font }, this.yield);
+		var bigGeo = await createText({ text: '', font: font, noBounds: true }, this.yield);
 		var vertCount = 0;
 		labels.traverse(function(c) {
 			if (c.geometry) {
@@ -793,15 +794,38 @@ class Tabletree {
 
 				var _xhr = this;
 				prettyPrintWorker.prettyPrint(contents, this.fsEntry.name, async function(result) {
+					const currentFrame = self.currentFrame + ' ' + _xhr.fsEntry.name;
 					if (result.language) {
 						await self.yield();
-						console.time('prettyPrint collectNodeStyles ' + self.currentFrame);
+						console.time('prettyPrint collectNodeStyles ' + currentFrame);
 						var doc = document.createElement('pre');
 						doc.className = 'hljs ' + result.language;
 						doc.style.display = 'none';
-						doc.innerHTML = result.value;
 						document.body.appendChild(doc);
-						await self.yield();
+						{
+							let i = 0,
+								start = 0;
+							for (let lines = 0; i < result.value.length; i++) {
+								if (result.value.charCodeAt(i) === 10) lines++;
+								if (lines > 100) {
+									const str = result.value.slice(start, i);
+									const d = document.createElement('template');
+									d.innerHTML = str;
+									doc.appendChild(d.content);
+									await self.yield();
+									lines = 0;
+									start = i;
+								}
+							}
+							if (start !== i) {
+								const str = result.value.slice(start, i);
+								const d = document.createElement('template');
+								d.innerHTML = str;
+								doc.appendChild(d.content);
+								await self.yield();
+							}
+						}
+
 						var paletteIndex = {};
 						var palette = [];
 						var txt = [];
@@ -835,20 +859,20 @@ class Tabletree {
 						};
 						await collectNodeStyles(doc, txt, palette, paletteIndex);
 						document.body.removeChild(doc);
-						console.timeEnd('prettyPrint collectNodeStyles ' + self.currentFrame);
+						console.timeEnd('prettyPrint collectNodeStyles ' + currentFrame);
 					}
 
 					var text = _xhr.obj;
 
 					text.visible = true;
 					await self.yield();
-					console.time('createText ' + self.currentFrame);
+					console.time('createText ' + currentFrame);
 					text.geometry = await createText(
 						{ font: Layout.font, text: contents, mode: 'pre' },
 						self.yield
 					);
-					console.timeEnd('createText ' + self.currentFrame);
-					console.time('tweakText ' + self.currentFrame);
+					console.timeEnd('createText ' + currentFrame);
+					console.time('tweakText ' + currentFrame);
 					if (result.language) {
 						var verts = text.geometry.attributes.position.array;
 						for (var i = 0, off = 3; i < txt.length; i++) {
@@ -921,7 +945,7 @@ class Tabletree {
 						self.goToFSEntryTextAtLine(_xhr.fsEntry, line);
 					}
 
-					console.timeEnd('tweakText ' + self.currentFrame);
+					console.timeEnd('tweakText ' + currentFrame);
 				});
 			}
 		};
@@ -938,6 +962,7 @@ class Tabletree {
 		var labels = new THREE.Object3D();
 		var thumbnails = new THREE.Object3D();
 		await Layout.createFileListQuads(
+			this.yield,
 			fileTree,
 			fileIndex,
 			geo.attributes.position.array,
@@ -952,7 +977,7 @@ class Tabletree {
 			fileTree.index
 		);
 
-		var bigGeo = await createText({ text: '', font: this.font }, this.yield);
+		var bigGeo = await createText({ text: '', font: this.font, noBounds: true }, this.yield);
 		var vertCount = 0;
 		labels.traverse(function(c) {
 			if (c.geometry) {

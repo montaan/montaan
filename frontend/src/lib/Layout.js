@@ -68,6 +68,7 @@ export default {
 	},
 
 	createFileListQuads: async function(
+		yieldFn,
 		fileTree,
 		fileIndex,
 		verts,
@@ -239,7 +240,7 @@ export default {
 					title = s;
 				}
 
-				var textGeometry = await createText({ text: title, font: this.font });
+				var textGeometry = await createText({ text: title, font: this.font }, yieldFn);
 				var text = new THREE.Object3D();
 				text.geometry = textGeometry;
 				var textScaleW = 220 / Math.max(textGeometry.layout.width, 220);
@@ -273,6 +274,7 @@ export default {
 		for (let j = 0; j < dirs.length; j++) {
 			let dir = dirs[j];
 			fileIndex = this.createFileListQuads(
+				yieldFn,
 				dir,
 				fileIndex,
 				verts,
@@ -473,6 +475,7 @@ export default {
 	// },
 
 	createFileTreeQuads: async function(
+		yieldFn,
 		fileTree,
 		fileIndex,
 		verts,
@@ -568,7 +571,8 @@ export default {
 							accum.textVertexIndex = await this.createTextForEntry(
 								file,
 								parentText,
-								accum.textVertexIndex
+								accum.textVertexIndex,
+								yieldFn
 							);
 							file.lastVertexIndex = accum.vertexIndex;
 							// file.thumbnail = Thumbnails.loadThumbnail(file);
@@ -615,9 +619,11 @@ export default {
 					accum.textVertexIndex = await this.createTextForEntry(
 						dir,
 						parentText,
-						accum.textVertexIndex
+						accum.textVertexIndex,
+						yieldFn
 					);
 					fileIndex = await this.createFileTreeQuads(
+						yieldFn,
 						dir,
 						fileIndex,
 						verts,
@@ -655,7 +661,7 @@ export default {
 		return fileIndex;
 	},
 
-	createTextForEntry: async function(obj, parentText, textVertexIndex) {
+	createTextForEntry: async function(obj, parentText, textVertexIndex, yieldFn) {
 		var title = obj.title;
 		if (obj.entries == null) {
 			if (title.indexOf('\n') === -1 && title.length > 16) {
@@ -700,7 +706,10 @@ export default {
 			title = s;
 		}
 
-		var textGeometry = await createText({ text: title, font: this.font });
+		var textGeometry = await createText(
+			{ text: title, font: this.font, noBounds: true },
+			yieldFn
+		);
 		var text = new THREE.Object3D();
 		text.geometry = textGeometry;
 
