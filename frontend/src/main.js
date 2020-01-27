@@ -804,23 +804,54 @@ class Tabletree {
 						document.body.appendChild(doc);
 						{
 							let i = 0,
-								start = 0;
-							for (let lines = 0; i < result.value.length; i++) {
-								if (result.value.charCodeAt(i) === 10) lines++;
-								if (lines > 100) {
-									const str = result.value.slice(start, i);
+								start = 0,
+								spanStack = [],
+								stackLen = 0,
+								html = result.value,
+								prefix = '',
+								tagStart = 0,
+								inTag = false,
+								closeSpan = false,
+								lines = 0,
+								chars = 0;
+							const lt = '<'.charCodeAt(0);
+							const gt = '>'.charCodeAt(0);
+							const slash = '/'.charCodeAt(0);
+							for (; i < html.length; i++) {
+								var ch = html.charCodeAt(i);
+								chars++;
+								if (ch === 10) lines++;
+								else if (ch === lt) {
+									tagStart = i;
+									closeSpan = false;
+									inTag = true;
+								} else if (i-1 === tagStart && ch === slash) {
+									closeSpan = true;
+									stackLen -= 2;
+								} else if (!closeSpan && ch === gt) {
+									inTag = false;
+									spanStack[stackLen++] = tagStart;
+									spanStack[stackLen++] = i+1;
+								}
+								if (!inTag && (lines > 100 || chars > 3000)) {
+									const str = html.substring(start, i+1);
 									const d = document.createElement('template');
-									d.innerHTML = str;
+									d.innerHTML = prefix + str;
+									prefix = '';
+									for (let k = 0; k < stackLen; k+=2) {
+										prefix += html.substring(spanStack[k], spanStack[k+1]);
+									}
 									doc.appendChild(d.content);
 									await self.yield();
 									lines = 0;
-									start = i;
+									chars = 0;
+									start = i+1;
 								}
 							}
-							if (start !== i) {
-								const str = result.value.slice(start, i);
+							if (start < i) {
+								const str = html.substring(start);
 								const d = document.createElement('template');
-								d.innerHTML = str;
+								d.innerHTML = prefix + str;
 								doc.appendChild(d.content);
 								await self.yield();
 							}
