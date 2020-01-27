@@ -1,5 +1,6 @@
 {
     "dependencies": {
+        "prettier": "^1.19.1"
     },
     "name": "montaan",
     "description": "Montaan is everything.",

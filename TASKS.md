@@ -35,6 +35,20 @@
 ## Active
 
 
+# Plugins
+    [] Some sort of plugin system to enable parallel development
+    [] TreeProvider
+    [] FileInlineProvider
+    [] FileViewProvider
+    [] LinkageProvider
+    [] HistoryProvider
+    [] MetadataProvider
+    Somehow:
+      - Detect when you're viewing a git repo with node_modules, pull in commits and tree history and depcruise.
+      - Register FileViewProvider for filename pattern
+      - Display directory of photos organized into calendar and events
+
+
 # "Payment" system
     [] Commit prompt to pay for use via commit
 

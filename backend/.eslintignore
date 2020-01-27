@@ -5,11 +5,6 @@ built
 # don't lint nyc coverage output
 coverage
 
-# don't lint random experiments
-toys
-
 # don't lint repos
 repos
 
-# don't lint frontend
-frontend
