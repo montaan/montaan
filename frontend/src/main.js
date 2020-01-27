@@ -1165,7 +1165,7 @@ class Tabletree {
 		if (!bbox || bbox.bottom < 0 || bbox.top > window.innerHeight) {
 			bv = new THREE.Vector3(
 				b.x - fsEntry.scale * 0.5 - 0.02,
-				av.y + 0.05 * fsEntry.scale + 0.01 * 3.15,
+				av.y + 0.05 * fsEntry.scale, // + 0.01 * 3.15,
 				av.z - fsEntry.scale * 0.5
 			);
 			aUp = new THREE.Vector3(
@@ -1260,13 +1260,13 @@ class Tabletree {
 		var aUp = new THREE.Vector3(
 			a.x + (b.x - a.x) * 0.1,
 			a.y + (b.y - a.y) * 0.1,
-			Math.max(a.z, b.z) + 0.1
+			Math.max(a.z, b.z) + 1 * entryA.scale
 		);
 		aUp.applyMatrix4(modelA.matrixWorld);
 		var bUp = new THREE.Vector3(
 			b.x - (b.x - a.x) * 0.1,
 			b.y - (b.y - a.y) * 0.1,
-			Math.max(a.z, b.z) + 0.1
+			Math.max(a.z, b.z) + 1 * entryB.scale
 		);
 		bUp.applyMatrix4(modelB.matrixWorld);
 

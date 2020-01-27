@@ -2,6 +2,8 @@ import React from 'react';
 import { withRouter } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
 
+import * as THREE from 'three';
+
 import MainView from './components/MainView';
 import CommitControls from './components/CommitControls';
 import CommitInfo from './components/CommitInfo';
@@ -114,6 +116,19 @@ class MainApp extends React.Component {
 		console.timeEnd('parse commitObj');
 		this.setState({ processing: false, commitData });
 		if (commitsOpen) this.setActiveCommits(commitData.commits);
+        const deps = await this.props.api.getType('/repo/fs/' + repoPrefix + '/deps.json', 'json');
+        const links = [];
+        deps.modules.forEach(({source, dependencies}, i) => {
+            var src = getPathEntry(fileTree.tree, repoPrefix + '/' + source);
+            if (!src) return;
+            const color = new THREE.Color().setHSL((i / 7) % 1, 0.5, 0.6);
+            dependencies.forEach(({resolved}) => {
+                var dst = getPathEntry(fileTree.tree, repoPrefix + '/' + resolved);
+                if (!dst) return;
+                links.push({src, dst, color});
+            });
+        });
+        this.setLinks(links);
 		// this.animateRandomLinks(fileTree.tree, files.split("\0"), repoPrefix);
 	};
 
@@ -511,7 +526,7 @@ class MainApp extends React.Component {
 	render() {
 		const title = this.state.repoPrefix ? '🏔 ' + this.state.repoPrefix : 'Montaan 🏔';
 		return (
-			<div id="mainApp" className={this.processing ? 'loading' : 'loaded'}>
+			<div id="mainApp">
 				<Helmet meta={[{ name: 'author', content: 'Montaan' }]}>
 					<link rel="canonical" href="https://montaan.com/" />
 					<meta name="description" content="Montaan." />
@@ -520,7 +535,6 @@ class MainApp extends React.Component {
 
 				<div id="debug" />
 				{fullscreenSupported && <div id="fullscreen" onClick={this.fullscreenOnClick} />}
-				<div id="loader" />
 
 				{this.state.processing && (
 					<div id="processing">
