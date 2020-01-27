@@ -116,19 +116,21 @@ class MainApp extends React.Component {
 		console.timeEnd('parse commitObj');
 		this.setState({ processing: false, commitData });
 		if (commitsOpen) this.setActiveCommits(commitData.commits);
-        const deps = await this.props.api.getType('/repo/fs/' + repoPrefix + '/deps.json', 'json');
-        const links = [];
-        deps.modules.forEach(({source, dependencies}, i) => {
-            var src = getPathEntry(fileTree.tree, repoPrefix + '/' + source);
-            if (!src) return;
-            const color = new THREE.Color().setHSL((i / 7) % 1, 0.5, 0.6);
-            dependencies.forEach(({resolved}) => {
-                var dst = getPathEntry(fileTree.tree, repoPrefix + '/' + resolved);
-                if (!dst) return;
-                links.push({src, dst, color});
+        try {
+            const deps = await this.props.api.getType('/repo/fs/' + repoPrefix + '/deps.json', 'json');
+            const links = [];
+            deps.modules.forEach(({source, dependencies}, i) => {
+                var src = getPathEntry(fileTree.tree, repoPrefix + '/' + source);
+                if (!src) return;
+                const color = new THREE.Color().setHSL((i / 7) % 1, 0.5, 0.6);
+                dependencies.forEach(({resolved}) => {
+                    var dst = getPathEntry(fileTree.tree, repoPrefix + '/' + resolved);
+                    if (!dst) return;
+                    links.push({src, dst, color});
+                });
             });
-        });
-        this.setLinks(links);
+            this.setLinks(links);
+        } catch(err) { /* No deps */ }
 		// this.animateRandomLinks(fileTree.tree, files.split("\0"), repoPrefix);
 	};
 
