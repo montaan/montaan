@@ -775,212 +775,207 @@ class Tabletree {
 		this.changed = true;
 	};
 
-	loadTextFile(fullPath, o) {
-		let obj3 = new THREE.Mesh();
-		obj3.visible = false;
-		obj3.fsEntry = o;
-		this.visibleFiles.visibleSet[fullPath] = true;
-		this.visibleFiles.add(obj3);
-		const self = this;
-		var xhr = new XMLHttpRequest();
-		xhr.open('GET', this.apiPrefix + '/repo/file' + fullPath, true);
-		xhr.obj = obj3;
-		xhr.fsEntry = o;
-		xhr.fullPath = fullPath;
-		xhr.onload = function() {
-			if (this.responseText.length < 1e6 && this.obj.parent) {
-				var contents = this.responseText.replace(/\r/g, '');
-				if (contents.length === 0) return;
+	async fillElement(html, element) {
+		let i = 0,
+			start = 0,
+			spanStack = [],
+			stackLen = 0,
+			prefix = '',
+			tagStart = 0,
+			inTag = false,
+			closeSpan = false,
+			lines = 0,
+			chars = 0;
+		const lt = '<'.charCodeAt(0);
+		const gt = '>'.charCodeAt(0);
+		const slash = '/'.charCodeAt(0);
+		for (; i < html.length; i++) {
+			var ch = html.charCodeAt(i);
+			chars++;
+			if (ch === 10) lines++;
+			else if (ch === lt) {
+				tagStart = i;
+				closeSpan = false;
+				inTag = true;
+			} else if (i-1 === tagStart && ch === slash) {
+				closeSpan = true;
+				stackLen -= 2;
+			} else if (!closeSpan && ch === gt) {
+				inTag = false;
+				spanStack[stackLen++] = tagStart;
+				spanStack[stackLen++] = i+1;
+			}
+			if (!inTag && (lines > 100 || chars > 3000)) {
+				const str = html.substring(start, i+1);
+				const d = document.createElement('template');
+				d.innerHTML = prefix + str;
+				prefix = '';
+				for (let k = 0; k < stackLen; k+=2) {
+					prefix += html.substring(spanStack[k], spanStack[k+1]);
+				}
+				element.appendChild(d.content);
+				await this.yield();
+				lines = 0;
+				chars = 0;
+				start = i+1;
+			}
+		}
+		if (start < i) {
+			const str = html.substring(start);
+			const d = document.createElement('template');
+			d.innerHTML = prefix + str;
+			element.appendChild(d.content);
+			await this.yield();
+		}
+		return lines;
+	}
 
-				var _xhr = this;
-				prettyPrintWorker.prettyPrint(contents, this.fsEntry.name, async function(result) {
-					const currentFrame = self.currentFrame + ' ' + _xhr.fsEntry.name;
-					if (result.language) {
-						await self.yield();
-						console.time('prettyPrint collectNodeStyles ' + currentFrame);
-						var doc = document.createElement('pre');
-						doc.className = 'hljs ' + result.language;
-						doc.style.display = 'none';
-						document.body.appendChild(doc);
-						{
-							let i = 0,
-								start = 0,
-								spanStack = [],
-								stackLen = 0,
-								html = result.value,
-								prefix = '',
-								tagStart = 0,
-								inTag = false,
-								closeSpan = false,
-								lines = 0,
-								chars = 0;
-							const lt = '<'.charCodeAt(0);
-							const gt = '>'.charCodeAt(0);
-							const slash = '/'.charCodeAt(0);
-							for (; i < html.length; i++) {
-								var ch = html.charCodeAt(i);
-								chars++;
-								if (ch === 10) lines++;
-								else if (ch === lt) {
-									tagStart = i;
-									closeSpan = false;
-									inTag = true;
-								} else if (i-1 === tagStart && ch === slash) {
-									closeSpan = true;
-									stackLen -= 2;
-								} else if (!closeSpan && ch === gt) {
-									inTag = false;
-									spanStack[stackLen++] = tagStart;
-									spanStack[stackLen++] = i+1;
-								}
-								if (!inTag && (lines > 100 || chars > 3000)) {
-									const str = html.substring(start, i+1);
-									const d = document.createElement('template');
-									d.innerHTML = prefix + str;
-									prefix = '';
-									for (let k = 0; k < stackLen; k+=2) {
-										prefix += html.substring(spanStack[k], spanStack[k+1]);
-									}
-									doc.appendChild(d.content);
-									await self.yield();
-									lines = 0;
-									chars = 0;
-									start = i+1;
-								}
-							}
-							if (start < i) {
-								const str = html.substring(start);
-								const d = document.createElement('template');
-								d.innerHTML = prefix + str;
-								doc.appendChild(d.content);
-								await self.yield();
-							}
-						}
-
-						var paletteIndex = {};
-						var palette = [];
-						var txt = [];
-						var collectNodeStyles = async function(doc, txt, palette, paletteIndex) {
-							await self.yield();
-							var style = getComputedStyle(doc);
-							var color = style.color;
-							if (!paletteIndex[color]) {
-								paletteIndex[color] = palette.length;
-								var c = new THREE.Color(color);
-								palette.push(new THREE.Vector3(c.r, c.g, c.b));
-							}
-							color = paletteIndex[color];
-							var bold = style.fontWeight !== 'normal';
-							var italic = style.fontStyle === 'italic';
-							var underline = style.textDecoration === 'underline';
-							for (var i = 0; i < doc.childNodes.length; i++) {
-								var cc = doc.childNodes[i];
-								if (cc.tagName) {
-									await collectNodeStyles(cc, txt, palette, paletteIndex);
-								} else {
-									txt.push({
-										color: color,
-										bold: bold,
-										italic: italic,
-										underline: underline,
-										text: cc.textContent,
-									});
-								}
-							}
-						};
-						await collectNodeStyles(doc, txt, palette, paletteIndex);
-						document.body.removeChild(doc);
-						console.timeEnd('prettyPrint collectNodeStyles ' + currentFrame);
-					}
-
-					var text = _xhr.obj;
-
-					text.visible = true;
-					await self.yield();
-					console.time('createText ' + currentFrame);
-					text.geometry = await createText(
-						{ font: Layout.font, text: contents, mode: 'pre' },
-						self.yield
-					);
-					console.timeEnd('createText ' + currentFrame);
-					console.time('tweakText ' + currentFrame);
-					if (result.language) {
-						var verts = text.geometry.attributes.position.array;
-						for (var i = 0, off = 3; i < txt.length; i++) {
-							var t = txt[i];
-							for (var j = 0; j < t.text.length; j++) {
-								var c = t.text.charCodeAt(j);
-								if (c === 10 || c === 32 || c === 9 || c === 13) continue;
-								for (var k = 0; k < 6; k++) {
-									if (t.italic) {
-										verts[off - 3] += (k <= 3 && k !== 0 ? -1 : 1) * 2.5;
-									}
-									verts[off] = t.color + 256 * t.bold;
-									off += 4;
-								}
-							}
-						}
-						text.material = self.makeTextMaterial(palette);
-					} else {
-						text.material = self.makeTextMaterial(palette);
-					}
-					text.material.uniforms.opacity.value = 0;
-					text.ontick = function(t, dt) {
-						if (this.material.uniforms.opacity.value === 1) return;
-						this.material.uniforms.opacity.value += dt / 1000 / 0.5;
-						if (this.material.uniforms.opacity.value > 1) {
-							this.material.uniforms.opacity.value = 1;
-						}
-						self.changed = true;
-					};
-
-					var textScale =
-						1 /
-						Math.max(
-							text.geometry.layout.width + 60,
-							(text.geometry.layout.height + 30) / 0.75
-						);
-					var scale = _xhr.fsEntry.scale * textScale;
-					var vAspect = Math.min(
-						1,
-						(text.geometry.layout.height + 30) /
-							0.75 /
-							(text.geometry.layout.width + 60)
-					);
-					text.material.depthTest = false;
-					text.scale.multiplyScalar(scale);
-					text.scale.y *= -1;
-					text.position.copy(_xhr.fsEntry);
-					text.fsEntry = _xhr.fsEntry;
-					text.position.x += _xhr.fsEntry.scale * textScale * 30;
-					text.position.y -= _xhr.fsEntry.scale * textScale * 7.5;
-					text.position.y += _xhr.fsEntry.scale * 0.25;
-
-					_xhr.fsEntry.textScale = textScale;
-					_xhr.fsEntry.textXZero = text.position.x;
-					_xhr.fsEntry.textX =
-						text.position.x +
-						scale * Math.min(40 * 30 + 60, text.geometry.layout.width + 60) * 0.5;
-					_xhr.fsEntry.textYZero = text.position.y + _xhr.fsEntry.scale * 0.75;
-					_xhr.fsEntry.textY = text.position.y + _xhr.fsEntry.scale * 0.75 - scale * 900;
-					_xhr.fsEntry.textHeight = scale * text.geometry.layout.height;
-
-					text.position.y += _xhr.fsEntry.scale * 0.75 * (1 - vAspect);
-
-					const lineCount = contents.split('\n').length;
-					_xhr.fsEntry.lineCount = lineCount;
-
-					if (_xhr.fsEntry.targetLine) {
-						const { line } = _xhr.fsEntry.targetLine;
-						_xhr.fsEntry.targetLine = null;
-						self.goToFSEntryTextAtLine(_xhr.fsEntry, line);
-					}
-
-					console.timeEnd('tweakText ' + currentFrame);
+	async collectNodeStyles(doc, txt, palette, paletteIndex) {
+		await this.yield();
+		var style = getComputedStyle(doc);
+		var color = style.color;
+		if (!paletteIndex[color]) {
+			paletteIndex[color] = palette.length;
+			var c = new THREE.Color(color);
+			palette.push(new THREE.Vector3(c.r, c.g, c.b));
+		}
+		color = paletteIndex[color];
+		var bold = style.fontWeight !== 'normal';
+		var italic = style.fontStyle === 'italic';
+		var underline = style.textDecoration === 'underline';
+		for (var i = 0; i < doc.childNodes.length; i++) {
+			var cc = doc.childNodes[i];
+			if (cc.tagName) {
+				await this.collectNodeStyles(cc, txt, palette, paletteIndex);
+			} else {
+				txt.push({
+					color: color,
+					bold: bold,
+					italic: italic,
+					underline: underline,
+					text: cc.textContent,
 				});
 			}
-		};
-		xhr.send();
+		}
+	}
+
+	async parsePrettyPrintResult(result) {
+		await this.yield();
+		const doc = document.createElement('pre');
+		doc.className = 'hljs ' + result.language;
+		doc.style.display = 'none';
+		document.body.appendChild(doc);
+
+		const lineCount = await this.fillElement(result.value, doc);
+
+		var paletteIndex = {};
+		var palette = [];
+		var txt = [];
+		await this.collectNodeStyles(doc, txt, palette, paletteIndex);
+		document.body.removeChild(doc);
+		return {txt, palette, lineCount};
+	}
+
+	async loadTextFile(fullPath, fsEntry) {
+		let text = new THREE.Mesh();
+		text.visible = false;
+		text.fsEntry = fsEntry;
+		this.visibleFiles.visibleSet[fullPath] = true;
+		this.visibleFiles.add(text);
+
+		const responseText = await (await fetch(this.apiPrefix + '/repo/file' + fullPath)).text();
+
+		if (responseText.length > 1e6 || !text.parent) return;
+
+		await this.yield();
+
+		var contents = responseText.replace(/\r/g, '');
+		if (contents.length === 0) return;
+
+		prettyPrintWorker.prettyPrint(contents, fsEntry.name, async (result) => {
+			await this.yield();
+			text.geometry = await createText(
+				{ font: Layout.font, text: contents, mode: 'pre' },
+				this.yield
+			);
+			if (result.language) {
+				const {txt, palette, lineCount} = await this.parsePrettyPrintResult(result);
+				fsEntry.lineCount = lineCount;
+				const verts = text.geometry.attributes.position.array;
+				for (let i = 0, off = 3; i < txt.length; i++) {
+					const t = txt[i];
+					for (let j = 0; j < t.text.length; j++) {
+						const c = t.text.charCodeAt(j);
+						if (c === 10 || c === 32 || c === 9 || c === 13) continue;
+						for (let k = 0; k < 6; k++) {
+							if (t.italic) {
+								verts[off - 3] += (k <= 3 && k !== 0 ? -1 : 1) * 2.5;
+							}
+							verts[off] = t.color + 256 * t.bold;
+							off += 4;
+						}
+					}
+					if (off % 12004 === 12003) await this.yield();
+				}
+				text.material = this.makeTextMaterial(palette);
+			} else {
+				let lineCount = 0;
+				for (let i = 0; i < contents.length; i++) if (contents.charCodeAt(i) === 10) lineCount++;
+				fsEntry.lineCount = lineCount;
+				text.material = this.makeTextMaterial();
+			}
+			text.visible = true;
+			text.material.uniforms.opacity.value = 0;
+			const self = this;
+			text.ontick = function(t, dt) {
+				if (this.material.uniforms.opacity.value === 1) return;
+				this.material.uniforms.opacity.value += dt / 1000 / 0.5;
+				if (this.material.uniforms.opacity.value > 1) {
+					this.material.uniforms.opacity.value = 1;
+				}
+				self.changed = true;
+			};
+
+			var textScale =
+				1 /
+				Math.max(
+					text.geometry.layout.width + 60,
+					(text.geometry.layout.height + 30) / 0.75
+				);
+			var scale = fsEntry.scale * textScale;
+			var vAspect = Math.min(
+				1,
+				(text.geometry.layout.height + 30) /
+					0.75 /
+					(text.geometry.layout.width + 60)
+			);
+			text.material.depthTest = false;
+			text.scale.multiplyScalar(scale);
+			text.scale.y *= -1;
+			text.position.copy(fsEntry);
+			text.fsEntry = fsEntry;
+			text.position.x += fsEntry.scale * textScale * 30;
+			text.position.y -= fsEntry.scale * textScale * 7.5;
+			text.position.y += fsEntry.scale * 0.25;
+
+			fsEntry.textScale = textScale;
+			fsEntry.textXZero = text.position.x;
+			fsEntry.textX =
+				text.position.x +
+				scale * Math.min(40 * 30 + 60, text.geometry.layout.width + 60) * 0.5;
+			fsEntry.textYZero = text.position.y + fsEntry.scale * 0.75;
+			fsEntry.textY = text.position.y + fsEntry.scale * 0.75 - scale * 900;
+			fsEntry.textHeight = scale * text.geometry.layout.height;
+
+			text.position.y += fsEntry.scale * 0.75 * (1 - vAspect);
+
+			if (fsEntry.targetLine) {
+				const { line } = fsEntry.targetLine;
+				fsEntry.targetLine = null;
+				this.goToFSEntryTextAtLine(fsEntry, line);
+			}
+			this.changed = true;
+		});
 	}
 
 	async createFileListModel(fileCount, fileTree) {
