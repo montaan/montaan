@@ -8,6 +8,10 @@ import Editor, { DiffEditor, monaco } from '@monaco-editor/react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes, faArrowUp, faArrowDown } from '@fortawesome/free-solid-svg-icons';
 
+import strict from '../../lib/strictProxy.js';
+import styles_ from './css/style.module.scss';
+const styles = strict(styles_, 'components/CommitInfo/css/style.module.scss');
+
 monaco.config({
 	urls: {
 		monacoLoader: '/vs/loader.js',
@@ -243,6 +247,8 @@ export default class CommitInfo extends React.Component {
 			default:
 				authors.sort((a, b) => a.localeCompare(b));
 		}
+        var runningCommitCount = 0;
+        var added50 = false, added80 = false, added95 = false;
 		authors.forEach((author) => {
 			var div = document.createElement('div');
 			div.dataset.commitCount = authorCommitCounts[author];
@@ -255,6 +261,19 @@ export default class CommitInfo extends React.Component {
 				else self.props.setCommitFilter({ ...self.props.commitFilter, author });
 			};
 			el.appendChild(div);
+            runningCommitCount += authorCommitCounts[author];
+            if (authorSort === 'commits') {
+                if (runningCommitCount >= activeCommits.length * 0.95 && !added95) {
+                    added50 = added80 = added95 = true;
+                    el.appendChild(span(styles.commits95Pct));
+                } else if (runningCommitCount >= activeCommits.length * 0.8 && !added80) {
+                    added50 = added80 = true;
+                    el.appendChild(span(styles.commits80Pct));
+                } else if (runningCommitCount >= activeCommits.length * 0.5 && !added50) {
+                    added50 = true;
+                    el.appendChild(span(styles.commits50Pct));
+                }
+            }
 		});
 	}
 
