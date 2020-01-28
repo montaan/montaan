@@ -1,7 +1,7 @@
-var utils = require('./utils.js');
-var THREE = require('three');
+import utils from './utils.js';
+import * as THREE from 'three';
 
-module.exports = {
+export default {
 	quadCount: 2,
 
 	vertsPerFile: 6 * 2,
@@ -12,7 +12,9 @@ module.exports = {
 			camera,
 			models instanceof Array ? models : [models]
 		);
+
 		if (intersections.length > 0) {
+			console.log(intersections);
 			var faceIndex = intersections[0].faceIndex;
 			var fsEntry =
 				intersections[0].object.fileTree.fsIndex[

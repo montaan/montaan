@@ -1,6 +1,5 @@
 # don't lint frontend build
 build
-built
 public
 node_modules
 coverage

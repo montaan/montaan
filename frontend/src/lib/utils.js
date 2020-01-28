@@ -1,4 +1,4 @@
-var THREE = require('three');
+import * as THREE from 'three';
 var slash = '/'.charCodeAt(0);
 
 // // Your Client ID can be retrieved from your project in the Google
@@ -127,7 +127,7 @@ var slash = '/'.charCodeAt(0);
 
 // }
 
-var utils = (module.exports = {
+var utils = {
 	uniq: function(array, cmp) {
 		return array.sort(cmp).reduce(function(s, a) {
 			if (s.length === 0 || cmp(s[s.length - 1], a) !== 0) s.push(a);
@@ -461,4 +461,6 @@ var utils = (module.exports = {
 		xhr.onerror = onError;
 		xhr.send();
 	},
-});
+};
+
+export default utils;

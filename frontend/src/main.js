@@ -3,13 +3,13 @@ import Colors from './lib/Colors';
 import prettyPrintWorker from './lib/pretty_print';
 import createText from './lib/third_party/three-bmfont-text-modified';
 import SDFShader from './lib/third_party/three-bmfont-text-modified/shaders/sdf';
-import Layout from './lib/Layout.js';
+import Layout from './lib/Layout';
+import utils from './lib/utils';
+import Geometry from './lib/Geometry';
 
 const THREE = require('three');
 global.THREE = THREE;
 
-var utils = require('./lib/utils.js');
-var Geometry = require('./lib/Geometry.js');
 var loadFont = require('load-bmfont');
 
 THREE.Object3D.prototype.tick = function(t, dt) {
@@ -661,12 +661,8 @@ class Tabletree {
 					!Geometry.quadInsideFrustum(fsEntry.index, this, camera) ||
 					(fsEntry.scale * 50) / Math.max(camera.fov, camera.targetFOV) < 0.2
 				) {
-					if (!c.geometry.layout) {
-						if (c.material && c.material.map) {
-							c.material.map.dispose();
-						}
-						// } else if (c.material) {
-						// 	c.material.dispose();
+					if (!c.geometry.layout && c.material && c.material.map) {
+						c.material.map.dispose();
 					}
 					if (c.geometry) {
 						c.geometry.dispose();
@@ -678,7 +674,7 @@ class Tabletree {
 				}
 			}
 			var stack = [this.fileTree];
-			// var zoomedInPath = "";
+			var zoomedInPath = '';
 			var navigationTarget = '';
 			var smallestCovering = this.fileTree;
 			while (stack.length > 0) {
@@ -689,7 +685,7 @@ class Tabletree {
 					if (!Geometry.quadInsideFrustum(idx, this, camera)) {
 					} else if ((o.scale * 50) / Math.max(camera.fov, camera.targetFOV) > 0.2) {
 						if (Geometry.quadCoversFrustum(idx, this, camera)) {
-							// zoomedInPath += '/' + o.name;
+							zoomedInPath += '/' + o.name;
 							navigationTarget += '/' + o.name;
 							smallestCovering = o;
 						} else if (
@@ -713,6 +709,7 @@ class Tabletree {
 				}
 			}
 			self.updateBreadCrumb(navigationTarget);
+			self.zoomedInPath = zoomedInPath;
 			window.setNavigationTarget(navigationTarget);
 			this.geometry.setDrawRange(
 				smallestCovering.vertexIndex,
@@ -1494,6 +1491,30 @@ class Tabletree {
 		);
 	}
 
+	getTextPosition(fsEntry, intersection) {
+		const fv = new THREE.Vector3(fsEntry.textXZero, fsEntry.textYZero, fsEntry.z);
+		const pv = new THREE.Vector3().copy(intersection.point);
+		const inv = new THREE.Matrix4().getInverse(intersection.object.matrixWorld);
+		pv.applyMatrix4(inv);
+		const uv = new THREE.Vector3().subVectors(pv, fv);
+		uv.divideScalar(fsEntry.scale * fsEntry.textScale);
+		uv.y /= 38;
+		uv.x /= 19;
+
+		console.log(Math.floor(-uv.y), Math.floor(uv.x+1));
+		return;
+
+		// const textYOff = ((line + 0.5) / fsEntry.lineCount) * fsEntry.textHeight;
+		// var textX = fsEntry.textX;
+		// textX += (fsEntry.scale * fsEntry.textScale * window.innerWidth) / 2;
+		// var fsPoint = new THREE.Vector3(textX, fsEntry.textYZero - textYOff, fsEntry.z);
+		// fsPoint.applyMatrix4(model.matrixWorld);
+		// camera.targetPosition.copy(fsPoint);
+		// camera.targetFOV = fsEntry.scale * fsEntry.textScale * 2000 * 50;
+		// fsEntry.textFOV = camera.targetFOV;
+
+	}
+
 	zoomToEntry(ev) {
 		const intersection = this.getEntryAtMouse(ev);
 		if (intersection) {
@@ -1512,7 +1533,12 @@ class Tabletree {
 				if (this.highlighted.entries === null) {
 					var fovDiff = (this.highlighted.scale * 50) / this.camera.fov;
 					if (fovDiff > 1 || !fsEntry.lineCount) {
-						this.goToFSEntry(this.highlighted, intersection.object);
+						if (fsEntry.lineCount) {
+							// handle text click
+							console.log(this.getTextPosition(this.highlighted, intersection));
+						} else {
+							this.goToFSEntry(this.highlighted, intersection.object);
+						}
 					} else {
 						this.goToFSEntryText(this.highlighted, intersection.object);
 					}

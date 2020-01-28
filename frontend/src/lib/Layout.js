@@ -1,7 +1,6 @@
 import createText from './third_party/three-bmfont-text-modified';
-import Colors from './Colors.js';
-
-const Geometry = require('./Geometry.js');
+import Colors from './Colors';
+import Geometry from './Geometry';
 
 const THREE = require('three');
 
