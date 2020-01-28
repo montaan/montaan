@@ -78,7 +78,7 @@ class MainApp extends React.Component {
 		return fileTree;
 	}
 
-	setRepo = async (repoPath, userName = this.props.userInfo.name) => {
+	setRepo = async (repoPath, userName = this.props.userInfo.name, ref = 'HEAD') => {
 		clearTimeout(this.repoTimeout);
 		clearInterval(this.animatedFiles);
 		clearInterval(this.randomLinksInterval);
@@ -97,7 +97,7 @@ class MainApp extends React.Component {
 		console.time('load files');
 		const files = await this.props.api.post('/repo/tree', {
 			repo: repoPrefix,
-			hash: 'HEAD',
+			hash: ref,
 		});
 		console.timeEnd('load files');
 		console.time('parse files');
@@ -296,7 +296,7 @@ class MainApp extends React.Component {
 			const files = c.files;
 			const jl = files.length;
 			var pathHit = !path;
-			var searchHit = !search || c.message.includes(search);
+			var searchHit = !search || (c.message && c.message.includes(search));
 			for (var j = 0; j < jl; ++j) {
 				const f = files[j];
 				if (f.renamed && f.renamed.startsWith(path)) {

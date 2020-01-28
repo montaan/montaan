@@ -668,6 +668,7 @@ class Tabletree {
 						c.geometry.dispose();
 					}
 					var fullPath = getFullPath(fsEntry);
+					fsEntry.contentObject = undefined;
 					visibleFiles.visibleSet[fullPath] = false;
 					visibleFiles.remove(c);
 					i--;
@@ -794,27 +795,27 @@ class Tabletree {
 				tagStart = i;
 				closeSpan = false;
 				inTag = true;
-			} else if (i-1 === tagStart && ch === slash) {
+			} else if (i - 1 === tagStart && ch === slash) {
 				closeSpan = true;
 				stackLen -= 2;
 			} else if (!closeSpan && ch === gt) {
 				inTag = false;
 				spanStack[stackLen++] = tagStart;
-				spanStack[stackLen++] = i+1;
+				spanStack[stackLen++] = i + 1;
 			}
 			if (!inTag && (lines > 100 || chars > 3000)) {
-				const str = html.substring(start, i+1);
+				const str = html.substring(start, i + 1);
 				const d = document.createElement('template');
 				d.innerHTML = prefix + str;
 				prefix = '';
-				for (let k = 0; k < stackLen; k+=2) {
-					prefix += html.substring(spanStack[k], spanStack[k+1]);
+				for (let k = 0; k < stackLen; k += 2) {
+					prefix += html.substring(spanStack[k], spanStack[k + 1]);
 				}
 				element.appendChild(d.content);
 				await this.yield();
 				lines = 0;
 				chars = 0;
-				start = i+1;
+				start = i + 1;
 			}
 		}
 		if (start < i) {
@@ -870,13 +871,14 @@ class Tabletree {
 		var txt = [];
 		await this.collectNodeStyles(doc, txt, palette, paletteIndex);
 		document.body.removeChild(doc);
-		return {txt, palette, lineCount};
+		return { txt, palette, lineCount };
 	}
 
 	async loadTextFile(fullPath, fsEntry) {
 		let text = new THREE.Mesh();
 		text.visible = false;
 		text.fsEntry = fsEntry;
+		fsEntry.contentObject = text;
 		this.visibleFiles.visibleSet[fullPath] = true;
 		this.visibleFiles.add(text);
 
@@ -896,7 +898,7 @@ class Tabletree {
 				this.yield
 			);
 			if (result.language) {
-				const {txt, palette, lineCount} = await this.parsePrettyPrintResult(result);
+				const { txt, palette, lineCount } = await this.parsePrettyPrintResult(result);
 				fsEntry.lineCount = lineCount;
 				const verts = text.geometry.attributes.position.array;
 				for (let i = 0, off = 3; i < txt.length; i++) {
@@ -917,7 +919,8 @@ class Tabletree {
 				text.material = this.makeTextMaterial(palette);
 			} else {
 				let lineCount = 0;
-				for (let i = 0; i < contents.length; i++) if (contents.charCodeAt(i) === 10) lineCount++;
+				for (let i = 0; i < contents.length; i++)
+					if (contents.charCodeAt(i) === 10) lineCount++;
 				fsEntry.lineCount = lineCount;
 				text.material = this.makeTextMaterial();
 			}
@@ -942,9 +945,7 @@ class Tabletree {
 			var scale = fsEntry.scale * textScale;
 			var vAspect = Math.min(
 				1,
-				(text.geometry.layout.height + 30) /
-					0.75 /
-					(text.geometry.layout.width + 60)
+				(text.geometry.layout.height + 30) / 0.75 / (text.geometry.layout.width + 60)
 			);
 			text.material.depthTest = false;
 			text.scale.multiplyScalar(scale);
@@ -1501,18 +1502,77 @@ class Tabletree {
 		uv.y /= 38;
 		uv.x /= 19;
 
-		console.log(Math.floor(-uv.y), Math.floor(uv.x+1));
-		return;
+		const line = Math.floor(-uv.y + 0.5);
+		const col = Math.floor(uv.x + 1);
+		return { line, col };
+	}
 
-		// const textYOff = ((line + 0.5) / fsEntry.lineCount) * fsEntry.textHeight;
-		// var textX = fsEntry.textX;
-		// textX += (fsEntry.scale * fsEntry.textScale * window.innerWidth) / 2;
-		// var fsPoint = new THREE.Vector3(textX, fsEntry.textYZero - textYOff, fsEntry.z);
-		// fsPoint.applyMatrix4(model.matrixWorld);
-		// camera.targetPosition.copy(fsPoint);
-		// camera.targetFOV = fsEntry.scale * fsEntry.textScale * 2000 * 50;
-		// fsEntry.textFOV = camera.targetFOV;
+	handleTextClick(ev, fsEntry, intersection) {
+		const { line, col } = this.getTextPosition(fsEntry, intersection);
+		const text = fsEntry.contentObject.geometry.layout._opt.text;
+		const lineStr = text.split('\n')[line - 1];
+		const urlRE = /https?:\/\/[a-z0-9.%$#@&?/]+/gi;
+		var hit = null;
+		while ((hit = urlRE.exec(lineStr))) {
+			const startIndex = hit.index;
+			const endIndex = hit.index + hit[0].length - 1;
+			if (col >= startIndex && col <= endIndex) {
+				if (this.onElectron) {
+					// Open link in a floating iframe added to the tree.
+					// On render, update the matrix of the iframe's 3D transform.
+					// This can only be done on Electron as X-Frame-Options: DENY
+					// disables cross-origin iframes.
+					var iframe = document.createElement('iframe');
+					iframe.src = hit[0];
+					iframe.style.border = '10px solid white';
+					iframe.style.backgroundColor = 'white';
+					iframe.style.position = 'absolute';
+					iframe.style.right = '10px';
+					iframe.style.top = 96 + 'px';
+					iframe.style.zIndex = '2';
+					iframe.style.width = '600px';
+					iframe.style.height = 'calc(100vh - 106px)';
+					this.renderer.domElement.parentNode.appendChild(iframe);
+				} else {
+					// Open link in a new window.
+					window.open(hit[0]);
+				}
+			}
+		}
+	}
 
+	registerElementForURL(el, url) {
+		this.urlIndex[url] = this.urlIndex[url] || [];
+		this.urlIndex[url].push(el);
+	}
+
+	async gcURLElements() {
+		const deletions = [];
+		let i = 0;
+		for (let n in this.urlIndex) {
+			this.urlIndex[n] = this.urlIndex[n].filter((el) => {
+				i++;
+				return el.ownerDocument.body.contains(el);
+			});
+			if (this.urlIndex[n].length === 0) deletions.push(n);
+			if (i > 100) {
+				await this.yield();
+				i = 0;
+			}
+		}
+		deletions.forEach((n) => delete this.urlIndex[n]);
+	}
+
+	getTree(path) {
+		return { tree: this.fileTree, path: path };
+	}
+
+	urlToFSEntry(url) {
+		const [treePath, coords] = url.split('#');
+		const point = coords && coords.split(';').map(parseFloat);
+		const { path, tree } = this.getTree(treePath);
+		const fsEntry = getPathEntry(tree, path);
+		return { fsEntry, point };
 	}
 
 	zoomToEntry(ev) {
@@ -1533,10 +1593,10 @@ class Tabletree {
 				if (this.highlighted.entries === null) {
 					var fovDiff = (this.highlighted.scale * 50) / this.camera.fov;
 					if (fovDiff > 1 || !fsEntry.lineCount) {
-						if (fsEntry.lineCount) {
-							// handle text click
-							console.log(this.getTextPosition(this.highlighted, intersection));
-						} else {
+						if (
+							!fsEntry.lineCount ||
+							!this.handleTextClick(ev, this.highlighted, intersection)
+						) {
 							this.goToFSEntry(this.highlighted, intersection.object);
 						}
 					} else {
