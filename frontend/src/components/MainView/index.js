@@ -20,7 +20,9 @@ export default class MainView extends React.Component {
 			tabletree.goToTarget(nextProps.goToTarget);
 		if (this.props.searchLinesRequest !== nextProps.searchLinesRequest)
 			tabletree.updateSearchLines(true);
+			tabletree.updateLinks();
 		if (this.props.links !== nextProps.links) tabletree.setLinks(nextProps.links);
+		if (this.props.navUrl !== nextProps.navUrl) tabletree.goToURL(nextProps.navUrl);
 		if (this.props.frameRequestTime !== nextProps.frameRequestTime) tabletree.changed = true;
 		return false;
 	}

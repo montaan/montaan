@@ -2,14 +2,13 @@ import React from 'react';
 import Button from 'react-bootstrap/Button';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes } from '@fortawesome/free-solid-svg-icons';
-
-import { getFullPath } from '../../lib/filetree';
+import { withRouter } from 'react-router-dom';
 
 import strict from '../../lib/strictProxy.js';
 import styles_ from './css/style.module.scss';
 const styles = strict(styles_, 'components/Search/css/style.module.scss');
 
-export default class CommitControls extends React.Component {
+class Search extends React.Component {
 	constructor(props) {
 		super(props);
 		this.state = {
@@ -27,8 +26,10 @@ export default class CommitControls extends React.Component {
 		const self = this;
 		const { fsEntry, line } = result;
 		const li = document.createElement('li');
-		li.fullPath = result.fullPath;
+		li.filename = result.filename;
 		li.hitType = result.hitType;
+        li.resultURL = result.filename + (line > 0 ? `#${line}` : '');
+
 		const title = document.createElement('div');
 		title.className = styles.searchTitle;
 		title.textContent = fsEntry.title;
@@ -37,21 +38,19 @@ export default class CommitControls extends React.Component {
 		}
 		const fullPath = document.createElement('div');
 		fullPath.className = styles.searchFullPath;
-		fullPath.textContent = li.fullPath.replace(/^\/[^/]*\/[^/]*\//, '/');
+		fullPath.textContent = li.filename.replace(/^\/[^/]*\/[^/]*\//, '/');
 		li.result = result;
 		li.addEventListener(
 			'mouseover',
-			function(ev) {
-				this.classList.add('hover');
-				self.props.requestFrame();
+			function(ev) { 
+                if (ev.target.parentNode === this) self.props.setSearchHover(this, this.resultURL);
 			},
 			false
 		);
 		li.addEventListener(
 			'mouseout',
 			function(ev) {
-				this.classList.remove('hover');
-				self.props.requestFrame();
+                if (ev.target === this) self.props.clearSearchHover(this);
 			},
 			false
 		);
@@ -59,11 +58,7 @@ export default class CommitControls extends React.Component {
 			if (ev.target.className === styles.collapseToggle) return;
 			ev.preventDefault();
 			ev.stopPropagation();
-			if (this.result.line > 0) {
-				self.props.goToFSEntryTextAtLine(this.result.fsEntry, this.result.line);
-			} else {
-				self.props.goToFSEntry(this.result.fsEntry);
-			}
+			self.props.history.push(this.resultURL);
 		};
 		li.appendChild(title);
 		li.appendChild(fullPath);
@@ -124,20 +119,18 @@ export default class CommitControls extends React.Component {
 		const resIndex = { 0: {}, 1: {}, 2: {}, 3: {} };
 		for (let i = 0; i < searchResults.length; i++) {
 			const r = searchResults[i];
-			const fullPath = getFullPath(r.fsEntry);
-			r.fullPath = fullPath;
-			if (!resIndex[r.hitType][fullPath]) {
+			if (!resIndex[r.hitType][r.filename]) {
 				const result = {
 					fsEntry: r.fsEntry,
 					hitType: r.hitType,
 					line: 0,
-					fullPath,
+					filename: r.filename,
 					lineResults: [],
 				};
-				resIndex[r.hitType][fullPath] = result;
+				resIndex[r.hitType][r.filename] = result;
 				results.push(result);
 			}
-			if (r.line > 0) resIndex[r.hitType][fullPath].lineResults.push(r);
+			if (r.line > 0) resIndex[r.hitType][r.filename].lineResults.push(r);
 		}
 		var hitType = -1;
 		for (let i = 0; i < results.length; i++) {
@@ -184,8 +177,8 @@ export default class CommitControls extends React.Component {
 				hitTypes[li.hitType] &&
 				(allVisible ||
 					!navigationPath ||
-					li.fullPath.startsWith(navigationPath + '/') ||
-					li.fullPath === navigationPath)
+					li.filename.startsWith(navigationPath + '/') ||
+					li.filename === navigationPath)
 			) {
 				li.classList.add(styles['in-view']);
 				visibleCount++;
@@ -253,3 +246,5 @@ export default class CommitControls extends React.Component {
 		);
 	}
 }
+
+export default withRouter(Search);

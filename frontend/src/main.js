@@ -160,6 +160,10 @@ class Tabletree {
 	// 	});
 	// }
 
+	setGoToHighlight(fsEntry, line) {
+		this.addHighlightedLine(fsEntry, line);
+	}
+
 	addHighlightedLine(fsEntry, line) {
 		if (fsEntry.textHeight) {
 			const lineCount = fsEntry.lineCount;
@@ -376,6 +380,7 @@ class Tabletree {
 			})
 		);
 		this.searchHighlights.frustumCulled = false;
+		this.searchHighlights.index = 0;
 		for (let i = 0; i < 40000; i++) {
 			this.searchHighlights.geometry.vertices.push(new THREE.Vector3());
 		}
@@ -387,7 +392,7 @@ class Tabletree {
 			);
 		}
 		this.searchHighlights.ontick = () => {
-			this.searchHighlights.visible = this.searchResults.length > 0;
+			this.searchHighlights.visible = this.searchHighlights.index > 0;
 			if (this.highlightLater.length > 0) {
 				const later = this.highlightLater.splice(0);
 				for (let i = 0; i < later.length; i++)
@@ -783,6 +788,7 @@ class Tabletree {
 			inTag = false,
 			closeSpan = false,
 			lines = 0,
+			totalLines = 1,
 			chars = 0;
 		const lt = '<'.charCodeAt(0);
 		const gt = '>'.charCodeAt(0);
@@ -790,7 +796,10 @@ class Tabletree {
 		for (; i < html.length; i++) {
 			var ch = html.charCodeAt(i);
 			chars++;
-			if (ch === 10) lines++;
+			if (ch === 10) {
+				lines++;
+				totalLines++;
+			}
 			else if (ch === lt) {
 				tagStart = i;
 				closeSpan = false;
@@ -825,7 +834,7 @@ class Tabletree {
 			element.appendChild(d.content);
 			await this.yield();
 		}
-		return lines;
+		return totalLines;
 	}
 
 	async collectNodeStyles(doc, txt, palette, paletteIndex) {
@@ -875,7 +884,7 @@ class Tabletree {
 	}
 
 	async loadTextFile(fullPath, fsEntry) {
-		let text = new THREE.Mesh();
+		const text = new THREE.Mesh();
 		text.visible = false;
 		text.fsEntry = fsEntry;
 		fsEntry.contentObject = text;
@@ -888,7 +897,7 @@ class Tabletree {
 
 		await this.yield();
 
-		var contents = responseText.replace(/\r/g, '');
+		const contents = responseText.replace(/\r/g, '');
 		if (contents.length === 0) return;
 
 		prettyPrintWorker.prettyPrint(contents, fsEntry.name, async (result) => {
@@ -899,7 +908,6 @@ class Tabletree {
 			);
 			if (result.language) {
 				const { txt, palette, lineCount } = await this.parsePrettyPrintResult(result);
-				fsEntry.lineCount = lineCount;
 				const verts = text.geometry.attributes.position.array;
 				for (let i = 0, off = 3; i < txt.length; i++) {
 					const t = txt[i];
@@ -917,12 +925,13 @@ class Tabletree {
 					if (off % 12004 === 12003) await this.yield();
 				}
 				text.material = this.makeTextMaterial(palette);
+				fsEntry.lineCount = lineCount;
 			} else {
 				let lineCount = 0;
 				for (let i = 0; i < contents.length; i++)
 					if (contents.charCodeAt(i) === 10) lineCount++;
-				fsEntry.lineCount = lineCount;
 				text.material = this.makeTextMaterial();
+				fsEntry.lineCount = lineCount;
 			}
 			text.visible = true;
 			text.material.uniforms.opacity.value = 0;
@@ -1183,6 +1192,8 @@ class Tabletree {
 		a.applyMatrix4(model.matrixWorld);
 		var b = a;
 
+		line = line ? line[0] : 0;
+
 		var av = new THREE.Vector3(a.x + 0.05 * fsEntry.scale, a.y + 0.05 * fsEntry.scale, a.z);
 		var bv, aUp;
 
@@ -1254,6 +1265,9 @@ class Tabletree {
 		var a = entryA;
 		var b = entryB;
 
+		lineA = lineA ? lineA[0] : 0;
+		lineB = lineB ? lineB[0] : 0;
+
 		var av = new THREE.Vector3(a.x, a.y, a.z);
 		av.applyMatrix4(modelA.matrixWorld);
 
@@ -1312,7 +1326,20 @@ class Tabletree {
 		}
 	}
 
-	setLinks(links) {
+	parseTarget(dst, dstPoint) {
+		if (typeof dst === 'string') {
+			const { fsEntry, point } = this.getFSEntryForURL(dst);
+			return { fsEntry, point };
+		} else {
+			return { fsEntry: dst, point: dstPoint };
+		}
+	}
+
+	updateLinks() {
+		this.setLinks(this.links, true);
+	}
+
+	setLinks(links, updateOnlyElements=false) {
 		if (this.lineGeo) {
 			const geo = this.lineGeo;
 			for (let i = links.length; i < this.links.length; i++) {
@@ -1337,41 +1364,45 @@ class Tabletree {
 					this.updateLineBetweenElements(geo, i * 6, l.color, bboxA, bboxB);
 				} else if (srcIsElem) {
 					const bbox = l.src.getBoundingClientRect();
+					const dst = this.parseTarget(l.dst, l.dstPoint);
 					this.updateLineBetweenEntryAndElement(
 						geo,
 						i * 6,
 						l.color,
 						model,
-						l.dst,
-						l.dstLine,
-						l.dst.lineCount,
+						dst.fsEntry,
+						dst.point,
+						dst.fsEntry.lineCount,
 						bbox
 					);
 				} else if (dstIsElem) {
 					const bbox = l.dst.getBoundingClientRect();
+					const dst = this.parseTarget(l.src, l.srcPoint);
 					this.updateLineBetweenEntryAndElement(
 						geo,
 						i * 6,
 						l.color,
 						model,
-						l.src,
-						l.srcLine,
-						l.src.lineCount,
+						dst.fsEntry,
+						dst.point,
+						dst.fsEntry.lineCount,
 						bbox
 					);
-				} else {
+				} else if (!updateOnlyElements) {
+					const src = this.parseTarget(l.src, l.srcPoint);
+					const dst = this.parseTarget(l.dst, l.dstPoint);
 					this.updateLineBetweenEntries(
 						geo,
 						i * 6,
 						l.color,
 						model,
-						l.src,
-						l.srcLine,
-						l.src.lineCount,
+						src.fsEntry,
+						src.point,
+						src.fsEntry.lineCount,
 						model,
-						l.dst,
-						l.dstLine,
-						l.dst.lineCount
+						dst.fsEntry,
+						dst.point,
+						dst.fsEntry.lineCount,
 					);
 				}
 			}
@@ -1564,15 +1595,25 @@ class Tabletree {
 	}
 
 	getTree(path) {
-		return { tree: this.fileTree, path: path };
+		return { tree: this.FileTree, path: path };
 	}
 
-	urlToFSEntry(url) {
+	getFSEntryForURL(url) {
 		const [treePath, coords] = url.split('#');
 		const point = coords && coords.split(';').map(parseFloat);
 		const { path, tree } = this.getTree(treePath);
 		const fsEntry = getPathEntry(tree, path);
 		return { fsEntry, point };
+	}
+
+	goToURL(url) {
+		console.log(url);
+		if (!this.FileTree) return;
+		const {fsEntry, point} = this.getFSEntryForURL(url);
+		if (point && !isNaN(point[0])) {
+			this.setGoToHighlight(fsEntry, point[0]);
+			this.goToFSEntryTextAtLine(fsEntry, point[0]);
+		} else this.goToFSEntry(fsEntry);
 	}
 
 	zoomToEntry(ev) {
@@ -1986,6 +2027,7 @@ class Tabletree {
 			camera.targetPosition.y !== camera.position.y ||
 			camera.fov !== camera.targetFOV
 		) {
+			this.updateLinks();
 			camera.position.x +=
 				(camera.targetPosition.x - camera.position.x) * (1 - Math.pow(0.85, dt / 16));
 			camera.position.y +=

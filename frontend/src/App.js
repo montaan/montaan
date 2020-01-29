@@ -271,7 +271,6 @@ class App extends React.Component {
 								component={(match) => <UserActivation api={this.api} />}
 							/>
 							<Route
-								exact
 								path="/:user/:name"
 								component={(_match) => (
 									<MainApp

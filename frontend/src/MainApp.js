@@ -116,6 +116,7 @@ class MainApp extends React.Component {
 		console.timeEnd('parse commitObj');
 		this.setState({ processing: false, commitData });
 		if (commitsOpen) this.setActiveCommits(commitData.commits);
+        this.setState({navUrl: this.props.location.pathname+this.props.location.hash});
         try {
             const deps = await this.props.api.getType('/repo/fs/' + repoPrefix + '/deps.json', 'json');
             const links = [];
@@ -334,7 +335,7 @@ class MainApp extends React.Component {
 		) {
 			const filename = getFullPath(fileTree);
 			results.push({
-				fsEntry: fileTree,
+                fsEntry: fileTree,
 				line: 0,
 				filename,
 				hitType: this.getHitType(rawQueryRE, filename, undefined),
@@ -384,12 +385,10 @@ class MainApp extends React.Component {
 						const [_, filename, lineStr, snippet] = lineNumberMatch;
 						const line = parseInt(lineStr);
 						const hitType = this.getHitType(rawQueryRE, filename, snippet);
+                        const fullPath = '/' + this.state.repoPrefix + '/' + filename;
 						return {
-							fsEntry: getPathEntry(
-								this.state.fileTree.tree,
-								this.state.repoPrefix + '/' + filename
-							),
-							filename,
+                            fsEntry: getPathEntry(this.state.fileTree.tree, fullPath),
+							filename: fullPath,
 							line,
 							snippet,
 							hitType,
@@ -506,6 +505,9 @@ class MainApp extends React.Component {
 				this.setRepo(nextProps.match.params.name, nextProps.match.params.user);
 			}
 		}
+        if (nextProps.location !== this.props.location) {
+            this.setState({navUrl: nextProps.location.pathname+nextProps.location.hash});
+        }
 
 		return true;
 	}
@@ -524,6 +526,28 @@ class MainApp extends React.Component {
 		}
 		return s;
 	}
+
+    setSearchHover = (el, url) => {
+        if (this.state.links.find(v => v.src === el)) return;
+        const links = this.state.links.slice();
+        const idx = links.findIndex(v => v.src === this.state.searchHover);
+        if (idx !== -1) links.splice(idx, 1);
+        this.setState({searchHover: el});
+        links.push({src: el, dst: url, color: {r: 1, g: 0, b: 0}});
+        this.setLinks(links);
+    };
+
+    clearSearchHover = (el) => {
+        if (this.state.searchHover === el) {
+            const idx = this.state.links.findIndex(v => v.src === el);
+            if (idx !== -1) {
+                var links = this.state.links.slice();
+                links.splice(idx, 1);
+                this.setState({searchHover: null});
+                this.setLinks(links);
+            }
+        }
+    };
 
 	render() {
 		const title = this.state.repoPrefix ? '🏔 ' + this.state.repoPrefix : 'Montaan 🏔';
@@ -553,8 +577,6 @@ class MainApp extends React.Component {
 					userInfo={this.props.userInfo}
 				/>
 				<Search
-					goToFSEntryTextAtLine={this.goToFSEntryTextAtLine}
-					goToFSEntry={this.goToFSEntry}
 					navigationTarget={this.state.navigationTarget}
 					requestFrame={this.requestFrame}
 					searchResults={this.state.searchResults}
@@ -565,9 +587,8 @@ class MainApp extends React.Component {
 					activeCommitData={this.state.activeCommitData}
 					updateSearchLines={this.updateSearchLines}
 					commitData={this.state.commitData}
-					addLinks={this.addLinks}
-					setLinks={this.setLinks}
-					links={this.state.links}
+					setSearchHover={this.setSearchHover}
+					clearSearchHover={this.clearSearchHover}
 				/>
 				<Breadcrumb
 					navigationTarget={this.state.navigationTarget}
@@ -611,6 +632,7 @@ class MainApp extends React.Component {
 
 				<MainView
 					goToTarget={this.state.goToTarget}
+                    navUrl={this.state.navUrl}
 					activeCommitData={this.state.activeCommitData}
 					diffsLoaded={this.state.diffsLoaded}
 					fileTree={this.state.fileTree}
