@@ -429,12 +429,9 @@ class MainApp extends React.Component {
 		if (searchQuery === '') {
 			this.setState({ searchResults: [] });
 		} else {
-			var segs = searchQuery.split(/\s+/);
-			var re = [];
+            const re = [];
 			try {
-				re = segs.map(function(r) {
-					return new RegExp(r, 'i');
-				});
+                re[0] = new RegExp(searchQuery, 'i');
 			} catch (e) {}
 			this.search(re, searchQuery);
 		}
