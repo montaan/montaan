@@ -17,6 +17,7 @@
     "@types/react-dom": "^16.9.0",
     "husky": "^4.2.1",
     "lint-staged": "^10.0.2",
+    "monaco-editor": "^0.19.3",
     "node-sass": "^4.13.1",
     "prettier": "^1.19.1",
     "react": "^16.12.0",

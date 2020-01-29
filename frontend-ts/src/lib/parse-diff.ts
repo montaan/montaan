@@ -165,24 +165,34 @@ export function formatDiff(sha:string, diff:string, trackedPaths:string[], previ
 	return container;
 }
 
-interface GlobalMouseEventHandler{ (this:GlobalEventHandlers, ev:MouseEvent):any }
+export interface CalendarMouseEventHandler{ (this:GlobalEventHandlers, ev:MouseEvent):any }
 
-interface CalendarElement extends HTMLElement {
+export interface CalendarElement extends HTMLElement {
 	authors: AuthorIndex;
 	commitCount: number;
 	authorCount: number;
 }
 
-interface Commit {
+export interface CommitFile {
+	action: string;
+	path: string;
+	renamed?: string;
+}
+
+export interface Commit {
+	sha: string;
 	date: Date;
 	author: string;
+	message: string;
+	files: CommitFile[];
+	diff?: string;
 }
 
 interface AuthorIndex {
 	[propType:string]:boolean;
 }
 
-export function createCalendar(commits:Commit[], yearOnClick:GlobalMouseEventHandler, monthOnClick:GlobalMouseEventHandler, dayOnClick:GlobalMouseEventHandler) {
+export function createCalendar(commits:Commit[], yearOnClick:CalendarMouseEventHandler, monthOnClick:CalendarMouseEventHandler, dayOnClick:CalendarMouseEventHandler) {
 	var createYear = function(year:number) {
 		const el = <CalendarElement><unknown>document.createElement('div');
 		el.className = 'calendar-year';
