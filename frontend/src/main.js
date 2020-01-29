@@ -1,6 +1,6 @@
 import { getPathEntry, getFullPath, getSiblings } from './lib/filetree';
 import Colors from './lib/Colors';
-import prettyPrintWorker from './lib/pretty_print';
+import prettyPrintWorker from './lib/pretty-print';
 import createText from './lib/third_party/three-bmfont-text-modified';
 import SDFShader from './lib/third_party/three-bmfont-text-modified/shaders/sdf';
 import Layout from './lib/Layout';
@@ -296,25 +296,23 @@ class Tabletree {
 		if (this.searchResults !== this.previousSearchResults) {
 			this.clearSearchLine();
 			this.previousSearchResults = this.searchResults;
-			this.searchResultHoverIndex = -1;
 			needUpdate = true;
 			this.searchLine.geometry.verticesNeedUpdate = true;
 			this.changed = true;
 			this.searchLis = [].slice.call(window.searchResults.querySelectorAll('li'));
 		}
 		const lis = this.searchLis;
-		if (lis.length <= this.searchLine.geometry.vertices.length / 4) {
+		if (needUpdate && lis.length <= this.searchLine.geometry.vertices.length / 4) {
 			for (var i = 0, l = lis.length; i < l; i++) {
 				var li = lis[i];
-				if (needUpdate)
-					this.addScreenLine(
-						this.searchLine.geometry,
-						li.result.fsEntry,
-						null,
-						i,
-						li.result.line,
-						li.result.fsEntry.lineCount
-					);
+				this.addScreenLine(
+					this.searchLine.geometry,
+					li.result.fsEntry,
+					null,
+					i,
+					li.result.line,
+					li.result.fsEntry.lineCount
+				);
 			}
 		}
 	}
@@ -388,15 +386,12 @@ class Tabletree {
 		);
 		this.searchLine = searchLine;
 		searchLine.frustumCulled = false;
-		searchLine.geometry.vertices.push(new THREE.Vector3());
-		searchLine.geometry.vertices.push(new THREE.Vector3());
 		for (var i = 0; i < 40000; i++) {
 			searchLine.geometry.vertices.push(new THREE.Vector3(-100, -100, -100));
 		}
 
 		searchLine.ontick = () => {
-			searchLine.visible = this.searchResults.length > 0;
-			if (!window.searchResults) return;
+			searchLine.visible = this.searchResults && this.searchResults.length > 0;
 		};
 
 		this.scene.add(this.searchLine);
@@ -1064,7 +1059,6 @@ class Tabletree {
 		const self = this;
 		return function(t, dt) {
 			var m = this.children[0];
-			// console.log(m.scale.x);
 			var visCount = 0;
 			if (this.isFirst) {
 				self.textMinScale = 1000;
@@ -1304,7 +1298,6 @@ class Tabletree {
 	}
 
 	setLinks(links, updateOnlyElements=false) {
-		console.log('setLinks', this.currentFrame, links.length);
 		if (this.lineGeo) {
 			const geo = this.lineGeo;
 			for (let i = links.length; i < this.links.length; i++) {
@@ -1545,11 +1538,12 @@ class Tabletree {
 	async gcURLElements() {
 		const deletions = [];
 		let i = 0;
+		const elFilter = (el) => {
+			i++;
+			return el.ownerDocument.body.contains(el);
+		};
 		for (let n in this.urlIndex) {
-			this.urlIndex[n] = this.urlIndex[n].filter((el) => {
-				i++;
-				return el.ownerDocument.body.contains(el);
-			});
+			this.urlIndex[n] = this.urlIndex[n].filter(elFilter);
 			if (this.urlIndex[n].length === 0) deletions.push(n);
 			if (i > 100) {
 				await this.yield();
@@ -1991,7 +1985,6 @@ class Tabletree {
 			camera.targetPosition.y !== camera.position.y ||
 			camera.fov !== camera.targetFOV
 		) {
-			this.updateLinks();
 			camera.position.x +=
 				(camera.targetPosition.x - camera.position.x) * (1 - Math.pow(0.85, dt / 16));
 			camera.position.y +=
@@ -2007,6 +2000,7 @@ class Tabletree {
 				camera.fov = camera.targetFOV;
 			}
 			camera.updateProjectionMatrix();
+			this.updateLinks();
 			this.changed = true;
 			this.animating = true;
 		} else {

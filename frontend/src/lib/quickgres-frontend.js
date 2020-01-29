@@ -85,6 +85,7 @@ export class RowReader {
 				const str = buf.toString('utf8', 5, 1 + r32(buf, 1)); // The CommandComplete is a string starting with the completed command name and followed by possible table OID and number of rows affected.
 				// eslint-disable-next-line
 				const [_, cmd, oid, rowCount] =
+					// eslint-disable-next-line
 					str.match(/^(\S+)( \d+)?( \d+)\u0000/) || str.match(/^([^\u0000]*)\u0000/); // Parse out the command, table OID and rowCount. This deals with 'CMD oid rowCount', 'CMD rowCount' and 'CMD' cases.
 				this.cmd = cmd;
 				this.oid = oid;
