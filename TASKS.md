@@ -34,9 +34,6 @@
 
 ## Active
 
-[] Color code search results by category
-[] Uncategorized result view
-
 # Plugins
     [] Some sort of plugin system to enable parallel development
     [] TreeProvider
@@ -136,21 +133,15 @@
             [] Update visible lines when navigating
 
 # UX tweaks
-    [x] Keyboard zoom controls
-    [x] Kb navigation in dir contents
     [] Zoom text doc left side to screen left side (instead of middle of screen)
     [] Snap scroll to document boundaries
     [] Line numbers for text view
     [] Kb navigation of search results
-    [x] Hide search results without erasing search term
     [] Better dashboard view
-        [x] All my repos
         [] Recent activity (commits, issues)
 
 # Performance
-    [] Pipeline text model creation to avoid frame stutter (probably coming from shader compile / geometry creation)
     [] Handle unlimited number of lines by rendering only a portion
-    [z] Handle a million commits somehow
 
 # Website engine
     [] Turn README.md into HTML and display it on top of directory
@@ -158,35 +149,27 @@
     [] Use a Blender scene as directory and models as files
 
 # Layout
-    [] Navigation tags
+    [] Layout text files as vertical [] (think of the minimap, source files are tall and narrow)
+    [] Split folders into [subdirs | files]
+    [] Navigation tags (little models next to long lists like e.g. Android contacts)
         [] Commit date tags (show "2019-09-01" next to first commit on that date) 
             [] Commit dates in UTC
         [] Author alphabetical tags (show "C" next to first author starting with "C")
-    [] Layout text files as vertical [] (think of the minimap, source files are tall and narrow)
 
 # Font
     [] MSDF for sharp corners
     [] Full Unicode support
 
 # Search
-    [] Score results by relevancy (lunr-style)
     [] Highlight found search token
-    [x] Search for Commits and Authors
     [] Non-regexp search FFS. Exact string matching (case-sensitive).
+    [] Color code search results by category
+    [] Uncategorized result view
 
 # Backend
-    [x] Register & Log in
-    [x] Add your own repos (supply repo URL -> pull repo -> add to repo list)
-        [x] repo/create
-        [x] repo/list
-        [x] UI for repo/list
-        [x] UI for repo/create
-        [x] Make App use repo/list
-        [x] View public repo
-        [] Public/private repos
-        [] Public repo/list
+    [] Public/private repos
+    [] Public repo/list
     [] Better non-logged-in experience
-        [x] Public repo MainApp view
         [] Public repos explorer
 
 # Version history
@@ -195,11 +178,9 @@
         [] Show list of files after message (click file to open)
         [] Collapse/expand individual diffs
         [] Navigate 
-    [x] Crop commits by date
     [] Single-file version history + moving between versions
     [] Show commit filter
     [] Don't hide other authors when clicking an author
-    [x] Sort authors by commit count
     [] Editable commit filter
         [] Select multiple authors with
             + - = Author Name <email>
@@ -214,14 +195,12 @@
         Commit-Queue: Santiago Aboy Solanes <solanes@chromium.org>
         Cr-Commit-Position: refs/heads/master@{#65730}
     [] Parse URLs into links
+    [x] Crop commits by date
+    [x] Sort authors by commit count
 
 # Commits
-    [x] Click on author to show commits by that author
-        [/] Click handler for author timeline (raycast to scene, find closest author to ray if ray is in the active area for authors)
-        [] Display list of files touched by author
-    [/] Click handler for commit timeline (raycast to scene, find closest commit to ray if ray is in the active area for commits)
-    [x] Link from commits list to files and authors in current active set
-        [] Navigate to file in zoom view
+    [] Display list of files touched by author
+    [] Navigate to file in zoom view
 
 # Visualization
     [] All files in repo by type (all the images, all the c, all the py, all the rs, all the js)
@@ -242,6 +221,17 @@
 
 ## Completed
 
+# Backend
+    [x] Register & Log in
+    [x] Add your own repos (supply repo URL -> pull repo -> add to repo list)
+        [x] repo/create
+        [x] repo/list
+        [x] UI for repo/list
+        [x] UI for repo/create
+        [x] Make App use repo/list
+        [x] View public repo
+    [] Better non-logged-in experience
+        [x] Public repo MainApp view
 
 # Search
     [x] Add line number to search index
@@ -263,6 +253,9 @@
     [x] Fix lunr search with <3 letter search queries (Well, it seems to work?)
     [x] Shrink search results outside current view
     [x] Pull and display line snippet context somehow
+    [z] Score results by relevancy (lunr-style)
+    [x] Categorize results 
+    [x] Search for Commits and Authors
 
 # Commits
     [x] Animated file tree history
@@ -283,6 +276,10 @@
     [x] Display list of commits and diffs for a file
     [x] Crop commit diffs to only ones relevant to file
     [x] Link from authors list to files and commits in current active set
+    [x] Click on author to show commits by that author
+        [/] Click handler for author timeline (raycast to scene, find closest author to ray if ray is in the active area for authors)
+    [/] Click handler for commit timeline (raycast to scene, find closest commit to ray if ray is in the active area for commits)
+    [x] Link from commits list to files and authors in current active set
 
 # Visualization
     [/] Different representation for zoomed-out-text (solid lines minimap)
@@ -298,6 +295,12 @@
         [x] Snap scroll to vertical or horizontal, only do freeform after a diagonal swipe
         [x] Better y-x-snap
     [x] Use gestures to zoom on touchpad
+    [x] Parse text file URLs into links
+    [x] Find out which letter you clicked on
+    [x] Keyboard zoom controls
+    [x] Kb navigation in dir contents
+    [x] Hide search results without erasing search term
+    [x] All my repos
 
 ## Data model
     [x] Use React to maintain current UI state
@@ -306,3 +309,7 @@
         [x] Search results
         [x] Commit filters
         [x] HTML UI elements
+
+# Performance
+    [x] Pipeline text model creation to avoid frame stutter (probably coming from shader compile / geometry creation)
+    [z] Handle a million commits somehow
