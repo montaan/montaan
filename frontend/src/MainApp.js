@@ -340,7 +340,6 @@ class MainApp extends React.Component {
 				filename,
 				hitType: this.getHitType(rawQueryRE, filename, undefined),
 			});
-			// this.console.log(fileTree);
 		}
 		for (var i in fileTree.entries) {
 			this.searchTree(query, fileTree.entries[i], results);
@@ -421,6 +420,7 @@ class MainApp extends React.Component {
 	}
 
 	searchString(searchQuery) {
+        this.clearSearchHover(this.state.searchHover);
 		if (searchQuery === '') {
 			this.setState({ searchResults: [] });
 		} else {
