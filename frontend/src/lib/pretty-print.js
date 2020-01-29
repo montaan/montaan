@@ -1,6 +1,4 @@
-import PrettyPrintWorker from 'pretty-print.worker.js';
-
-const prettyPrintWorker = new PrettyPrintWorker();
+var prettyPrintWorker = new Worker('/js/prettyPrintWorker.js');
 prettyPrintWorker.callbacks = {};
 prettyPrintWorker.callbackUID = 0;
 prettyPrintWorker.onmessage = function(event) {
