@@ -34,6 +34,8 @@
 
 ## Active
 
+[] Color code search results by category
+[] Uncategorized result view
 
 # Plugins
     [] Some sort of plugin system to enable parallel development

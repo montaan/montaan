@@ -291,7 +291,7 @@ class Tabletree {
 		geo.vertices[off++].copy(bv);
 	}
 
-	updateSearchLines(forceUpdateHover) {
+	updateSearchLines() {
 		var needUpdate = false;
 		if (this.searchResults !== this.previousSearchResults) {
 			this.clearSearchLine();
@@ -303,9 +303,7 @@ class Tabletree {
 			this.searchLis = [].slice.call(window.searchResults.querySelectorAll('li'));
 		}
 		const lis = this.searchLis;
-		this.searchLine.hovered = false;
 		if (lis.length <= this.searchLine.geometry.vertices.length / 4) {
-			var hoverIndex = -1;
 			for (var i = 0, l = lis.length; i < l; i++) {
 				var li = lis[i];
 				if (needUpdate)
@@ -317,40 +315,7 @@ class Tabletree {
 						li.result.line,
 						li.result.fsEntry.lineCount
 					);
-				if (li.classList.contains('hover') && !li.result.lineResults) hoverIndex = i;
 			}
-			if (hoverIndex !== this.searchResultHoverIndex || forceUpdateHover) {
-				if (this.searchResultHoverIndex !== -1) {
-					li = lis[this.searchResultHoverIndex];
-					this.addScreenLine(
-						this.searchLine.geometry,
-						li.result.fsEntry,
-						null,
-						this.searchResultHoverIndex,
-						li.result.line,
-						li.result.fsEntry.lineCount
-					);
-				}
-				if (hoverIndex !== -1) {
-					li = lis[hoverIndex];
-					this.searchLine.hovered = true;
-					const bbox = li.getBoundingClientRect();
-					this.addScreenLine(
-						this.searchLine.geometry,
-						li.result.fsEntry,
-						bbox,
-						hoverIndex,
-						li.result.line,
-						li.result.fsEntry.lineCount
-					);
-				}
-				this.searchResultHoverIndex = hoverIndex;
-				this.searchLine.geometry.verticesNeedUpdate = true;
-				this.changed = true;
-			}
-		}
-		if (this.lineModel) {
-			this.lineModel.visible = this.highlightedResults.length === 0;
 		}
 	}
 
@@ -429,13 +394,9 @@ class Tabletree {
 			searchLine.geometry.vertices.push(new THREE.Vector3(-100, -100, -100));
 		}
 
-		searchLine.hovered = false;
 		searchLine.ontick = () => {
 			searchLine.visible = this.searchResults.length > 0;
 			if (!window.searchResults) return;
-			if (window.searchResults.querySelector('.hover') || searchLine.hovered) {
-				this.updateSearchLines();
-			}
 		};
 
 		this.scene.add(this.searchLine);
@@ -1336,10 +1297,14 @@ class Tabletree {
 	}
 
 	updateLinks() {
-		this.setLinks(this.links, true);
+		if (this.linksUpdatedOn !== this.currentFrame) {
+			this.setLinks(this.links, true);
+			this.linksUpdatedOn = this.currentFrame;
+		}
 	}
 
 	setLinks(links, updateOnlyElements=false) {
+		console.log('setLinks', this.currentFrame, links.length);
 		if (this.lineGeo) {
 			const geo = this.lineGeo;
 			for (let i = links.length; i < this.links.length; i++) {
@@ -1607,7 +1572,6 @@ class Tabletree {
 	}
 
 	goToURL(url) {
-		console.log(url);
 		if (!this.FileTree) return;
 		const {fsEntry, point} = this.getFSEntryForURL(url);
 		if (point && !isNaN(point[0])) {
