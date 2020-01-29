@@ -116,22 +116,27 @@ class MainApp extends React.Component {
 		console.timeEnd('parse commitObj');
 		this.setState({ processing: false, commitData });
 		if (commitsOpen) this.setActiveCommits(commitData.commits);
-        this.setState({navUrl: this.props.location.pathname+this.props.location.hash});
-        try {
-            const deps = await this.props.api.getType('/repo/fs/' + repoPrefix + '/deps.json', 'json');
-            const links = [];
-            deps.modules.forEach(({source, dependencies}, i) => {
-                var src = getPathEntry(fileTree.tree, repoPrefix + '/' + source);
-                if (!src) return;
-                const color = new THREE.Color().setHSL((i / 7) % 1, 0.5, 0.6);
-                dependencies.forEach(({resolved}) => {
-                    var dst = getPathEntry(fileTree.tree, repoPrefix + '/' + resolved);
-                    if (!dst) return;
-                    links.push({src, dst, color});
-                });
-            });
-            this.setLinks(links);
-        } catch(err) { /* No deps */ }
+		this.setState({ navUrl: this.props.location.pathname + this.props.location.hash });
+		try {
+			const deps = await this.props.api.getType(
+				'/repo/fs/' + repoPrefix + '/deps.json',
+				'json'
+			);
+			const links = [];
+			deps.modules.forEach(({ source, dependencies }, i) => {
+				var src = getPathEntry(fileTree.tree, repoPrefix + '/' + source);
+				if (!src) return;
+				const color = new THREE.Color().setHSL((i / 7) % 1, 0.5, 0.6);
+				dependencies.forEach(({ resolved }) => {
+					var dst = getPathEntry(fileTree.tree, repoPrefix + '/' + resolved);
+					if (!dst) return;
+					links.push({ src, dst, color });
+				});
+			});
+			this.setLinks(links);
+		} catch (err) {
+			/* No deps */
+		}
 		// this.animateRandomLinks(fileTree.tree, files.split("\0"), repoPrefix);
 	};
 
@@ -335,7 +340,7 @@ class MainApp extends React.Component {
 		) {
 			const filename = getFullPath(fileTree);
 			results.push({
-                fsEntry: fileTree,
+				fsEntry: fileTree,
 				line: 0,
 				filename,
 				hitType: this.getHitType(rawQueryRE, filename, undefined),
@@ -384,9 +389,9 @@ class MainApp extends React.Component {
 						const [_, filename, lineStr, snippet] = lineNumberMatch;
 						const line = parseInt(lineStr);
 						const hitType = this.getHitType(rawQueryRE, filename, snippet);
-                        const fullPath = '/' + this.state.repoPrefix + '/' + filename;
+						const fullPath = '/' + this.state.repoPrefix + '/' + filename;
 						return {
-                            fsEntry: getPathEntry(this.state.fileTree.tree, fullPath),
+							fsEntry: getPathEntry(this.state.fileTree.tree, fullPath),
 							filename: fullPath,
 							line,
 							snippet,
@@ -420,7 +425,7 @@ class MainApp extends React.Component {
 	}
 
 	searchString(searchQuery) {
-        this.clearSearchHover(this.state.searchHover);
+		this.clearSearchHover(this.state.searchHover);
 		if (searchQuery === '') {
 			this.setState({ searchResults: [] });
 		} else {
@@ -505,9 +510,9 @@ class MainApp extends React.Component {
 				this.setRepo(nextProps.match.params.name, nextProps.match.params.user);
 			}
 		}
-        if (nextProps.location !== this.props.location) {
-            this.setState({navUrl: nextProps.location.pathname+nextProps.location.hash});
-        }
+		if (nextProps.location !== this.props.location) {
+			this.setState({ navUrl: nextProps.location.pathname + nextProps.location.hash });
+		}
 
 		return true;
 	}
@@ -527,27 +532,27 @@ class MainApp extends React.Component {
 		return s;
 	}
 
-    setSearchHover = (el, url) => {
-        if (this.state.links.find(v => v.src === el)) return;
-        const links = this.state.links.slice();
-        const idx = links.findIndex(v => v.src === this.state.searchHover);
-        if (idx !== -1) links.splice(idx, 1);
-        this.setState({searchHover: el});
-        links.push({src: el, dst: url, color: {r: 1, g: 0, b: 0}});
-        this.setLinks(links);
-    };
+	setSearchHover = (el, url) => {
+		if (this.state.links.find((v) => v.src === el)) return;
+		const links = this.state.links.slice();
+		const idx = links.findIndex((v) => v.src === this.state.searchHover);
+		if (idx !== -1) links.splice(idx, 1);
+		this.setState({ searchHover: el });
+		links.push({ src: el, dst: url, color: { r: 1, g: 0, b: 0 } });
+		this.setLinks(links);
+	};
 
-    clearSearchHover = (el) => {
-        if (this.state.searchHover === el) {
-            const idx = this.state.links.findIndex(v => v.src === el);
-            if (idx !== -1) {
-                var links = this.state.links.slice();
-                links.splice(idx, 1);
-                this.setState({searchHover: null});
-                this.setLinks(links);
-            }
-        }
-    };
+	clearSearchHover = (el) => {
+		if (this.state.searchHover === el) {
+			const idx = this.state.links.findIndex((v) => v.src === el);
+			if (idx !== -1) {
+				var links = this.state.links.slice();
+				links.splice(idx, 1);
+				this.setState({ searchHover: null });
+				this.setLinks(links);
+			}
+		}
+	};
 
 	render() {
 		const title = this.state.repoPrefix ? '🏔 ' + this.state.repoPrefix : 'Montaan 🏔';
@@ -632,7 +637,7 @@ class MainApp extends React.Component {
 
 				<MainView
 					goToTarget={this.state.goToTarget}
-                    navUrl={this.state.navUrl}
+					navUrl={this.state.navUrl}
 					activeCommitData={this.state.activeCommitData}
 					diffsLoaded={this.state.diffsLoaded}
 					fileTree={this.state.fileTree}
