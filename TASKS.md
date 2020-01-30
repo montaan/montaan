@@ -34,6 +34,28 @@
 
 ## Active
 
+# KEY FEATURES
+    [] Dynamic tree loading
+        [] One directory at a time
+        [] Lots of directories at a time
+        [] Hide and show tree parts
+    [] View reparenting
+        [] Move camera instead of changing FOV
+        [] Change transformation matrices when containing object changes
+    [] Dynamic commit loading
+        [] 10k commits at a time
+        [] Calendar data from server
+    [] [Directories | Files] layout
+        [] 1:1 wide rectangle
+        [] N:M split based on count
+    [] Thumbnail mip pyramid server
+        [] Copy from Muryu
+    [] Custom layouts
+        [] Move files around
+        [] Save file positions in DB
+        [] Load file positions from .layout
+    [] Workflow to export file / dir models from Blender
+
 # Plugins
     [] Some sort of plugin system to enable parallel development
     [] TreeProvider
@@ -53,8 +75,13 @@
 
 # Collaboration system
     [] Codebase easy to contribute to
+    - Key here is to have thousands of active threads of work that can be executed by executors or further split by coordinators 
+    - A large number of commits should come automatically from bots (Bors, CI, dependabot)
+        [] Design Lint to catch design bugs https://lintyour.design/
+        [x] ESLint to catch bugs
         [] TypeScript for IntelliSense
-        [] Documentation
+        [] Storybook to develop components
+        [] Documentation with https://docusaurus.io/
         [] Getting Started 
         [] Book with deep knowledge
         [] Self-contained components
@@ -68,7 +95,7 @@
         [] Fun project
         [] Optimization project
         [] Quality project
-        [] Prettier in CI hook to enforce coding style
+        [x] Prettier in CI hook to enforce coding style
     [] Actively prompt for commits
         [] Issue dispatcher
     [] Commit flow management best practices
@@ -115,22 +142,10 @@
     [] Artwork
 
 # Frontend data model
-    [] Links between objects
-        [] Use URIs to refer to objects
-            [] commit:sha
-            [] author:authorString
-            [] file:filePath
-        [] When drawing a link, find all objects with the URI
-        [x] Element-FSEntry
-        [x] FSEntry-FSEntry
-        [x] Element-Element
-        [] Single line geometry for all lines 
-            [x] Links
-            [] Search results
-        [] Optimize lines
-            [] Limit to ~10k lines in view
-            [] Stratified random sampling
-            [] Update visible lines when navigating
+    [] Use URIs to refer to objects
+        [] commit:sha
+        [] author:authorString
+    [] When drawing a link, find all objects with the URI
 
 # UX tweaks
     [] Zoom text doc left side to screen left side (instead of middle of screen)
@@ -141,7 +156,10 @@
         [] Recent activity (commits, issues)
 
 # Performance
-    [] Handle unlimited number of lines by rendering only a portion
+    [] Optimize lines
+        [] Limit to ~10k lines in view
+        [] Stratified random sampling
+        [] Update visible lines when navigating
 
 # Website engine
     [] Turn README.md into HTML and display it on top of directory
@@ -178,7 +196,6 @@
         [] Show list of files after message (click file to open)
         [] Collapse/expand individual diffs
         [] Navigate 
-    [] Single-file version history + moving between versions
     [] Show commit filter
     [] Don't hide other authors when clicking an author
     [] Editable commit filter
@@ -281,6 +298,9 @@
     [/] Click handler for commit timeline (raycast to scene, find closest commit to ray if ray is in the active area for commits)
     [x] Link from commits list to files and authors in current active set
 
+# Version history
+    [x] Single-file version history + moving between versions
+
 # Visualization
     [/] Different representation for zoomed-out-text (solid lines minimap)
 
@@ -309,6 +329,13 @@
         [x] Search results
         [x] Commit filters
         [x] HTML UI elements
+    [x] file:filePath URI
+    [x] Element-FSEntry
+    [x] FSEntry-FSEntry
+    [x] Element-Element
+    [x] Single line geometry for all lines 
+        [x] Links
+        [x] Search results
 
 # Performance
     [x] Pipeline text model creation to avoid frame stutter (probably coming from shader compile / geometry creation)
