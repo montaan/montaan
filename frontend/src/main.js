@@ -439,6 +439,7 @@ class Tabletree {
 	}
 
 	goToFSEntry(fsEntry, model = this.model) {
+		if (!fsEntry) return;
 		const { scene, camera } = this;
 		scene.updateMatrixWorld();
 		var fsPoint = new THREE.Vector3(
