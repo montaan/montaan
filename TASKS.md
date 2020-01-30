@@ -36,7 +36,7 @@
 
 # KEY FEATURES
     [] Dynamic tree loading
-        [] One directory at a time
+        [1] One directory at a time
         [] Lots of directories at a time
         [] Hide and show tree parts
     [] View reparenting
@@ -189,6 +189,7 @@
     [] Public repo/list
     [] Better non-logged-in experience
         [] Public repos explorer
+    [] Poll server for new commits
 
 # Version history
     [] Compare file at any revision to HEAD in file diff view (so that you can first find a file with code you want to revert, then compare that with the current version to know what to revert.)
