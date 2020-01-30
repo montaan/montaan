@@ -111,7 +111,7 @@ class Tabletree {
 		var modelTop = new THREE.Object3D();
 		modelTop.position.set(-0.5, -0.5, 0.0);
 		var modelPivot = new THREE.Object3D();
-		modelPivot.rotation.x = -0.5;
+		// modelPivot.rotation.x = -0.5;
 		// modelPivot.rotation.z = 0;
 		modelPivot.position.set(0.5, 0.5, 0.0);
 		scene.add(modelTop);

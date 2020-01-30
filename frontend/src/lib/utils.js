@@ -394,12 +394,14 @@ var utils = {
 	parseFileList_: function(fileString, includePrefix, prefix = '') {
 		// console.log("Parsing file string", fileString.length);
 		var sep = fileString.substring(0, 4096).includes('\0') ? 0 : 10;
+		// eslint-disable-next-line
+		var gitStyle = /^\d{6} (blob|tree) [a-f0-9]{40}\t[^\u0000]+\u0000/.test(fileString);
 		var fileTree = { name: '', title: '', entries: {}, index: 0 };
 		var name = '';
 		var startIndex = 0;
 		var fileCount = 0;
 		var first = includePrefix ? false : true;
-		var skip = 0;
+		var skip = gitStyle ? 53 : 0;
 		// console.log('prefix:', prefix);
 		for (var i = 0; i < fileString.length; i++) {
 			if (fileString.charCodeAt(i) === sep) {
@@ -411,6 +413,7 @@ var utils = {
 					first = false;
 				} else {
 					name = prefix + fileString.substring(startIndex + skip, i);
+					if (gitStyle && fileString.charCodeAt(startIndex+7) === 116 /* t */) name += '/';
 					// console.log(name);
 				}
 				startIndex = i + 1;
