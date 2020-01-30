@@ -327,6 +327,7 @@ export default class CommitInfo extends React.Component {
 			);
 			diffEditor.setModel({ original, modified });
 			diffEditor.onDidDispose(() => {
+				this.setState({diffEditor: null});
 				original.dispose();
 				modified.dispose();
 			});
@@ -338,7 +339,10 @@ export default class CommitInfo extends React.Component {
 				window.monaco.Uri.file(this.props.fileContents.path)
 			);
 			editor.setModel(model);
-			editor.onDidDispose(() => model.dispose());
+			editor.onDidDispose(() => {
+				model.dispose();
+				this.setState({editor: null});
+			});
 			this.setState({ diffEditor: null, editor });
 		}
 	};

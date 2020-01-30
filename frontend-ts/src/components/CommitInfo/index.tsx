@@ -69,6 +69,8 @@ interface CommitInfoState {
 	visible: boolean;
 	authorSort: string;
 	commitFilter: any;
+	diffEditor: any;
+	editor: any;
 }
 
 class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState> {
@@ -76,7 +78,13 @@ class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState> {
 
 	constructor(props: CommitInfoProps) {
 		super(props);
-		this.state = { visible: false, authorSort: 'commits', commitFilter: undefined };
+		this.state = {
+			diffEditor: null,
+			editor: null,
+			visible: false,
+			authorSort: 'commits',
+			commitFilter: undefined,
+		};
 		this.searchTimeout = 0;
 	}
 
@@ -366,9 +374,11 @@ class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState> {
 		);
 		diffEditor.setModel({ original, modified });
 		diffEditor.onDidDispose(() => {
+			this.setState({diffEditor: null});
 			original.dispose();
 			modified.dispose();
 		});
+		this.setState({ diffEditor, editor: null });
 	};
 
 	handleEditorDidMount = (_: any, editor: any) => {
@@ -378,7 +388,11 @@ class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState> {
 			window.monaco.Uri.file(this.props.fileContents.path)
 		);
 		editor.setModel(model);
-		editor.onDidDispose(() => model.dispose());
+		editor.onDidDispose(() => {
+			model.dispose();
+			this.setState({editor: null});
+		});
+		this.setState({ diffEditor: null, editor });
 	};
 
 	authorSearchOnChange = (event: React.FormEvent<any>): void => {
