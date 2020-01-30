@@ -1,7 +1,14 @@
 // src/components/CommitInfo/index.tsx
 
 import React from 'react';
-import { span, formatDiff, createCalendar, CalendarMouseEventHandler, CalendarElement, Commit } from '../../lib/parse-diff';
+import {
+	span,
+	formatDiff,
+	createCalendar,
+	CalendarMouseEventHandler,
+	CalendarElement,
+	Commit,
+} from '../../lib/parse-diff';
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
 // import prettyPrintWorker from '../../lib/pretty_print';
@@ -19,15 +26,17 @@ monaco.config({
 });
 
 declare global {
-    interface Window { monaco: Monaco; }
+	interface Window {
+		monaco: Monaco;
+	}
 }
 
 interface CommitInfoProps {
-	loadFileDiff(sha:string, previousSha:string, path:string, el:HTMLElement):void;
-	loadFile(sha:string, path:string, el:HTMLElement):void;
+	loadFileDiff(sha: string, previousSha: string, path: string, el?: HTMLElement): void;
+	loadFile(sha: string, path: string, el: HTMLElement): void;
 
-	commitFilter:any;
-	setCommitFilter(commitFilter:any):void;
+	commitFilter: any;
+	setCommitFilter(commitFilter: any): void;
 
 	navigationTarget: string;
 	repoPrefix: string;
@@ -37,13 +46,13 @@ interface CommitInfoProps {
 
 	activeCommitData: {
 		authors: string[];
-		authorCommitCounts: {[propType:string]:number};
+		authorCommitCounts: { [propType: string]: number };
 		commits: Commit[];
 	};
 
 	commitData: {
 		commits: Commit[];
-		commitIndex: { [propType:string]: Commit };
+		commitIndex: { [propType: string]: Commit };
 	};
 
 	fileContents: {
@@ -53,7 +62,7 @@ interface CommitInfoProps {
 		original?: string;
 	};
 
-	showFileCommitsClick(event: React.MouseEvent<HTMLButtonElement, MouseEvent>):void;
+	showFileCommitsClick(event: React.MouseEvent<HTMLButtonElement, MouseEvent>): void;
 }
 
 interface CommitInfoState {
@@ -63,7 +72,7 @@ interface CommitInfoState {
 }
 
 class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState> {
-	searchTimeout:number;
+	searchTimeout: number;
 
 	constructor(props: CommitInfoProps) {
 		super(props);
@@ -71,43 +80,44 @@ class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState> {
 		this.searchTimeout = 0;
 	}
 
-	showFile = (sha:string, previousSha:string, path:string, el:HTMLElement) => {
+	showFile = (sha: string, previousSha: string, path: string, el: HTMLElement) => {
 		if (previousSha) this.props.loadFileDiff(sha, previousSha, path, el);
 		else this.props.loadFile(sha, path, el);
 	};
 
-	pad2(v:string) {
+	pad2(v: string) {
 		if (v.length === 1) return '0' + v;
 		return v;
 	}
 
-	setDateFilter(date:string) {
+	setDateFilter(date: string) {
 		if (this.props.commitFilter.date === date)
 			this.props.setCommitFilter({ ...this.props.commitFilter, date: undefined });
 		else this.props.setCommitFilter({ ...this.props.commitFilter, date });
 	}
 
-	onYearClick : CalendarMouseEventHandler = (ev) => {
-		const target = (ev.target as CalendarElement);
+	onYearClick: CalendarMouseEventHandler = (ev) => {
+		const target = ev.target as CalendarElement;
 		if (target.classList.contains('calendar-year')) {
 			this.setDateFilter(target.dataset.year || '');
 		}
-	}
-	onMonthClick : CalendarMouseEventHandler = (ev) => {
-		const target = (ev.target as CalendarElement);
+	};
+	onMonthClick: CalendarMouseEventHandler = (ev) => {
+		const target = ev.target as CalendarElement;
 		if (target.classList.contains('calendar-month') && target.parentElement) {
 			this.setDateFilter(
-				(target.parentElement.dataset.year || '') + '-' + 
-				this.pad2(target.dataset.month || '')
+				(target.parentElement.dataset.year || '') +
+					'-' +
+					this.pad2(target.dataset.month || '')
 			);
 		}
-	}
-	onDayClick : CalendarMouseEventHandler = (ev) => {
-		const target = (ev.target as CalendarElement);
+	};
+	onDayClick: CalendarMouseEventHandler = (ev) => {
+		const target = ev.target as CalendarElement;
 		this.setDateFilter(target.dataset.fullDate || '');
-	}
+	};
 
-	updateActiveCommitSetDiffs(activeCommits:Commit[]) {
+	updateActiveCommitSetDiffs(activeCommits: Commit[]) {
 		const el = document.getElementById('commitList');
 		if (!el) return;
 		while (el.firstChild) el.removeChild(el.firstChild);
@@ -129,7 +139,7 @@ class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState> {
 		commitsEl.style.position = 'relative';
 		commitsEl.style.height = commitHeight * activeCommits.length + 'px';
 
-		var visible:{ [propType:number]:HTMLElement } = {};
+		var visible: { [propType: number]: HTMLElement } = {};
 
 		// If div height > 1Mpx, switch over to 1Mpx high scroll div for jumping big chunks + onwheel to fine-tune.
 		// The scroll is pretty useless at that point anyhow, so it doesn't need "scroll this for long enough and you'll see all the commits"
@@ -169,7 +179,7 @@ class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState> {
 		const trackedPaths = [
 			this.props.navigationTarget.substring(this.props.repoPrefix.length + 1),
 		];
-		const trackedIndex:{ [propType:string]:boolean } = {};
+		const trackedIndex: { [propType: string]: boolean } = {};
 		trackedIndex[this.props.navigationTarget] = true;
 
 		for (var i = 0; i < activeCommits.length; i++) {
@@ -198,7 +208,7 @@ class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState> {
 			}
 		}
 
-		const makeCommit = (c:Commit, top:number, previousCommit:Commit) => {
+		const makeCommit = (c: Commit, top: number, previousCommit: Commit) => {
 			var div = document.createElement('div');
 			div.style.position = 'absolute';
 			div.style.top = top + 'px';
@@ -216,12 +226,10 @@ class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState> {
 					diffView.firstChild &&
 					diffView.firstChild.textContent === hashSpan.textContent
 				) {
-					while (diffView.firstChild)
-						diffView.removeChild(diffView.firstChild);
+					while (diffView.firstChild) diffView.removeChild(diffView.firstChild);
 					return;
 				}
-				while (diffView.firstChild)
-					diffView.removeChild(diffView.firstChild);
+				while (diffView.firstChild) diffView.removeChild(diffView.firstChild);
 				if (c.diff == null) await this.props.loadDiff(c);
 				diffView.classList.remove('expanded-diffs');
 				diffView.classList.add('expanded');
@@ -262,9 +270,9 @@ class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState> {
 	}
 
 	updateActiveCommitSetAuthors(
-		authors:string[],
-		authorCommitCounts:{[propType:string]:number},
-		activeCommits:Commit[],
+		authors: string[],
+		authorCommitCounts: { [propType: string]: number },
+		activeCommits: Commit[],
 		authorSort = this.state.authorSort
 	) {
 		var self = this;
@@ -288,8 +296,10 @@ class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState> {
 			default:
 				authors.sort((a, b) => a.localeCompare(b));
 		}
-        var runningCommitCount = 0;
-        var added50 = false, added80 = false, added95 = false;
+		var runningCommitCount = 0;
+		var added50 = false,
+			added80 = false,
+			added95 = false;
 		authors.forEach((author) => {
 			var div = document.createElement('div');
 			div.dataset.commitCount = authorCommitCounts[author].toString();
@@ -302,34 +312,33 @@ class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState> {
 				else self.props.setCommitFilter({ ...self.props.commitFilter, author });
 			};
 			el.appendChild(div);
-            runningCommitCount += authorCommitCounts[author];
-            if (authorSort === 'commits') {
-                if (runningCommitCount >= activeCommits.length * 0.95 && !added95) {
-                    added50 = added80 = added95 = true;
-                    el.appendChild(span(styles.commits95Pct));
-                } else if (runningCommitCount >= activeCommits.length * 0.8 && !added80) {
-                    added50 = added80 = true;
-                    el.appendChild(span(styles.commits80Pct));
-                } else if (runningCommitCount >= activeCommits.length * 0.5 && !added50) {
-                    added50 = true;
-                    el.appendChild(span(styles.commits50Pct));
-                }
-            }
+			runningCommitCount += authorCommitCounts[author];
+			if (authorSort === 'commits') {
+				if (runningCommitCount >= activeCommits.length * 0.95 && !added95) {
+					added50 = added80 = added95 = true;
+					el.appendChild(span(styles.commits95Pct));
+				} else if (runningCommitCount >= activeCommits.length * 0.8 && !added80) {
+					added50 = added80 = true;
+					el.appendChild(span(styles.commits80Pct));
+				} else if (runningCommitCount >= activeCommits.length * 0.5 && !added50) {
+					added50 = true;
+					el.appendChild(span(styles.commits50Pct));
+				}
+			}
 		});
 	}
 
-	toggleVisible = (ev:MouseEvent) => {
+	toggleVisible = (ev: MouseEvent) => {
 		this.setState({ visible: !this.state.visible });
 	};
 
-	shouldComponentUpdate(nextProps:CommitInfoProps, nextState:CommitInfoState) {
+	shouldComponentUpdate(nextProps: CommitInfoProps, nextState: CommitInfoState) {
 		if (nextProps.activeCommitData !== this.props.activeCommitData) {
 			const { authors, commits, authorCommitCounts } = nextProps.activeCommitData;
 			if (!nextState.visible && commits && commits !== nextProps.commitData.commits)
 				this.setState({ visible: true });
 			const diffView = document.getElementById('diffView')!;
-			while (diffView.firstChild)
-				diffView.removeChild(diffView.firstChild);
+			while (diffView.firstChild) diffView.removeChild(diffView.firstChild);
 			this.updateActiveCommitSetAuthors(authors, authorCommitCounts, commits);
 			this.updateActiveCommitSetDiffs(commits);
 		} else if (nextState.authorSort !== this.state.authorSort) {
@@ -344,7 +353,7 @@ class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState> {
 		return true;
 	}
 
-	handleDiffEditorDidMount = (_:any, _editor:any, diffEditor:any) => {
+	handleDiffEditorDidMount = (_: any, _editor: any, diffEditor: any) => {
 		const original = window.monaco.editor.createModel(
 			this.props.fileContents.original || '',
 			undefined,
@@ -362,8 +371,7 @@ class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState> {
 		});
 	};
 
-
-	handleEditorDidMount = (_:any, editor:any) => {
+	handleEditorDidMount = (_: any, editor: any) => {
 		const model = window.monaco.editor.createModel(
 			this.props.fileContents.content,
 			undefined,
@@ -373,21 +381,26 @@ class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState> {
 		editor.onDidDispose(() => model.dispose());
 	};
 
-	authorSearchOnChange = (event: React.FormEvent<any>):void => {
+	authorSearchOnChange = (event: React.FormEvent<any>): void => {
 		const authorSearch = (event.target! as HTMLInputElement).value;
 		clearTimeout(this.searchTimeout);
-		
+
 		this.searchTimeout = setTimeout(
-			(() => this.props.setCommitFilter({ ...this.state.commitFilter, authorSearch })) as TimerHandler,
+			(() =>
+				this.props.setCommitFilter({
+					...this.state.commitFilter,
+					authorSearch,
+				})) as TimerHandler,
 			200
 		);
 	};
 
-	commitSearchOnChange = (event: React.FormEvent<any>):void => {
+	commitSearchOnChange = (event: React.FormEvent<any>): void => {
 		const search = (event.target! as HTMLInputElement).value;
 		clearTimeout(this.searchTimeout);
 		this.searchTimeout = setTimeout(
-			(() => this.props.setCommitFilter({ ...this.state.commitFilter, search })) as TimerHandler,
+			(() =>
+				this.props.setCommitFilter({ ...this.state.commitFilter, search })) as TimerHandler,
 			200
 		);
 	};
@@ -398,16 +411,75 @@ class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState> {
 	sortByDate = () => this.setState({ authorSort: 'date' });
 	hideCommitsPane = () => this.setState({ visible: false });
 
-	onShowFileCommits = (event: React.MouseEvent<HTMLButtonElement, MouseEvent>):void => {
+	onShowFileCommits = (event: React.MouseEvent<HTMLButtonElement, MouseEvent>): void => {
 		this.setState({ visible: true });
 		this.props.showFileCommitsClick(event);
 	};
 
-	previousFileVersion = ():void => {
+	getFileCommits(path: string, hash: string): { path: string; commit: Commit }[] {
+		const arr = [];
+		const commits = this.props.commitData.commits;
+		let currentPath = path;
+		for (let i = 0; i < commits.length; i++) {
+			const c = commits[i];
+			if (c.sha === hash) {
+				for (let j = i; j >= 0; j--) {
+					const cc = commits[j];
+					for (let k = 0; k < cc.files.length; k++) {
+						const f = cc.files[k];
+						if (f.renamed && f.path === currentPath) {
+							currentPath = f.renamed;
+						}
+					}
+				}
+				break;
+			}
+		}
+		for (let i = 0; i < commits.length; i++) {
+			const c = commits[i];
+			for (let j = 0; j < c.files.length; j++) {
+				const f = c.files[j];
+				if (f.renamed !== undefined && f.renamed === currentPath) {
+					currentPath = f.path;
+				}
+				if (f.path === currentPath) {
+					arr.push({ path: currentPath, commit: c });
+					break;
+				}
+			}
+		}
+		return arr;
 	}
 
-	nextFileVersion = ():void => {
-	}
+	previousFileVersion = (): void => {
+		const fileCommits = this.getFileCommits(
+			this.props.fileContents.path,
+			this.props.fileContents.hash
+		);
+		const idx = fileCommits.findIndex(
+			({ commit }) => commit.sha === this.props.fileContents.hash
+		);
+		if (idx < fileCommits.length - 1) {
+			const { path, commit } = fileCommits[idx + 1];
+			const previous = idx + 2 <= fileCommits.length ? fileCommits[idx + 2] : undefined;
+			this.props.loadFileDiff(commit.sha, previous ? previous.commit.sha : '00000000', path);
+		}
+	};
+
+	nextFileVersion = (): void => {
+		const fileCommits = this.getFileCommits(
+			this.props.fileContents.path,
+			this.props.fileContents.hash
+		);
+		const idx = fileCommits.findIndex(
+			({ commit }) => commit.sha === this.props.fileContents.hash
+		);
+		if (idx > 0) {
+			const { path, commit } = fileCommits[idx];
+			const previous = fileCommits[idx - 1];
+			this.props.loadFileDiff(previous ? previous.commit.sha : '00000000', commit.sha, path);
+		}
+	};
 
 	render() {
 		const { authorSort } = this.state;

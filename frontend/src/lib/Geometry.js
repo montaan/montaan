@@ -14,7 +14,6 @@ export default {
 		);
 
 		if (intersections.length > 0) {
-			console.log(intersections);
 			var faceIndex = intersections[0].faceIndex;
 			var fsEntry =
 				intersections[0].object.fileTree.fsIndex[

@@ -247,8 +247,10 @@ export default class CommitInfo extends React.Component {
 			default:
 				authors.sort((a, b) => a.localeCompare(b));
 		}
-        var runningCommitCount = 0;
-        var added50 = false, added80 = false, added95 = false;
+		var runningCommitCount = 0;
+		var added50 = false,
+			added80 = false,
+			added95 = false;
 		authors.forEach((author) => {
 			var div = document.createElement('div');
 			div.dataset.commitCount = authorCommitCounts[author];
@@ -261,19 +263,19 @@ export default class CommitInfo extends React.Component {
 				else self.props.setCommitFilter({ ...self.props.commitFilter, author });
 			};
 			el.appendChild(div);
-            runningCommitCount += authorCommitCounts[author];
-            if (authorSort === 'commits') {
-                if (runningCommitCount >= activeCommits.length * 0.95 && !added95) {
-                    added50 = added80 = added95 = true;
-                    el.appendChild(span(styles.commits95Pct));
-                } else if (runningCommitCount >= activeCommits.length * 0.8 && !added80) {
-                    added50 = added80 = true;
-                    el.appendChild(span(styles.commits80Pct));
-                } else if (runningCommitCount >= activeCommits.length * 0.5 && !added50) {
-                    added50 = true;
-                    el.appendChild(span(styles.commits50Pct));
-                }
-            }
+			runningCommitCount += authorCommitCounts[author];
+			if (authorSort === 'commits') {
+				if (runningCommitCount >= activeCommits.length * 0.95 && !added95) {
+					added50 = added80 = added95 = true;
+					el.appendChild(span(styles.commits95Pct));
+				} else if (runningCommitCount >= activeCommits.length * 0.8 && !added80) {
+					added50 = added80 = true;
+					el.appendChild(span(styles.commits80Pct));
+				} else if (runningCommitCount >= activeCommits.length * 0.5 && !added50) {
+					added50 = true;
+					el.appendChild(span(styles.commits50Pct));
+				}
+			}
 		});
 	}
 
@@ -283,7 +285,6 @@ export default class CommitInfo extends React.Component {
 
 	shouldComponentUpdate(nextProps, nextState) {
 		if (nextProps.activeCommitData !== this.props.activeCommitData) {
-			// window.fileView.innerHTML = '';
 			const { authors, commits, authorCommitCounts } = nextProps.activeCommitData;
 			if (!nextState.visible && commits && commits !== nextProps.commitData.commits)
 				this.setState({ visible: true });
@@ -299,6 +300,15 @@ export default class CommitInfo extends React.Component {
 				commits,
 				nextState.authorSort
 			);
+		}
+		if (nextProps.fileContents !== this.props.fileContents && nextProps.fileContents) {
+			if (nextState.diffEditor && nextProps.fileContents.original) {
+				const model = nextState.diffEditor.getModel();
+				model.original.setValue(nextProps.fileContents.original);
+				model.modified.setValue(nextProps.fileContents.content);
+			} else if (nextState.editor && nextProps.fileContents.content) {
+				nextState.editor.getModel().setValue(nextProps.fileContents.content);
+			}
 		}
 		return true;
 	}
@@ -320,6 +330,7 @@ export default class CommitInfo extends React.Component {
 				original.dispose();
 				modified.dispose();
 			});
+			this.setState({ diffEditor, editor: null });
 		} else {
 			const model = window.monaco.editor.createModel(
 				this.props.fileContents.content,
@@ -328,6 +339,7 @@ export default class CommitInfo extends React.Component {
 			);
 			editor.setModel(model);
 			editor.onDidDispose(() => model.dispose());
+			this.setState({ diffEditor: null, editor });
 		}
 	};
 
@@ -358,6 +370,71 @@ export default class CommitInfo extends React.Component {
 	onShowFileCommits = (ev) => {
 		this.setState({ visible: true });
 		this.props.showFileCommitsClick(ev);
+	};
+
+	getFileCommits(path, hash) {
+		const arr = [];
+		const commits = this.props.commitData.commits;
+		let currentPath = path;
+		for (let i = 0; i < commits.length; i++) {
+			const c = commits[i];
+			if (c.sha === hash) {
+				for (let j = i; j >= 0; j--) {
+					const cc = commits[j];
+					for (let k = 0; k < cc.files.length; k++) {
+						const f = cc.files[k];
+						if (f.renamed && f.path === currentPath) {
+							currentPath = f.renamed;
+						}
+					}
+				}
+				break;
+			}
+		}
+		for (let i = 0; i < commits.length; i++) {
+			const c = commits[i];
+			for (let j = 0; j < c.files.length; j++) {
+				const f = c.files[j];
+				if (f.renamed !== undefined && f.renamed === currentPath) {
+					currentPath = f.path;
+				}
+				if (f.path === currentPath) {
+					arr.push({ path: currentPath, commit: c });
+					break;
+				}
+			}
+		}
+		return arr;
+	}
+
+	previousFileVersion = () => {
+		const fileCommits = this.getFileCommits(
+			this.props.fileContents.path,
+			this.props.fileContents.hash
+		);
+		const idx = fileCommits.findIndex(
+			({ commit }) => commit.sha === this.props.fileContents.hash
+		);
+		if (idx < fileCommits.length - 1) {
+			const { path, commit } = fileCommits[idx + 1];
+			const previous = idx + 2 <= fileCommits.length ? fileCommits[idx + 2] : undefined;
+			this.props.loadFileDiff(commit.sha, previous ? previous.commit.sha : '00000000', path);
+		}
+	};
+
+	nextFileVersion = () => {
+		const fileCommits = this.getFileCommits(
+			this.props.fileContents.path,
+			this.props.fileContents.hash
+		);
+		const idx = fileCommits.findIndex(
+			({ commit }) => commit.sha === this.props.fileContents.hash
+		);
+		if (idx > 0) {
+			const { path, commit } = fileCommits[idx];
+			const previous = fileCommits[idx - 1];
+			this.props.loadFileDiff(previous ? previous.commit.sha : '00000000', commit.sha, path);
+		}
 	};
 
 	render() {
