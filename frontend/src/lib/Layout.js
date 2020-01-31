@@ -331,14 +331,18 @@ export default {
 			fileTree.vertexIndex = 0;
 		}
 
-		const dirSquareSide = Math.ceil(Math.sqrt(dirs.length/2));
-		const fileSquareSide = Math.ceil(Math.sqrt(files.length/2));
+		const dirScale = files.length === 0 ? 1 : 0.5;
+		const filesScale = dirs.length === 0 ? 0.5 : 0.5;
+		const fileXOff = dirs.length === 0 ? 0 : 1;
+
+		const dirSquareSide = Math.ceil(Math.sqrt(Math.ceil(dirScale*dirs.length)));
+		const fileSquareSide = Math.ceil(Math.sqrt(Math.ceil(0.5*files.length)));
 
 		var maxX = 0,
 			maxY = 0;
 		for (let x = 0; x < dirSquareSide; x++) {
-			for (let y = 0; y < dirSquareSide*2; y++) {
-				const off = x * dirSquareSide + y;
+			for (let y = 0; y < dirSquareSide/dirScale; y++) {
+				const off = x * dirSquareSide/dirScale + y;
 				if (off >= dirs.length) {
 					break;
 				}
@@ -349,9 +353,9 @@ export default {
 				const dir = dirs[off];
 				const subX = xOff + 0.1 / dirSquareSide;
 				const subY = yOff + 0.1 / dirSquareSide;
-				dir.x = parentX + parentScale * subX * 0.5;
-				dir.y = parentY + parentScale * subY * 0.5 + 0.5 * parentScale;
-				dir.scale = parentScale * (0.8 / dirSquareSide) * 0.5;
+				dir.x = parentX + parentScale * subX * dirScale;
+				dir.y = parentY + parentScale * subY * dirScale + (1-dirScale) * parentScale;
+				dir.scale = parentScale * (0.8 / dirSquareSide) * dirScale;
 				dir.z = parentZ + dir.scale * 0.2;
 				dir.index = fileIndex;
 				dir.vertexIndex = accum.vertexIndex;
@@ -396,25 +400,24 @@ export default {
 
 		maxX = 0;
 		maxY = 0;
-		for (var x = 0; x < fileSquareSide*2; x++) {
-			for (var y = 0; y < fileSquareSide; y++) {
-				var off = x * fileSquareSide*2 + y;
+		for (let x = 0; x < fileSquareSide*2; x++) {
+			for (let y = 0; y < fileSquareSide; y++) {
+				const off = x * fileSquareSide + y;
 				if (off >= files.length) {
 					break;
 				}
 				maxX = Math.max(x, maxX);
 				maxY = Math.max(y, maxY);
-				var yOff = 1 - (y + 1) * (1 / fileSquareSide);
-				var xOff = 1 + 0.5 * x * (1 / fileSquareSide);
-				var subX = xOff + 0.1 / fileSquareSide;
-				var subY = yOff; //+ 0.1 / fileSquareSide;
-				var fileScale = parentScale * (0.8 / fileSquareSide);
+				const yOff = 1 - (y + 1) * (1 / fileSquareSide);
+				const xOff = fileXOff + 0.5 * x * (1 / fileSquareSide);
+				const subX = xOff + 0.1 / fileSquareSide;
+				const subY = yOff; //+ 0.1 / fileSquareSide;
 
-				var file = files[off];
-				var fileColor = file.color || Colors.getFileColor(file);
-				file.x = parentX + parentScale * subX * 0.5;
-				file.y = parentY + parentScale * subY * 0.5 + parentScale * 0.5;
-				file.scale = fileScale * 0.5;
+				const file = files[off];
+				const fileColor = file.color || Colors.getFileColor(file);
+				file.x = parentX + parentScale * subX * filesScale;
+				file.y = parentY + parentScale * subY * filesScale + parentScale * (1-filesScale);
+				file.scale = parentScale * (0.8 / fileSquareSide) * filesScale;
 				file.z = parentZ + file.scale * 0.2;
 				file.index = fileIndex;
 				file.vertexIndex = accum.vertexIndex;

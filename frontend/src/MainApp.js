@@ -119,6 +119,7 @@ class MainApp extends React.Component {
 		if (commitsOpen) this.setActiveCommits(commitData.commits);
 		this.setState({ navUrl: this.props.location.pathname + this.props.location.hash });
 		try {
+			return;
 			const deps = await this.props.api.getType(
 				'/repo/fs/' + repoPrefix + '/deps.json',
 				'json'
