@@ -95,10 +95,10 @@ class MainApp extends React.Component {
 			return;
 		}
 		console.time('load files');
-		const files = await this.props.api.post('/repo/dir', {
+		const files = await this.props.api.post('/repo/tree', {
 			repo: repoPrefix,
 			hash: ref,
-			paths: [''],
+			// paths: [''],
 		});
 		console.timeEnd('load files');
 		console.time('parse files');

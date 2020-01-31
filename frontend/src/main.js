@@ -443,8 +443,8 @@ class Tabletree {
 		const { scene, camera } = this;
 		scene.updateMatrixWorld();
 		var fsPoint = new THREE.Vector3(
-			fsEntry.x + fsEntry.scale / 2,
-			fsEntry.y + fsEntry.scale / 2,
+			fsEntry.x + fsEntry.scale * (fsEntry.entries ? 0.5 : 0.25),
+			fsEntry.y + fsEntry.scale * (fsEntry.entries ? 0.75 : 0.5),
 			fsEntry.z
 		);
 		fsPoint.applyMatrix4(model.matrixWorld);
@@ -903,15 +903,14 @@ class Tabletree {
 			};
 
 			var textScale =
-				1 /
-				Math.max(
-					text.geometry.layout.width + 60,
-					(text.geometry.layout.height + 30) / 0.75
+				Math.min(
+					0.5 / (text.geometry.layout.width + 60),
+					1 / ((text.geometry.layout.height + 30) / 0.75)
 				);
 			var scale = fsEntry.scale * textScale;
 			var vAspect = Math.min(
 				1,
-				(text.geometry.layout.height + 30) / 0.75 / (text.geometry.layout.width + 60)
+				((text.geometry.layout.height + 30) / 0.75) / ((text.geometry.layout.width + 60) / 0.5)
 			);
 			text.material.depthTest = false;
 			text.scale.multiplyScalar(scale);

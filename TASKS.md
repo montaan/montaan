@@ -46,7 +46,7 @@
         [] 10k commits at a time
         [] Calendar data from server
     [] [Directories | Files] layout
-        [] 1:1 wide rectangle
+        [x] 1:1 wide rectangle
         [] N:M split based on count
     [] Thumbnail mip pyramid server
         [] Copy from Muryu
@@ -123,6 +123,7 @@
             [] Find files for PR, find authors for files, distribute review request across authors with enough commits
     [] Non-English contributor languages
     [] Competition around contribution amount and quality
+    [] CodeSquare - become the Mayor of a file / dir by contributing to it
     [] Embarrassingly parallel architecture - imagine a million devs simultaneously working on the codebase
         [] Commits to one component don't screw up others
         [] Large number of simple individual components

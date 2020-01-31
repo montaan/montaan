@@ -7,7 +7,7 @@ const Mime = require('mime-types');
 
 const repoDataShape = {
     url: isMaybe(isURL), 
-    name: isRegExp(/^[a-zA-Z0-9_-]+$/)
+    name: isRegExp(/^[a-zA-Z0-9._-]+$/)
 };
 
 function assertRepoFile(fsPath) {
