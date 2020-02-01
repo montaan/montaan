@@ -79,6 +79,7 @@ class Tabletree {
 
 		this.commitsPlaying = false;
 		this.searchResults = [];
+		this.previousSearchResults = [];
 
 		this.frameFibers = [];
 		this.frameStart = -1;
@@ -220,8 +221,8 @@ class Tabletree {
 			const lineBottom = fsEntry.textYZero - ((line + 1) / lineCount) * fsEntry.textHeight;
 			const lineTop = fsEntry.textYZero - (line / lineCount) * fsEntry.textHeight;
 			var c0 = new THREE.Vector3(fsEntry.x, lineBottom, fsEntry.z);
-			var c1 = new THREE.Vector3(fsEntry.x + fsEntry.scale, lineBottom, fsEntry.z);
-			var c2 = new THREE.Vector3(fsEntry.x + fsEntry.scale, lineTop, fsEntry.z);
+			var c1 = new THREE.Vector3(fsEntry.x + fsEntry.scale*0.5, lineBottom, fsEntry.z);
+			var c2 = new THREE.Vector3(fsEntry.x + fsEntry.scale*0.5, lineTop, fsEntry.z);
 			var c3 = new THREE.Vector3(fsEntry.x, lineTop, fsEntry.z);
 
 			c0.applyMatrix4(this.model.matrixWorld);
@@ -331,10 +332,13 @@ class Tabletree {
 			}
 		}
 
-		geo.vertices[off++].copy(av);
-		geo.vertices[off++].copy(aUp);
-		geo.vertices[off++].copy(aUp);
-		geo.vertices[off++].copy(bv);
+		const verts = geo.getAttribute('position').array;
+		off *= 3;
+		var v;
+		v = av; verts[off++] = v.x; verts[off++] = v.y; verts[off++] = v.z;
+		v = aUp; verts[off++] = v.x; verts[off++] = v.y; verts[off++] = v.z;
+		v = aUp; verts[off++] = v.x; verts[off++] = v.y; verts[off++] = v.z;
+		v = bv; verts[off++] = v.x; verts[off++] = v.y; verts[off++] = v.z;
 	}
 
 	updateSearchLines() {
@@ -343,12 +347,12 @@ class Tabletree {
 			this.clearSearchLine();
 			this.previousSearchResults = this.searchResults;
 			needUpdate = true;
-			this.searchLine.geometry.verticesNeedUpdate = true;
 			this.changed = true;
 			this.searchLis = [].slice.call(window.searchResults.querySelectorAll('li'));
 		}
 		const lis = this.searchLis;
-		if (needUpdate && lis.length <= this.searchLine.geometry.vertices.length / 4) {
+		var verts = this.searchLine.geometry.getAttribute('position').array;
+		if (needUpdate && lis.length <= verts.length / 3 / 4) {
 			for (var i = 0, l = lis.length; i < l; i++) {
 				var li = lis[i];
 				this.addScreenLine(
@@ -364,13 +368,11 @@ class Tabletree {
 	}
 
 	clearSearchLine() {
-		var geo = this.searchLine.geometry;
-		var verts = geo.vertices;
-		for (var i = 0; i < verts.length; i++) {
-			var v = verts[i];
-			v.x = v.y = v.z = 0;
+		var verts = this.searchLine.geometry.getAttribute('position').array;
+		for (var i = 0; i < this.previousSearchResults.length * 4 * 3; i++) {
+			verts[i] = 0;
 		}
-		geo.verticesNeedUpdate = true;
+		this.searchLine.geometry.getAttribute('position').needsUpdate = true;
 		this.changed = true;
 	}
 
@@ -1159,21 +1161,25 @@ class Tabletree {
 		var b = intersectionsB[0].point;
 		var bv = new THREE.Vector3(b.x, b.y, b.z);
 
-		geo.vertices[index++].copy(av);
-		geo.vertices[index++].copy(av);
-		geo.vertices[index++].copy(av);
-		geo.vertices[index++].copy(bv);
-		geo.vertices[index++].copy(bv);
-		geo.vertices[index++].copy(bv);
+		var verts = geo.getAttribute('position').array;
+		var off = index * 3;
+		var v;
+		v = av; verts[off++] = v.x; verts[off++] = v.y; verts[off++] = v.z;
+		v = av; verts[off++] = v.x; verts[off++] = v.y; verts[off++] = v.z;
+		v = av; verts[off++] = v.x; verts[off++] = v.y; verts[off++] = v.z;
+		v = bv; verts[off++] = v.x; verts[off++] = v.y; verts[off++] = v.z;
+		v = bv; verts[off++] = v.x; verts[off++] = v.y; verts[off++] = v.z;
+		v = bv; verts[off++] = v.x; verts[off++] = v.y; verts[off++] = v.z;
 
 		if (color) {
-			index -= 6;
-			geo.colors[index++].copy(color);
-			geo.colors[index++].copy(color);
-			geo.colors[index++].copy(color);
-			geo.colors[index++].copy(color);
-			geo.colors[index++].copy(color);
-			geo.colors[index++].copy(color);
+			verts = geo.getAttribute('color').array;
+			off = index * 3;
+			v = color; verts[off++] = v.r; verts[off++] = v.g; verts[off++] = v.b;
+			v = color; verts[off++] = v.r; verts[off++] = v.g; verts[off++] = v.b;
+			v = color; verts[off++] = v.r; verts[off++] = v.g; verts[off++] = v.b;
+			v = color; verts[off++] = v.r; verts[off++] = v.g; verts[off++] = v.b;
+			v = color; verts[off++] = v.r; verts[off++] = v.g; verts[off++] = v.b;
+			v = color; verts[off++] = v.r; verts[off++] = v.g; verts[off++] = v.b;
 		}
 	}
 
@@ -1221,21 +1227,25 @@ class Tabletree {
 			}
 		}
 
-		geo.vertices[index++].copy(av);
-		geo.vertices[index++].copy(aUp);
-		geo.vertices[index++].copy(aUp);
-		geo.vertices[index++].copy(bv);
-		geo.vertices[index++].copy(bv);
-		geo.vertices[index++].copy(bv);
+		var verts = geo.getAttribute('position').array;
+		var off = index * 3;
+		var v;
+		v = av; verts[off++] = v.x; verts[off++] = v.y; verts[off++] = v.z;
+		v = aUp; verts[off++] = v.x; verts[off++] = v.y; verts[off++] = v.z;
+		v = aUp; verts[off++] = v.x; verts[off++] = v.y; verts[off++] = v.z;
+		v = bv; verts[off++] = v.x; verts[off++] = v.y; verts[off++] = v.z;
+		v = bv; verts[off++] = v.x; verts[off++] = v.y; verts[off++] = v.z;
+		v = bv; verts[off++] = v.x; verts[off++] = v.y; verts[off++] = v.z;
 
 		if (color) {
-			index -= 6;
-			geo.colors[index++].copy(color);
-			geo.colors[index++].copy(color);
-			geo.colors[index++].copy(color);
-			geo.colors[index++].copy(color);
-			geo.colors[index++].copy(color);
-			geo.colors[index++].copy(color);
+			verts = geo.getAttribute('color').array;
+			off = index * 3;
+			v = color; verts[off++] = v.r; verts[off++] = v.g; verts[off++] = v.b;
+			v = color; verts[off++] = v.r; verts[off++] = v.g; verts[off++] = v.b;
+			v = color; verts[off++] = v.r; verts[off++] = v.g; verts[off++] = v.b;
+			v = color; verts[off++] = v.r; verts[off++] = v.g; verts[off++] = v.b;
+			v = color; verts[off++] = v.r; verts[off++] = v.g; verts[off++] = v.b;
+			v = color; verts[off++] = v.r; verts[off++] = v.g; verts[off++] = v.b;
 		}
 	}
 
@@ -1298,21 +1308,25 @@ class Tabletree {
 		);
 		bUp.applyMatrix4(modelB.matrixWorld);
 
-		geo.vertices[index++].copy(av);
-		geo.vertices[index++].copy(aUp);
-		geo.vertices[index++].copy(aUp);
-		geo.vertices[index++].copy(bUp);
-		geo.vertices[index++].copy(bUp);
-		geo.vertices[index++].copy(bv);
+		var verts = geo.getAttribute('position').array;
+		var off = index * 3;
+		var v;
+		v = av; verts[off++] = v.x; verts[off++] = v.y; verts[off++] = v.z;
+		v = aUp; verts[off++] = v.x; verts[off++] = v.y; verts[off++] = v.z;
+		v = aUp; verts[off++] = v.x; verts[off++] = v.y; verts[off++] = v.z;
+		v = bUp; verts[off++] = v.x; verts[off++] = v.y; verts[off++] = v.z;
+		v = bUp; verts[off++] = v.x; verts[off++] = v.y; verts[off++] = v.z;
+		v = bv; verts[off++] = v.x; verts[off++] = v.y; verts[off++] = v.z;
 
 		if (color) {
-			index -= 6;
-			geo.colors[index++].copy(color);
-			geo.colors[index++].copy(color);
-			geo.colors[index++].copy(color);
-			geo.colors[index++].copy(color);
-			geo.colors[index++].copy(color);
-			geo.colors[index++].copy(color);
+			verts = geo.getAttribute('color').array;
+			off = index * 3;
+			v = color; verts[off++] = v.r; verts[off++] = v.g; verts[off++] = v.b;
+			v = color; verts[off++] = v.r; verts[off++] = v.g; verts[off++] = v.b;
+			v = color; verts[off++] = v.r; verts[off++] = v.g; verts[off++] = v.b;
+			v = color; verts[off++] = v.r; verts[off++] = v.g; verts[off++] = v.b;
+			v = color; verts[off++] = v.r; verts[off++] = v.g; verts[off++] = v.b;
+			v = color; verts[off++] = v.r; verts[off++] = v.g; verts[off++] = v.b;
 		}
 	}
 
@@ -1335,14 +1349,11 @@ class Tabletree {
 	setLinks(links, updateOnlyElements=false) {
 		if (this.lineGeo) {
 			const geo = this.lineGeo;
+			const verts = geo.getAttribute('position').array;
+	
 			for (let i = links.length; i < this.links.length; i++) {
-				let j = i * 6;
-				geo.vertices[j++].set(-100, -100, -100);
-				geo.vertices[j++].set(-100, -100, -100);
-				geo.vertices[j++].set(-100, -100, -100);
-				geo.vertices[j++].set(-100, -100, -100);
-				geo.vertices[j++].set(-100, -100, -100);
-				geo.vertices[j++].set(-100, -100, -100);
+				let j = i * 6 * 3;
+				for (let k = 0; k < 18; k++) verts[j+k] = -100;
 			}
 			this.links = links;
 			for (let i = 0; i < links.length; i++) {
@@ -1399,8 +1410,8 @@ class Tabletree {
 					);
 				}
 			}
-			geo.verticesNeedUpdate = true;
-			geo.colorsNeedUpdate = true;
+			geo.getAttribute('position').needsUpdate = true;
+			geo.getAttribute('color').needsUpdate = true;
 			this.changed = true;
 		}
 	}
