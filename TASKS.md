@@ -45,16 +45,18 @@
     [] Dynamic commit loading
         [] 10k commits at a time
         [] Calendar data from server
-    [] [Directories | Files] layout
-        [x] 1:1 wide rectangle
-        [] N:M split based on count
     [] Thumbnail mip pyramid server
-        [] Copy from Muryu
+        [] Copy from Muryu?
     [] Custom layouts
         [] Move files around
         [] Save file positions in DB
         [] Load file positions from .layout
     [] Workflow to export file / dir models from Blender
+        [] Instanced rendering demo
+        [] Load demo models from GLB
+        [] Add instancing & model loading to main app
+        [] Load models based on directory scene file (e.g. add trees and other props)
+
 
 # Plugins
     [] Some sort of plugin system to enable parallel development
@@ -226,7 +228,7 @@
 
 # Visuals
     [] Fade out text before hiding it
-    [] Output a 3D model for rendering with a path tracer
+    [x] Output a 3D model for rendering with a path tracer
     [] Sparkling precious particle diamonds like on Precious Nature map
     [] Design that makes you feel awesome
 
@@ -239,6 +241,15 @@
 
 
 ## Completed
+
+# KEY FEATURES
+    [x] [Directories | Files] layout
+        [x] 1:1 wide rectangle
+        [x] N:M split based on count
+
+
+# Visuals
+    [x] Output a 3D model for rendering with a path tracer
 
 # Backend
     [x] Register & Log in

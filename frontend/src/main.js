@@ -7,6 +7,48 @@ import Layout from './lib/Layout';
 import utils from './lib/utils';
 import Geometry from './lib/Geometry';
 
+import { GLTFExporter } from "three/examples/jsm/exporters/GLTFExporter.js";
+import { BufferGeometry } from 'three';
+
+
+function save( blob, filename ) {
+	const link = document.createElement('a');
+	link.href = URL.createObjectURL( blob );
+	link.download = filename;
+	link.click();
+
+	// URL.revokeObjectURL( url ); breaks Firefox...
+}
+
+function saveString( text, filename ) {
+	save( new Blob( [ text ], { type: 'text/plain' } ), filename );
+}
+
+
+function saveArrayBuffer( buffer, filename ) {
+	save( new Blob( [ buffer ], { type: 'application/octet-stream' } ), filename );
+}
+
+function exportGLTF( input ) {
+	var gltfExporter = new GLTFExporter();
+
+	var options = {
+		onlyVisible: false,
+		truncateDrawRange: false,
+		binary: true,
+	};
+	gltfExporter.parse( input, function ( result ) {
+		if ( result instanceof ArrayBuffer ) {
+			saveArrayBuffer( result, 'scene.glb' );
+		} else {
+			var output = JSON.stringify( result, null, 2 );
+			console.log( output );
+			saveString( output, 'scene.gltf' );
+		}
+	}, options );
+}
+global.exportGLTF = exportGLTF;
+
 const THREE = require('three');
 global.THREE = THREE;
 
@@ -94,6 +136,10 @@ class Tabletree {
 		document.body.appendChild(renderer.domElement);
 
 		var scene = new THREE.Scene();
+		window.scene3 = scene;
+		window.GLTFExporter = GLTFExporter;
+
+		
 
 		var camera = new THREE.PerspectiveCamera(
 			45,
@@ -374,7 +420,7 @@ class Tabletree {
 		this.screenPlane = screenPlane;
 
 		var searchLine = new THREE.LineSegments(
-			new THREE.Geometry(),
+			new THREE.BufferGeometry(),
 			new THREE.LineBasicMaterial({
 				color: 0xff0000,
 				opacity: 1,
@@ -386,9 +432,7 @@ class Tabletree {
 		);
 		this.searchLine = searchLine;
 		searchLine.frustumCulled = false;
-		for (var i = 0; i < 40000; i++) {
-			searchLine.geometry.vertices.push(new THREE.Vector3(-100, -100, -100));
-		}
+		searchLine.geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(40000*3), 3));
 
 		searchLine.ontick = () => {
 			searchLine.visible = this.searchResults && this.searchResults.length > 0;
@@ -397,7 +441,9 @@ class Tabletree {
 		this.scene.add(this.searchLine);
 		this.scene.add(this.searchHighlights);
 
-		this.lineGeo = new THREE.Geometry();
+		this.lineGeo = new THREE.BufferGeometry();
+		this.lineGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(40000*3), 3));
+		this.lineGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(40000*3), 3));
 		this.lineModel = new THREE.LineSegments(
 			this.lineGeo,
 			new THREE.LineBasicMaterial({
@@ -408,17 +454,6 @@ class Tabletree {
 				vertexColors: true,
 			})
 		);
-		for (let i = 0; i < 40000; i++) {
-			this.lineGeo.vertices.push(new THREE.Vector3());
-			this.lineGeo.colors.push(new THREE.Color());
-		}
-		for (let i = 0; i < 10000; i++) {
-			let off = i * 4;
-			this.lineGeo.faces.push(
-				new THREE.Face3(off, off + 1, off + 2),
-				new THREE.Face3(off, off + 2, off + 3)
-			);
-		}
 		this.lineModel.frustumCulled = false;
 		this.lineModel.ontick = () => {
 			this.lineModel.visible = this.links.length > 0;
@@ -444,12 +479,12 @@ class Tabletree {
 		scene.updateMatrixWorld();
 		var fsPoint = new THREE.Vector3(
 			fsEntry.x + fsEntry.scale * (fsEntry.entries ? 0.5 : 0.25),
-			fsEntry.y + fsEntry.scale * (fsEntry.entries ? 0.75 : 0.5),
+			fsEntry.y + fsEntry.scale * (fsEntry.entries ? 0.77 : 0.5),
 			fsEntry.z
 		);
 		fsPoint.applyMatrix4(model.matrixWorld);
 		camera.targetPosition.copy(fsPoint);
-		camera.targetFOV = fsEntry.scale * 50;
+		camera.targetFOV = fsEntry.scale * (fsEntry.entries ? 22 : 50);
 		fsEntry.fov = camera.targetFOV;
 	}
 

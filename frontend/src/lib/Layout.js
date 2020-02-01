@@ -333,10 +333,11 @@ export default {
 
 		const dirScale = files.length === 0 ? 1 : 0.5;
 		const filesScale = dirs.length === 0 ? 0.5 : 0.5;
-		const fileXOff = dirs.length === 0 ? 0 : 1;
+		const fileXOff = dirs.length === 0 ? 0 : 0.95;
+		const filesPerRow = dirs.length === 0 ? 4 : 2;
 
 		const dirSquareSide = Math.ceil(Math.sqrt(Math.ceil(dirScale*dirs.length)));
-		const fileSquareSide = Math.ceil(Math.sqrt(Math.ceil(0.5*files.length)));
+		const fileSquareSide = Math.ceil(Math.sqrt(Math.ceil(files.length / filesPerRow)));
 
 		var maxX = 0,
 			maxY = 0;
@@ -349,10 +350,10 @@ export default {
 				maxX = Math.max(x, maxX);
 				maxY = Math.max(y, maxY);
 				const yOff = 1 - (0.5 * y + 1) * (1 / dirSquareSide);
-				const xOff = x * (1 / dirSquareSide);
+				const xOff = 0.9 * x * (1 / dirSquareSide);
 				const dir = dirs[off];
 				const subX = xOff + 0.1 / dirSquareSide;
-				const subY = yOff + 0.1 / dirSquareSide;
+				const subY = yOff + 0.125 / dirSquareSide;
 				dir.x = parentX + parentScale * subX * dirScale;
 				dir.y = parentY + parentScale * subY * dirScale + (1-dirScale) * parentScale;
 				dir.scale = parentScale * (0.8 / dirSquareSide) * dirScale;
@@ -377,7 +378,8 @@ export default {
 					dir,
 					parentText,
 					accum.textVertexIndex,
-					yieldFn
+					yieldFn,
+					0.4
 				);
 				fileIndex = await this.createFileTreeQuads(
 					yieldFn,
@@ -400,7 +402,7 @@ export default {
 
 		maxX = 0;
 		maxY = 0;
-		for (let x = 0; x < fileSquareSide*2; x++) {
+		for (let x = 0; x < fileSquareSide*filesPerRow; x++) {
 			for (let y = 0; y < fileSquareSide; y++) {
 				const off = x * fileSquareSide + y;
 				if (off >= files.length) {
@@ -410,14 +412,14 @@ export default {
 				maxY = Math.max(y, maxY);
 				const yOff = 1 - (y + 1) * (1 / fileSquareSide);
 				const xOff = fileXOff + 0.5 * x * (1 / fileSquareSide);
-				const subX = xOff + 0.1 / fileSquareSide;
-				const subY = yOff; //+ 0.1 / fileSquareSide;
+				const subX = xOff + 0.05 / fileSquareSide;
+				const subY = yOff + 0.05 / fileSquareSide;
 
 				const file = files[off];
 				const fileColor = file.color || Colors.getFileColor(file);
 				file.x = parentX + parentScale * subX * filesScale;
 				file.y = parentY + parentScale * subY * filesScale + parentScale * (1-filesScale);
-				file.scale = parentScale * (0.8 / fileSquareSide) * filesScale;
+				file.scale = parentScale * (0.9 / fileSquareSide) * filesScale;
 				file.z = parentZ + file.scale * 0.2;
 				file.index = fileIndex;
 				file.vertexIndex = accum.vertexIndex;
