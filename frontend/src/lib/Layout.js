@@ -447,19 +447,6 @@ export default {
 				fileIndex++;
 			}
 		}
-		if (dirs.length > 0) {
-			// // var xScale = (maxX+1)/squareSide;
-			// var yScale = 0.5 * (maxY + 1) / dirSquareSide;
-			// Geometry.makeQuad(
-			// 	verts,
-			// 	fileTree.index,
-			// 	fileTree.x,
-			// 	fileTree.y + fileTree.scale * (1.0 - yScale),
-			// 	fileTree.scale * yScale,
-			// 	fileTree.scale * yScale,
-			// 	fileTree.z
-			// );
-		}
 
 		fileTree.lastIndex = fileIndex - 1;
 		fileTree.lastTextVertexIndex = accum.textVertexIndex;

@@ -89,7 +89,7 @@ class MainApp extends React.Component {
 			this.setState({ repoError: repoInfo });
 			return;
 		}
-		this.setState({ ...this.emptyState, processing: true, repoPrefix });
+		this.setState({ ...this.emptyState, processing: true, repoPrefix, ref });
 		if (repoInfo[0] && repoInfo[0].processing) {
 			this.repoTimeout = setTimeout(() => this.setRepo(repoPath, userName), 1000);
 			return;
@@ -105,7 +105,8 @@ class MainApp extends React.Component {
 		const fileTree = this.parseFiles(files, repoPrefix);
 		console.timeEnd('parse files');
 		const commitsOpen = this.state.activeCommitData.commits;
-		this.setState({ ...this.emptyState, repoPrefix, fileTree });
+		this.setState({ ...this.emptyState, processing: false, repoPrefix, fileTree });
+		return;
 		console.time('load commitObj');
 		const commitObj = await this.props.api.getType(
 			'/repo/fs/' + repoPrefix + '/log.json',
@@ -198,6 +199,24 @@ class MainApp extends React.Component {
 			this.commitIndex = (this.commitIndex + 1) % commits.length;
 			this.setState({ fileTree: fileTrees[idx] });
 		}, 16);
+	}
+
+	requestDirs = async (paths) => {
+		const files = await this.props.api.post('/repo/dir', {
+			repo: this.state.repoPrefix,
+			hash: this.state.ref,
+			paths: paths.map(p => p.slice(this.state.repoPrefix.length+2)+"/"),
+		});
+		const fileTree = utils.parseFileList_(files, true, this.state.repoPrefix + '/', this.state.fileTree);
+		this.setState({fileTree});
+	}
+
+	requestDitchDirs = async (fsEntries) => {
+		fsEntries.forEach(fsEntry => fsEntry.entries = {});
+		var count = 0;
+		utils.traverseTree(this.state.fileTree, () => count++);
+		const fileTree = {...this.state.fileTree, count}
+		this.setState({fileTree});
 	}
 
 	setCommitFilter = (commitFilter) => {
@@ -652,6 +671,8 @@ class MainApp extends React.Component {
 					addLinks={this.addLinks}
 					setLinks={this.setLinks}
 					links={this.state.links}
+					requestDirs={this.requestDirs}
+					requestDitchDirs={this.requestDitchDirs}
 				/>
 			</div>
 		);

@@ -7,29 +7,28 @@ import Layout from './lib/Layout';
 import utils from './lib/utils';
 import Geometry from './lib/Geometry';
 
-import { GLTFExporter } from "three/examples/jsm/exporters/GLTFExporter.js";
-import { BufferGeometry } from 'three';
+import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js';
+import * as THREE from 'three';
+import loadFont from 'load-bmfont';
 
-
-function save( blob, filename ) {
+function save(blob, filename) {
 	const link = document.createElement('a');
-	link.href = URL.createObjectURL( blob );
+	link.href = URL.createObjectURL(blob);
 	link.download = filename;
 	link.click();
 
 	// URL.revokeObjectURL( url ); breaks Firefox...
 }
 
-function saveString( text, filename ) {
-	save( new Blob( [ text ], { type: 'text/plain' } ), filename );
+function saveString(text, filename) {
+	save(new Blob([text], { type: 'text/plain' }), filename);
 }
 
-
-function saveArrayBuffer( buffer, filename ) {
-	save( new Blob( [ buffer ], { type: 'application/octet-stream' } ), filename );
+function saveArrayBuffer(buffer, filename) {
+	save(new Blob([buffer], { type: 'application/octet-stream' }), filename);
 }
 
-function exportGLTF( input ) {
+function exportGLTF(input) {
 	var gltfExporter = new GLTFExporter();
 
 	var options = {
@@ -37,22 +36,23 @@ function exportGLTF( input ) {
 		truncateDrawRange: false,
 		binary: true,
 	};
-	gltfExporter.parse( input, function ( result ) {
-		if ( result instanceof ArrayBuffer ) {
-			saveArrayBuffer( result, 'scene.glb' );
-		} else {
-			var output = JSON.stringify( result, null, 2 );
-			console.log( output );
-			saveString( output, 'scene.gltf' );
-		}
-	}, options );
+	gltfExporter.parse(
+		input,
+		function(result) {
+			if (result instanceof ArrayBuffer) {
+				saveArrayBuffer(result, 'scene.glb');
+			} else {
+				var output = JSON.stringify(result, null, 2);
+				console.log(output);
+				saveString(output, 'scene.gltf');
+			}
+		},
+		options
+	);
 }
 global.exportGLTF = exportGLTF;
 
-const THREE = require('three');
 global.THREE = THREE;
-
-var loadFont = require('load-bmfont');
 
 THREE.Object3D.prototype.tick = function(t, dt) {
 	if (this.ontick) this.ontick(t, dt);
@@ -116,8 +116,8 @@ class Tabletree {
 		this._fileTree = fileTree;
 		if (this.renderer) {
 			await this.showFileTree(fileTree);
-			const topEntry = fileTree.tree.entries[Object.keys(fileTree.tree.entries)[0]];
-			if (topEntry) this.goToFSEntry(topEntry);
+			// const topEntry = fileTree.tree.entries[Object.keys(fileTree.tree.entries)[0]];
+			// if (topEntry) this.goToFSEntry(topEntry);
 			this._fileTree = null;
 		}
 	}
@@ -140,8 +140,6 @@ class Tabletree {
 		window.scene3 = scene;
 		window.GLTFExporter = GLTFExporter;
 
-		
-
 		var camera = new THREE.PerspectiveCamera(
 			45,
 			window.innerWidth / window.innerHeight,
@@ -158,8 +156,6 @@ class Tabletree {
 		var modelTop = new THREE.Object3D();
 		modelTop.position.set(-0.5, -0.5, 0.0);
 		var modelPivot = new THREE.Object3D();
-		// modelPivot.rotation.x = -0.5;
-		// modelPivot.rotation.z = 0;
 		modelPivot.position.set(0.5, 0.5, 0.0);
 		scene.add(modelTop);
 		modelTop.add(modelPivot);
@@ -174,41 +170,8 @@ class Tabletree {
 		this.onResize();
 	}
 
-	// Running processes tree
-	// processTick() {
-	// 	utils.loadFiles(this.apiPrefix + '/_/processes', function(processTree, processString) {
-	// 		this.ProcessTree = processTree.tree;
-	// 		if (this.processModel) {
-	// 			scene.remove(this.processModel);
-	// 			scene.remove(this.processModel.line);
-	// 			this.processModel.line.geometry.dispose();
-	// 			this.processModel.geometry.dispose();
-	// 		}
-	// 		this.processModel = createFileTreeModel(processTree.count, processTree.tree);
-	// 		this.processModel.position.set(0.5, -0.25, 0.0);
-	// 		this.processModel.scale.multiplyScalar(0.5);
-	// 		scene.add(this.processModel);
-
-	// 		var geo = new THREE.Geometry();
-
-	// 		processString.split("\n").forEach(function(proc) {
-	// 			if (/^\/\d+\/files\/.+/.test(proc)) {
-	// 				addLine(geo, proc);
-	// 			}
-	// 		});
-
-	// 		var line = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({
-	// 			color: 0xffffff, opacity: 0.1, blending: THREE.AdditiveBlending, transparent: true
-	// 		}));
-	// 		this.processModel.line = line;
-	// 		scene.add(line);
-
-	// 		// setTimeout(processTick, 1000);
-	// 	});
-	// }
-
 	setGoToHighlight(fsEntry, line) {
-		this.addHighlightedLine(fsEntry, line);
+		// this.addHighlightedLine(fsEntry, line);
 	}
 
 	addHighlightedLine(fsEntry, line) {
@@ -221,8 +184,8 @@ class Tabletree {
 			const lineBottom = fsEntry.textYZero - ((line + 1) / lineCount) * fsEntry.textHeight;
 			const lineTop = fsEntry.textYZero - (line / lineCount) * fsEntry.textHeight;
 			var c0 = new THREE.Vector3(fsEntry.x, lineBottom, fsEntry.z);
-			var c1 = new THREE.Vector3(fsEntry.x + fsEntry.scale*0.5, lineBottom, fsEntry.z);
-			var c2 = new THREE.Vector3(fsEntry.x + fsEntry.scale*0.5, lineTop, fsEntry.z);
+			var c1 = new THREE.Vector3(fsEntry.x + fsEntry.scale * 0.5, lineBottom, fsEntry.z);
+			var c2 = new THREE.Vector3(fsEntry.x + fsEntry.scale * 0.5, lineTop, fsEntry.z);
 			var c3 = new THREE.Vector3(fsEntry.x, lineTop, fsEntry.z);
 
 			c0.applyMatrix4(this.model.matrixWorld);
@@ -335,10 +298,22 @@ class Tabletree {
 		const verts = geo.getAttribute('position').array;
 		off *= 3;
 		var v;
-		v = av; verts[off++] = v.x; verts[off++] = v.y; verts[off++] = v.z;
-		v = aUp; verts[off++] = v.x; verts[off++] = v.y; verts[off++] = v.z;
-		v = aUp; verts[off++] = v.x; verts[off++] = v.y; verts[off++] = v.z;
-		v = bv; verts[off++] = v.x; verts[off++] = v.y; verts[off++] = v.z;
+		v = av;
+		verts[off++] = v.x;
+		verts[off++] = v.y;
+		verts[off++] = v.z;
+		v = aUp;
+		verts[off++] = v.x;
+		verts[off++] = v.y;
+		verts[off++] = v.z;
+		v = aUp;
+		verts[off++] = v.x;
+		verts[off++] = v.y;
+		verts[off++] = v.z;
+		v = bv;
+		verts[off++] = v.x;
+		verts[off++] = v.y;
+		verts[off++] = v.z;
 	}
 
 	updateSearchLines() {
@@ -434,7 +409,10 @@ class Tabletree {
 		);
 		this.searchLine = searchLine;
 		searchLine.frustumCulled = false;
-		searchLine.geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(40000*3), 3));
+		searchLine.geometry.setAttribute(
+			'position',
+			new THREE.BufferAttribute(new Float32Array(40000 * 3), 3)
+		);
 
 		searchLine.ontick = () => {
 			searchLine.visible = this.searchResults && this.searchResults.length > 0;
@@ -444,8 +422,14 @@ class Tabletree {
 		this.scene.add(this.searchHighlights);
 
 		this.lineGeo = new THREE.BufferGeometry();
-		this.lineGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(40000*3), 3));
-		this.lineGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(40000*3), 3));
+		this.lineGeo.setAttribute(
+			'position',
+			new THREE.BufferAttribute(new Float32Array(40000 * 3), 3)
+		);
+		this.lineGeo.setAttribute(
+			'color',
+			new THREE.BufferAttribute(new Float32Array(40000 * 3), 3)
+		);
 		this.lineModel = new THREE.LineSegments(
 			this.lineGeo,
 			new THREE.LineBasicMaterial({
@@ -488,6 +472,7 @@ class Tabletree {
 		camera.targetPosition.copy(fsPoint);
 		camera.targetFOV = fsEntry.scale * (fsEntry.entries ? 22 : 50);
 		fsEntry.fov = camera.targetFOV;
+		this.changed = true;
 	}
 
 	goToFSEntryText(fsEntry, model = this.model) {
@@ -498,8 +483,9 @@ class Tabletree {
 		var fsPoint = new THREE.Vector3(textX, fsEntry.textY, fsEntry.z);
 		fsPoint.applyMatrix4(model.matrixWorld);
 		camera.targetPosition.copy(fsPoint);
-		camera.targetFOV = fsEntry.scale * fsEntry.textScale * 2000 * 50;
+		camera.targetFOV = fsEntry.scale * fsEntry.textScale * 2000 * 50 / (window.pageZoom / 100);
 		fsEntry.textFOV = camera.targetFOV;
+		this.changed = true;
 	}
 
 	goToFSEntryTextAtLine(fsEntry, line, model = this.model) {
@@ -515,8 +501,9 @@ class Tabletree {
 		var fsPoint = new THREE.Vector3(textX, fsEntry.textYZero - textYOff, fsEntry.z);
 		fsPoint.applyMatrix4(model.matrixWorld);
 		camera.targetPosition.copy(fsPoint);
-		camera.targetFOV = fsEntry.scale * fsEntry.textScale * 2000 * 50;
+		camera.targetFOV = fsEntry.scale * fsEntry.textScale * 2000 * 50 / (window.pageZoom / 100);
 		fsEntry.textFOV = camera.targetFOV;
+		this.changed = true;
 	}
 
 	updateBreadCrumb(path) {
@@ -536,7 +523,7 @@ class Tabletree {
 		};
 		var linkMouseOver = function(ev) {
 			if (this.querySelector('ul')) return;
-			var siblings = getSiblings(self.FileTree, this.path);
+			var siblings = getSiblings(self.fileTree, this.path);
 			var ul = document.createElement('ul');
 			siblings.splice(siblings.indexOf(this.path), 1);
 			siblings.forEach((path) => {
@@ -546,7 +533,7 @@ class Tabletree {
 				link.onclick = function(ev) {
 					ev.preventDefault();
 					ev.stopPropagation();
-					var fsEntry = getPathEntry(self.FileTree, this.path);
+					var fsEntry = getPathEntry(self.fileTree, this.path);
 					if (fsEntry) self.goToFSEntry(fsEntry, self.model);
 				};
 				ul.append(link);
@@ -584,7 +571,7 @@ class Tabletree {
 			link.textContent = name;
 			link.onclick = function(ev) {
 				ev.preventDefault();
-				var fsEntry = getPathEntry(self.FileTree, this.path);
+				var fsEntry = getPathEntry(self.fileTree, this.path);
 				if (fsEntry) self.goToFSEntry(fsEntry, self.model);
 			};
 			link.onmouseover = linkMouseOver;
@@ -610,17 +597,17 @@ class Tabletree {
 			fileIndex,
 			geo.attributes.position.array,
 			geo.attributes.color.array,
-			0,
-			0,
-			0,
-			1,
+			fileTree.x || 0,
+			fileTree.y || 0,
+			fileTree.z || 0,
+			fileTree.scale || 1,
 			0,
 			labels,
 			thumbnails,
 			fileTree.fsIndex
 		);
 
-		var bigGeo = await createText({ text: '', font: font, noBounds: true }, this.yield);
+		var textGeo = await createText({ text: '', font: font, noBounds: true }, this.yield);
 		var vertCount = 0;
 		labels.traverse(function(c) {
 			if (c.geometry) {
@@ -638,17 +625,16 @@ class Tabletree {
 			}
 		});
 
-		bigGeo.setAttribute('position', new THREE.BufferAttribute(parr, 4));
-		bigGeo.setAttribute('uv', new THREE.BufferAttribute(uarr, 2));
+		textGeo.setAttribute('position', new THREE.BufferAttribute(parr, 4));
+		textGeo.setAttribute('uv', new THREE.BufferAttribute(uarr, 2));
 
-		var bigMesh = new THREE.Mesh(bigGeo, this.textMaterial);
+		var textMesh = new THREE.Mesh(textGeo, this.textMaterial);
 
 		var mesh = new THREE.Mesh(
 			geo,
 			new THREE.MeshBasicMaterial({ color: 0xffffff, vertexColors: THREE.VertexColors })
 		);
 		const visibleFiles = new THREE.Object3D();
-		this.visibleFiles = visibleFiles;
 		mesh.add(visibleFiles);
 		visibleFiles.visibleSet = {};
 
@@ -677,13 +663,35 @@ class Tabletree {
 			var zoomedInPath = '';
 			var navigationTarget = '';
 			var smallestCovering = this.fileTree;
+			const fetchDirs = [];
+			const ditchDirs = [];
 			while (stack.length > 0) {
 				var obj = stack.pop();
 				for (var name in obj.entries) {
 					var o = obj.entries[name];
 					var idx = o.index;
 					if (!Geometry.quadInsideFrustum(idx, this, camera)) {
-					} else if ((o.scale * 50) / Math.max(camera.fov, camera.targetFOV) > 0.2) {
+						continue;
+					}
+					if (
+						!o.fetched &&
+						o.entries &&
+						(o.scale * 50) / Math.max(camera.fov, camera.targetFOV) > 0.05
+					) {
+						// eslint-disable-next-line no-unused-vars
+						for (let _ in o.entries) {
+							o.fetched = true;
+							break;
+						}
+						if (!o.fetched) fetchDirs.push(o);
+					} else if (
+						o.fetched &&
+						(o.scale * 50) / Math.max(camera.fov, camera.targetFOV) < 0.01
+					) {
+						ditchDirs.push(o);
+						o.fetched = false;
+					}
+					if ((o.scale * 50) / Math.max(camera.fov, camera.targetFOV) > 0.2) {
 						if (Geometry.quadCoversFrustum(idx, this, camera)) {
 							zoomedInPath += '/' + o.name;
 							navigationTarget += '/' + o.name;
@@ -694,20 +702,32 @@ class Tabletree {
 						) {
 							navigationTarget += '/' + o.name;
 						}
-						if (o.entries) stack.push(o);
-						else {
+						if (o.entries) {
+							stack.push(o);
+						} else {
 							let fullPath = getFullPath(o);
 							if (
 								visibleFiles.children.length < 20 &&
 								!visibleFiles.visibleSet[fullPath]
 							) {
-								if (Colors.imageRE.test(fullPath)) self.loadImage(fullPath, o);
-								else self.loadTextFile(fullPath, o);
+								if (Colors.imageRE.test(fullPath))
+									self.loadImage(visibleFiles, fullPath, o);
+								else self.loadTextFile(visibleFiles, fullPath, o);
 							}
 						}
 					}
 				}
 			}
+			// if (!self.animating) {
+			// 	if (ditchDirs.length > 0) self.requestDitchDirs(ditchDirs);
+			// 	if (fetchDirs.length > 0) {
+			// 		const dirs = fetchDirs.slice(0, 10).map((d) => {
+			// 			d.fetched = true;
+			// 			return getFullPath(d);
+			// 		});
+			// 		self.requestDirs(dirs);
+			// 	}
+			// }
 			self.updateBreadCrumb(navigationTarget);
 			self.zoomedInPath = zoomedInPath;
 			window.setNavigationTarget(navigationTarget);
@@ -715,24 +735,24 @@ class Tabletree {
 				smallestCovering.vertexIndex,
 				smallestCovering.lastVertexIndex - smallestCovering.vertexIndex
 			);
-			bigGeo.setDrawRange(
+			textGeo.setDrawRange(
 				smallestCovering.textVertexIndex,
 				smallestCovering.lastTextVertexIndex - smallestCovering.textVertexIndex
 			);
 		};
 		mesh.fileTree = fileTree;
 		mesh.material.side = THREE.DoubleSide;
-		mesh.add(bigMesh);
+		mesh.add(textMesh);
 		mesh.add(thumbnails);
 		return mesh;
 	}
 
-	loadImage(fullPath, o) {
+	loadImage(visibleFiles, fullPath, o) {
 		var obj3 = new THREE.Mesh();
 		obj3.visible = false;
 		obj3.fsEntry = o;
-		this.visibleFiles.visibleSet[fullPath] = true;
-		this.visibleFiles.add(obj3);
+		visibleFiles.visibleSet[fullPath] = true;
+		visibleFiles.add(obj3);
 		obj3.geometry = new THREE.PlaneBufferGeometry(1, 1);
 		obj3.scale.multiplyScalar(o.scale);
 		obj3.position.set(o.x + o.scale * 0.5, o.y + o.scale * 0.5, o.z);
@@ -759,11 +779,11 @@ class Tabletree {
 	}
 
 	yield = () => {
-		if (this.frameStart > 0 && performance.now() - this.frameStart > 10) {
+		if (this.frameStart > 0 && performance.now() - this.frameStart > 5) {
 			return new Promise((resolve, reject) => {
 				const resolver = () => {
 					this.changed = true;
-					if (performance.now() - this.frameStart > 10) this.frameFibers.push(resolver);
+					if (performance.now() - this.frameStart > 5) this.frameFibers.push(resolver);
 					else resolve();
 				};
 				this.frameFibers.push(resolver);
@@ -793,8 +813,7 @@ class Tabletree {
 			if (ch === 10) {
 				lines++;
 				totalLines++;
-			}
-			else if (ch === lt) {
+			} else if (ch === lt) {
 				tagStart = i;
 				closeSpan = false;
 				inTag = true;
@@ -877,13 +896,13 @@ class Tabletree {
 		return { txt, palette, lineCount };
 	}
 
-	async loadTextFile(fullPath, fsEntry) {
+	async loadTextFile(visibleFiles, fullPath, fsEntry) {
 		const text = new THREE.Mesh();
 		text.visible = false;
 		text.fsEntry = fsEntry;
 		fsEntry.contentObject = text;
-		this.visibleFiles.visibleSet[fullPath] = true;
-		this.visibleFiles.add(text);
+		visibleFiles.visibleSet[fullPath] = true;
+		visibleFiles.add(text);
 
 		const responseText = await (await fetch(this.apiPrefix + '/repo/file' + fullPath)).text();
 
@@ -939,15 +958,16 @@ class Tabletree {
 				self.changed = true;
 			};
 
-			var textScale =
-				Math.min(
-					0.5 / (text.geometry.layout.width + 60),
-					1 / ((text.geometry.layout.height + 30) / 0.75)
-				);
+			var textScale = Math.min(
+				0.5 / (text.geometry.layout.width + 60),
+				1 / ((text.geometry.layout.height + 30) / 0.75)
+			);
 			var scale = fsEntry.scale * textScale;
 			var vAspect = Math.min(
 				1,
-				((text.geometry.layout.height + 30) / 0.75) / ((text.geometry.layout.width + 60) / 0.5)
+				(text.geometry.layout.height + 30) /
+					0.75 /
+					((text.geometry.layout.width + 60) / 0.5)
 			);
 			text.material.depthTest = false;
 			text.scale.multiplyScalar(scale);
@@ -1037,8 +1057,38 @@ class Tabletree {
 		return mesh;
 	}
 
+	async addFile(tree) {
+		const model = await this.createFileTreeModel(
+			Object.keys(tree.parent.entries).length,
+			tree.parent
+		);
+		this.model.add(model);
+	}
+
+	updateTree(fileTree) {
+		/*
+			Traverse tree to find subtrees that are not in a model.
+			If the parent model has enough allocation to host a subtree, write the
+			subtree to the model.
+			If there's no space left in the model, create a new model for the subtree.
+		*/
+		utils.traverseFSEntry(
+			fileTree,
+			(tree, path) => {
+				if (tree.index === 0 && path !== '' && !tree.parent.building) {
+					tree.parent.building = true;
+					this.addFile(tree);
+				}
+			},
+			''
+		);
+	}
+
 	async showFileTree(fileTree) {
-		this.changed = true;
+		if (fileTree.tree === this.fileTree) {
+			// this.updateTree(fileTree.tree);
+			// return;
+		}
 		if (this.model) {
 			this.model.parent.remove(this.model);
 			this.model.traverse(function(m) {
@@ -1048,25 +1098,11 @@ class Tabletree {
 			});
 			this.model = null;
 		}
-		if (this.processModel) {
-			this.processModel.parent.remove(this.processModel);
-			this.processModel.traverse(function(m) {
-				if (m.geometry) {
-					m.geometry.dispose();
-				}
-			});
-			this.processModel = null;
-		}
-		if (this.authorModel) {
-			this.authorModel.visible = false;
-			this.authorModel.parent.remove(this.authorModel);
-			this.authorModel = null;
-		}
-		this.FileTree = fileTree.tree;
+		this.fileTree = fileTree.tree;
 		this.model = await this.createFileTreeModel(fileTree.count, fileTree.tree);
 		this.model.position.set(-0.5, -0.5, 0.0);
 		this.modelPivot.add(this.model);
-		// processTick();
+		this.changed = true;
 	}
 
 	makeTextMaterial(palette = null, fontTexture = this.fontTexture) {
@@ -1164,22 +1200,58 @@ class Tabletree {
 		var verts = geo.getAttribute('position').array;
 		var off = index * 3;
 		var v;
-		v = av; verts[off++] = v.x; verts[off++] = v.y; verts[off++] = v.z;
-		v = av; verts[off++] = v.x; verts[off++] = v.y; verts[off++] = v.z;
-		v = av; verts[off++] = v.x; verts[off++] = v.y; verts[off++] = v.z;
-		v = bv; verts[off++] = v.x; verts[off++] = v.y; verts[off++] = v.z;
-		v = bv; verts[off++] = v.x; verts[off++] = v.y; verts[off++] = v.z;
-		v = bv; verts[off++] = v.x; verts[off++] = v.y; verts[off++] = v.z;
+		v = av;
+		verts[off++] = v.x;
+		verts[off++] = v.y;
+		verts[off++] = v.z;
+		v = av;
+		verts[off++] = v.x;
+		verts[off++] = v.y;
+		verts[off++] = v.z;
+		v = av;
+		verts[off++] = v.x;
+		verts[off++] = v.y;
+		verts[off++] = v.z;
+		v = bv;
+		verts[off++] = v.x;
+		verts[off++] = v.y;
+		verts[off++] = v.z;
+		v = bv;
+		verts[off++] = v.x;
+		verts[off++] = v.y;
+		verts[off++] = v.z;
+		v = bv;
+		verts[off++] = v.x;
+		verts[off++] = v.y;
+		verts[off++] = v.z;
 
 		if (color) {
 			verts = geo.getAttribute('color').array;
 			off = index * 3;
-			v = color; verts[off++] = v.r; verts[off++] = v.g; verts[off++] = v.b;
-			v = color; verts[off++] = v.r; verts[off++] = v.g; verts[off++] = v.b;
-			v = color; verts[off++] = v.r; verts[off++] = v.g; verts[off++] = v.b;
-			v = color; verts[off++] = v.r; verts[off++] = v.g; verts[off++] = v.b;
-			v = color; verts[off++] = v.r; verts[off++] = v.g; verts[off++] = v.b;
-			v = color; verts[off++] = v.r; verts[off++] = v.g; verts[off++] = v.b;
+			v = color;
+			verts[off++] = v.r;
+			verts[off++] = v.g;
+			verts[off++] = v.b;
+			v = color;
+			verts[off++] = v.r;
+			verts[off++] = v.g;
+			verts[off++] = v.b;
+			v = color;
+			verts[off++] = v.r;
+			verts[off++] = v.g;
+			verts[off++] = v.b;
+			v = color;
+			verts[off++] = v.r;
+			verts[off++] = v.g;
+			verts[off++] = v.b;
+			v = color;
+			verts[off++] = v.r;
+			verts[off++] = v.g;
+			verts[off++] = v.b;
+			v = color;
+			verts[off++] = v.r;
+			verts[off++] = v.g;
+			verts[off++] = v.b;
 		}
 	}
 
@@ -1230,22 +1302,58 @@ class Tabletree {
 		var verts = geo.getAttribute('position').array;
 		var off = index * 3;
 		var v;
-		v = av; verts[off++] = v.x; verts[off++] = v.y; verts[off++] = v.z;
-		v = aUp; verts[off++] = v.x; verts[off++] = v.y; verts[off++] = v.z;
-		v = aUp; verts[off++] = v.x; verts[off++] = v.y; verts[off++] = v.z;
-		v = bv; verts[off++] = v.x; verts[off++] = v.y; verts[off++] = v.z;
-		v = bv; verts[off++] = v.x; verts[off++] = v.y; verts[off++] = v.z;
-		v = bv; verts[off++] = v.x; verts[off++] = v.y; verts[off++] = v.z;
+		v = av;
+		verts[off++] = v.x;
+		verts[off++] = v.y;
+		verts[off++] = v.z;
+		v = aUp;
+		verts[off++] = v.x;
+		verts[off++] = v.y;
+		verts[off++] = v.z;
+		v = aUp;
+		verts[off++] = v.x;
+		verts[off++] = v.y;
+		verts[off++] = v.z;
+		v = bv;
+		verts[off++] = v.x;
+		verts[off++] = v.y;
+		verts[off++] = v.z;
+		v = bv;
+		verts[off++] = v.x;
+		verts[off++] = v.y;
+		verts[off++] = v.z;
+		v = bv;
+		verts[off++] = v.x;
+		verts[off++] = v.y;
+		verts[off++] = v.z;
 
 		if (color) {
 			verts = geo.getAttribute('color').array;
 			off = index * 3;
-			v = color; verts[off++] = v.r; verts[off++] = v.g; verts[off++] = v.b;
-			v = color; verts[off++] = v.r; verts[off++] = v.g; verts[off++] = v.b;
-			v = color; verts[off++] = v.r; verts[off++] = v.g; verts[off++] = v.b;
-			v = color; verts[off++] = v.r; verts[off++] = v.g; verts[off++] = v.b;
-			v = color; verts[off++] = v.r; verts[off++] = v.g; verts[off++] = v.b;
-			v = color; verts[off++] = v.r; verts[off++] = v.g; verts[off++] = v.b;
+			v = color;
+			verts[off++] = v.r;
+			verts[off++] = v.g;
+			verts[off++] = v.b;
+			v = color;
+			verts[off++] = v.r;
+			verts[off++] = v.g;
+			verts[off++] = v.b;
+			v = color;
+			verts[off++] = v.r;
+			verts[off++] = v.g;
+			verts[off++] = v.b;
+			v = color;
+			verts[off++] = v.r;
+			verts[off++] = v.g;
+			verts[off++] = v.b;
+			v = color;
+			verts[off++] = v.r;
+			verts[off++] = v.g;
+			verts[off++] = v.b;
+			v = color;
+			verts[off++] = v.r;
+			verts[off++] = v.g;
+			verts[off++] = v.b;
 		}
 	}
 
@@ -1311,22 +1419,58 @@ class Tabletree {
 		var verts = geo.getAttribute('position').array;
 		var off = index * 3;
 		var v;
-		v = av; verts[off++] = v.x; verts[off++] = v.y; verts[off++] = v.z;
-		v = aUp; verts[off++] = v.x; verts[off++] = v.y; verts[off++] = v.z;
-		v = aUp; verts[off++] = v.x; verts[off++] = v.y; verts[off++] = v.z;
-		v = bUp; verts[off++] = v.x; verts[off++] = v.y; verts[off++] = v.z;
-		v = bUp; verts[off++] = v.x; verts[off++] = v.y; verts[off++] = v.z;
-		v = bv; verts[off++] = v.x; verts[off++] = v.y; verts[off++] = v.z;
+		v = av;
+		verts[off++] = v.x;
+		verts[off++] = v.y;
+		verts[off++] = v.z;
+		v = aUp;
+		verts[off++] = v.x;
+		verts[off++] = v.y;
+		verts[off++] = v.z;
+		v = aUp;
+		verts[off++] = v.x;
+		verts[off++] = v.y;
+		verts[off++] = v.z;
+		v = bUp;
+		verts[off++] = v.x;
+		verts[off++] = v.y;
+		verts[off++] = v.z;
+		v = bUp;
+		verts[off++] = v.x;
+		verts[off++] = v.y;
+		verts[off++] = v.z;
+		v = bv;
+		verts[off++] = v.x;
+		verts[off++] = v.y;
+		verts[off++] = v.z;
 
 		if (color) {
 			verts = geo.getAttribute('color').array;
 			off = index * 3;
-			v = color; verts[off++] = v.r; verts[off++] = v.g; verts[off++] = v.b;
-			v = color; verts[off++] = v.r; verts[off++] = v.g; verts[off++] = v.b;
-			v = color; verts[off++] = v.r; verts[off++] = v.g; verts[off++] = v.b;
-			v = color; verts[off++] = v.r; verts[off++] = v.g; verts[off++] = v.b;
-			v = color; verts[off++] = v.r; verts[off++] = v.g; verts[off++] = v.b;
-			v = color; verts[off++] = v.r; verts[off++] = v.g; verts[off++] = v.b;
+			v = color;
+			verts[off++] = v.r;
+			verts[off++] = v.g;
+			verts[off++] = v.b;
+			v = color;
+			verts[off++] = v.r;
+			verts[off++] = v.g;
+			verts[off++] = v.b;
+			v = color;
+			verts[off++] = v.r;
+			verts[off++] = v.g;
+			verts[off++] = v.b;
+			v = color;
+			verts[off++] = v.r;
+			verts[off++] = v.g;
+			verts[off++] = v.b;
+			v = color;
+			verts[off++] = v.r;
+			verts[off++] = v.g;
+			verts[off++] = v.b;
+			v = color;
+			verts[off++] = v.r;
+			verts[off++] = v.g;
+			verts[off++] = v.b;
 		}
 	}
 
@@ -1346,14 +1490,14 @@ class Tabletree {
 		}
 	}
 
-	setLinks(links, updateOnlyElements=false) {
+	setLinks(links, updateOnlyElements = false) {
 		if (this.lineGeo) {
 			const geo = this.lineGeo;
 			const verts = geo.getAttribute('position').array;
-	
+
 			for (let i = links.length; i < this.links.length; i++) {
 				let j = i * 6 * 3;
-				for (let k = 0; k < 18; k++) verts[j+k] = -100;
+				for (let k = 0; k < 18; k++) verts[j + k] = -100;
 			}
 			this.links = links;
 			for (let i = 0; i < links.length; i++) {
@@ -1406,7 +1550,7 @@ class Tabletree {
 						model,
 						dst.fsEntry,
 						dst.point,
-						dst.fsEntry.lineCount,
+						dst.fsEntry.lineCount
 					);
 				}
 			}
@@ -1600,7 +1744,7 @@ class Tabletree {
 	}
 
 	getTree(path) {
-		return { tree: this.FileTree, path: path };
+		return { tree: this.fileTree, path: path };
 	}
 
 	getFSEntryForURL(url) {
@@ -1612,8 +1756,8 @@ class Tabletree {
 	}
 
 	goToURL(url) {
-		if (!this.FileTree) return;
-		const {fsEntry, point} = this.getFSEntryForURL(url);
+		if (!this.fileTree) return;
+		const { fsEntry, point } = this.getFSEntryForURL(url);
 		if (point && !isNaN(point[0])) {
 			this.setGoToHighlight(fsEntry, point[0]);
 			this.goToFSEntryTextAtLine(fsEntry, point[0]);
@@ -1785,7 +1929,7 @@ class Tabletree {
 				switch (ev.key) {
 					case 'w': // scroll up
 						{
-							const fsEntry = getPathEntry(self.FileTree, self.breadcrumbPath);
+							const fsEntry = getPathEntry(self.fileTree, self.breadcrumbPath);
 							if (fsEntry) {
 								const files = Object.values(fsEntry.parent.entries).sort(
 									self.fsEntryCmp
@@ -1797,7 +1941,7 @@ class Tabletree {
 						break;
 					case 's': // scroll down
 						{
-							const fsEntry = getPathEntry(self.FileTree, self.breadcrumbPath);
+							const fsEntry = getPathEntry(self.fileTree, self.breadcrumbPath);
 							if (fsEntry) {
 								const files = Object.values(fsEntry.parent.entries).sort(
 									self.fsEntryCmp
@@ -1842,7 +1986,7 @@ class Tabletree {
 						break;
 					case 'x': // zoom out of object
 						var fsEntry = getPathEntry(
-							self.FileTree,
+							self.fileTree,
 							self.breadcrumbPath.replace(/\/[^/]+$/, '')
 						);
 						if (fsEntry && fsEntry.title) self.goToFSEntry(fsEntry, self.model);

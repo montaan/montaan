@@ -1,132 +1,6 @@
 import * as THREE from 'three';
 var slash = '/'.charCodeAt(0);
 
-// // Your Client ID can be retrieved from your project in the Google
-// // Developer Console, https://console.developers.google.com
-// var CLIENT_ID = '671524571878.apps.googleusercontent.com';
-// var SCOPES = ['https://www.googleapis.com/auth/drive.readonly'];
-
-// /**
-// * Check if current user has authorized this application.
-// */
-// function checkAuth() {
-// 	console.log('checkAuth');
-// 	gapi.auth.authorize({
-// 		'client_id': CLIENT_ID,
-// 		'scope': SCOPES.join(' '),
-// 		'immediate': true
-// 	}, handleAuthResult);
-// }
-
-// window.checkAuth = checkAuth;
-
-// /**
-// * Handle response from authorization server.
-// *
-// * @param {Object} authResult Authorization result.
-// */
-// function handleAuthResult(authResult) {
-// 	// console.log(handleAuthResult, authResult);
-// 	var authorizeDiv = document.getElementById('authorize-div');
-// 	if (authResult && !authResult.error) {
-// 		// Hide auth UI, then load client library.
-// 		authorizeDiv.style.display = 'none';
-// 		loadDriveApi();
-// 	} else {
-// 		// Show auth UI, allowing the user to initiate authorization by
-// 		// clicking authorize button.
-// 		authorizeDiv.style.display = 'inline';
-// 	}
-// }
-
-// /**
-// * Initiate auth flow in response to user clicking authorize button.
-// *
-// * @param {Event} event Button click event.
-// */
-// function handleAuthClick(event) {
-// 	gapi.auth.authorize({client_id: CLIENT_ID, scope: SCOPES, immediate: false}, handleAuthResult);
-// 	return false;
-// }
-
-// window.handleAuthClick = handleAuthClick;
-
-// /**
-// * Load Drive API client library.
-// */
-// function loadDriveApi() {
-// 	window.GDriveCallback = window.GDriveCallback || function(files){
-// 		console.log(files);
-// 	};
-// 	var listFiles = function() {
-// 		var request = gapi.client.drive.files.list({
-// 			'pageSize': 1000,
-// 			'trashed': false,
-// 			'spaces': 'drive',
-// 			'orderBy': 'name',
-// 			'fields': "nextPageToken, files(id, name, parents, mimeType, thumbnailLink, iconLink)"
-// 		});
-
-// 		var files = [];
-// 		var filesLoaded = function(files) {
-// 			if (files && files.length > 0) {
-// 				var fileIndex = {};
-// 				var fileTree = {name: "/", title: "Drive", entries: {}, index: 0};
-// 				var top = {name: "Drive", title: "Drive", entries: {}, index: 0};
-// 				fileTree.entries["Drive"] = top;
-
-// 				for (var i = 0; i < files.length; i++) {
-// 					var f = files[i];
-// 					f.entries = null;
-// 					f.title = f.name;
-// 					f.name = f.id;
-// 					fileIndex[f.id] = f;
-// 				}
-
-// 				for (var i = 0; i < files.length; i++) {
-// 					var f = files[i];
-// 					if (f.parents) {
-// 						for (var j=0; j<f.parents.length; j++) {
-// 							var p = fileIndex[f.parents[j]];
-// 							if (!p) {
-// 								p = top;
-// 							}
-// 							if (!p.entries) {
-// 								p.entries = {};
-// 							}
-// 							p.entries[f.name] = f;
-// 						}
-// 					} else {
-// 						top.entries[f.name] = f;
-// 					}
-// 				}
-// 			}
-// 			window.GDriveCallback({tree: fileTree, count: files.length});
-// 		};
-// 		var tick = function(resp) {
-// 			files = files.concat(resp.files || []);
-// 			var nextPageToken = resp.nextPageToken;
-// 			if (nextPageToken && files.length < 10000) {
-// 				var request = gapi.client.drive.files.list({
-// 					'pageSize': 1000,
-// 					'trashed': false,
-// 					'pageToken': nextPageToken,
-// 					'orderBy': 'name',
-// 					'fields': "nextPageToken, files(id, name, parents, mimeType, thumbnailLink, iconLink)"
-// 				});
-// 				request.execute(tick);
-// 				console.log(files.length);
-// 			} else {
-// 				filesLoaded(files);
-// 			}
-// 		}
-// 		request.execute(tick);
-// 	}
-
-// 	gapi.client.load('drive', 'v3', listFiles);
-
-// }
-
 var utils = {
 	uniq: function(array, cmp) {
 		return array.sort(cmp).reduce(function(s, a) {
@@ -223,6 +97,7 @@ var utils = {
 				title: segments[i],
 				entries: dir ? {} : null,
 				index: 0,
+				parent: branch,
 			};
 			addCount++;
 		}
@@ -391,15 +266,21 @@ var utils = {
 		return this.parseFileList_(fileString, includePrefix, prefix);
 	},
 
-	parseFileList_: function(fileString, includePrefix, prefix = '') {
+	parseFileList_: function(fileString, includePrefix, prefix = '', targetTree = null) {
 		// console.log("Parsing file string", fileString.length);
 		var sep = fileString.substring(0, 4096).includes('\0') ? 0 : 10;
 		// eslint-disable-next-line
 		var gitStyle = /^\d{6} (blob|tree) [a-f0-9]{40}\t[^\u0000]+\u0000/.test(fileString);
-		var fileTree = { name: '', title: '', entries: {}, index: 0 };
+		var fileTree, fileCount;
+		if (targetTree === null) {
+			fileTree = { name: '', title: '', entries: {}, index: 0 };
+			fileCount = 0;
+		} else {
+			fileTree = targetTree.tree;
+			fileCount = targetTree.count;
+		}
 		var name = '';
 		var startIndex = 0;
-		var fileCount = 0;
 		var first = includePrefix ? false : true;
 		var skip = gitStyle ? 53 : 0;
 		// console.log('prefix:', prefix);

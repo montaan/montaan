@@ -4,6 +4,8 @@ import tabletree from '../../main.js';
 
 export default class MainView extends React.Component {
 	constructor(props) {
+		tabletree.requestDirs = props.requestDirs;
+		tabletree.requestDitchDirs = props.requestDitchDirs;
 		tabletree.init(props.apiPrefix, props.repoPrefix);
 		super(props);
 	}

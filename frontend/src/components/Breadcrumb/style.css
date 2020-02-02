@@ -32,6 +32,7 @@
 	margin-top: 8px;
     max-height: 400px;
     overflow: auto;
+	background: rgba(255,255,255,0.9);
 }
 #breadcrumb ul:empty {
 	display: none;

@@ -28,9 +28,10 @@
         "react-redux": "^7.1.0",
         "react-router-dom": "^5.0.1",
         "react-scripts": "3.0.1",
+        "react-three-fiber": "^4.0.12",
         "reactour": "^1.15.0",
         "styled-components": "^4.0.0",
-        "three": "^0.111.0",
+        "three": "0.113.0",
         "uncontrollable": "^7.0.0",
         "yup": "^0.27.0"
     },

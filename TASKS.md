@@ -36,9 +36,18 @@
 
 # KEY FEATURES
     [] Dynamic tree loading
-        [1] One directory at a time
-        [] Lots of directories at a time
+        [x] One directory at a time
+            [x] API to load single dirs
+            [x] If directory is larger than X, fetch its contents and graft onto filetree
+            [x] If directory is smaller than X, remove it from the filetree
+        [] Cheap tree updates
+            [] Edit tree geometry instead of regenerating the whole thing 
+            [] Individual models per dir / subtree
         [] Hide and show tree parts
+            [x] Based on size
+            [] Based on frustum
+        [x] Lots of directories at a time
+            [x] Batch fetch directories smaller than X 
     [] View reparenting
         [] Move camera instead of changing FOV
         [] Change transformation matrices when containing object changes
@@ -56,8 +65,9 @@
         [] Load demo models from GLB
         [] Add instancing & model loading to main app
         [] Load models based on directory scene file (e.g. add trees and other props)
+        [] Palette editor for live editing of file type looks
 
-
+/
 # Plugins
     [] Some sort of plugin system to enable parallel development
     [] TreeProvider
@@ -163,6 +173,9 @@
         [] Limit to ~10k lines in view
         [] Stratified random sampling
         [] Update visible lines when navigating
+    [] Fetch configurable level deep
+    [] Server approximates what's visible and sends that in one go
+    [] Instanced rendering of all models
 
 # Website engine
     [] Turn README.md into HTML and display it on top of directory
