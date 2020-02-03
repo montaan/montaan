@@ -43,7 +43,6 @@ function exportGLTF(input) {
 				saveArrayBuffer(result, 'scene.glb');
 			} else {
 				var output = JSON.stringify(result, null, 2);
-				console.log(output);
 				saveString(output, 'scene.gltf');
 			}
 		},
@@ -65,6 +64,7 @@ class Tabletree {
 	constructor() {
 		this.animating = false;
 		this.currentFrame = 0;
+		this.pageZoom = 1;
 
 		this.textMinScale = 1000;
 		this.textMaxScale = 0;
@@ -125,7 +125,13 @@ class Tabletree {
 	onResize() {
 		this.camera.aspect = window.innerWidth / window.innerHeight;
 		this.camera.updateProjectionMatrix();
-		this.renderer.setSize(window.innerWidth, window.innerHeight);
+		if (/Safari/.test(navigator.userAgent)) {
+			this.renderer.setSize(window.innerWidth * this.pageZoom, window.innerHeight * this.pageZoom);
+		} else {
+			this.renderer.setSize(window.innerWidth, window.innerHeight);
+		}
+		this.renderer.domElement.style.width = window.innerWidth + 'px';
+		this.renderer.domElement.style.height = window.innerHeight + 'px';
 		this.changed = true;
 	}
 
@@ -479,11 +485,11 @@ class Tabletree {
 		const { scene, camera } = this;
 		scene.updateMatrixWorld();
 		var textX = fsEntry.textX;
-		textX += (fsEntry.scale * fsEntry.textScale * window.innerWidth) / 2;
-		var fsPoint = new THREE.Vector3(textX, fsEntry.textY, fsEntry.z);
+		textX += (fsEntry.scale * fsEntry.textScale * window.innerWidth) / 1.5;
+		var fsPoint = new THREE.Vector3(textX, fsEntry.textYZero - (fsEntry.scale * fsEntry.textScale * window.innerHeight/this.pageZoom), fsEntry.z);
 		fsPoint.applyMatrix4(model.matrixWorld);
 		camera.targetPosition.copy(fsPoint);
-		camera.targetFOV = fsEntry.scale * fsEntry.textScale * 2000 * 50 / (window.pageZoom / 100);
+		camera.targetFOV = fsEntry.scale * fsEntry.textScale * 2000 * 50 / this.pageZoom;
 		fsEntry.textFOV = camera.targetFOV;
 		this.changed = true;
 	}
@@ -501,7 +507,7 @@ class Tabletree {
 		var fsPoint = new THREE.Vector3(textX, fsEntry.textYZero - textYOff, fsEntry.z);
 		fsPoint.applyMatrix4(model.matrixWorld);
 		camera.targetPosition.copy(fsPoint);
-		camera.targetFOV = fsEntry.scale * fsEntry.textScale * 2000 * 50 / (window.pageZoom / 100);
+		camera.targetFOV = fsEntry.scale * fsEntry.textScale * 2000 * 50 / this.pageZoom;
 		fsEntry.textFOV = camera.targetFOV;
 		this.changed = true;
 	}
@@ -589,6 +595,13 @@ class Tabletree {
 
 		fileTree.fsIndex = [fileTree];
 
+		if (fileTree.scale === undefined) {
+			fileTree.x = 0;
+			fileTree.y = 0;
+			fileTree.z = 0;
+			fileTree.scale = 1;
+		}
+
 		var labels = new THREE.Object3D();
 		var thumbnails = new THREE.Object3D();
 		await Layout.createFileTreeQuads(
@@ -597,11 +610,6 @@ class Tabletree {
 			fileIndex,
 			geo.attributes.position.array,
 			geo.attributes.color.array,
-			fileTree.x || 0,
-			fileTree.y || 0,
-			fileTree.z || 0,
-			fileTree.scale || 1,
-			0,
 			labels,
 			thumbnails,
 			fileTree.fsIndex
@@ -639,6 +647,7 @@ class Tabletree {
 		visibleFiles.visibleSet = {};
 
 		mesh.ontick = function(t, dt) {
+			// Dispose loaded files that are outside the current view
 			for (var i = 0; i < visibleFiles.children.length; i++) {
 				var c = visibleFiles.children[i];
 				var fsEntry = c.fsEntry;
@@ -659,12 +668,15 @@ class Tabletree {
 					i--;
 				}
 			}
-			var stack = [this.fileTree];
 			var zoomedInPath = '';
 			var navigationTarget = '';
 			var smallestCovering = this.fileTree;
-			const fetchDirs = [];
-			const ditchDirs = [];
+
+			// Breadth-first traversal of this.fileTree
+			// - determines fsEntry visibility
+			// - finds the covering fsEntry
+			// - finds the currently zoomed-in path and breadcrumb path
+			var stack = [this.fileTree];
 			while (stack.length > 0) {
 				var obj = stack.pop();
 				for (var name in obj.entries) {
@@ -672,24 +684,6 @@ class Tabletree {
 					var idx = o.index;
 					if (!Geometry.quadInsideFrustum(idx, this, camera)) {
 						continue;
-					}
-					if (
-						!o.fetched &&
-						o.entries &&
-						(o.scale * 50) / Math.max(camera.fov, camera.targetFOV) > 0.05
-					) {
-						// eslint-disable-next-line no-unused-vars
-						for (let _ in o.entries) {
-							o.fetched = true;
-							break;
-						}
-						if (!o.fetched) fetchDirs.push(o);
-					} else if (
-						o.fetched &&
-						(o.scale * 50) / Math.max(camera.fov, camera.targetFOV) < 0.01
-					) {
-						ditchDirs.push(o);
-						o.fetched = false;
 					}
 					if ((o.scale * 50) / Math.max(camera.fov, camera.targetFOV) > 0.2) {
 						if (Geometry.quadCoversFrustum(idx, this, camera)) {
@@ -707,7 +701,7 @@ class Tabletree {
 						} else {
 							let fullPath = getFullPath(o);
 							if (
-								visibleFiles.children.length < 20 &&
+								visibleFiles.children.length < 30 &&
 								!visibleFiles.visibleSet[fullPath]
 							) {
 								if (Colors.imageRE.test(fullPath))
@@ -718,16 +712,6 @@ class Tabletree {
 					}
 				}
 			}
-			// if (!self.animating) {
-			// 	if (ditchDirs.length > 0) self.requestDitchDirs(ditchDirs);
-			// 	if (fetchDirs.length > 0) {
-			// 		const dirs = fetchDirs.slice(0, 10).map((d) => {
-			// 			d.fetched = true;
-			// 			return getFullPath(d);
-			// 		});
-			// 		self.requestDirs(dirs);
-			// 	}
-			// }
 			self.updateBreadCrumb(navigationTarget);
 			self.zoomedInPath = zoomedInPath;
 			window.setNavigationTarget(navigationTarget);
@@ -1058,37 +1042,44 @@ class Tabletree {
 	}
 
 	async addFile(tree) {
+		await this.yield();
 		const model = await this.createFileTreeModel(
 			Object.keys(tree.parent.entries).length,
-			tree.parent
+			{...tree.parent, noGeo: true}
 		);
-		this.model.add(model);
+		tree.model = model;
+		(tree.parent.model || this.model).add(model);
 	}
 
-	updateTree(fileTree) {
+	async updateTree(fileTree) {
 		/*
 			Traverse tree to find subtrees that are not in a model.
 			If the parent model has enough allocation to host a subtree, write the
 			subtree to the model.
 			If there's no space left in the model, create a new model for the subtree.
 		*/
+		const promises = [];
 		utils.traverseFSEntry(
 			fileTree,
 			(tree, path) => {
-				if (tree.index === 0 && path !== '' && !tree.parent.building) {
+				if (tree.index === 0 && tree.parent && !tree.parent.building) {
 					tree.parent.building = true;
-					this.addFile(tree);
+					promises.push(tree);
 				}
 			},
 			''
 		);
+		for (let i = 0; i < promises.length; i++) {
+			await this.addFile(promises[i]);
+		}
+		this.changed = true;
 	}
 
 	async showFileTree(fileTree) {
-		if (fileTree.tree === this.fileTree) {
-			// this.updateTree(fileTree.tree);
-			// return;
-		}
+		// if (fileTree.tree === this.fileTree) {
+		// 	await this.updateTree(fileTree.tree);
+		// 	return;
+		// }
 		if (this.model) {
 			this.model.parent.remove(this.model);
 			this.model.traverse(function(m) {
@@ -1681,7 +1672,7 @@ class Tabletree {
 		uv.y /= 38;
 		uv.x /= 19;
 
-		const line = Math.floor(-uv.y + 0.5);
+		const line = Math.floor(-uv.y);
 		const col = Math.floor(uv.x + 1);
 		return { line, col };
 	}
@@ -1690,7 +1681,7 @@ class Tabletree {
 		const { line, col } = this.getTextPosition(fsEntry, intersection);
 		const text = fsEntry.contentObject.geometry.layout._opt.text;
 		const lineStr = text.split('\n')[line - 1];
-		const urlRE = /https?:\/\/[a-z0-9.%$#@&?/]+/gi;
+		const urlRE = /https?:\/\/[a-z0-9.%$#@&?/_-]+/gi;
 		var hit = null;
 		while ((hit = urlRE.exec(lineStr))) {
 			const startIndex = hit.index;
@@ -1712,12 +1703,15 @@ class Tabletree {
 					iframe.style.width = '600px';
 					iframe.style.height = 'calc(100vh - 106px)';
 					this.renderer.domElement.parentNode.appendChild(iframe);
+					return true;
 				} else {
 					// Open link in a new window.
 					window.open(hit[0]);
+					return true;
 				}
 			}
 		}
+		return false;
 	}
 
 	registerElementForURL(el, url) {
@@ -2159,6 +2153,10 @@ class Tabletree {
 	}
 
 	tick = () => {
+		if (((window.pageZoom||100)/100) !== this.pageZoom) {
+			this.pageZoom = (window.pageZoom || 100) / 100;
+			this.onResize();
+		}
 		this.frameStart = performance.now();
 		this.frameFibers.splice(0).map((f) => f());
 		const camera = this.camera;
@@ -2196,11 +2194,11 @@ class Tabletree {
 		} else {
 			this.animating = false;
 		}
-		var wasChanged = this.changed;
+		var wasChanged = this.changed || this.frameFibers.length > 0;
 		this.changed = false;
 		if (wasChanged || this.animating) this.render();
 		this.frameRequested = false;
-		if (this.changed || this.animating) this.requestFrame();
+		if (this.frameFibers.length > 0 || this.changed || this.animating) this.requestFrame();
 		this.frameLoopPaused = !this.frameRequested;
 	};
 
