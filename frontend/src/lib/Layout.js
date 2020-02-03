@@ -8,64 +8,6 @@ export default {
 	thumbnailGeo: new THREE.PlaneBufferGeometry(1, 1, 1, 1),
 	font: null,
 
-	layoutObjectsInRectangle: function(
-		aspect,
-		objects,
-		fileTree,
-		fileIndex,
-		verts,
-		colorVerts,
-		parentX,
-		parentY,
-		parentZ,
-		parentScale,
-		depth,
-		parentText,
-		thumbnails,
-		index
-	) {
-		var count = objects.length;
-		var xCount = Math.ceil(count / aspect);
-		var yCount = Math.ceil(count / xCount);
-
-		var minCount = Math.min(xCount, yCount);
-
-		for (var y = 0; y < yCount; y++) {
-			for (var x = 0; x < xCount; x++) {
-				var off = y * xCount + x;
-				if (off >= count) {
-					break;
-				}
-				var yOff = 1 - (y + 1) * (1 / yCount);
-				var xOff = x * (1 / xCount);
-
-				var dir = objects[off];
-				var subX = aspect * xOff;
-				var subY = yOff;
-				dir.x = parentX + parentScale * subX;
-				dir.y = parentY + parentScale * subY;
-				dir.scale = parentScale * (0.8 / minCount);
-				dir.z = parentZ + dir.scale * 0.2;
-				dir.index = fileIndex;
-				dir.parent = fileTree;
-				index[fileIndex] = dir;
-				var dirColor = Colors.getDirectoryColor(dir);
-				Geometry.setColor(colorVerts, dir.index, dirColor, depth);
-				Geometry.makeQuad(
-					verts,
-					dir.index,
-					dir.x,
-					dir.y,
-					dir.scale * aspect,
-					dir.scale,
-					dir.z
-				);
-				fileIndex++;
-			}
-		}
-		return fileIndex;
-	},
-
 	createFileListQuads: async function(
 		yieldFn,
 		fileTree,
@@ -95,7 +37,6 @@ export default {
 				dirs.push(obj);
 			}
 		}
-		// fileIndex = this.layoutObjectsInRectangle(1.5, dirs, fileTree, fileIndex, verts, colorVerts, parentX, parentY, parentZ, parentScale, depth, parentText, thumbnails, index);
 
 		var dirCount = dirs.length + (files.length > 0 ? 1 : 0);
 		var squareSide = Math.ceil(dirCount);
@@ -297,11 +238,6 @@ export default {
 		fileIndex,
 		verts,
 		colorVerts,
-		parentX,
-		parentY,
-		parentZ,
-		parentScale,
-		depth,
 		parentText,
 		thumbnails,
 		index,
@@ -315,13 +251,13 @@ export default {
 			obj.y = 0;
 			obj.z = 0;
 			obj.scale = 0;
+			if (obj.title[0] === '.') continue;
 			if (obj.entries === null) {
 				files.push(obj);
 			} else {
 				dirs.push(obj);
 			}
 		}
-		// fileIndex = this.layoutObjectsInRectangle(1.5, dirs, fileTree, fileIndex, verts, colorVerts, parentX, parentY, parentZ, parentScale, depth, parentText, thumbnails, index);
 
 		fileTree.index = fileIndex;
 		fileIndex++;
@@ -333,7 +269,7 @@ export default {
 
 		const dirScale = files.length === 0 ? 1 : 0.5;
 		const filesScale = dirs.length === 0 ? 0.5 : 0.5;
-		const fileXOff = dirs.length === 0 ? 0 : 0.95;
+		const fileXOff = dirs.length === 0 ? 0 : 1;
 		const filesPerRow = dirs.length === 0 ? 4 : 2;
 
 		const dirSquareSide = Math.ceil(Math.sqrt(Math.ceil(dirScale*dirs.length)));
@@ -341,11 +277,12 @@ export default {
 
 		var maxX = 0,
 			maxY = 0;
+		outer:
 		for (let x = 0; x < dirSquareSide; x++) {
 			for (let y = 0; y < dirSquareSide/dirScale; y++) {
-				const off = x * dirSquareSide/dirScale + y;
+				const off = x * Math.ceil(dirSquareSide/dirScale) + y;
 				if (off >= dirs.length) {
-					break;
+					break outer;
 				}
 				maxX = Math.max(x, maxX);
 				maxY = Math.max(y, maxY);
@@ -354,17 +291,17 @@ export default {
 				const dir = dirs[off];
 				const subX = xOff + 0.1 / dirSquareSide;
 				const subY = yOff + 0.125 / dirSquareSide;
-				dir.x = parentX + parentScale * subX * dirScale;
-				dir.y = parentY + parentScale * subY * dirScale + (1-dirScale) * parentScale;
-				dir.scale = parentScale * (0.8 / dirSquareSide) * dirScale;
-				dir.z = parentZ + dir.scale * 0.2;
+				dir.x = fileTree.x + fileTree.scale * subX * dirScale;
+				dir.y = fileTree.y + fileTree.scale * subY * dirScale + (1-dirScale) * fileTree.scale;
+				dir.scale = fileTree.scale * (0.8 / dirSquareSide) * dirScale;
+				dir.z = fileTree.z + dir.scale * 0.2;
 				dir.index = fileIndex;
 				dir.vertexIndex = accum.vertexIndex;
 				dir.textVertexIndex = accum.textVertexIndex;
 				dir.parent = fileTree;
 				index[fileIndex] = dir;
 				var dirColor = dir.color || Colors.getDirectoryColor(dir);
-				Geometry.setColor(colorVerts, dir.index, dirColor, depth);
+				Geometry.setColor(colorVerts, dir.index, dirColor);
 				accum.vertexIndex = Geometry.makeQuad(
 					verts,
 					dir.index,
@@ -379,7 +316,7 @@ export default {
 					parentText,
 					accum.textVertexIndex,
 					yieldFn,
-					0.4
+					1
 				);
 				fileIndex = await this.createFileTreeQuads(
 					yieldFn,
@@ -387,11 +324,6 @@ export default {
 					fileIndex,
 					verts,
 					colorVerts,
-					dir.x,
-					dir.y,
-					dir.z,
-					dir.scale,
-					depth + 1,
 					dir.text,
 					thumbnails,
 					index,
@@ -402,11 +334,12 @@ export default {
 
 		maxX = 0;
 		maxY = 0;
+		outer:
 		for (let x = 0; x < fileSquareSide*filesPerRow; x++) {
 			for (let y = 0; y < fileSquareSide; y++) {
 				const off = x * fileSquareSide + y;
 				if (off >= files.length) {
-					break;
+					break outer;
 				}
 				maxX = Math.max(x, maxX);
 				maxY = Math.max(y, maxY);
@@ -417,16 +350,16 @@ export default {
 
 				const file = files[off];
 				const fileColor = file.color || Colors.getFileColor(file);
-				file.x = parentX + parentScale * subX * filesScale;
-				file.y = parentY + parentScale * subY * filesScale + parentScale * (1-filesScale);
-				file.scale = parentScale * (0.9 / fileSquareSide) * filesScale;
-				file.z = parentZ + file.scale * 0.2;
+				file.x = fileTree.x + fileTree.scale * subX * filesScale;
+				file.y = fileTree.y + fileTree.scale * subY * filesScale + fileTree.scale * (1-filesScale);
+				file.scale = fileTree.scale * (0.9 / fileSquareSide) * filesScale;
+				file.z = fileTree.z + file.scale * 0.2;
 				file.index = fileIndex;
 				file.vertexIndex = accum.vertexIndex;
 				file.lastIndex = fileIndex;
 				file.parent = fileTree;
 				index[fileIndex] = file;
-				Geometry.setColor(colorVerts, file.index, fileColor, depth);
+				Geometry.setColor(colorVerts, file.index, fileColor);
 				accum.vertexIndex = Geometry.makeQuad(
 					verts,
 					file.index,

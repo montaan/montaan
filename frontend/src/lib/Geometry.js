@@ -185,7 +185,7 @@ export default {
 		return geo;
 	},
 
-	setColor: function(verts, index, color, depth) {
+	setColor: function(verts, index, color) {
 		var i = index * 18 * this.quadCount; //(index * 2 + 1) * 18;
 		var dx = color[0],
 			dy = color[1],
