@@ -267,6 +267,9 @@ var utils = {
 	},
 
 	parseFileList_: function(fileString, includePrefix, prefix = '', targetTree = null) {
+		if (fileString instanceof ArrayBuffer) {
+			return this.parseFileListAB_(fileString, includePrefix, prefix, targetTree);
+		}
 		// console.log("Parsing file string", fileString.length);
 		var sep = fileString.substring(0, 4096).includes('\0') ? 0 : 10;
 		// eslint-disable-next-line
@@ -296,6 +299,48 @@ var utils = {
 					name = prefix + fileString.substring(startIndex + skip, i);
 					if (gitStyle && fileString.charCodeAt(startIndex+7) === 116 /* t */) name += '/';
 					// console.log(name);
+				}
+				startIndex = i + 1;
+				fileCount += utils.addFileTreeEntry(name, fileTree);
+			}
+		}
+		// console.log("Parsed files", fileCount);
+		return { tree: fileTree, count: fileCount };
+	},
+
+	parseFileListAB_: function(buffer, includePrefix, prefix = '', targetTree = null) {
+		const sep = 0;
+		// eslint-disable-next-line
+		var fileTree, fileCount;
+		if (targetTree === null) {
+			fileTree = { name: '', title: '', entries: {}, index: 0 };
+			fileCount = 0;
+		} else {
+			fileTree = targetTree.tree;
+			fileCount = targetTree.count;
+		}
+		var name = '';
+		var startIndex = 0;
+		var skip = 0;
+		var first = includePrefix ? false : true;
+		const u8 = new Uint8Array(buffer);
+		// console.log('prefix:', prefix);
+		const td = new TextDecoder();
+		for (let i = 0; i < u8.length; i++) {
+			if (u8[i] === sep) {
+				if (first) {
+					const tabIndex = u8.indexOf(9, startIndex+48);
+					const segs = td.decode(u8.slice(tabIndex + 1, i)).split('/');
+					name = segs[segs.length - 2] + '/';
+					skip = i - name.length + 1;
+					name = prefix;
+					first = false;
+				} else {
+					const tabIndex = u8.indexOf(9, startIndex+48);
+					// console.log(td.decode(u8.slice(startIndex, i)));
+					const fn = td.decode(u8.slice(tabIndex + 1 + skip, i));
+					name = prefix + fn;
+					if (u8[startIndex+7] === 116 /* t */ || u8[startIndex+7] === 99 /* c */) name += '/';
 				}
 				startIndex = i + 1;
 				fileCount += utils.addFileTreeEntry(name, fileTree);
