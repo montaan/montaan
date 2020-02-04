@@ -520,8 +520,16 @@ class Tabletree {
 		this.changed = true;
 	}
 
-	async setPlaylist(path) {
-		console.log(path);
+	async setPlaylist(fsEntry) {
+		var path = null;
+		while (fsEntry.parent) {
+			if (fsEntry.entries && fsEntry.entries['.playlist']) {
+				path = getFullPath(fsEntry.entries['.playlist']);
+				break;
+			}
+			fsEntry = fsEntry.parent;
+		}
+		if (path === null) return;
 		var src = this.apiPrefix + '/repo/file' + path;
 		var playlistURL = await (await fetch(src)).text();
 		window.open(playlistURL, 'montaan-music');
@@ -535,14 +543,6 @@ class Tabletree {
 		if (!el) return;
 		while (el.firstChild) el.removeChild(el.firstChild);
 		var segs = path.split('/');
-		var fsEntry = getPathEntry(path);
-		while (fsEntry.parent) {
-			if (fsEntry.entries && fsEntry.entries['.playlist']) {
-				this.setPlaylist(getFullPath(fsEntry.entries['.playlist']));
-				break;
-			}
-			fsEntry = fsEntry.parent;
-		}
 		el.onmouseout = function(ev) {
 			if (ev.target === this && !this.contains(ev.relatedTarget)) {
 				[].slice
@@ -761,8 +761,8 @@ class Tabletree {
 		visibleFiles.visibleSet[fullPath] = true;
 		visibleFiles.add(obj3);
 		obj3.geometry = new THREE.PlaneBufferGeometry(1, 1);
-		obj3.scale.multiplyScalar(o.scale);
-		obj3.position.set(o.x + o.scale * 0.5, o.y + o.scale * 0.5, o.z);
+		obj3.scale.multiplyScalar(o.scale * 0.5);
+		obj3.position.set(o.x + o.scale * 0.25, o.y + o.scale * 0.5, o.z);
 		obj3.visible = false;
 		var img = new Image();
 		img.crossOrigin = 'anonymous';
@@ -1794,6 +1794,7 @@ class Tabletree {
 			}
 			if (this.highlighted !== fsEntry) {
 				this.highlighted = fsEntry;
+				this.setPlaylist(this.highlighted);
 				this.goToFSEntry(fsEntry, intersection.object);
 			} else {
 				if (this.highlighted.entries === null) {
