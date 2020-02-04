@@ -126,7 +126,10 @@ class Tabletree {
 		this.camera.aspect = window.innerWidth / window.innerHeight;
 		this.camera.updateProjectionMatrix();
 		if (/Safari/.test(navigator.userAgent)) {
-			this.renderer.setSize(window.innerWidth * this.pageZoom, window.innerHeight * this.pageZoom);
+			this.renderer.setSize(
+				window.innerWidth * this.pageZoom,
+				window.innerHeight * this.pageZoom
+			);
 		} else {
 			this.renderer.setSize(window.innerWidth, window.innerHeight);
 		}
@@ -486,10 +489,15 @@ class Tabletree {
 		scene.updateMatrixWorld();
 		var textX = fsEntry.textX;
 		textX += (fsEntry.scale * fsEntry.textScale * window.innerWidth) / 1.5;
-		var fsPoint = new THREE.Vector3(textX, fsEntry.textYZero - (fsEntry.scale * fsEntry.textScale * window.innerHeight/this.pageZoom), fsEntry.z);
+		var fsPoint = new THREE.Vector3(
+			textX,
+			fsEntry.textYZero -
+				(fsEntry.scale * fsEntry.textScale * window.innerHeight) / this.pageZoom,
+			fsEntry.z
+		);
 		fsPoint.applyMatrix4(model.matrixWorld);
 		camera.targetPosition.copy(fsPoint);
-		camera.targetFOV = fsEntry.scale * fsEntry.textScale * 2000 * 50 / this.pageZoom;
+		camera.targetFOV = (fsEntry.scale * fsEntry.textScale * 2000 * 50) / this.pageZoom;
 		fsEntry.textFOV = camera.targetFOV;
 		this.changed = true;
 	}
@@ -507,7 +515,7 @@ class Tabletree {
 		var fsPoint = new THREE.Vector3(textX, fsEntry.textYZero - textYOff, fsEntry.z);
 		fsPoint.applyMatrix4(model.matrixWorld);
 		camera.targetPosition.copy(fsPoint);
-		camera.targetFOV = fsEntry.scale * fsEntry.textScale * 2000 * 50 / this.pageZoom;
+		camera.targetFOV = (fsEntry.scale * fsEntry.textScale * 2000 * 50) / this.pageZoom;
 		fsEntry.textFOV = camera.targetFOV;
 		this.changed = true;
 	}
@@ -685,7 +693,7 @@ class Tabletree {
 					if (!Geometry.quadInsideFrustum(idx, this, camera)) {
 						continue;
 					}
-					if ((o.scale * 50) / Math.max(camera.fov, camera.targetFOV) > 0.2) {
+					if ((o.scale * 50) / Math.max(camera.fov, camera.targetFOV) > 0.3) {
 						if (Geometry.quadCoversFrustum(idx, this, camera)) {
 							zoomedInPath += '/' + o.name;
 							navigationTarget += '/' + o.name;
@@ -1043,10 +1051,10 @@ class Tabletree {
 
 	async addFile(tree) {
 		await this.yield();
-		const model = await this.createFileTreeModel(
-			Object.keys(tree.parent.entries).length,
-			{...tree.parent, noGeo: true}
-		);
+		const model = await this.createFileTreeModel(Object.keys(tree.parent.entries).length, {
+			...tree.parent,
+			noGeo: true,
+		});
 		tree.model = model;
 		(tree.parent.model || this.model).add(model);
 	}
@@ -2153,7 +2161,7 @@ class Tabletree {
 	}
 
 	tick = () => {
-		if (((window.pageZoom||100)/100) !== this.pageZoom) {
+		if ((window.pageZoom || 100) / 100 !== this.pageZoom) {
 			this.pageZoom = (window.pageZoom || 100) / 100;
 			this.onResize();
 		}
