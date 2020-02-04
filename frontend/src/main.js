@@ -87,7 +87,8 @@ class Tabletree {
 		this.initDone = false;
 	}
 
-	init(apiPrefix, repoPrefix) {
+	init(api, apiPrefix, repoPrefix) {
+		this.api = api;
 		this.apiPrefix = apiPrefix;
 		this.repoPrefix = repoPrefix;
 		loadFont('/fnt/DejaVu-sdf.fnt', (err, font) => {
@@ -530,9 +531,8 @@ class Tabletree {
 			fsEntry = fsEntry.parent;
 		}
 		if (path === null) return;
-		var src = this.apiPrefix + '/repo/file' + path;
-		var playlistURL = await (await fetch(src)).text();
-		window.open(playlistURL, 'montaan-music');
+		var playlistURL = await this.api.getType('/repo/file' + path, {}, 'text');
+		await this.api.post('/repo/playSpotify', {uri: playlistURL});
 	}
 
 	updateBreadCrumb(path) {

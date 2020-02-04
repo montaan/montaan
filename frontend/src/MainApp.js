@@ -661,6 +661,7 @@ class MainApp extends React.Component {
 					fileTree={this.state.fileTree}
 					commitData={this.state.commitData}
 					frameRequestTime={this.state.frameRequestTime}
+					api={this.props.api}
 					apiPrefix={this.props.apiPrefix}
 					repoPrefix={this.state.repoPrefix}
 					navigationTarget={this.state.navigationTarget}
