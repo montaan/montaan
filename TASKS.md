@@ -67,6 +67,12 @@
         [] Load models based on directory scene file (e.g. add trees and other props)
         [] Palette editor for live editing of file type looks
 
+# Make a pleasant place
+    [] Party
+    [] Theme music for tasks / parts of project
+        [x] Per-dir playlist URL
+    [] Artwork
+
 # Plugins
     [] Some sort of plugin system to enable parallel development
     [] TreeProvider

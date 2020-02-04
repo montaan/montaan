@@ -520,6 +520,13 @@ class Tabletree {
 		this.changed = true;
 	}
 
+	async setPlaylist(path) {
+		console.log(path);
+		var src = this.apiPrefix + '/repo/file' + path;
+		var playlistURL = await (await fetch(src)).text();
+		window.open(playlistURL, 'montaan-music');
+	}
+
 	updateBreadCrumb(path) {
 		if (path === this.breadcrumbPath) return;
 		const self = this;
@@ -528,6 +535,14 @@ class Tabletree {
 		if (!el) return;
 		while (el.firstChild) el.removeChild(el.firstChild);
 		var segs = path.split('/');
+		var fsEntry = getPathEntry(path);
+		while (fsEntry.parent) {
+			if (fsEntry.entries && fsEntry.entries['.playlist']) {
+				this.setPlaylist(getFullPath(fsEntry.entries['.playlist']));
+				break;
+			}
+			fsEntry = fsEntry.parent;
+		}
 		el.onmouseout = function(ev) {
 			if (ev.target === this && !this.contains(ev.relatedTarget)) {
 				[].slice
