@@ -34,28 +34,6 @@
 
 ## Active
 
-Dynamic tree:
-    [] Tree cache with LRU ejection on size overflow
-    [] Tree nodes have bboxes
-    [] Instance list
-    [] On frame, do breadth-first traversal of tree bboxes to determine the visibility of nodes
-    [] If a bbox covers the frustum, use bbox matrix as the view root matrix
-    [] If a node is visible, add it to the visible node list
-    [] If the visible node list is full, stop traversal
-
-    -- Basically it's the FileZoo model
-        - TreeCache in one thread
-        - RenderListGen in one thread, turning current camera position to TreeCache requests and render list
-        - Renderer just renders the current render list and on receiving a new render list replaces the current one with it.
-        - Render list is made out of object instances (instance id, instance params, matrix) 
-        - The render list is fixed-size
-        - Swapping render lists can be done with arraybuffer worker->worker pass
-        - The RenderListGen knows roughly how much time it takes to draw each instance in the list -> keeps render list draw time below frame time target
-        - RenderListGen keeps only visible objects in the renderlist (with some margin for camera animations)
-
-
-
-
 # KEY FEATURES
     [] Dynamic tree loading
         [x] One directory at a time
@@ -89,7 +67,6 @@ Dynamic tree:
         [] Load models based on directory scene file (e.g. add trees and other props)
         [] Palette editor for live editing of file type looks
 
-/
 # Plugins
     [] Some sort of plugin system to enable parallel development
     [] TreeProvider
@@ -106,75 +83,6 @@ Dynamic tree:
 
 # "Payment" system
     [] Commit prompt to pay for use via commit
-
-# Collaboration system
-    [] Codebase easy to contribute to
-    - Key here is to have thousands of active threads of work that can be executed by executors or further split by coordinators 
-    - A large number of commits should come automatically from bots (Bors, CI, dependabot)
-        [] Design Lint to catch design bugs https://lintyour.design/
-        [x] ESLint to catch bugs
-        [] TypeScript for IntelliSense
-        [] Storybook to develop components
-        [] Documentation with https://docusaurus.io/
-        [] Getting Started 
-        [] Book with deep knowledge
-        [] Self-contained components
-        [] Bors to keep master a-OK
-        [] Tests to keep things working
-        [] Issue dispatcher
-        [] Translation project
-        [] Documentation project
-        [] Artwork / theme project
-        [] Music / audio project
-        [] Fun project
-        [] Optimization project
-        [] Quality project
-        [x] Prettier in CI hook to enforce coding style
-    [] Actively prompt for commits
-        [] Issue dispatcher
-    [] Commit flow management best practices
-        [] Rust
-        [] Linux
-        [] LLVM
-        [] VSCode
-        [] Chromium
-    [] Positive community mood
-        [] Like Fortnite &c online games deal with griefers and keeping it fun for all
-    [] Automatic formatting
-    [] Easy refactoring
-        [] TypeScript
-        [] js-i18n to multilang
-    [] Neutral naming policy
-    [] Instant editing
-        - Edit live version of app, see changes, push commit to repo
-    [] Anonymous contribution
-        [] No chat, emoji/dance-based comms
-        [] Random 12-digit id numbers
-        [] No gender pronouns
-        [] High velocity reviews
-            [] Bors-NG to enforce that master works
-            [] Review automation to allow thousands of reviews per day
-            [] Find files for PR, find authors for files, distribute review request across authors with enough commits
-    [] Non-English contributor languages
-    [] Competition around contribution amount and quality
-    [] CodeSquare - become the Mayor of a file / dir by contributing to it
-    [] Embarrassingly parallel architecture - imagine a million devs simultaneously working on the codebase
-        [] Commits to one component don't screw up others
-        [] Large number of simple individual components
-        [] Hot-patching architecture to allow loading components only when needed
-        [] No One Language -- well-defined API + WASM -- bring C/C++/Rust/Go libs into lang easily
-        [] High failure tolerance, high failure detection, high failure avoidance
-            [] Auto-generated fuzzer tests
-            [] Tests next to code
-            [] QuickCheck
-            [] Flag failures in individual components for quick review & fixing
-            [] Disable failed components from affecting rest of app
-            [] Runtime monitoring of failure causes & stack traces to replicate failure
-
-# Make a pleasant place
-    [] Party
-    [] Theme music for tasks / parts of project
-    [] Artwork
 
 # Frontend data model
     [] Use URIs to refer to objects
