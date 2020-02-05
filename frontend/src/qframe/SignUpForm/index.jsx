@@ -30,7 +30,7 @@ const signUpSchema = yup.object({
 	rememberme: yup.bool().optional(),
 });
 
-class SignupForm extends React.Component {
+class SignUpForm extends React.Component {
 	constructor(props) {
 		super(props);
 
@@ -167,4 +167,4 @@ class SignupForm extends React.Component {
 	}
 }
 
-export default withRouter(SignupForm);
+export default withRouter(SignUpForm);
