@@ -38,5 +38,10 @@ time git log --name-status > ../log.txt
 echo 'Parse log to JSON'
 time node ../../../../bin/parse_log.js < ../log.txt > ../log.json
 echo 'Add log to DB'
+if [[ -e package.json ]]
+then
+    echo 'Parse dependencies'
+    time depcruise -T json . > ../deps.json
+fi
 cd ../../../../;
 time node bin/parse_log_db.js $(dirname "$path") $(basename "$path")
