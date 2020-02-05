@@ -6,14 +6,14 @@ import * as THREE from 'three';
 
 import MainView from './components/MainView';
 import CommitControls from './components/CommitControls';
-import CommitInfo from './components/CommitInfo';
+import CommitInfo from './components/CommitInfo/index.tsx';
 import Search from './components/Search';
 import Breadcrumb from './components/Breadcrumb';
 import RepoSelector from './components/RepoSelector';
 
 import utils from './lib/utils';
 import { parseCommits } from './lib/parse_commits';
-import { authorCmp } from './lib/parse_diff';
+import { authorCmp } from './lib/parse-diff.ts';
 import { getPathEntry, getFullPath } from './lib/filetree';
 
 const fullscreenSupported =

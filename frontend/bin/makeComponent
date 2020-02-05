@@ -1,0 +1,54 @@
+#!/bin/bash
+
+NAME=$1
+TARGET=components
+AUTHOR=$(echo `git config --get user.name` '<'`git config --get user.email`'>')
+
+if [ -z $1 ]
+then
+	echo "USAGE: makeComponent COMPONENT_NAME [TARGET_DIR]"
+	echo ""
+	echo "Creates pre-populated component directories based on templates/component"
+	echo ""
+	echo "Examples:"
+	echo ""
+	echo "Create component MyComponent in src/components/"
+	echo ""
+	echo "    makeComponent MyComponent"
+	echo "    OR"
+	echo "    makeComponent MyComponent components"
+	echo ""
+	echo "Create component Footer in src/containers/"
+	echo ""
+	echo "    makeComponent Footer containers"
+	echo ""
+	echo "Create component Home in src/screens/"
+	echo ""
+	echo "    makeComponent Home screens"
+	echo ""
+	exit 1
+fi
+
+if [ ! -z $2 ]
+then
+	TARGET=$2
+fi
+
+if [ ! -e src/"$TARGET"/"$NAME" ]
+then
+	echo "Creating $TARGET/$NAME with author $AUTHOR"
+	mkdir -p src/"$TARGET" &&
+	cp -r templates/component src/"$TARGET"/"$NAME"/ &&
+	sed -i '' -e s/TARGET/"$TARGET"/g src/"$TARGET"/"$NAME"/*.*
+	sed -i '' -e s/NAME/"$NAME"/g src/"$TARGET"/"$NAME"/*.*
+	sed -i '' -e s/AUTHOR/"$AUTHOR"/g src/"$TARGET"/"$NAME"/*.*
+	(cd src/"$TARGET"/"$NAME"/ &&
+		for f in `find . | fgrep NAME`
+		do
+			mv "$f" "$(echo $f | sed -e s/NAME/"$NAME"/g)"
+		done)
+	echo OK
+else
+	echo Component "$NAME" already exists in "$TARGET";
+	exit 1
+fi
