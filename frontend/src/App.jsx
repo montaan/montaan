@@ -8,13 +8,13 @@ import {
 	Link,
 } from 'react-router-dom';
 
-// import TopBar from './components/TopBar';
-import LoginForm from './components/LoginForm';
-import SignupForm from './components/SignupForm';
-import { RecoverForm, PasswordResetForm } from './components/RecoverForm';
-import UserActivation from './components/UserActivation';
-// import HelpOverlay from './components/HelpOverlay';
-import MainApp from './MainApp';
+// import TopBar from './qframe/TopBar';
+import LoginForm from './qframe/LoginForm';
+import SignUpForm from './qframe/SignUpForm';
+import { RecoverForm, PasswordResetForm } from './qframe/RecoverForm';
+import UserActivation from './qframe/UserActivation';
+// import HelpOverlay from './qframe/HelpOverlay';
+import Montaan from './Montaan';
 
 import { Client } from './lib/quickgres-frontend';
 
@@ -230,7 +230,7 @@ class App extends React.Component {
 									loggedIn ? (
 										<Redirect to="/" />
 									) : (
-										<SignupForm
+										<SignUpForm
 											api={this.api}
 											onSuccess={this.setAuthHeaders}
 											onCancel={this.goHome}
@@ -273,7 +273,7 @@ class App extends React.Component {
 							<Route
 								path="/:user/:name"
 								component={(_match) => (
-									<MainApp
+									<Montaan
 										api={this.api}
 										apiPrefix={this.api.server}
 										userInfo={this.state.userInfo}
@@ -285,7 +285,7 @@ class App extends React.Component {
 								path="/"
 								component={(_match) =>
 									loggedIn ? (
-										<MainApp
+										<Montaan
 											api={this.api}
 											apiPrefix={this.api.server}
 											userInfo={this.state.userInfo}

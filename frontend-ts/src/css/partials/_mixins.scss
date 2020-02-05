@@ -1,9 +1,0 @@
-@import './variables';
-
-@function mobile($dimension) {
-	@return (($dimension / $mobile-width) * 100vw);
-}
-
-@function desktop($dimension) {
-	@return $dimension * 1px;
-}
