@@ -65,6 +65,12 @@ class Tabletree {
 		this.animating = false;
 		this.currentFrame = 0;
 		this.pageZoom = 1;
+		this.resAdjust = 1;
+		if (/Safari/.test(navigator.userAgent)) {
+			if (window.screen.width !== 1280 && window.devicePixelRatio ===  2) {
+				this.resAdjust = 1280 / window.screen.width;
+			}
+		}
 
 		this.textMinScale = 1000;
 		this.textMaxScale = 0;
@@ -88,6 +94,10 @@ class Tabletree {
 	}
 
 	init(api, apiPrefix, repoPrefix) {
+		if (this.api) {
+			console.error("ALREADY INITIALIZED"); 
+			return;
+		}
 		this.api = api;
 		this.apiPrefix = apiPrefix;
 		this.repoPrefix = repoPrefix;
@@ -128,8 +138,8 @@ class Tabletree {
 		this.camera.updateProjectionMatrix();
 		if (/Safari/.test(navigator.userAgent)) {
 			this.renderer.setSize(
-				window.innerWidth * this.pageZoom,
-				window.innerHeight * this.pageZoom
+				window.innerWidth * this.pageZoom * this.resAdjust,
+				window.innerHeight * this.pageZoom * this.resAdjust
 			);
 		} else {
 			this.renderer.setSize(window.innerWidth, window.innerHeight);
@@ -530,6 +540,8 @@ class Tabletree {
 			}
 			fsEntry = fsEntry.parent;
 		}
+		if (this.playlist === fsEntry) return;
+		this.playlist = fsEntry;
 		if (path === null) return;
 		var playlistURL = await this.api.getType('/repo/file' + path, {}, 'text');
 		await this.api.post('/repo/playSpotify', {uri: playlistURL});
@@ -724,7 +736,7 @@ class Tabletree {
 						} else {
 							let fullPath = getFullPath(o);
 							if (
-								visibleFiles.children.length < 30 &&
+								visibleFiles.children.length < 10 &&
 								!visibleFiles.visibleSet[fullPath]
 							) {
 								if (Colors.imageRE.test(fullPath))
@@ -904,6 +916,8 @@ class Tabletree {
 	}
 
 	async loadTextFile(visibleFiles, fullPath, fsEntry) {
+		if (fsEntry.size > 1e5) return;
+
 		const text = new THREE.Mesh();
 		text.visible = false;
 		text.fsEntry = fsEntry;
