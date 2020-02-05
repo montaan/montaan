@@ -67,7 +67,7 @@ class Tabletree {
 		this.pageZoom = 1;
 		this.resAdjust = 1;
 		if (/Safari/.test(navigator.userAgent)) {
-			if (window.screen.width !== 1280 && window.devicePixelRatio ===  2) {
+			if (window.screen.width !== 1280 && window.devicePixelRatio === 2) {
 				this.resAdjust = 1280 / window.screen.width;
 			}
 		}
@@ -95,7 +95,7 @@ class Tabletree {
 
 	init(api, apiPrefix, repoPrefix) {
 		if (this.api) {
-			console.error("ALREADY INITIALIZED"); 
+			console.error('ALREADY INITIALIZED');
 			return;
 		}
 		this.api = api;
@@ -544,7 +544,7 @@ class Tabletree {
 		this.playlist = fsEntry;
 		if (path === null) return;
 		var playlistURL = await this.api.getType('/repo/file' + path, {}, 'text');
-		await this.api.post('/repo/playSpotify', {uri: playlistURL});
+		await this.api.post('/repo/playSpotify', { uri: playlistURL });
 	}
 
 	updateBreadCrumb(path) {
@@ -925,9 +925,39 @@ class Tabletree {
 		visibleFiles.visibleSet[fullPath] = true;
 		visibleFiles.add(text);
 
-		const responseText = await (await fetch(this.apiPrefix + '/repo/file' + fullPath)).text();
+		let responseBuffer = await (
+			await fetch(this.apiPrefix + '/repo/file' + fullPath)
+		).arrayBuffer();
+		if (responseBuffer.byteLength > 1e5 || !text.parent) return;
 
-		if (responseText.length > 1e6 || !text.parent) return;
+		const u8 = new Uint8Array(responseBuffer);
+		const isBinary = u8.slice(0, 4096).some((x) => x < 9);
+		var responseText = '';
+		if (isBinary) {
+			if (responseBuffer.byteLength > 1e4) return;
+			const hex = [];
+			for (let i = 0; i < 256; i++) hex[i] = (i < 16 ? ' 0' : ' ') + i.toString(16);
+			const pad = [
+				'         ',
+				'        ',
+				'       ',
+				'      ',
+				'     ',
+				'    ',
+				'   ',
+				'  ',
+				' ',
+				'',
+			];
+			let accum = ['HEXDUMP'];
+			for (let i = 0; i < u8.length; i++) {
+				if (i % 64 === 0) accum.push(`\n${pad[Math.log10(i) | 0]}${i} `);
+				accum.push(hex[u8[i]]);
+			}
+			responseText += accum.join('');
+		} else {
+			responseText = new TextDecoder().decode(responseBuffer);
+		}
 
 		await this.yield();
 
