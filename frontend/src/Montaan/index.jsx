@@ -11,10 +11,10 @@ import Search from './Search';
 import Breadcrumb from './Breadcrumb';
 import RepoSelector from './RepoSelector';
 
-import utils from '../lib/utils';
-import { parseCommits } from '../lib/parse_commits';
-import { authorCmp } from '../lib/parse-diff.ts';
-import { getPathEntry, getFullPath } from '../lib/filetree';
+import utils from './lib/utils';
+import { parseCommits } from './lib/parse_commits';
+import { authorCmp } from './lib/parse-diff.ts';
+import { getPathEntry, getFullPath } from './lib/filetree';
 
 const fullscreenSupported =
 	(document.exitFullscreen ||

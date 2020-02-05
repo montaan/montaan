@@ -1,11 +1,11 @@
-import { getPathEntry, getFullPath, getSiblings } from '../../lib/filetree';
-import Colors from '../../lib/Colors';
-import prettyPrintWorker from '../../lib/pretty-print';
-import createText from '../../lib/third_party/three-bmfont-text-modified';
-import SDFShader from '../../lib/third_party/three-bmfont-text-modified/shaders/sdf';
-import Layout from '../../lib/Layout';
-import utils from '../../lib/utils';
-import Geometry from '../../lib/Geometry';
+import { getPathEntry, getFullPath, getSiblings } from '../lib/filetree';
+import Colors from '../lib/Colors';
+import prettyPrintWorker from '../lib/pretty-print';
+import createText from '../lib/third_party/three-bmfont-text-modified';
+import SDFShader from '../lib/third_party/three-bmfont-text-modified/shaders/sdf';
+import Layout from '../lib/Layout';
+import utils from '../lib/utils';
+import Geometry from '../lib/Geometry';
 
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js';
 import * as THREE from 'three';
@@ -136,6 +136,11 @@ class Tabletree {
 	onResize() {
 		this.camera.aspect = window.innerWidth / window.innerHeight;
 		this.camera.updateProjectionMatrix();
+		if (/Mac OS X/.test(navigator.userAgent)) {
+			if (window.screen.width !== 1280 && window.devicePixelRatio >= 2) {
+				this.resAdjust = 1280 / window.screen.width;
+			}
+		}
 		if (/Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent)) {
 			this.renderer.setSize(
 				window.innerWidth * this.pageZoom * this.resAdjust,

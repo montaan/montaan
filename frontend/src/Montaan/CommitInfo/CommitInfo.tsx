@@ -8,7 +8,7 @@ import {
 	CalendarMouseEventHandler,
 	CalendarElement,
 	Commit,
-} from '../../lib/parse-diff';
+} from '../lib/parse-diff';
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
 import Editor, { DiffEditor, monaco, Monaco } from '@monaco-editor/react';
