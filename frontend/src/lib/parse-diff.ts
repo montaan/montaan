@@ -215,6 +215,7 @@ export function createCalendar(commits:Commit[], yearOnClick:CalendarMouseEventH
 				if (date.getUTCMonth() === i) {
 					var day = date.getUTCDay();
 					var dayEl = span('calendar-day') as unknown as CalendarElement;
+					dayEl.authors = {};
 					dayEl.onclick = dayOnClick;
 					dayEl.dataset.date = (j + 1).toString();
 					dayEl.dataset.day = day.toString();

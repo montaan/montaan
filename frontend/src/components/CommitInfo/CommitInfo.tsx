@@ -16,7 +16,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes, faArrowUp, faArrowDown } from '@fortawesome/free-solid-svg-icons';
 import { editor } from 'monaco-editor';
 
-import styles from './css/style.module.scss';
+import styles from './CommitInfo.module.scss';
 
 monaco.config({
 	urls: {
@@ -143,7 +143,7 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 		const commitHeight = 30;
 
 		const commitsEl = document.createElement('div');
-		commitsEl.className = 'commits';
+		commitsEl.className = styles['commits'];
 		commitsEl.style.position = 'relative';
 		commitsEl.style.height = commitHeight * activeCommits.length + 'px';
 
@@ -220,11 +220,11 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 			var div = document.createElement('div');
 			div.style.position = 'absolute';
 			div.style.top = top + 'px';
-			var hashSpan = span('commit-hash', c.sha);
-			var dateSpan = span('commit-date', c.date.toUTCString());
-			var authorSpan = span('commit-author', c.author);
-			var messageSpan = span('commit-message', c.message);
-			var toggleDiffs = span('commit-toggle-diffs', 'All changes');
+			var hashSpan = span(styles['commit-hash'], c.sha);
+			var dateSpan = span(styles['commit-date'], c.date.toUTCString());
+			var authorSpan = span(styles['commit-author'], c.author);
+			var messageSpan = span(styles['commit-message'], c.message);
+			var toggleDiffs = span(styles['commit-toggle-diffs'], 'All changes');
 			div.onmousedown = async (ev) => {
 				ev.preventDefault();
 				const diffView = document.getElementById('diffView');
@@ -239,9 +239,9 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 				}
 				while (diffView.firstChild) diffView.removeChild(diffView.firstChild);
 				if (c.diff == null) await this.props.loadDiff(c);
-				diffView.classList.remove('expanded-diffs');
-				diffView.classList.add('expanded');
-				const diffSpan = span('commit-diff');
+				diffView.classList.remove(styles['expanded-diffs']);
+				diffView.classList.add(styles['expanded']);
+				const diffSpan = span(styles['commit-diff']);
 				diffSpan.appendChild(
 					formatDiff(
 						c.sha,
@@ -263,7 +263,7 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 			toggleDiffs.onmousedown = function(ev) {
 				ev.preventDefault();
 				if (!toggleDiffs.parentElement) return;
-				toggleDiffs.parentElement.classList.toggle('expanded-diffs');
+				toggleDiffs.parentElement.classList.toggle(styles['expanded-diffs']);
 			};
 			div.append(hashSpan, dateSpan, authorSpan, messageSpan);
 			return div;
@@ -311,7 +311,7 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 		authors.forEach((author) => {
 			var div = document.createElement('div');
 			div.dataset.commitCount = authorCommitCounts[author].toString();
-			var nameSpan = span('author-name', author);
+			var nameSpan = span(styles['author-name'], author);
 			div.append(nameSpan);
 			div.onmousedown = function(ev) {
 				ev.preventDefault();
@@ -501,58 +501,58 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 		const { authorSort } = this.state;
 		return (
 			<>
-				<Button id="showFileCommits" onClick={this.onShowFileCommits}>
+				<Button id="showFileCommits" className={styles.showFileCommits} onClick={this.onShowFileCommits}>
 					Show commits
 				</Button>
-				<div id="commitInfo" className={this.state.visible ? 'visible' : 'hidden'}>
+				<div id="commitInfo" className={styles.CommitInfo + ' ' + (this.state.visible ? styles.visible : styles.hidden)}>
 					<div className="close" onClick={this.hideCommitsPane}>
 						<FontAwesomeIcon icon={faTimes} />
 					</div>
-					<div id="authors">
+					<div id="authors" className={styles.authors}>
 						<h3>Authors</h3>
 						<Form.Group id="authorSearch">
 							<Form.Control onChange={this.authorSearchOnChange} />
 						</Form.Group>
-						<div id="authorSort">
+						<div id="authorSort" className={styles.authorSort}>
 							Sort by
 							<span
 								onClick={this.sortByName}
-								className={authorSort === 'name' ? 'selected' : undefined}
+								className={authorSort === 'name' ? styles.selected : undefined}
 							>
 								Name
 							</span>
 							<span
 								onClick={this.sortByEmail}
-								className={authorSort === 'email' ? 'selected' : undefined}
+								className={authorSort === 'email' ? styles.selected : undefined}
 							>
 								Email
 							</span>
 							<span
 								onClick={this.sortByCommits}
-								className={authorSort === 'commits' ? 'selected' : undefined}
+								className={authorSort === 'commits' ? styles.selected : undefined}
 							>
 								Commits
 							</span>
 							<span
 								onClick={this.sortByDate}
-								className={authorSort === 'date' ? 'selected' : undefined}
+								className={authorSort === 'date' ? styles.selected : undefined}
 							>
 								Date
 							</span>
 						</div>
-						<div id="authorList" />
+						<div id="authorList" className={styles.authorList}/>
 					</div>
-					<div id="activeCommits">
+					<div id="activeCommits" className={styles.activeCommits}>
 						<h3>Commits</h3>
-						<Form.Group id="commitSearch">
+						<Form.Group id="commitSearch" className={styles.commitSearch}>
 							<Form.Control onChange={this.commitSearchOnChange} />
 						</Form.Group>
-						<div id="commitList" />
+						<div id="commitList" className={styles.commitList} />
 					</div>
-					<div id="diffView" />
+					<div id="diffView" className={styles.diffView} />
 				</div>
 				{this.props.fileContents && (
-					<div id="fileView">
+					<div id="fileView" className={styles.fileView} >
 						<h4>
 							<span className="hash">{this.props.fileContents.hash}</span>
 							&mdash;

@@ -251,7 +251,6 @@ export default {
 			obj.y = 0;
 			obj.z = 0;
 			obj.scale = 0;
-			if (obj.title[0] === '.') continue;
 			if (obj.entries === null) {
 				files.push(obj);
 			} else {

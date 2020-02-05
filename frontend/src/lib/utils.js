@@ -66,7 +66,7 @@ var utils = {
 		}
 	},
 
-	addFileTreeEntry: function(path, tree) {
+	addFileTreeEntry: function(path, tree, mode, type, hash, size) {
 		var dir = false;
 		if (path.charCodeAt(path.length - 1) === slash) {
 			dir = true;
@@ -83,7 +83,7 @@ var utils = {
 				branch.entries = {};
 			}
 			if (typeof branch.entries[segment] !== 'object') {
-				branch.entries[segment] = { name: segment, title: segment, entries: {}, index: 0 };
+				branch.entries[segment] = { name: segment, title: segment, entries: {}, index: 0, size: 0 };
 				addCount++;
 			}
 			branch = branch.entries[segment];
@@ -92,6 +92,7 @@ var utils = {
 			branch.entries = {};
 		}
 		if (typeof branch.entries[segments[i]] !== 'object') {
+			branch.size++;
 			branch.entries[segments[i]] = {
 				name: segments[i],
 				title: segments[i],
@@ -101,6 +102,12 @@ var utils = {
 			};
 			addCount++;
 		}
+		branch = branch.entries[segments[i]];
+		branch.mode = mode;
+		branch.type = type;
+		branch.hash = hash;
+		branch.size = parseInt(size);
+		if (isNaN(branch.size)) branch.size = 0;
 		return addCount;
 	},
 
@@ -325,12 +332,14 @@ var utils = {
 		var first = includePrefix ? false : true;
 		const u8 = new Uint8Array(buffer);
 		// console.log('prefix:', prefix);
+		let mode,type,hash,length;
 		const td = new TextDecoder();
 		for (let i = 0; i < u8.length; i++) {
 			if (u8[i] === sep) {
 				if (first) {
 					const tabIndex = u8.indexOf(9, startIndex+48);
 					const segs = td.decode(u8.slice(tabIndex + 1, i)).split('/');
+					[mode, type, hash, length] = td.decode(u8.slice(startIndex, tabIndex)).split(/\s+/);
 					name = segs[segs.length - 2] + '/';
 					skip = i - name.length + 1;
 					name = prefix;
@@ -339,11 +348,11 @@ var utils = {
 					const tabIndex = u8.indexOf(9, startIndex+48);
 					// console.log(td.decode(u8.slice(startIndex, i)));
 					const fn = td.decode(u8.slice(tabIndex + 1 + skip, i));
-					name = prefix + fn;
+					[mode, type, hash, length] = td.decode(u8.slice(startIndex, tabIndex)).split(/\s+/);					name = prefix + fn;
 					if (u8[startIndex+7] === 116 /* t */ || u8[startIndex+7] === 99 /* c */) name += '/';
 				}
 				startIndex = i + 1;
-				fileCount += utils.addFileTreeEntry(name, fileTree);
+				fileCount += utils.addFileTreeEntry(name, fileTree, mode,type,hash,length);
 			}
 		}
 		// console.log("Parsed files", fileCount);
