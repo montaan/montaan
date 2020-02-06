@@ -1,7 +1,7 @@
 // src/components/MainApp/MainApp.tsx
 
 import React from 'react';
-import { withRouter, RouteProps, RouteComponentProps } from 'react-router-dom';
+import { withRouter, RouteComponentProps } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
 
 import * as THREE from 'three';
@@ -119,7 +119,18 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 
 	constructor(props: MainAppProps) {
 		super(props);
-		this.state = { ...this.emptyState, repos: [], navUrl: '', commitData: null, ref: 'HEAD' };
+		var repoPrefix = '';
+		if (props.match && props.match.params.user) {
+			repoPrefix = props.match.params.user + '/' + props.match.params.name;
+		}
+		this.state = {
+			...this.emptyState,
+			repos: [],
+			navUrl: '',
+			commitData: null,
+			ref: 'HEAD',
+			repoPrefix,
+		};
 		this.repoTimeout = 0;
 		this.commitIndex = 0;
 		if (props.userInfo) this.updateUserRepos(props.userInfo);
