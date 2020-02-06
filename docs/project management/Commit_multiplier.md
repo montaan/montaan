@@ -63,6 +63,8 @@ To make something like the Grail System, you need to:
     - create audio
     - create background music
 
+Snippets for algorithms (indexed for-loop, foo[x] ||= [], binary search, tree algos, heap algos, DFS, BFS, graph algos, add test property)
+
 ## Compound growth
 
 A commit multiplier system that can be applied to its own codebase will show compound growth. If every raw commit to the multiplier system increases its commit factor by 1%, the commit factor grows as 1.01^n where n is the number of commits to the commit multiplier system.
