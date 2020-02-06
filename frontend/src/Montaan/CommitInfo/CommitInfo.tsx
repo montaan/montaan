@@ -35,6 +35,14 @@ export interface CommitInfoProps {
 	loadFileDiff(sha: string, previousSha: string, path: string, el?: HTMLElement): void;
 	loadFile(sha: string, path: string, el: HTMLElement): void;
 
+	searchQuery: string;
+
+	diffsLoaded: number;
+
+	addLinks(links: any[]): void;
+	setLinks(links: any[]): void;
+	links: any[];
+
 	commitFilter: any;
 	setCommitFilter(commitFilter: any): void;
 
@@ -42,7 +50,7 @@ export interface CommitInfoProps {
 	repoPrefix: string;
 
 	closeFile(): void;
-	loadDiff(commit: Commit): Promise<string>;
+	loadDiff(commit: Commit): Promise<void>;
 
 	activeCommitData: {
 		authors: string[];
@@ -362,7 +370,7 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 	}
 
 	handleDiffEditorDidMount = (_: any, _editor: any, diffEditor: any) => {
-        if (this.props.fileContents === null) return;
+		if (this.props.fileContents === null) return;
 		const original = window.monaco.editor.createModel(
 			this.props.fileContents.original || '',
 			undefined,
@@ -375,7 +383,7 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 		);
 		diffEditor.setModel({ original, modified });
 		diffEditor.onDidDispose(() => {
-			this.setState({diffEditor: null});
+			this.setState({ diffEditor: null });
 			original.dispose();
 			modified.dispose();
 		});
@@ -383,7 +391,7 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 	};
 
 	handleEditorDidMount = (_: any, editor: any) => {
-        if (this.props.fileContents === null) return;
+		if (this.props.fileContents === null) return;
 		const model = window.monaco.editor.createModel(
 			this.props.fileContents.content,
 			undefined,
@@ -392,7 +400,7 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 		editor.setModel(model);
 		editor.onDidDispose(() => {
 			model.dispose();
-			this.setState({editor: null});
+			this.setState({ editor: null });
 		});
 		this.setState({ diffEditor: null, editor });
 	};
@@ -468,12 +476,12 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 	}
 
 	previousFileVersion = (): void => {
-        if (this.props.fileContents === null) return;
+		if (this.props.fileContents === null) return;
 		const fileCommits = this.getFileCommits(
 			this.props.fileContents.path,
 			this.props.fileContents.hash
 		);
-        const hash = this.props.fileContents.hash;
+		const hash = this.props.fileContents.hash;
 		const idx = fileCommits.findIndex(({ commit }) => commit.sha === hash);
 		if (idx < fileCommits.length - 1) {
 			const { path, commit } = fileCommits[idx + 1];
@@ -483,12 +491,12 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 	};
 
 	nextFileVersion = (): void => {
-        if (this.props.fileContents === null) return;
+		if (this.props.fileContents === null) return;
 		const fileCommits = this.getFileCommits(
 			this.props.fileContents.path,
 			this.props.fileContents.hash
 		);
-        const hash = this.props.fileContents.hash;
+		const hash = this.props.fileContents.hash;
 		const idx = fileCommits.findIndex(({ commit }) => commit.sha === hash);
 		if (idx > 0) {
 			const { path, commit } = fileCommits[idx];
@@ -501,10 +509,21 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 		const { authorSort } = this.state;
 		return (
 			<>
-				<Button id="showFileCommits" className={styles.showFileCommits} onClick={this.onShowFileCommits}>
+				<Button
+					id="showFileCommits"
+					className={styles.showFileCommits}
+					onClick={this.onShowFileCommits}
+				>
 					Show commits
 				</Button>
-				<div id="commitInfo" className={styles.CommitInfo + ' ' + (this.state.visible ? styles.visible : styles.hidden)}>
+				<div
+					id="commitInfo"
+					className={
+						styles.CommitInfo +
+						' ' +
+						(this.state.visible ? styles.visible : styles.hidden)
+					}
+				>
 					<div className="close" onClick={this.hideCommitsPane}>
 						<FontAwesomeIcon icon={faTimes} />
 					</div>
@@ -540,7 +559,7 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 								Date
 							</span>
 						</div>
-						<div id="authorList" className={styles.authorList}/>
+						<div id="authorList" className={styles.authorList} />
 					</div>
 					<div id="activeCommits" className={styles.activeCommits}>
 						<h3>Commits</h3>
@@ -552,7 +571,7 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 					<div id="diffView" className={styles.diffView} />
 				</div>
 				{this.props.fileContents && (
-					<div id="fileView" className={styles.fileView} >
+					<div id="fileView" className={styles.fileView}>
 						<h4>
 							<span className="hash">{this.props.fileContents.hash}</span>
 							&mdash;
@@ -579,16 +598,20 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 						{this.props.fileContents.original ? (
 							<DiffEditor
 								editorDidMount={this.handleDiffEditorDidMount}
-								options={({
-									model: null,
-								} as editor.IDiffEditorConstructionOptions)}
+								options={
+									{
+										model: null,
+									} as editor.IDiffEditorConstructionOptions
+								}
 							/>
 						) : (
 							<Editor
 								editorDidMount={this.handleEditorDidMount}
-								options={({
-									model: null,
-								} as editor.IEditorConstructionOptions)}
+								options={
+									{
+										model: null,
+									} as editor.IEditorConstructionOptions
+								}
 							/>
 						)}
 					</div>

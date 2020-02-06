@@ -93,6 +93,7 @@ class Tabletree {
 		this.initDone = false;
 		this.requestDirs = undefined;
 		this.requestDitchDirs = undefined;
+		this.setNavigationTarget = undefined;
 	}
 
 	init(api, apiPrefix, repoPrefix) {
@@ -762,7 +763,7 @@ class Tabletree {
 			}
 			self.updateBreadCrumb(navigationTarget);
 			self.zoomedInPath = zoomedInPath;
-			window.setNavigationTarget(navigationTarget);
+			self.setNavigationTarget(navigationTarget);
 			this.geometry.setDrawRange(
 				smallestCovering.vertexIndex,
 				smallestCovering.lastVertexIndex - smallestCovering.vertexIndex
