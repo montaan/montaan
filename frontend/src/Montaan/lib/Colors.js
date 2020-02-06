@@ -9,7 +9,7 @@ var Colors = {
 	configRE: /(^(makefile.*|configure|cmake.*|InfoPlist)|\.(gyp.?|pyt|isolate|json|xcscheme|projitems|shproj|gradle|properties|mk|xml|cfg|conf|vcxproj|xcconfig|plist|config|in)$)/i,
 	imageRE: /\.(ai|c4d|obj|png|gif|psd|tga|webm|jpe?g|svg)$/i,
 	documentRE: /(^(Doxyfile|readme))|(\.(pdf|mtl|docx?|pptx?|xaml|txt|html?|pages|dox|md)$)/i,
-	archiveRE: /\.(zip|gz|bz2|tar|rar|7z|js|c|cpp|rb|py|pl|php\d?|java|vbs|cs|mm?|hlsl|glsl|vert|frag|vs|fs|cc|ts)$/i,
+	archiveRE: /\.(zip|gz|bz2|tar|rar|7z|jsx?|tsx?|c|cpp|rb|py|pl|php\d?|java|vbs|cs|mm?|hlsl|glsl|vert|frag|vs|fs|cc|ts)$/i,
 	objectRE: /\.(a|jar|dylib|lib|pri|so|aar)$/i,
 	headerRE: /\.(h|hh|hpp|css|sass|less|scss|d\.ts)$/i,
 	exeRE: /\.(sh|exe|bsh|bat)$/i,

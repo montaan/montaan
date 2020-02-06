@@ -270,10 +270,10 @@ export default {
 		verts[i++] = z;
 
 		verts[i++] = x + w * 0.1;
-		verts[i++] = y;
+		verts[i++] = y - h * 0.025;
 		verts[i++] = z - h * 0.2;
 		verts[i++] = x + w * 0.9;
-		verts[i++] = y;
+		verts[i++] = y - h * 0.025;
 		verts[i++] = z - h * 0.2;
 		verts[i++] = x;
 		verts[i++] = y;
@@ -283,7 +283,7 @@ export default {
 		verts[i++] = y;
 		verts[i++] = z;
 		verts[i++] = x + w * 0.9;
-		verts[i++] = y;
+		verts[i++] = y - h * 0.025;
 		verts[i++] = z - h * 0.2;
 		verts[i++] = x + w;
 		verts[i++] = y;

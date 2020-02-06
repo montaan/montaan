@@ -1445,7 +1445,7 @@ class Tabletree {
 		var av = new THREE.Vector3(a.x, a.y, a.z);
 		av.applyMatrix4(modelA.matrixWorld);
 
-		var bv = new THREE.Vector3(b.x, b.y, b.z);
+		var bv = new THREE.Vector3(b.x, b.y+b.scale, b.z);
 		bv.applyMatrix4(modelB.matrixWorld);
 
 		if (lineA > 0 && entryA.textHeight) {
@@ -1470,14 +1470,14 @@ class Tabletree {
 		}
 
 		var aUp = new THREE.Vector3(
-			a.x + (b.x - a.x) * 0.1 - 0.1 * entryA.scale,
-			a.y + (b.y - a.y) * 0.1 + (0.1 + 0.01 * (entryB.size % 10)) * entryA.scale,
+			a.x + (a.x < b.x ? 1 : -1) * 0.1 * entryA.scale,
+			(a.y) + (0.1 + 0.01 * (entryB.size % 10)) * entryA.scale,
 			Math.max(a.z, b.z) + 1 * entryA.scale
 		);
 		aUp.applyMatrix4(modelA.matrixWorld);
 		var bUp = new THREE.Vector3(
-			b.x - (b.x - a.x) * 0.1 - 0.1 * entryB.scale,
-			b.y - (b.y - a.y) * 0.1 + (0.1 + 0.01 * (entryB.size % 10)) * entryB.scale,
+			b.x + (a.x > b.x ? 1 : -1) * 0.1 * entryB.scale,
+			(b.y+b.scale) + (0.1 + 0.01 * (entryB.size % 10)) * entryB.scale,
 			Math.max(a.z, b.z) + 1 * entryB.scale
 		);
 		bUp.applyMatrix4(modelB.matrixWorld);
