@@ -2,7 +2,7 @@ import { getPathEntry, getFullPath, getSiblings } from '../lib/filetree';
 import Colors from '../lib/Colors';
 import prettyPrintWorker from '../lib/pretty-print';
 import createText from '../lib/third_party/three-bmfont-text-modified';
-import SDFShader from '../lib/third_party/three-bmfont-text-modified/shaders/sdf';
+import SDFShader from '../lib/third_party/three-bmfont-text-modified/shaders/msdf';
 import Layout from '../lib/Layout';
 import utils from '../lib/utils';
 import Geometry from '../lib/Geometry';
@@ -101,9 +101,9 @@ class Tabletree {
 		this.api = api;
 		this.apiPrefix = apiPrefix;
 		this.repoPrefix = repoPrefix;
-		loadFont('/fnt/DejaVu-sdf.fnt', (err, font) => {
+		loadFont('/fnt/Inconsolata-Regular.fnt', (err, font) => {
 			if (err) throw err;
-			new THREE.TextureLoader().load('/fnt/DejaVu-sdf.png', (tex) => this.start(font, tex));
+			new THREE.TextureLoader().load('/fnt/Inconsolata-Regular.png', (tex) => this.start(font, tex));
 		});
 	}
 
@@ -1470,14 +1470,14 @@ class Tabletree {
 		}
 
 		var aUp = new THREE.Vector3(
-			a.x + (b.x - a.x) * 0.1,
-			a.y + (b.y - a.y) * 0.1,
+			a.x + (b.x - a.x) * 0.1 - 0.1 * entryA.scale,
+			a.y + (b.y - a.y) * 0.1 + (0.1 + 0.01 * (entryB.size % 10)) * entryA.scale,
 			Math.max(a.z, b.z) + 1 * entryA.scale
 		);
 		aUp.applyMatrix4(modelA.matrixWorld);
 		var bUp = new THREE.Vector3(
-			b.x - (b.x - a.x) * 0.1,
-			b.y - (b.y - a.y) * 0.1,
+			b.x - (b.x - a.x) * 0.1 - 0.1 * entryB.scale,
+			b.y - (b.y - a.y) * 0.1 + (0.1 + 0.01 * (entryB.size % 10)) * entryB.scale,
 			Math.max(a.z, b.z) + 1 * entryB.scale
 		);
 		bUp.applyMatrix4(modelB.matrixWorld);
