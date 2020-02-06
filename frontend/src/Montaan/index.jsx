@@ -4,7 +4,7 @@ import { Helmet } from 'react-helmet';
 
 import * as THREE from 'three';
 
-import MainView from './MainView';
+import MainView from './MainView/index.tsx';
 import CommitControls from './CommitControls';
 import CommitInfo from './CommitInfo/index.tsx';
 import Search from './Search';

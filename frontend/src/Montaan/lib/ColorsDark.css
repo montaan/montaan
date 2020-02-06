@@ -32,14 +32,14 @@ body {
 .hiddenFile { color: rgb(84, 86, 94); }
 .unknownFile { color: rgb(33, 35, 43); }
 
-.actionM { color: #ff3300; }
-.actionA { color: #99ff00; }
-.actionD { color: #000000; }
-.actionR { color: #ffcc00; }
-.actionC { color: #44aaff; }
+.actionMFile { color: #ff3300; }
+.actionAFile { color: #99ff00; }
+.actionDFile { color: #000000; }
+.actionRFile { color: #ffcc00; }
+.actionCFile { color: #44aaff; }
 
-.actionDirM { color: #ff3300; }
-.actionDirA { color: #99ff00; }
-.actionDirD { color: #000000; }
-.actionDirR { color: #ffcc00; }
-.actionDirC { color: #44aaff; }
+.actionMDir { color: #ff3300; }
+.actionADir { color: #99ff00; }
+.actionDDir { color: #000000; }
+.actionRDir { color: #ffcc00; }
+.actionCDir { color: #44aaff; }

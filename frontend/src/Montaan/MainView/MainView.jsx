@@ -1,5 +1,5 @@
 import React from 'react';
-import './style.css';
+import './MainView.css';
 import tabletree from './main.js';
 
 export default class MainView extends React.Component {

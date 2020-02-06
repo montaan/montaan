@@ -1,5 +1,5 @@
 import { getPathEntry, getFullPath, getSiblings } from '../lib/filetree';
-import Colors from '../lib/Colors';
+import Colors from '../lib/Colors.ts';
 import prettyPrintWorker from '../lib/pretty-print';
 import createText from '../lib/third_party/three-bmfont-text-modified';
 import SDFShader from '../lib/third_party/three-bmfont-text-modified/shaders/msdf';
