@@ -24,7 +24,7 @@ Type systems
 Refactoring tools
 Boilerplate generators
 Code generators
-Code translators
+Compilers
 UI generators
 Language translators
 Formatters
@@ -45,6 +45,23 @@ Performance testing
 Fuzz testing
 
 E.g. if you need to write a React component, a commit multiplier would generate you a full component source directory with tests, stories and documentation. The next version of the multiplier could ask you briefly describe the component and its properties and types to generate a more fleshed out component. The generator could be augmented by a system that would automatically update tests and documentation on changes to the code and the API.
+
+The Grail System would allow you to commit small changes that have commit factors in the thousands: You commit something like "add fireworks at moments of success", and the Grail System builds a fully tested and document high-performance fireworks animation with different levels of intensity, defines moments of success and threads the implementation in a self-confined scalable fashion through the codebase. To finish the commit, you'd work with the Grail System to refine and evolve the look and feel of the fireworks and the moments of success, and ask for audio and background music. The whole process would take a few hours and the resulting commit would be equal to thousands of raw commits.
+
+To make something like the Grail System, you need to:
+    - recognize "fireworks"
+    - create visual that matches "fireworks"
+    - create code that creates a similar visual
+    - evolve code to higher-quality code
+    - create tests for code
+    - create documentation for code
+    - recognize "moments of success"
+    - match "moments of success" to UI states
+    - add a visual to UI states
+    - evolve visual according to developer feedback
+    - evolve moments of success matcher
+    - create audio
+    - create background music
 
 ## Compound growth
 

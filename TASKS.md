@@ -38,8 +38,8 @@
     [] Dynamic tree loading
         [x] One directory at a time
             [x] API to load single dirs
-            [x] If directory is larger than X, fetch its contents and graft onto filetree
-            [x] If directory is smaller than X, remove it from the filetree
+            [x] If directory is larger than X, fetch its contents and graft onto file tree
+            [x] If directory is smaller than X, remove it from the file tree
         [] Cheap tree updates
             [] Edit tree geometry instead of regenerating the whole thing 
             [] Individual models per dir / subtree
@@ -48,7 +48,7 @@
             [] Based on frustum
         [x] Lots of directories at a time
             [x] Batch fetch directories smaller than X 
-    [] View reparenting
+    [] View re-parenting
         [] Move camera instead of changing FOV
         [] Change transformation matrices when containing object changes
     [] Dynamic commit loading

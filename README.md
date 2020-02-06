@@ -1,10 +1,27 @@
-# Misty
+# Montaan
 
-Misty is a filesystem tree visualizer.
+Montaan is an in-browser git repo visualizer.
 
-It displays the filesystem as an easy-to-understand 2D hierarchy, with folders surrounding their contents.
+It displays the git repo as an easy-to-understand 2D hierarchy, with folders surrounding their contents. Projects in supported languages (read: JavaScript) also have dependency graphs to show the dependencies of source files.
 
-Misty wants to display the contents of individual files too. Can you help?
+There's code search that splits the results into Definition, Documentation, Uses and Tests, making it quick to things in the tree. The search results are overlaid on top of the tree with little pins, making huge result sets navigable.
+
+
+
+## Make it better
+
+New features should be initially implemented as components. To create a component, run `yarn makeComponent` in `frontend`.
+
+The components are split into two categories, `qframe` and `Montaan`. Qframe components deal with framework-level stuff like user login, registration, activation etc. Montaan components make up the tree visualizer. 
+
+```sh
+cd frontend
+yarn makeComponent MyShinyComponent
+# Fill in the questionnaire
+open src/components/MyShinyComponent/MyShinyComponent.tsx
+# Add your component to src/Montaan/index.jsx render() for top-level components
+# or under one of the sub-components in src/Montaan.
+```
 
 
 ## The focused project description
@@ -28,23 +45,3 @@ Misty wants to display the contents of individual files too. Can you help?
 - English Wikipedia articles (5.5M items) [ ]
 - Wikipedia with categories & interlinking (55M-ish) [ ]
 
-
-## VR/AR management
-
-- Hierarchies as 3D objects, more natural feel, easier to understand and work with
-- So coooool! Double-mondo radicalissimo!
-
-
-## Organization chart visualization
-
-- What are the teams
-- Who is working on what
-- What other teams are working on similar things
-- What expertise exists inside the organization, how to bring that to bear on the important problems
-
-
-## Visualize analytics, visitor flow
-
-- Analytics events clustered as different types of hierarchies
-- Link to users
-- User movement traces, focus on success event analysis, failure event analysis -- what leads someone to buy, what is the route they take
