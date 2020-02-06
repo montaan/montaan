@@ -95,12 +95,17 @@ class MainApp extends React.Component {
 			return;
 		}
 		console.time('load files');
-		const files = await this.props.api.postType('/repo/tree', {
-			repo: repoPrefix,
-			hash: ref,
-			paths: [''],
-			recursive: true,
-		}, {}, 'arrayBuffer');
+		const files = await this.props.api.postType(
+			'/repo/tree',
+			{
+				repo: repoPrefix,
+				hash: ref,
+				paths: [''],
+				recursive: true,
+			},
+			{},
+			'arrayBuffer'
+		);
 		console.timeEnd('load files');
 		console.time('parse files');
 		const fileTree = this.parseFiles(files, repoPrefix);
@@ -109,7 +114,8 @@ class MainApp extends React.Component {
 		this.setState({ ...this.emptyState, processing: false, repoPrefix, fileTree });
 		console.time('load commitObj');
 		const commitObj = await this.props.api.getType(
-			'/repo/fs/' + repoPrefix + '/log.json', {},
+			'/repo/fs/' + repoPrefix + '/log.json',
+			{},
 			'json'
 		);
 		console.timeEnd('load commitObj');
@@ -121,7 +127,8 @@ class MainApp extends React.Component {
 		this.setState({ navUrl: this.props.location.pathname + this.props.location.hash });
 		try {
 			const deps = await this.props.api.getType(
-				'/repo/fs/' + repoPrefix + '/deps.json', {},
+				'/repo/fs/' + repoPrefix + '/deps.json',
+				{},
 				'json'
 			);
 			const links = [];
@@ -201,23 +208,33 @@ class MainApp extends React.Component {
 	}
 
 	requestDirs = async (paths) => {
-		const files = await this.props.api.postType('/repo/tree', {
-			repo: this.state.repoPrefix,
-			hash: this.state.ref,
-			paths: paths.map(p => p.slice(this.state.repoPrefix.length+2)+"/"),
-			recursive: false,
-		}, {}, 'arrayBuffer');
-		const fileTree = utils.parseFileList_(files, true, this.state.repoPrefix + '/', this.state.fileTree);
-		this.setState({fileTree});
-	}
+		const files = await this.props.api.postType(
+			'/repo/tree',
+			{
+				repo: this.state.repoPrefix,
+				hash: this.state.ref,
+				paths: paths.map((p) => p.slice(this.state.repoPrefix.length + 2) + '/'),
+				recursive: false,
+			},
+			{},
+			'arrayBuffer'
+		);
+		const fileTree = utils.parseFileList_(
+			files,
+			true,
+			this.state.repoPrefix + '/',
+			this.state.fileTree
+		);
+		this.setState({ fileTree });
+	};
 
 	requestDitchDirs = async (fsEntries) => {
-		fsEntries.forEach(fsEntry => fsEntry.entries = {});
+		fsEntries.forEach((fsEntry) => (fsEntry.entries = {}));
 		var count = 0;
 		utils.traverseTree(this.state.fileTree, () => count++);
-		const fileTree = {...this.state.fileTree, count}
-		this.setState({fileTree});
-	}
+		const fileTree = { ...this.state.fileTree, count };
+		this.setState({ fileTree });
+	};
 
 	setCommitFilter = (commitFilter) => {
 		this.setState({ commitFilter });
@@ -450,9 +467,9 @@ class MainApp extends React.Component {
 		if (searchQuery === '') {
 			this.setState({ searchResults: [] });
 		} else {
-            const re = [];
+			const re = [];
 			try {
-                re[0] = new RegExp(searchQuery, 'i');
+				re[0] = new RegExp(searchQuery, 'i');
 			} catch (e) {}
 			this.search(re, searchQuery);
 		}

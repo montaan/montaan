@@ -91,6 +91,8 @@ class Tabletree {
 		this.frameStart = -1;
 
 		this.initDone = false;
+		this.requestDirs = undefined;
+		this.requestDitchDirs = undefined;
 	}
 
 	init(api, apiPrefix, repoPrefix) {
@@ -103,7 +105,9 @@ class Tabletree {
 		this.repoPrefix = repoPrefix;
 		loadFont('/fnt/Inconsolata-Regular.fnt', (err, font) => {
 			if (err) throw err;
-			new THREE.TextureLoader().load('/fnt/Inconsolata-Regular.png', (tex) => this.start(font, tex));
+			new THREE.TextureLoader().load('/fnt/Inconsolata-Regular.png', (tex) =>
+				this.start(font, tex)
+			);
 		});
 	}
 
@@ -1446,7 +1450,7 @@ class Tabletree {
 		var av = new THREE.Vector3(a.x, a.y, a.z);
 		av.applyMatrix4(modelA.matrixWorld);
 
-		var bv = new THREE.Vector3(b.x, b.y+b.scale, b.z);
+		var bv = new THREE.Vector3(b.x, b.y + b.scale, b.z);
 		bv.applyMatrix4(modelB.matrixWorld);
 
 		if (lineA > 0 && entryA.textHeight) {
@@ -1472,13 +1476,13 @@ class Tabletree {
 
 		var aUp = new THREE.Vector3(
 			a.x + (a.x < b.x ? 1 : -1) * 0.1 * entryA.scale,
-			(a.y) + (0.1 + 0.01 * (entryB.size % 10)) * entryA.scale,
+			a.y + (0.1 + 0.01 * (entryB.size % 10)) * entryA.scale,
 			Math.max(a.z, b.z) + 1 * entryA.scale
 		);
 		aUp.applyMatrix4(modelA.matrixWorld);
 		var bUp = new THREE.Vector3(
 			b.x + (a.x > b.x ? 1 : -1) * 0.1 * entryB.scale,
-			(b.y+b.scale) + (0.1 + 0.01 * (entryB.size % 10)) * entryB.scale,
+			b.y + b.scale + (0.1 + 0.01 * (entryB.size % 10)) * entryB.scale,
 			Math.max(a.z, b.z) + 1 * entryB.scale
 		);
 		bUp.applyMatrix4(modelB.matrixWorld);
