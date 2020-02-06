@@ -6,6 +6,7 @@ import {
 	Switch,
 	withRouter,
 	Link,
+	RouteComponentProps,
 } from 'react-router-dom';
 
 // import TopBar from './qframe/TopBar';
@@ -14,7 +15,7 @@ import SignUpForm from './qframe/SignUpForm';
 import { RecoverForm, PasswordResetForm } from './qframe/RecoverForm';
 import UserActivation from './qframe/UserActivation';
 // import HelpOverlay from './qframe/HelpOverlay';
-import Montaan from './Montaan/index.tsx';
+import Montaan from './Montaan';
 
 import { Client } from './lib/quickgres-frontend';
 
@@ -24,18 +25,22 @@ import { faArrowLeft } from '@fortawesome/free-solid-svg-icons';
 
 const APIServer = document.location.origin.replace(/(:\d+)$/, ':8008') + '/_';
 
-class Logout extends React.Component {
+class Logout extends React.Component<{ api: any }> {
 	async componentDidMount() {
 		await this.props.api.post('/user/logout');
-		window.location = '/';
+		window.location.href = '/';
 	}
 	render() {
 		return <></>;
 	}
 }
 
-class _GoBack extends React.Component {
-	goBack = (ev) => {
+interface GoBackProps extends RouteComponentProps {
+	loggedIn: boolean;
+}
+
+class _GoBack extends React.Component<GoBackProps> {
+	goBack = (ev: any) => {
 		ev.preventDefault();
 		if (this.props.location.pathname === '/recoverAccount') {
 			this.props.history.push('/login');
@@ -54,57 +59,79 @@ class _GoBack extends React.Component {
 }
 const GoBack = withRouter(_GoBack);
 
-class App extends React.Component {
-	constructor(props) {
+type QFrameAPIResponseType = 'json' | 'text' | 'arrayBuffer' | 'raw';
+
+class QFrameAPI {
+	server: string;
+	authHeaders?: any;
+
+	constructor(server: string) {
+		this.server = server;
+		this.authHeaders = undefined;
+	}
+
+	request(path: string, config?: any) {
+		const configHeaders = config ? config.headers : {};
+		config = {
+			credentials: 'include',
+			...config,
+			headers: { ...configHeaders, ...this.authHeaders },
+		};
+		return fetch(this.server + path, config);
+	}
+
+	async parseResponse(res: Response, responseType?: QFrameAPIResponseType) {
+		if (res.status !== 200)
+			throw Error('Response failed: ' + res.status + ' ' + res.statusText);
+		if (responseType === 'raw') return res;
+		if (responseType) return res[responseType]();
+		const mime = res.headers.get('content-type');
+		if (mime === 'application/json') return res.json();
+		else if (mime === 'text/plain') return res.text();
+		else if (mime === 'application/x-postgres') {
+			const arrayBuffer = await res.arrayBuffer();
+			const client = new Client(1);
+			client.onData(arrayBuffer);
+			return client.stream.rows.map((r) => r.toObject());
+		} else if (/^text/.test(mime || '')) return res.text();
+		else return res.arrayBuffer();
+	}
+	async postType(path: string, body: any, config: any, responseType: QFrameAPIResponseType) {
+		return this.parseResponse(
+			await this.request(path, { method: 'POST', body: JSON.stringify(body), ...config }),
+			responseType
+		);
+	}
+	async getType(path: string, config: any, responseType: QFrameAPIResponseType) {
+		return this.parseResponse(await this.request(path, config), responseType);
+	}
+	async post(path: string, body: any, config?: object) {
+		return this.parseResponse(
+			await this.request(path, { method: 'POST', body: JSON.stringify(body), ...config })
+		);
+	}
+	async get(path: string, config?: object) {
+		return this.parseResponse(await this.request(path, config));
+	}
+}
+
+class App extends React.Component<any, any> {
+	api: QFrameAPI;
+	history: any;
+
+	constructor(props: any) {
 		super(props);
 		this.state = {
 			authHeaders: {},
 			userInfo: {},
 		};
 		this.authHeaders = this.state.authHeaders;
-		this.api = (path, config) => {
-			const configHeaders = config ? config.headers : {};
-			config = {
-				credentials: 'include',
-				...config,
-				headers: { ...configHeaders, ...this.state.authHeaders, ...this.authHeaders },
-			};
-			return fetch(this.api.server + path, config);
-		};
-		this.api.server = APIServer;
-		this.api.parseResponse = async (res, responseType) => {
-			if (res.status !== 200)
-				throw Error('Response failed: ' + res.status + ' ' + res.statusText);
-			if (responseType === 'raw') return res;
-			if (responseType) return res[responseType]();
-			const mime = res.headers.get('content-type');
-			if (mime === 'application/json') return res.json();
-			else if (mime === 'text/plain') return res.text();
-			else if (mime === 'application/x-postgres') {
-				const arrayBuffer = await res.arrayBuffer();
-				const client = new Client(1);
-				client.onData(arrayBuffer);
-				return client.stream.rows.map((r) => r.toObject());
-			} else if (/^text/.test(mime)) return res.text();
-			else return res.arrayBuffer();
-		};
-		this.api.postType = async (path, body, config, responseType) =>
-			this.api.parseResponse(
-				await this.api(path, { method: 'POST', body: JSON.stringify(body), ...config }),
-				responseType
-			);
-		this.api.getType = async (path, config, responseType) =>
-			this.api.parseResponse(await this.api(path, config), responseType);
-		this.api.post = async (path, body, config) =>
-			this.api.parseResponse(
-				await this.api(path, { method: 'POST', body: JSON.stringify(body), ...config })
-			);
-		this.api.get = async (path, config) => this.api.parseResponse(await this.api(path, config));
+		this.api = new QFrameAPI(APIServer);
 	}
 
-	setAuthHeaders = (authHeaders, fetchUserInfo = true) => {
+	setAuthHeaders = (authHeaders: any, fetchUserInfo = true) => {
 		const { csrf } = authHeaders;
-		this.authHeaders = { csrf };
+		this.api.authHeaders = { csrf };
 		authHeaders = csrf ? { csrf } : {};
 		this.setState({ authHeaders });
 		if (fetchUserInfo) this.fetchUserInfo();
@@ -116,7 +143,7 @@ class App extends React.Component {
 		return this.fetchUserInfo();
 	}
 
-	async fetchUserInfo(mountTime) {
+	async fetchUserInfo() {
 		try {
 			const userInfo = await this.fetchUserDetails();
 			if (!userInfo) {
@@ -153,7 +180,7 @@ class App extends React.Component {
 		this.history.push('/');
 	}
 
-	showHelp = (ev) => {
+	showHelp = (ev: MouseEvent) => {
 		ev.preventDefault();
 		this.setState({ showHelp: !this.state.showHelp });
 	};
@@ -179,7 +206,7 @@ class App extends React.Component {
 								'/recover/:token',
 								'/activate/:activationToken',
 							]}
-							component={(match) => <GoBack loggedIn={loggedIn} />}
+							component={() => <GoBack loggedIn={loggedIn} />}
 						/>
 						<Route>
 							<GoBack loggedIn={loggedIn} />
@@ -211,7 +238,7 @@ class App extends React.Component {
 							<Route
 								exact
 								path="/login"
-								component={(_match) =>
+								component={() =>
 									loggedIn ? (
 										<Redirect to="/" />
 									) : (
@@ -226,7 +253,7 @@ class App extends React.Component {
 							<Route
 								exact
 								path="/signup"
-								component={(_match) =>
+								component={() =>
 									loggedIn ? (
 										<Redirect to="/" />
 									) : (
@@ -241,14 +268,14 @@ class App extends React.Component {
 							<Route
 								exact
 								path="/recoverAccount"
-								component={(_match) =>
+								component={() =>
 									loggedIn ? <Redirect to="/" /> : <RecoverForm api={this.api} />
 								}
 							/>
 							<Route
 								exact
 								path="/recover/:token"
-								component={(_match) => {
+								component={() => {
 									return loggedIn ? (
 										<Redirect to="/" />
 									) : (
@@ -262,17 +289,17 @@ class App extends React.Component {
 							<Route
 								exact
 								path="/logout"
-								component={(_match) =>
+								component={() =>
 									!loggedIn ? <Redirect to="/" /> : <Logout api={this.api} />
 								}
 							/>
 							<Route
 								path="/activate/:activationToken"
-								component={(match) => <UserActivation api={this.api} />}
+								component={() => <UserActivation api={this.api} />}
 							/>
 							<Route
 								path="/:user/:name"
-								component={(_match) => (
+								component={() => (
 									<Montaan
 										api={this.api}
 										apiPrefix={this.api.server}
@@ -283,7 +310,7 @@ class App extends React.Component {
 							<Route
 								exact
 								path="/"
-								component={(_match) =>
+								component={() =>
 									loggedIn ? (
 										<Montaan
 											api={this.api}
