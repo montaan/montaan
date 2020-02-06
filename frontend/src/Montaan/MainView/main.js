@@ -141,7 +141,8 @@ class Tabletree {
 				this.resAdjust = 1280 / window.screen.width;
 			}
 		}
-		if (/Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent)) {
+		this.renderer.setPixelRatio(window.devicePixelRatio);
+		if (!/Chrome/.test(navigator.userAgent)) {
 			this.renderer.setSize(
 				window.innerWidth * this.pageZoom * this.resAdjust,
 				window.innerHeight * this.pageZoom * this.resAdjust
