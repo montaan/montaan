@@ -14,7 +14,7 @@ import SignUpForm from './qframe/SignUpForm';
 import { RecoverForm, PasswordResetForm } from './qframe/RecoverForm';
 import UserActivation from './qframe/UserActivation';
 // import HelpOverlay from './qframe/HelpOverlay';
-import Montaan from './Montaan';
+import Montaan from './Montaan/index.tsx';
 
 import { Client } from './lib/quickgres-frontend';
 
