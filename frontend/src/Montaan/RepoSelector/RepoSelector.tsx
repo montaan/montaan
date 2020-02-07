@@ -2,7 +2,7 @@
 
 import React, { Component } from 'react';
 
-import { withRouter } from 'react-router-dom';
+import { withRouter, RouteComponentProps } from 'react-router-dom';
 import Button from 'react-bootstrap/Button';
 import Dropdown from 'react-bootstrap/Dropdown';
 import DropdownButton from 'react-bootstrap/DropdownButton';
@@ -14,17 +14,40 @@ import * as yup from 'yup';
 
 import FormGroupTextInput from '../../lib/FormGroupTextInput';
 
-import strict from '../../lib/strictProxy.js';
-import styles_ from './css/style.module.scss';
-const styles = strict(styles_, 'components/RepoSelector/css/style.module.scss');
+import styles from './RepoSelector.module.scss';
 
 const schema = yup.object({
-	name: yup.string().optional(),
-	url: yup.string().optional(),
+	name: yup.string().nullable(),
+	url: yup.string().nullable(),
 });
 
-class RepoSelector extends Component {
-	constructor(props) {
+interface Repo {
+	name: string;
+	commit_count: number;
+	url: string;
+	owner: string;
+	processing: boolean;
+}
+
+interface RepoSelectorProps extends RouteComponentProps {
+	createRepo(name: string, url: string): void;
+	repos: Repo[];
+}
+
+interface RepoSelectorState {
+	showCreate: boolean;
+	name: string;
+	url: string;
+	search: string;
+	repoSort: 'name' | 'commits';
+}
+
+type SubmitValues = { name: string; url: string };
+type SetSubmitFunc = (value: boolean) => void;
+type RepoSorter = (a: Repo, b: Repo) => number;
+
+class RepoSelector extends Component<RepoSelectorProps, RepoSelectorState> {
+	constructor(props: RepoSelectorProps) {
 		super(props);
 
 		this.state = {
@@ -36,21 +59,18 @@ class RepoSelector extends Component {
 		};
 	}
 
-	handleChange = (event) => {
-		this.setState({
-			[event.target.id]: event.target.value,
-		});
-	};
-
-	async handleSubmit(values, setSubmitting) {
+	async handleSubmit(values: SubmitValues, setSubmitting?: SetSubmitFunc) {
+		if (!values.name && !values.url) return;
 		this.setState({ showCreate: false });
 		setSubmitting && setSubmitting(true);
 		try {
-			if (!values.name)
-				values.name = values.url
-					.split('/')
-					.filter((a) => a)
-					.pop();
+			if (!values.name) {
+				values.name =
+					values.url
+						.split('/')
+						.filter((a) => a)
+						.pop() || '';
+			}
 			this.props.createRepo(values.name, values.url);
 		} finally {
 			setSubmitting && setSubmitting(false);
@@ -59,37 +79,45 @@ class RepoSelector extends Component {
 
 	onCancel = () => this.setState({ showCreate: false });
 
-	setRepo = (eventKey, event) => {
+	setRepo = (eventKey: string, event: any) => {
 		if (eventKey === '#new') this.setState({ showCreate: true });
 		else this.props.history.push(eventKey);
 	};
 
-	onSubmit = async (values, { setSubmitting }) => {
+	onSubmit = async (
+		values: SubmitValues,
+		{ setSubmitting }: { setSubmitting: SetSubmitFunc }
+	) => {
 		setSubmitting(true);
 		await this.handleSubmit(values);
 		setSubmitting(false);
 	};
 
-	repoCmpName(a, b) {
+	repoCmpName(a: Repo, b: Repo): number {
 		return a.name.localeCompare(b.name);
 	}
-	repoCmpCommitCount(a, b) {
+	repoCmpCommitCount(a: Repo, b: Repo): number {
 		return b.commit_count - a.commit_count;
 	}
 
-	getRepoCmp(repoSort) {
+	getRepoCmp(repoSort: string): RepoSorter {
 		if (repoSort === 'commits') return this.repoCmpCommitCount;
 		else return this.repoCmpName;
 	}
 
-	repoSearchOnChange = (ev) => this.setState({ search: ev.target.value });
-	repoFilter = (repo) => repo.name.includes(this.state.search);
+	repoSearchOnChange = (ev: any) => this.setState({ search: ev.target.value });
+	repoFilter = (repo: Repo) => repo.name.includes(this.state.search);
 
 	render() {
 		return (
 			<div className={styles.RepoSelector}>
-				<DropdownButton alignRight title="Your Repositories" onSelect={this.setRepo}>
-					<Dropdown.Header>
+				<DropdownButton
+					id="repoDropdown"
+					alignRight
+					title="Your Repositories"
+					onSelect={this.setRepo}
+				>
+					<Dropdown.Header key="header">
 						<Form.Group id="repoSearch">
 							<Form.Control
 								onChange={this.repoSearchOnChange}
@@ -142,7 +170,7 @@ class RepoSelector extends Component {
 							isSubmitting,
 							/* and other goodies */
 						}) => (
-							<Form onSubmit={handleSubmit} disabled={isSubmitting}>
+							<Form onSubmit={isSubmitting ? () => {} : handleSubmit}>
 								<FormGroupTextInput
 									label="Repo name"
 									control="name"

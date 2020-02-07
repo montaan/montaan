@@ -678,12 +678,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 				)}
 				{this.state.repoError && <div id="repoError">{this.state.repoError}</div>}
 
-				<RepoSelector
-					setRepo={this.setRepo}
-					repos={this.state.repos}
-					createRepo={this.createRepo}
-					userInfo={this.props.userInfo}
-				/>
+				<RepoSelector repos={this.state.repos} createRepo={this.createRepo} />
 				<Search
 					navigationTarget={this.state.navigationTarget}
 					requestFrame={this.requestFrame}

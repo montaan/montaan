@@ -1,12 +1,15 @@
 // src/Montaan/Breadcrumb/Breadcrumb.test.js
 
-import React from 'react';
 import { render } from '@testing-library/react';
+import React from 'react';
+import { BrowserRouter as Router } from 'react-router-dom';
 import Breadcrumb from './';
 
-import styles from './Breadcrumb.module.scss';
-
 test('renders without crashing', () => {
-	const { baseElement } = render(<Breadcrumb navigationTarget="/foo/bar/baz" fileTree={{}} />);
+	const { baseElement } = render(
+		<Router>
+			<Breadcrumb navigationTarget="/foo/bar/baz" fileTree={{}} />
+		</Router>
+	);
 	expect(baseElement).toBeInTheDocument();
 });

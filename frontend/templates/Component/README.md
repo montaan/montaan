@@ -1,19 +1,15 @@
 # TARGET/NAME
 
-AUTHOR is a lame-o who hasn't documented their yucky component NAME. Neener neener!
+The NAME component is WHAT_IS_IT for WHY_IS_IT.
 
-The NAME component is an X for Y.
-
-The NAME component is used by Z.
+The NAME component is used by USED_BY.
 
 The primary reviewer for NAME is AUTHOR.
 
 ## Usage
 
 ```tsx
-<NAME
-    propA={}
-/>
+<NAME PROPS_USE />
 ```
 
 ## Props
@@ -22,41 +18,38 @@ This is the description of the NAME component's NAMEProps interface.
 
 ```ts
 interface NAMEProps {
-    propA: PropTypes.string, // propA is used to pass A to NAME
+	PROPS;
 }
 ```
 
 ## Styling
 
-The NAME component uses [CSS Modules](https://github.com/css-modules/css-modules) for styling. The component stylesheet is at [css/NAME.module.css].
+The NAME component uses [CSS Modules](https://github.com/css-modules/css-modules) for styling. The component stylesheet is at [NAME.module.css].
 
 Example of using the stylesheet:
 
 ```css
 .NAME {
-    display: inline-block;
+	display: inline-block;
 
-    :global(.hidden) {
-        display: block;
-        opacity: 0.1;
-    }
+	:global(.hidden) {
+		display: block;
+		opacity: 0.1;
+	}
 }
 
 .title {
-    color: red;
+	color: red;
 }
-
 ```
 
 ```tsx
-render() {
-    return (
-        <div className={this.styles.NAME}>
-            <h1 className={this.styles.title}>Hello from {this.styles.title}!</h1>
-            <p className="hidden">This P is using the global class <code>.hidden</code></p>
-        </div>
-    );
-}
+<div className={this.styles.NAME}>
+	<h1 className={this.styles.title}>Hello from {this.styles.title}!</h1>
+	<p className="hidden">
+		This P is using the global class <code>.hidden</code>
+	</p>
+</div>
 ```
 
 ## Assets
@@ -66,12 +59,9 @@ Any assets (images, fonts, 3D models, static files, etc.) used by the component 
 ```jsx
 import myImage from './assets/myImage.svg';
 // ...
-render() {
-    return (<img src={myImage}>);
-}
+<img src={myImage}>
 ```
 
 ## Authors
 
 AUTHOR
-

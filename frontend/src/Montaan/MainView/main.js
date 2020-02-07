@@ -1,4 +1,4 @@
-import { getPathEntry, getFullPath, getSiblings } from '../lib/filetree';
+import { getPathEntry, getFullPath } from '../lib/filetree';
 import Colors from '../lib/Colors.ts';
 import prettyPrintWorker from '../lib/pretty-print';
 import createText from '../lib/third_party/three-bmfont-text-modified';
@@ -7,7 +7,7 @@ import Layout from '../lib/Layout';
 import utils from '../lib/utils';
 import Geometry from '../lib/Geometry';
 
-import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js';
+import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter';
 import * as THREE from 'three';
 import loadFont from 'load-bmfont';
 

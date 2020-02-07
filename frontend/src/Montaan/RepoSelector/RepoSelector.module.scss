@@ -1,6 +1,6 @@
-/* src/components/RepoSelector/css/style.module.css */
-@import '../../../css/partials/variables';
-@import '../../../css/partials/mixins';
+/* src/components/RepoSelector/RepoSelector.module.css */
+@import '../../css/partials/variables';
+@import '../../css/partials/mixins';
 
 .RepoSelector {
 	position: absolute;
@@ -23,7 +23,9 @@
 		max-height: 80vh;
 		overflow-y: auto;
 		overflow-x: hidden;
-		a { white-space: normal; }
+		a {
+			white-space: normal;
+		}
 	}
 	.repoOwner {
 		display: none;
@@ -33,8 +35,12 @@
 	}
 	.repoCommits {
 		font-size: 80%;
-		&:before { content: "("; }
-		&:after { content: " commits)"; }
+		&:before {
+			content: '(';
+		}
+		&:after {
+			content: ' commits)';
+		}
 		margin-left: 8px;
 	}
 	.repoProcessing {
