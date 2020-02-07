@@ -7,49 +7,49 @@ import Layout from '../lib/Layout';
 import utils from '../lib/utils';
 import Geometry from '../lib/Geometry';
 
-import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter';
+// import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter';
 import * as THREE from 'three';
 import loadFont from 'load-bmfont';
 
-function save(blob, filename) {
-	const link = document.createElement('a');
-	link.href = URL.createObjectURL(blob);
-	link.download = filename;
-	link.click();
+// function save(blob, filename) {
+// 	const link = document.createElement('a');
+// 	link.href = URL.createObjectURL(blob);
+// 	link.download = filename;
+// 	link.click();
 
-	// URL.revokeObjectURL( url ); breaks Firefox...
-}
+// 	// URL.revokeObjectURL( url ); breaks Firefox...
+// }
 
-function saveString(text, filename) {
-	save(new Blob([text], { type: 'text/plain' }), filename);
-}
+// function saveString(text, filename) {
+// 	save(new Blob([text], { type: 'text/plain' }), filename);
+// }
 
-function saveArrayBuffer(buffer, filename) {
-	save(new Blob([buffer], { type: 'application/octet-stream' }), filename);
-}
+// function saveArrayBuffer(buffer, filename) {
+// 	save(new Blob([buffer], { type: 'application/octet-stream' }), filename);
+// }
 
-function exportGLTF(input) {
-	var gltfExporter = new GLTFExporter();
+// function exportGLTF(input) {
+// 	var gltfExporter = new GLTFExporter();
 
-	var options = {
-		onlyVisible: false,
-		truncateDrawRange: false,
-		binary: true,
-	};
-	gltfExporter.parse(
-		input,
-		function(result) {
-			if (result instanceof ArrayBuffer) {
-				saveArrayBuffer(result, 'scene.glb');
-			} else {
-				var output = JSON.stringify(result, null, 2);
-				saveString(output, 'scene.gltf');
-			}
-		},
-		options
-	);
-}
-global.exportGLTF = exportGLTF;
+// 	var options = {
+// 		onlyVisible: false,
+// 		truncateDrawRange: false,
+// 		binary: true,
+// 	};
+// 	gltfExporter.parse(
+// 		input,
+// 		function(result) {
+// 			if (result instanceof ArrayBuffer) {
+// 				saveArrayBuffer(result, 'scene.glb');
+// 			} else {
+// 				var output = JSON.stringify(result, null, 2);
+// 				saveString(output, 'scene.gltf');
+// 			}
+// 		},
+// 		options
+// 	);
+// }
+// global.exportGLTF = exportGLTF;
 
 global.THREE = THREE;
 
@@ -171,8 +171,8 @@ class Tabletree {
 		document.body.appendChild(renderer.domElement);
 
 		var scene = new THREE.Scene();
-		window.scene3 = scene;
-		window.GLTFExporter = GLTFExporter;
+		// window.scene3 = scene;
+		// window.GLTFExporter = GLTFExporter;
 
 		var camera = new THREE.PerspectiveCamera(
 			45,

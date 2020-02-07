@@ -78,7 +78,8 @@ declare global {
 }
 
 const isInWebAppiOS = window.navigator.standalone === true;
-const isInWebAppChrome = window.matchMedia('(display-mode: standalone)').matches;
+const isInWebAppChrome =
+	window.matchMedia && window.matchMedia('(display-mode: standalone)').matches;
 const fullscreenSupported = document.exitFullscreen && !isInWebAppChrome && !isInWebAppiOS;
 
 var searchResultsTimeout = 0;
