@@ -141,6 +141,20 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 
 	parseFiles(text: string, repoPrefix: string, changedFiles = []) {
 		const fileTree = utils.parseFileList(text, {}, true, repoPrefix + '/');
+		if (this.state.repos) {
+			const reposEntry = fileTree.tree.entries[this.props.userInfo.name];
+			this.state.repos.forEach((repo: any) => {
+				if (!reposEntry.entries[repo.name]) {
+					reposEntry.entries[repo.name] = {
+						entries: {},
+						size: 0,
+						title: repo.name,
+						parent: reposEntry,
+						index: 0,
+					};
+				}
+			});
+		}
 		for (var i = 0; i < changedFiles.length; i++) {
 			const { path, renamed, action } = changedFiles[i];
 			const fsEntry = getPathEntry(fileTree.tree, repoPrefix + '/' + (renamed || path));
@@ -686,11 +700,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 				/>
 				<Breadcrumb
 					navigationTarget={this.state.navigationTarget}
-					commitFilter={this.state.commitFilter}
-					setCommitFilter={this.setCommitFilter}
-					addLinks={this.addLinks}
-					setLinks={this.setLinks}
-					links={this.state.links}
+					fileTree={this.state.fileTree}
 				/>
 				<CommitControls
 					activeCommitData={this.state.activeCommitData}

@@ -561,80 +561,6 @@ class Tabletree {
 		await this.api.post('/repo/playSpotify', { uri: playlistURL });
 	}
 
-	updateBreadCrumb(path) {
-		if (path === this.breadcrumbPath) return;
-		const self = this;
-		this.breadcrumbPath = path;
-		var el = document.getElementById('breadcrumb');
-		if (!el) return;
-		while (el.firstChild) el.removeChild(el.firstChild);
-		var segs = path.split('/');
-		el.onmouseout = function(ev) {
-			if (ev.target === this && !this.contains(ev.relatedTarget)) {
-				[].slice
-					.call(this.querySelectorAll('ul'))
-					.forEach((u) => u.parentNode.removeChild(u));
-			}
-		};
-		var linkMouseOver = function(ev) {
-			if (this.querySelector('ul')) return;
-			var siblings = getSiblings(self.fileTree, this.path);
-			var ul = document.createElement('ul');
-			siblings.splice(siblings.indexOf(this.path), 1);
-			siblings.forEach((path) => {
-				var link = document.createElement('li');
-				link.path = path;
-				link.textContent = path.split('/').pop();
-				link.onclick = function(ev) {
-					ev.preventDefault();
-					ev.stopPropagation();
-					var fsEntry = getPathEntry(self.fileTree, this.path);
-					if (fsEntry) self.goToFSEntry(fsEntry, self.model);
-				};
-				ul.append(link);
-			});
-			ul.onmouseout = function(ev) {
-				if (ev.target === this && !this.parentNode.contains(ev.relatedTarget)) {
-					this.parentNode.removeChild(this);
-				}
-			};
-			[].slice
-				.call(this.parentNode.querySelectorAll('ul'))
-				.forEach((u) => u.parentNode.removeChild(u));
-			this.appendChild(ul);
-		};
-		var linkMouseOut = function(ev) {
-			var ul = this.querySelector('ul');
-			if (
-				ev.target === this &&
-				ev.relatedTarget !== this.parentNode &&
-				ul &&
-				!ul.contains(ev.relatedTarget)
-			) {
-				this.removeChild(ul);
-			}
-		};
-		for (let i = 1; i < segs.length; i++) {
-			let prefix = segs.slice(0, i + 1).join('/');
-			let name = segs[i];
-			let sep = document.createElement('span');
-			sep.className = 'separator';
-			sep.textContent = '/';
-			el.appendChild(sep);
-			let link = document.createElement('span');
-			link.path = prefix;
-			link.textContent = name;
-			link.onclick = function(ev) {
-				ev.preventDefault();
-				var fsEntry = getPathEntry(self.fileTree, this.path);
-				if (fsEntry) self.goToFSEntry(fsEntry, self.model);
-			};
-			link.onmouseover = linkMouseOver;
-			link.onmouseout = linkMouseOut;
-			el.appendChild(link);
-		}
-	}
-
 	async createFileTreeModel(fileCount, fileTree) {
 		const { font, camera } = this;
 		const self = this;
@@ -750,7 +676,7 @@ class Tabletree {
 						} else {
 							let fullPath = getFullPath(o);
 							if (
-								visibleFiles.children.length < 10 &&
+								visibleFiles.children.length < 30 &&
 								!visibleFiles.visibleSet[fullPath]
 							) {
 								if (Colors.imageRE.test(fullPath))
@@ -761,8 +687,8 @@ class Tabletree {
 					}
 				}
 			}
-			self.updateBreadCrumb(navigationTarget);
 			self.zoomedInPath = zoomedInPath;
+			self.breadcrumbPath = navigationTarget;
 			self.setNavigationTarget(navigationTarget);
 			this.geometry.setDrawRange(
 				smallestCovering.vertexIndex,
