@@ -1,8 +1,9 @@
 ### Tasks
 
 # Strengths
+
     Keep these in mind when deciding what to work on. Improving these increases project value for everyday use.
-    
+
     [] Code browsing
     [] Seeing through hierarchy
     [] Understanding structure
@@ -15,7 +16,6 @@
     [] Opening content in-line
     [] Editing content in-line
     [] Fast filesystem browsing
-
 
 ## Quality targets
 
@@ -32,22 +32,31 @@
         - Content editing [5k]
         - Repo activity vis [3k]
 
+Architecture change time:
+_ Design it OS style
+_ Tree with filesystems mounted onto it
+_ Overlay filesystems for things like per-session data, UI state, selections, search highlights, etc. metadata that shouldn't be a part of the filesystem, needs fast edits, and isn't trivial enough to be fully transient UI state.
+_ Render list generator that traverses the visible parts of the tree and creates a drawable model out of them.
+_ Renderer that draws the render list
+_ UI controller that converts UI events and the latest render list into tree edits
+
 ## Active
 
 # KEY FEATURES
+
     [] Dynamic tree loading
         [x] One directory at a time
             [x] API to load single dirs
             [x] If directory is larger than X, fetch its contents and graft onto file tree
             [x] If directory is smaller than X, remove it from the file tree
         [] Cheap tree updates
-            [] Edit tree geometry instead of regenerating the whole thing 
+            [] Edit tree geometry instead of regenerating the whole thing
             [] Individual models per dir / subtree
         [] Hide and show tree parts
             [x] Based on size
             [] Based on frustum
         [x] Lots of directories at a time
-            [x] Batch fetch directories smaller than X 
+            [x] Batch fetch directories smaller than X
     [] View re-parenting
         [] Move camera instead of changing FOV
         [] Change transformation matrices when containing object changes
@@ -68,12 +77,14 @@
         [] Palette editor for live editing of file type looks
 
 # Make a pleasant place
+
     [] Party
     [] Theme music for tasks / parts of project
         [x] Per-dir playlist URL
     [] Artwork
 
 # Plugins
+
     [] Some sort of plugin system to enable parallel development
     [] TreeProvider
     [] FileInlineProvider
@@ -86,17 +97,19 @@
       - Register FileViewProvider for filename pattern
       - Display directory of photos organized into calendar and events
 
-
 # "Payment" system
+
     [] Commit prompt to pay for use via commit
 
 # Frontend data model
+
     [] Use URIs to refer to objects
         [] commit:sha
         [] author:authorString
     [] When drawing a link, find all objects with the URI
 
 # UX tweaks
+
     [] Zoom text doc left side to screen left side (instead of middle of screen)
     [] Snap scroll to document boundaries
     [] Line numbers for text view
@@ -105,6 +118,7 @@
         [] Recent activity (commits, issues)
 
 # Performance
+
     [] Optimize lines
         [] Limit to ~10k lines in view
         [] Stratified random sampling
@@ -114,29 +128,34 @@
     [] Instanced rendering of all models
 
 # Website engine
+
     [] Turn README.md into HTML and display it on top of directory
     [] Display images nicely - design system for directories
     [] Use a Blender scene as directory and models as files
 
 # Layout
+
     [] Layout text files as vertical [] (think of the minimap, source files are tall and narrow)
     [] Split folders into [subdirs | files]
     [] Navigation tags (little models next to long lists like e.g. Android contacts)
-        [] Commit date tags (show "2019-09-01" next to first commit on that date) 
+        [] Commit date tags (show "2019-09-01" next to first commit on that date)
             [] Commit dates in UTC
         [] Author alphabetical tags (show "C" next to first author starting with "C")
 
 # Font
+
     [] MSDF for sharp corners
     [] Full Unicode support
 
 # Search
+
     [] Highlight found search token
     [] Non-regexp search FFS. Exact string matching (case-sensitive).
     [] Color code search results by category
     [] Uncategorized result view
 
 # Backend
+
     [] Public/private repos
     [] Public repo/list
     [] Better non-logged-in experience
@@ -144,11 +163,12 @@
     [] Poll server for new commits
 
 # Version history
+
     [] Compare file at any revision to HEAD in file diff view (so that you can first find a file with code you want to revert, then compare that with the current version to know what to revert.)
     [] Commit view
         [] Show list of files after message (click file to open)
         [] Collapse/expand individual diffs
-        [] Navigate 
+        [] Navigate
     [] Show commit filter
     [] Don't hide other authors when clicking an author
     [] Editable commit filter
@@ -157,7 +177,7 @@
         [] Select date range (ctrl/shift drag)
         [] Crop / expand path filter
     [] Parse change metadata like
-        [cleanup][CSA] TNodify InitializeAllocationMemento  
+        [cleanup][CSA] TNodify InitializeAllocationMemento
         Bug: v8:10021
         Change-Id: I78948e93ca61116a6a1a45ccbc1dfa7c27988c30
         Reviewed-on: https://chromium-review.googlesource.com/c/v8/v8/+/1995391
@@ -169,38 +189,41 @@
     [x] Sort authors by commit count
 
 # Commits
+
     [] Display list of files touched by author
     [] Navigate to file in zoom view
 
 # Visualization
+
     [] All files in repo by type (all the images, all the c, all the py, all the rs, all the js)
 
 # Visuals
+
     [] Fade out text before hiding it
     [x] Output a 3D model for rendering with a path tracer
     [] Sparkling precious particle diamonds like on Precious Nature map
     [] Design that makes you feel awesome
 
 # Payment system
+
     [] Ad magazine to pay for today's use
     [] Buy ads
     [] Buy platform credits
 
-
-
-
 ## Completed
 
 # KEY FEATURES
+
     [x] [Directories | Files] layout
         [x] 1:1 wide rectangle
         [x] N:M split based on count
 
-
 # Visuals
+
     [x] Output a 3D model for rendering with a path tracer
 
 # Backend
+
     [x] Register & Log in
     [x] Add your own repos (supply repo URL -> pull repo -> add to repo list)
         [x] repo/create
@@ -213,6 +236,7 @@
         [x] Public repo MainApp view
 
 # Search
+
     [x] Add line number to search index
     [x] Group search results by file and sort in-file hits by line number:
         search_result_1.txt
@@ -224,7 +248,7 @@
             '- Line 300
         [x] Navigate to line when clicking a line result
     [x] Highlight search hit line
-        [x] Draw connection line to hit line 
+        [x] Draw connection line to hit line
         [x] Add a line-sized quad under each hit line
         [x] Render the damn quads properly (instead of 3 lines)
     [x] Switch search engine to codesearch
@@ -233,10 +257,11 @@
     [x] Shrink search results outside current view
     [x] Pull and display line snippet context somehow
     [z] Score results by relevancy (lunr-style)
-    [x] Categorize results 
+    [x] Categorize results
     [x] Search for Commits and Authors
 
 # Commits
+
     [x] Animated file tree history
     [x] Animated commit history
     [x] Show files touched by single commit
@@ -261,15 +286,19 @@
     [x] Link from commits list to files and authors in current active set
 
 # Version history
+
     [x] Single-file version history + moving between versions
 
 # Visualization
+
     [/] Different representation for zoomed-out-text (solid lines minimap)
 
 # Visuals
+
     [x] Fix images: proper alpha & CORS
 
 # UX tweaks
+
     [x] Breadcrumb navigation
         [x] Show sibling dirs in breadcrumb (like OSX column view)
     [x] Use scroll for lateral navigation
@@ -285,6 +314,7 @@
     [x] All my repos
 
 ## Data model
+
     [x] Use React to maintain current UI state
         [x] Slicing-dicing MegaQueryObject to pass down fileTree, highlights, connections
         [x] Search query
@@ -295,10 +325,11 @@
     [x] Element-FSEntry
     [x] FSEntry-FSEntry
     [x] Element-Element
-    [x] Single line geometry for all lines 
+    [x] Single line geometry for all lines
         [x] Links
         [x] Search results
 
 # Performance
+
     [x] Pipeline text model creation to avoid frame stutter (probably coming from shader compile / geometry creation)
     [z] Handle a million commits somehow
