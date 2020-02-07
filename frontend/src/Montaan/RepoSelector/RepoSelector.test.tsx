@@ -10,10 +10,20 @@ it('renders without crashing', () => {
 	ReactDOM.render(
 		<Router>
 			<RepoSelector
-				createRepo={() => {}}
 				repos={[
-					{ name: 'test', commit_count: 2, owner: 'foo', processing: false, url: '' },
+					{ name: 'foo', owner: 'bar', url: '', commit_count: 20, processing: false },
 				]}
+				createRepo={async (name: string, url?: string) =>
+					new Promise((r) =>
+						r({
+							name: 'foo',
+							owner: 'bar',
+							url: '',
+							commit_count: 20,
+							processing: false,
+						})
+					)
+				}
 			/>
 		</Router>,
 		div

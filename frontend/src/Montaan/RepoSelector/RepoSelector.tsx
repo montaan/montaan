@@ -21,7 +21,7 @@ const schema = yup.object({
 	url: yup.string().nullable(),
 });
 
-interface Repo {
+export interface Repo {
 	name: string;
 	commit_count: number;
 	url: string;
@@ -30,8 +30,8 @@ interface Repo {
 }
 
 interface RepoSelectorProps extends RouteComponentProps {
-	createRepo(name: string, url: string): void;
 	repos: Repo[];
+	createRepo(name: string, url?: string): Promise<Repo>;
 }
 
 interface RepoSelectorState {

@@ -19,6 +19,7 @@ import { authorCmp, Commit, CommitFile } from '../lib/parse-diff';
 import { getPathEntry, getFullPath } from '../lib/filetree';
 
 import styles from './MainApp.module.scss';
+import { Repo } from '../RepoSelector/RepoSelector';
 
 export interface MainAppProps extends RouteComponentProps {
 	match: any;
@@ -622,8 +623,9 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 
 	createRepo = async (name: string, url?: string) => {
 		if (!url) url = undefined;
-		await this.props.api.post('/repo/create', { name, url });
+		const repo = await this.props.api.post('/repo/create', { name, url });
 		this.updateUserRepos(this.props.userInfo);
+		return repo as Repo;
 	};
 
 	dots() {
