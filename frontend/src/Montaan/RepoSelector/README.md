@@ -70,6 +70,100 @@ import myImage from './assets/myImage.svg';
 <img src={myImage}>
 ```
 
-## Authors
+## API
 
-Ilmari Heikkinen <hei@heichen.hk>
+### Props
+
+```tsx
+interface RepoSelectorProps extends RouteComponentProps {
+	repos: Repo[];
+	createRepo(name: string, url?: string): Promise<Repo>;
+}
+```
+
+### Interfaces
+
+```tsx
+export interface Repo {
+	name: string;
+	commit_count: number;
+	url: string;
+	owner: string;
+	processing: boolean;
+}
+interface RepoSelectorProps extends RouteComponentProps {
+	repos: Repo[];
+	createRepo(name: string, url?: string): Promise<Repo>;
+}
+interface RepoSelectorState {
+	showCreate: boolean;
+	name: string;
+	url: string;
+	search: string;
+	repoSort: 'name' | 'commits';
+}
+```
+
+### Props
+
+```tsx
+interface RepoSelectorProps extends RouteComponentProps {
+	repos: Repo[];
+	createRepo(name: string, url?: string): Promise<Repo>;
+}
+```
+
+### Interfaces
+
+```tsx
+export interface Repo {
+	name: string;
+	commit_count: number;
+	url: string;
+	owner: string;
+	processing: boolean;
+}
+interface RepoSelectorProps extends RouteComponentProps {
+	repos: Repo[];
+	createRepo(name: string, url?: string): Promise<Repo>;
+}
+interface RepoSelectorState {
+	showCreate: boolean;
+	name: string;
+	url: string;
+	search: string;
+	repoSort: 'name' | 'commits';
+}
+```
+
+### Props
+
+```tsx
+interface RepoSelectorProps extends RouteComponentProps {
+	repos: Repo[];
+	createRepo(name: string, url?: string): Promise<Repo>;
+}
+```
+
+### Interfaces
+
+```tsx
+export interface Repo {
+	name: string;
+	commit_count: number;
+	url: string;
+	owner: string;
+	processing: boolean;
+}
+interface RepoSelectorProps extends RouteComponentProps {
+	repos: Repo[];
+	createRepo(name: string, url?: string): Promise<Repo>;
+}
+interface RepoSelectorState {
+	showCreate: boolean;
+	name: string;
+	url: string;
+	search: string;
+	repoSort: 'name' | 'commits';
+}
+```

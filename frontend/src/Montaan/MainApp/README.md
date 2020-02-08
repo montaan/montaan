@@ -1,28 +1,23 @@
-# components/MainApp
+# Montaan/MainApp
 
-Ilmari Heikkinen <hei@heichen.hk> is a lame-o who hasn't documented their yucky component MainApp. Neener neener!
-
-The MainApp component is an X for Y.
-
-The MainApp component is used by Z.
+The MainApp component is the main screen for the Montaan repo browser.
+The MainApp component is used by the App and is referred from Montaan/index.tsx.
 
 The primary reviewer for MainApp is Ilmari Heikkinen <hei@heichen.hk>.
 
 ## Usage
 
 ```tsx
-<MainApp
-    propA={}
-/>
+<MainApp propA={} />
 ```
 
 ## Props
 
 This is the description of the MainApp component's MainAppProps interface.
 
-```ts
+```tsx
 interface MainAppProps {
-    propA: PropTypes.string, // propA is used to pass A to MainApp
+	propA: PropTypes.string; // propA is used to pass A to MainApp
 }
 ```
 
@@ -34,44 +29,106 @@ Example of using the stylesheet:
 
 ```css
 .MainApp {
-    display: inline-block;
+	display: inline-block;
 
-    :global(.hidden) {
-        display: block;
-        opacity: 0.1;
-    }
+	:global(.hidden) {
+		display: block;
+		opacity: 0.1;
+	}
 }
-
 .title {
-    color: red;
+	color: red;
 }
-
 ```
 
 ```tsx
-render() {
-    return (
-        <div className={this.styles.MainApp}>
-            <h1 className={this.styles.title}>Hello from {this.styles.title}!</h1>
-            <p className="hidden">This P is using the global class <code>.hidden</code></p>
-        </div>
-    );
-}
+<div className={this.styles.MainApp}>
+	<h1 className={this.styles.title}>Hello from {this.styles.title}!</h1>
+	<p className="hidden">
+		This P is using the global class <code>.hidden</code>
+	</p>
+</div>
 ```
 
 ## Assets
 
 Any assets (images, fonts, 3D models, static files, etc.) used by the component are in [assets/]. Import the asset into your script file to get the post-build URL.
 
-```jsx
+```tsx
 import myImage from './assets/myImage.svg';
 // ...
-render() {
-    return (<img src={myImage}>);
+<img src={myImage}>
+```
+
+## API
+
+### Props
+
+```tsx
+export interface MainAppProps extends RouteComponentProps {
+	match: any;
+	userInfo: any;
+	api: any;
+	apiPrefix: string;
 }
 ```
 
-## Authors
+### Interfaces
 
-Ilmari Heikkinen <hei@heichen.hk>
+```tsx
+export interface MainAppProps extends RouteComponentProps {
+	match: any;
+	userInfo: any;
+	api: any;
+	apiPrefix: string;
+}
+export interface FSEntry {
+	title: string;
+	entries: { [propType: string]: FSEntry };
+}
+export interface FSLink {
+	src: Element | FSEntry;
+	dst: Element | FSEntry;
+	color: THREE.Color;
+}
+export interface UserInfo {
+	name: string;
+}
+interface MainAppState {
+	repoPrefix: string;
+	commitFilter: any;
+	searchQuery: string;
+	commits: any[];
+	activeCommitData: any;
+	fileTree: { count: number; tree: FSEntry };
+	commitLog: string;
+	commitChanges: string;
+	files: string;
+	searchResults: any[];
+	navigationTarget: string;
+	goToTarget: null | { fsEntry: FSEntry; line?: number; col?: number };
+	frameRequestTime: number;
+	searchLinesRequest: number;
+	diffsLoaded: number;
+	fileContents: null | any;
+	links: any[];
+	repos: any[];
+	repoError: any;
+	processing: boolean;
+	processingCommits: boolean;
+	commitData: any;
+	navUrl: string;
+	ref: string;
+	searchHover?: any;
+}
+```
 
+### Declares
+
+```tsx
+declare global {
+	interface Navigator {
+		standalone?: boolean;
+	}
+}
+```

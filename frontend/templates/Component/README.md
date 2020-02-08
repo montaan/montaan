@@ -62,6 +62,4 @@ import myImage from './assets/myImage.svg';
 <img src={myImage}>
 ```
 
-## Authors
-
-AUTHOR
+## API

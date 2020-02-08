@@ -17,6 +17,34 @@ storiesOf('Montaan/RepoSelector', module).add('RepoSelector', () => (
 			<p>The primary reviewer for RepoSelector is Ilmari Heikkinen {'<hei@heichen.hk>'}.</p>
 
 			<h4>API</h4>
+			<h5>Props</h5>
+			<pre>
+				<code>{`interface RepoSelectorProps extends RouteComponentProps {
+	repos: Repo[];
+	createRepo(name: string, url?: string): Promise<Repo>;
+}`}</code>
+			</pre>
+			<h5>Interfaces</h5>
+			<pre>
+				<code>{`export interface Repo {
+	name: string;
+	commit_count: number;
+	url: string;
+	owner: string;
+	processing: boolean;
+}
+interface RepoSelectorProps extends RouteComponentProps {
+	repos: Repo[];
+	createRepo(name: string, url?: string): Promise<Repo>;
+}
+interface RepoSelectorState {
+	showCreate: boolean;
+	name: string;
+	url: string;
+	search: string;
+	repoSort: 'name' | 'commits';
+}`}</code>
+			</pre>
 		</div>
 
 		<hr />

@@ -57,6 +57,7 @@
 		"test": "react-scripts test",
 		"eject": "react-scripts eject",
 		"makeComponent": "bin/makeComponent",
+		"updateComponent": "bin/updateComponent.js",
 		"analyze": "source-map-explorer 'build/static/js/*.js'",
 		"storybook": "start-storybook -p 9009 -s public",
 		"build-storybook": "build-storybook -s public"
@@ -72,6 +73,9 @@
 	"lint-staged": {
 		"src/**/*.{js,jsx,ts,tsx,json,css,scss,md}": [
 			"prettier --write"
+		],
+		"src/**/*.{js,jsx,ts,tsx,json}": [
+			"eslint --fix"
 		]
 	},
 	"browserslist": {
@@ -93,6 +97,7 @@
 		"@storybook/preset-create-react-app": "^1.5.2",
 		"@storybook/react": "^5.3.12",
 		"@types/mustache": "^4.0.0",
+		"cypress": "^4.0.0",
 		"husky": ">=4",
 		"lint-staged": ">=10",
 		"mustache": "^4.0.0",

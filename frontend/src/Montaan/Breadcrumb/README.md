@@ -1,17 +1,25 @@
 # Montaan/Breadcrumb
 
-Ilmari Heikkinen <hei@heichen.hk> is a lame-o who hasn't documented their yucky component Breadcrumb. Neener neener!
+The Breadcrumb component is a clickable list of path components for navigating the file tree.
 
-The Breadcrumb component is an X for Y.
-
-The Breadcrumb component is used by Z.
+The Breadcrumb component is used by the MainApp screen.
 
 The primary reviewer for Breadcrumb is Ilmari Heikkinen <hei@heichen.hk>.
 
 ## Usage
 
 ```tsx
-<Breadcrumb propA={} />
+<Breadcrumb
+	navigationTarget={'/foo/bar'}
+	fileTree={{
+		tree: {
+			title: '',
+			entries: {
+				foo: { title: 'foo', entries: { bar: { title: '', entries: null } } },
+			},
+		},
+	}}
+/>
 ```
 
 ## Props
@@ -19,8 +27,9 @@ The primary reviewer for Breadcrumb is Ilmari Heikkinen <hei@heichen.hk>.
 This is the description of the Breadcrumb component's BreadcrumbProps interface.
 
 ```ts
-interface BreadcrumbProps {
-	propA: PropTypes.string; // propA is used to pass A to Breadcrumb
+interface BreadcrumbProps extends RouteComponentProps {
+	navigationTarget: string;
+	fileTree: any;
 }
 ```
 
@@ -68,6 +77,22 @@ render() {
 }
 ```
 
-## Authors
+## API
 
-Ilmari Heikkinen <hei@heichen.hk>
+### Props
+
+```tsx
+export interface BreadcrumbProps extends RouteComponentProps {
+	navigationTarget: string;
+	fileTree: any;
+}
+```
+
+### Interfaces
+
+```tsx
+export interface BreadcrumbProps extends RouteComponentProps {
+	navigationTarget: string;
+	fileTree: any;
+}
+```
