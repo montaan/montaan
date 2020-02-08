@@ -17,6 +17,8 @@ import { faTimes, faArrowUp, faArrowDown } from '@fortawesome/free-solid-svg-ico
 import { editor } from 'monaco-editor';
 
 import styles from './CommitInfo.module.scss';
+import { TreeLink, CommitFilter, FileContents, ActiveCommitData } from '../MainApp';
+import { CommitData } from '../lib/parse_commits';
 
 monaco.config({
 	urls: {
@@ -39,12 +41,12 @@ export interface CommitInfoProps {
 
 	diffsLoaded: number;
 
-	addLinks(links: any[]): void;
-	setLinks(links: any[]): void;
-	links: any[];
+	addLinks(links: TreeLink[]): void;
+	setLinks(links: TreeLink[]): void;
+	links: TreeLink[];
 
-	commitFilter: any;
-	setCommitFilter(commitFilter: any): void;
+	commitFilter: CommitFilter;
+	setCommitFilter(commitFilter: CommitFilter): void;
 
 	navigationTarget: string;
 	repoPrefix: string;
@@ -52,23 +54,11 @@ export interface CommitInfoProps {
 	closeFile(): void;
 	loadDiff(commit: Commit): Promise<void>;
 
-	activeCommitData: {
-		authors: string[];
-		authorCommitCounts: { [propType: string]: number };
-		commits: Commit[];
-	};
+	activeCommitData: null | ActiveCommitData;
 
-	commitData: {
-		commits: Commit[];
-		commitIndex: { [propType: string]: Commit };
-	};
+	commitData: null | CommitData;
 
-	fileContents: null | {
-		content: string;
-		path: string;
-		hash: string;
-		original?: string;
-	};
+	fileContents: null | FileContents;
 
 	showFileCommitsClick(event: React.MouseEvent<HTMLButtonElement, MouseEvent>): void;
 }
@@ -324,7 +314,7 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 			div.onmousedown = function(ev) {
 				ev.preventDefault();
 				if (self.props.commitFilter.author === author)
-					self.props.setCommitFilter({ ...self.props.commitFilter, author: null });
+					self.props.setCommitFilter({ ...self.props.commitFilter, author: undefined });
 				else self.props.setCommitFilter({ ...self.props.commitFilter, author });
 			};
 			el.appendChild(div);
@@ -350,21 +340,25 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 
 	shouldComponentUpdate(nextProps: CommitInfoProps, nextState: CommitInfoState) {
 		if (nextProps.activeCommitData !== this.props.activeCommitData) {
-			const { authors, commits, authorCommitCounts } = nextProps.activeCommitData;
-			if (!nextState.visible && commits && commits !== nextProps.commitData.commits)
-				this.setState({ visible: true });
-			const diffView = document.getElementById('diffView')!;
-			while (diffView.firstChild) diffView.removeChild(diffView.firstChild);
-			this.updateActiveCommitSetAuthors(authors, authorCommitCounts, commits);
-			this.updateActiveCommitSetDiffs(commits);
+			if (nextProps.activeCommitData && nextProps.commitData) {
+				const { authors, commits, authorCommitCounts } = nextProps.activeCommitData;
+				if (!nextState.visible && commits && commits !== nextProps.commitData.commits)
+					this.setState({ visible: true });
+				const diffView = document.getElementById('diffView')!;
+				while (diffView.firstChild) diffView.removeChild(diffView.firstChild);
+				this.updateActiveCommitSetAuthors(authors, authorCommitCounts, commits);
+				this.updateActiveCommitSetDiffs(commits);
+			}
 		} else if (nextState.authorSort !== this.state.authorSort) {
-			const { authors, commits, authorCommitCounts } = nextProps.activeCommitData;
-			this.updateActiveCommitSetAuthors(
-				authors,
-				authorCommitCounts,
-				commits,
-				nextState.authorSort
-			);
+			if (nextProps.activeCommitData && nextProps.commitData) {
+				const { authors, commits, authorCommitCounts } = nextProps.activeCommitData;
+				this.updateActiveCommitSetAuthors(
+					authors,
+					authorCommitCounts,
+					commits,
+					nextState.authorSort
+				);
+			}
 		}
 		return true;
 	}
@@ -441,6 +435,7 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 	};
 
 	getFileCommits(path: string, hash: string): { path: string; commit: Commit }[] {
+		if (!this.props.commitData) return [];
 		const arr = [];
 		const commits = this.props.commitData.commits;
 		let currentPath = path;
@@ -576,11 +571,11 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 							<span className="hash">{this.props.fileContents.hash}</span>
 							&mdash;
 							<span className="message">
-								{
-									this.props.commitData.commitIndex[
-										this.props.fileContents.hash
-									].message.split('\n')[0]
-								}
+								{this.props.commitData
+									? this.props.commitData.commitIndex[
+											this.props.fileContents.hash
+									  ].message.split('\n')[0]
+									: ''}
 							</span>
 						</h4>
 						<h3>{this.props.fileContents.path}</h3>

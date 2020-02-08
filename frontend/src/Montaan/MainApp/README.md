@@ -16,8 +16,11 @@ The primary reviewer for MainApp is Ilmari Heikkinen <hei@heichen.hk>.
 This is the description of the MainApp component's MainAppProps interface.
 
 ```tsx
-interface MainAppProps {
-	propA: PropTypes.string; // propA is used to pass A to MainApp
+export interface MainAppProps extends RouteComponentProps {
+	match: any;
+	userInfo: any;
+	api: any;
+	apiPrefix: string;
 }
 ```
 

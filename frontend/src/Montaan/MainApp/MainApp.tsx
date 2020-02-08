@@ -11,15 +11,14 @@ import CommitControls from '../CommitControls';
 import CommitInfo from '../CommitInfo';
 import Search from '../Search';
 import Breadcrumb from '../Breadcrumb';
-import RepoSelector from '../RepoSelector';
+import RepoSelector, { Repo } from '../RepoSelector';
 
 import utils from '../lib/utils';
-import { parseCommits } from '../lib/parse_commits';
+import { parseCommits, CommitData, RawCommitData } from '../lib/parse_commits';
 import { authorCmp, Commit, CommitFile } from '../lib/parse-diff';
 import { getPathEntry, getFullPath } from '../lib/filetree';
 
 import styles from './MainApp.module.scss';
-import { Repo } from '../RepoSelector/RepoSelector';
 
 export interface MainAppProps extends RouteComponentProps {
 	match: any;
@@ -30,42 +29,82 @@ export interface MainAppProps extends RouteComponentProps {
 
 export interface FSEntry {
 	title: string;
-	entries: { [propType: string]: FSEntry };
+	entries: null | { [filename: string]: FSEntry };
 }
 
-export interface FSLink {
-	src: Element | FSEntry;
-	dst: Element | FSEntry;
-	color: THREE.Color;
+export interface TreeLink {
+	src: Element | FSEntry | string;
+	dst: Element | FSEntry | string;
+	color: { r: number; g: number; b: number };
+}
+
+export interface SearchResult {
+	fsEntry: FSEntry;
+	filename: string;
+	line: number;
+	snippet?: string;
+	hitType: number;
 }
 
 export interface UserInfo {
 	name: string;
 }
 
+export interface FileTree {
+	count: number;
+	tree: FSEntry;
+}
+export interface GoToTarget {
+	fsEntry: FSEntry;
+	line?: number;
+	col?: number;
+}
+
+export interface FileContents {
+	content: string;
+	path: string;
+	hash: string;
+	original?: string;
+}
+
+export interface CommitFilter {
+	path?: string;
+	author?: string;
+	authorSearch?: string;
+	search?: string;
+	date?: string;
+}
+
+export interface ActiveCommitData {
+	commits: Commit[];
+	authors: string[];
+	authorCommitCounts: { [author: string]: number };
+	files: any[];
+}
+
 interface MainAppState {
 	repoPrefix: string;
-	commitFilter: any;
+	commitFilter: CommitFilter;
 	searchQuery: string;
-	commits: any[];
-	activeCommitData: any;
-	fileTree: { count: number; tree: FSEntry };
+	commits: Commit[];
+	activeCommitData: null | ActiveCommitData;
+	fileTree: FileTree;
 	commitLog: string;
 	commitChanges: string;
 	files: string;
-	searchResults: any[];
+	searchResults: SearchResult[];
 	navigationTarget: string;
-	goToTarget: null | { fsEntry: FSEntry; line?: number; col?: number };
+	goToTarget: null | GoToTarget;
 	frameRequestTime: number;
 	searchLinesRequest: number;
 	diffsLoaded: number;
-	fileContents: null | any;
-	links: any[];
-	repos: any[];
+	fileContents: null | FileContents;
+	links: TreeLink[];
+	repos: Repo[];
 	repoError: any;
 	processing: boolean;
 	processingCommits: boolean;
-	commitData: any;
+	commitData: null | CommitData;
 	navUrl: string;
 	ref: string;
 	searchHover?: any;
@@ -98,7 +137,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		commitFilter: {},
 		searchQuery: '',
 		commits: [],
-		activeCommitData: {},
+		activeCommitData: null,
 		fileTree: { count: 0, tree: { title: '', entries: {} } },
 		commitLog: '',
 		commitChanges: '',
@@ -197,14 +236,14 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		console.time('parse files');
 		const fileTree = this.parseFiles(files, repoPrefix);
 		console.timeEnd('parse files');
-		const commitsOpen = this.state.activeCommitData.commits;
+		const commitsOpen = this.state.activeCommitData !== null;
 		this.setState({ ...this.emptyState, processing: false, repoPrefix, fileTree });
 		console.time('load commitObj');
-		const commitObj = await this.props.api.getType(
+		const commitObj = (await this.props.api.getType(
 			'/repo/fs/' + repoPrefix + '/log.json',
 			{},
 			'json'
-		);
+		)) as RawCommitData;
 		console.timeEnd('load commitObj');
 		console.time('parse commitObj');
 		const commitData = parseCommits(commitObj);
@@ -339,7 +378,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 
 	setActiveCommits = (activeCommits: any[]) => {
 		const authorList = activeCommits.map((c) => c.author);
-		const authorCommitCounts: { [propTypes: string]: number } = {};
+		const authorCommitCounts: { [author: string]: number } = {};
 		authorList.forEach((key) => {
 			if (!authorCommitCounts[key]) authorCommitCounts[key] = 0;
 			authorCommitCounts[key]++;
@@ -405,11 +444,13 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		});
 	};
 
-	filterCommits(commitFilter: any) {
+	filterCommits(commitFilter: CommitFilter): Commit[] {
+		if (!this.state.commitData) return [];
+
 		var path = (commitFilter.path || '').substring(this.state.repoPrefix.length + 2);
 		var author = commitFilter.author;
 		var authorSearch = commitFilter.authorSearch;
-		var search = commitFilter.search;
+		var search = commitFilter.search || '';
 		var date = commitFilter.date;
 		var year, month, day;
 
@@ -427,7 +468,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 			const files = c.files;
 			const jl = files.length;
 			var pathHit = !path;
-			var searchHit = !search || (c.message && c.message.includes(search));
+			var searchHit = !search || !!(c.message && c.message.includes(search));
 			for (var j = 0; j < jl; ++j) {
 				const f = files[j];
 				if (f.renamed && f.renamed.startsWith(path)) {
@@ -438,7 +479,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 				searchHit =
 					searchHit ||
 					f.path.includes(search) ||
-					(f.renamed && f.renamed.includes(search));
+					!!(f.renamed && f.renamed.includes(search));
 			}
 			const authorHit = !author || authorCmp(author, c.author) === 0;
 			const authorSearchHit = !authorSearch || c.author.toLowerCase().includes(authorSearch);
@@ -562,7 +603,8 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		}
 	}
 
-	findCommitsForPath(path: string) {
+	findCommitsForPath(path: string): Commit[] {
+		if (!this.state.commitData) return [];
 		path = path.substring(this.state.repoPrefix.length + 2);
 		return this.state.commitData.commits.filter((c: Commit) =>
 			c.files.some((f: CommitFile) => {
@@ -595,8 +637,8 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		this.setState({ goToTarget: { fsEntry, line } });
 	goToFSEntry = (fsEntry: FSEntry) => this.setState({ goToTarget: { fsEntry } });
 
-	setLinks = (links: FSLink[]) => this.setState({ links });
-	addLinks = (links: FSLink[]) => this.setLinks(this.state.links.concat(links));
+	setLinks = (links: TreeLink[]) => this.setState({ links });
+	addLinks = (links: TreeLink[]) => this.setLinks(this.state.links.concat(links));
 
 	async updateUserRepos(userInfo: UserInfo) {
 		if (!userInfo) return this.setState({ repos: [] });
@@ -661,9 +703,12 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 	};
 
 	render() {
-		const title = this.state.repoPrefix ? '🏔 ' + this.state.repoPrefix : 'Montaan 🏔';
+		const titlePrefix = /Chrome/.test(navigator.userAgent) ? '' : '🏔 ';
+		const title = this.state.repoPrefix
+			? titlePrefix + this.state.repoPrefix.split('/')[1] + ' - Montaan'
+			: 'Montaan 🏔';
 		return (
-			<div id="mainApp">
+			<div id="mainApp" className={styles.MainApp}>
 				<Helmet meta={[{ name: 'author', content: 'Montaan' }]}>
 					<link rel="canonical" href="https://montaan.com/" />
 					<meta name="description" content="Montaan." />

@@ -1,5 +1,5 @@
 import React from 'react';
-import './MainView.css';
+import './MainView.scss';
 import tabletree from './main.js';
 
 interface MainViewProps {

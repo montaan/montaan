@@ -75,7 +75,7 @@ then
 	sed -i '' -e s/TARGET/"$TARGET"/g src/"$TARGET"/"$NAME"/*.*
 	sed -i '' -e s/NAME/"$NAME"/g src/"$TARGET"/"$NAME"/*.*
 	sed -i '' -e s/AUTHOR/"$AUTHOR"/g src/"$TARGET"/"$NAME"/*.*
-	sed -i '' -e s/;;/;/g src/"$TARGET"/"$NAME"/*.*
+	sed -i '' -e 's/;;/;/g' src/"$TARGET"/"$NAME"/*.*
 	(cd src/"$TARGET"/"$NAME"/ &&
 		for f in `find . | fgrep NAME`
 		do

@@ -1,24 +1,48 @@
-import * as THREE from 'three';
+import { Commit, CommitFile } from './parse-diff';
 
-export function parseCommits(commitData) {
-	const touchedFiles = [];
-	const commitIndex = {};
-	const authors = {};
-	const commits = commitData.commits;
+export interface CommitIndex {
+	[sha: string]: Commit;
+}
+export interface AuthorIndex {
+	[author: string]: Commit[];
+}
+
+export interface CommitData {
+	commits: Commit[];
+	commitIndex: CommitIndex;
+	authors: AuthorIndex;
+}
+
+export interface RawCommitData {
+	commits: any[][];
+	authors: string[];
+	files: string[];
+}
+
+export function parseCommits(commitData: RawCommitData): CommitData {
+	const commitIndex: CommitIndex = {};
+	const authors: AuthorIndex = {};
+	const commitList = commitData.commits;
 	const authorList = commitData.authors;
 	const fileList = commitData.files;
+	const commits = new Array(commitList.length);
 
-	for (var i = 0; i < commits.length; i++) {
-		const [sha, author, message, date, files] = commits[i];
-		const commit = { sha, author, message, date, files };
+	for (var i = 0; i < commitList.length; i++) {
+		const [sha, author, message, date, files] = commitList[i];
+		const commit = {
+			sha,
+			author: authorList[author as number],
+			message,
+			date: new Date(date),
+			files: [] as CommitFile[],
+		};
 		commits[i] = commit;
-		commit.date = new Date(commit.date);
-		commit.author = authorList[commit.author];
-		for (var j = 0; j < commit.files.length; j++) {
-			var [action, path, renamed] = commit.files[j];
-			path = fileList[path];
-			renamed = renamed && fileList[renamed];
-			commit.files[j] = { action, path, renamed };
+		for (var j = 0; j < files.length; j++) {
+			let action: string, pathIdx: number, renamedIdx: number | undefined;
+			[action, pathIdx, renamedIdx] = files[j];
+			const path = fileList[pathIdx];
+			const renamed = renamedIdx !== undefined ? fileList[renamedIdx] : undefined;
+			commit.files.push({ action, path, renamed });
 		}
 		commitIndex[commit.sha] = commit;
 		if (!authors[commit.author]) authors[commit.author] = [];
@@ -106,8 +130,6 @@ export function parseCommits(commitData) {
 	// }
 	// console.timeLog("commits", "done with authors");
 
-	var lineGeo = new THREE.Geometry();
-
 	// var h = 4;
 	// for (var authorName in authors) {
 	//     var author = authors[authorName];
@@ -144,8 +166,5 @@ export function parseCommits(commitData) {
 	// }
 	// var touchedFiles = Object.keys(touchedFilesIndex).sort().map(k => touchedFilesIndex[k]);
 
-	lineGeo.vertices.push(new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, 0));
-	lineGeo.colors.push(new THREE.Color(0, 0, 0), new THREE.Color(0, 0, 0));
-
-	return { commits, commitIndex, authors, lineGeo, touchedFiles };
+	return { commits, commitIndex, authors };
 }

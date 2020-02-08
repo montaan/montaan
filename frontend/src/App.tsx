@@ -8,6 +8,7 @@ import {
 	Link,
 	RouteComponentProps,
 } from 'react-router-dom';
+import { QFrameAPI } from './lib/api';
 
 // import TopBar from './qframe/TopBar';
 import LoginForm from './qframe/LoginForm';
@@ -16,8 +17,6 @@ import { RecoverForm, PasswordResetForm } from './qframe/RecoverForm';
 import UserActivation from './qframe/UserActivation';
 // import HelpOverlay from './qframe/HelpOverlay';
 import Montaan from './Montaan';
-
-import { Client } from './lib/quickgres-frontend';
 
 import './App.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -58,62 +57,6 @@ class _GoBack extends React.Component<GoBackProps> {
 	}
 }
 const GoBack = withRouter(_GoBack);
-
-type QFrameAPIResponseType = 'json' | 'text' | 'arrayBuffer' | 'raw';
-
-class QFrameAPI {
-	server: string;
-	authHeaders?: any;
-
-	constructor(server: string) {
-		this.server = server;
-		this.authHeaders = undefined;
-	}
-
-	request(path: string, config?: any) {
-		const configHeaders = config ? config.headers : {};
-		config = {
-			credentials: 'include',
-			...config,
-			headers: { ...configHeaders, ...this.authHeaders },
-		};
-		return fetch(this.server + path, config);
-	}
-
-	async parseResponse(res: Response, responseType?: QFrameAPIResponseType) {
-		if (res.status !== 200)
-			throw Error('Response failed: ' + res.status + ' ' + res.statusText);
-		if (responseType === 'raw') return res;
-		if (responseType) return res[responseType]();
-		const mime = res.headers.get('content-type');
-		if (mime === 'application/json') return res.json();
-		else if (mime === 'text/plain') return res.text();
-		else if (mime === 'application/x-postgres') {
-			const arrayBuffer = await res.arrayBuffer();
-			const client = new Client(1);
-			client.onData(arrayBuffer);
-			return client.stream.rows.map((r) => r.toObject());
-		} else if (/^text/.test(mime || '')) return res.text();
-		else return res.arrayBuffer();
-	}
-	async postType(path: string, body: any, config: any, responseType: QFrameAPIResponseType) {
-		return this.parseResponse(
-			await this.request(path, { method: 'POST', body: JSON.stringify(body), ...config }),
-			responseType
-		);
-	}
-	async getType(path: string, config: any, responseType: QFrameAPIResponseType) {
-		return this.parseResponse(await this.request(path, config), responseType);
-	}
-	async post(path: string, body: any, config?: object) {
-		return this.parseResponse(
-			await this.request(path, { method: 'POST', body: JSON.stringify(body), ...config })
-		);
-	}
-	async get(path: string, config?: object) {
-		return this.parseResponse(await this.request(path, config));
-	}
-}
 
 class App extends React.Component<any, any> {
 	api: QFrameAPI;

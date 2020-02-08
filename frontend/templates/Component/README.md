@@ -17,7 +17,7 @@ The primary reviewer for NAME is AUTHOR.
 This is the description of the NAME component's NAMEProps interface.
 
 ```ts
-interface NAMEProps {
+interface NAMEProps extends RouteComponentProps {
 	PROPS;
 }
 ```
