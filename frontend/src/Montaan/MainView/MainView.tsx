@@ -1,6 +1,7 @@
 import React from 'react';
 import './MainView.scss';
 import tabletree from './main.js';
+import { TreeLink } from '../MainApp';
 
 interface MainViewProps {
 	requestDirs(paths: string[]): void;
@@ -18,9 +19,9 @@ interface MainViewProps {
 	goToTarget: any;
 	searchQuery: string;
 	searchLinesRequest: number;
-	addLinks: any;
-	setLinks: any;
-	links: any[];
+	addLinks(links: TreeLink[]): void;
+	setLinks(links: TreeLink[]): void;
+	links: TreeLink[];
 	navUrl?: string;
 	frameRequestTime: number;
 	setNavigationTarget(target: string): void;

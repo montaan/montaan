@@ -3,5 +3,17 @@
 @import '../../css/partials/mixins';
 
 .TreeView {
+	position: absolute;
+	left: 0;
+	top: 0;
+	width: 100%;
+	height: 100%;
 	/* Placeholder to make the compiler create this class. */
+	canvas {
+		position: absolute;
+		left: 0;
+		top: 0;
+		width: 100%;
+		height: 100%;
+	}
 }
