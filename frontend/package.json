@@ -47,14 +47,14 @@
 		"yup": "^0.27.0"
 	},
 	"scripts": {
-		"start": "react-scripts start",
+		"start": "react-app-rewired start",
 		"deploy": "cd .. && yarn deploy",
-		"build": "react-scripts build && yarn sw-epilog && yarn brotli && yarn gzip && yarn imageOptim",
+		"build": "react-app-rewired build && yarn sw-epilog && yarn brotli && yarn gzip && yarn imageOptim",
 		"sw-epilog": "cat src/sw-epilog.js >> build/service-worker.js",
 		"brotli": "gulp brotli",
 		"gzip": "gulp gzip",
 		"imageOptim": "gulp imageOptim",
-		"test": "react-scripts test",
+		"test": "react-app-rewired test --env=jsdom",
 		"eject": "react-scripts eject",
 		"makeComponent": "bin/makeComponent",
 		"updateComponent": "bin/updateComponent.js",
@@ -97,10 +97,13 @@
 		"@storybook/preset-create-react-app": "^1.5.2",
 		"@storybook/react": "^5.3.12",
 		"@types/mustache": "^4.0.0",
+		"customize-cra": "^0.9.1",
+		"customize-cra-react-refresh": "^1.0.1",
 		"cypress": "^4.0.0",
 		"husky": ">=4",
 		"lint-staged": ">=10",
 		"mustache": "^4.0.0",
-		"prettier": "1.19.1"
+		"prettier": "1.19.1",
+		"react-app-rewired": "^2.1.5"
 	}
 }
