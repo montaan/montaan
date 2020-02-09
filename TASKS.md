@@ -33,12 +33,21 @@
         - Repo activity vis [3k]
 
 Architecture change time:
-_ Design it OS style
+_ Design it operating system style
 _ Tree with filesystems mounted onto it
 _ Overlay filesystems for things like per-session data, UI state, selections, search highlights, etc. metadata that shouldn't be a part of the filesystem, needs fast edits, and isn't trivial enough to be fully transient UI state.
 _ Render list generator that traverses the visible parts of the tree and creates a drawable model out of them.
 _ Renderer that draws the render list
 _ UI controller that converts UI events and the latest render list into tree edits
+
+Mistakes are costly. Most mistakes are easy to detect, given a recording of activity. Eliminating all detectable mistakes gets you into 99.999% performance category.
+
+Eliminate mistakes
+_ Detect mistakes
+_ Auto-fix what you can
+_ Block what you can't, forcing manual fix
+_ Minimize impact of mistakes
+\_ Minimize lifetime of mistakes
 
 ## Active
 
