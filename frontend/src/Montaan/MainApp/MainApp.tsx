@@ -183,7 +183,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 
 	parseFiles(text: string, repoPrefix: string, changedFiles = []) {
 		const fileTree = utils.parseFileList(text, {}, true, repoPrefix + '/');
-		if (this.state.repos) {
+		if (false && this.state.repos) {
 			const reposEntry = fileTree.tree.entries[this.props.userInfo.name];
 			this.state.repos.forEach((repo: any) => {
 				if (!reposEntry.entries[repo.name]) {

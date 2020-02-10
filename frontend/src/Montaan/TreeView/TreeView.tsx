@@ -3,7 +3,7 @@
 import { withRouter, RouteComponentProps } from 'react-router-dom';
 import React, { useState, useCallback, useEffect, useRef, useMemo, MutableRefObject } from 'react';
 import * as THREE from 'three';
-import { Canvas, extend, useFrame, useThree, ReactThreeFiber } from 'react-three-fiber';
+import { Canvas, extend, useFrame, useThree } from 'react-three-fiber';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass';
@@ -68,73 +68,35 @@ declare global {
 
 function Swarm({ count, mouse }: { count: number; mouse: MutableRefObject<number[]> }) {
 	const mesh = useRef() as MutableRefObject<any>;
-	const light = useRef() as MutableRefObject<any>;
-	const { size, viewport } = useThree();
-	const aspect = size.width / viewport.width;
+	const [done, setDone] = useState(false);
 
 	const dummy = useMemo(() => new THREE.Object3D(), []);
 	// Generate some random positions, speed factors and timings
-	const particles = useMemo(() => {
-		const temp = [];
+	useFrame(() => {
+		if (!!mesh && done) return;
+		setDone(true);
 		for (let i = 0; i < count; i++) {
 			const t = Math.random() * 100;
 			const factor = 20 + Math.random() * 100;
-			const speed = 0.01 + Math.random() / 200;
 			const xFactor = -50 + Math.random() * 100;
 			const yFactor = -50 + Math.random() * 100;
 			const zFactor = -50 + Math.random() * 100;
-			temp.push({ t, factor, speed, xFactor, yFactor, zFactor, mx: 0, my: 0 });
-		}
-		return temp;
-	}, [count]);
-	// The innards of this hook will run every frame
-	useFrame((state) => {
-		if (!light || !mouse || !mesh) return;
-		// Makes the light follow the mouse
-		light.current.position.set(mouse.current[0] / aspect, -mouse.current[1] / aspect, 0);
-		// Run through the randomized data to calculate some movement
-		particles.forEach((particle, i) => {
-			let { t, factor, speed, xFactor, yFactor, zFactor } = particle;
-			// There is no sense or reason to any of this, just messing around with trigonometric functions
-			t = particle.t += speed / 2;
-			const a = Math.cos(t) + Math.sin(t * 1) / 10;
-			const b = Math.sin(t) + Math.cos(t * 2) / 10;
-			const s = Math.cos(t);
-			particle.mx += (mouse.current[0] - particle.mx) * 0.01;
-			particle.my += (mouse.current[1] * -1 - particle.my) * 0.01;
-			// Update the dummy object
 			dummy.position.set(
-				(particle.mx / 10) * a +
-					xFactor +
-					Math.cos((t / 10) * factor) +
-					(Math.sin(t * 1) * factor) / 10,
-				(particle.my / 10) * b +
-					yFactor +
-					Math.sin((t / 10) * factor) +
-					(Math.cos(t * 2) * factor) / 10,
-				(particle.my / 10) * b +
-					zFactor +
-					Math.cos((t / 10) * factor) +
-					(Math.sin(t * 3) * factor) / 10
+				xFactor + Math.cos((t / 10) * factor) + (Math.sin(t * 1) * factor) / 10,
+				yFactor + Math.sin((t / 10) * factor) + (Math.cos(t * 2) * factor) / 10,
+				zFactor + Math.cos((t / 10) * factor) + (Math.sin(t * 3) * factor) / 10
 			);
-			dummy.scale.set(s, s, s);
-			dummy.rotation.set(s * 5, s * 5, s * 5);
 			dummy.updateMatrix();
 			// And apply the matrix to the instanced item
 			mesh.current.setMatrixAt(i, dummy.matrix);
-		});
+		}
 		mesh.current.instanceMatrix.needsUpdate = true;
-	});
+	}, 1);
+	// The innards of this hook will run every frame
 	return (
 		<>
-			<pointLight ref={light} distance={40} intensity={8} color="lightblue">
-				<mesh scale={[1, 1, 6]}>
-					<dodecahedronBufferGeometry attach="geometry" args={[4, 0]} />
-					<meshBasicMaterial attach="material" color="lightblue" transparent />
-				</mesh>
-			</pointLight>
 			<instancedMesh ref={mesh} args={[null, null, count]}>
-				<dodecahedronBufferGeometry attach="geometry" args={[1, 0]} />
+				<boxBufferGeometry attach="geometry" args={[1, 0]} />
 				<meshStandardMaterial attach="material" color="#020000" />
 			</instancedMesh>
 		</>
@@ -150,17 +112,71 @@ function Effect({ down }: { down: any }) {
 	return (
 		<effectComposer ref={composer} args={[gl]}>
 			<renderPass attachArray="passes" scene={scene} camera={camera} />
-			<waterPass attachArray="passes" factor={2} />
 			<unrealBloomPass attachArray="passes" args={[aspect, 2, 1, 0]} />
-			<filmPass attachArray="passes" args={[0.25, 0.4, 1500, false]} />
-			<glitchPass attachArray="passes" factor={down ? 1 : 0} />
 		</effectComposer>
 	);
 }
 
-const TreeView = (props: TreeViewProps) => {
+function Tree({ tree, index, count }: any) {
+	const entries = useMemo(
+		() =>
+			tree.entries &&
+			Object.keys(tree.entries).map((n, i, a) => (
+				<Tree key={n} tree={tree.entries[n]} index={i} count={a.length} />
+			)),
+		[tree]
+	);
+	const side = Math.ceil(Math.pow(count, 1 / 3));
+	const z = (index / (side * side)) | 0;
+	const y = ((index - z * side * side) / side) | 0;
+	const x = index - (z * side * side + y * side);
+	const s = 0.8 / side;
+	return (
+		<group
+			position={[x / side + 0.1 / side, y / side + 0.1 / side, z / side + 0.1 / side]}
+			scale={[s, s, s]}
+		>
+			<mesh position={[0.5, 0.5, 0.5]} scale={[1, 1, 1]}>
+				{entries ? (
+					<boxBufferGeometry attach="geometry" args={[1, 0]} />
+				) : (
+					<octahedronBufferGeometry attach="geometry" args={[0.5, 0]} />
+				)}
+				<meshStandardMaterial
+					attach="material"
+					blending={entries ? THREE.AdditiveBlending : THREE.NormalBlending}
+					color={`hsl(${Math.random() * 360}, 70%, ${entries ? 30 : 60}%)`}
+					depthWrite={!entries}
+					opacity={entries ? 0.07 : 1}
+				/>
+			</mesh>
+			{entries}
+		</group>
+	);
+}
+
+function TreeContainer({ fileTree }: { fileTree: FileTree }) {
+	const { scene, gl, size, camera } = useThree();
+	gl.setClearColor(0, 1);
+	const [rot, setRot] = useState([0, 0, 0]);
+	const tree = useMemo(() => <Tree tree={fileTree.tree} index={0} count={1} />, [fileTree]);
+	useFrame(() => {
+		camera.position.set(0, 0.5, 1);
+		camera.lookAt(new THREE.Vector3(0, 0, 0));
+		setRot([0, rot[1] + 0.01, 0]);
+	});
+	return (
+		<group position={[0, 0, 0]}>
+			<group rotation={rot}>
+				<group position={[-0.5, -0.5, -0.5]}>{tree}</group>
+			</group>
+		</group>
+	);
+}
+
+function TreeView({ fileTree }: TreeViewProps) {
 	const [down, setDown] = useState(false);
-	const mouse = useRef([300, -200]);
+	const mouse = useRef([0, 0]);
 	const onMouseMove = useCallback(
 		({ clientX: x, clientY: y }) =>
 			(mouse.current = [x - window.innerWidth / 2, y - window.innerHeight / 2]),
@@ -169,22 +185,20 @@ const TreeView = (props: TreeViewProps) => {
 	return (
 		<div className={styles.TreeView}>
 			<Canvas
-				camera={{ fov: 100, position: [0, 0, 30] }}
+				camera={{ fov: 60, position: [0, 1, 1] }}
 				onMouseMove={onMouseMove}
 				onMouseUp={() => setDown(false)}
 				onMouseDown={() => setDown(true)}
+				pixelRatio={2}
 			>
-				<pointLight distance={60} intensity={2} color="red" />
-				<spotLight intensity={2} position={[0, 0, 70]} penumbra={1} color="red" />
-				<mesh>
-					<planeBufferGeometry attach="geometry" args={[10000, 10000]} />
-					<meshStandardMaterial attach="material" color="#00ffff" depthTest={false} />
-				</mesh>
-				<Swarm mouse={mouse} count={20000} />
-				<Effect down={down} />
+				<pointLight color="white" intensity={3} distance={60} position={[5, 20, 10]} />
+				<pointLight color="lightblue" intensity={1} distance={60} position={[-10, -2, 5]} />
+				<TreeContainer fileTree={fileTree} />
+				{/* <Swarm mouse={mouse} count={20000} /> */}
+				{/* <Effect down={down} /> */}
 			</Canvas>
 		</div>
 	);
-};
+}
 
 export default withRouter(TreeView);
