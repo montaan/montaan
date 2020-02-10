@@ -49,6 +49,10 @@ _ Block what you can't, forcing manual fix
 _ Minimize impact of mistakes
 \_ Minimize lifetime of mistakes
 
+_ Record coding sessions
+_ Do video review right after & next morning & rehearse without mistakes
+\_ Record and spot mistakes and immediately correct
+
 ## Active
 
 # KEY FEATURES
