@@ -1,7 +1,7 @@
 // src/Montaan/TreeView/TreeView.tsx
 
 import { withRouter, RouteComponentProps } from 'react-router-dom';
-import React, { useState, useCallback, useEffect, useRef, useMemo, MutableRefObject } from 'react';
+import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import * as THREE from 'three';
 import { Canvas, extend, useFrame, useThree } from 'react-three-fiber';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer';
@@ -60,47 +60,11 @@ declare global {
 			unrealBloomPass: any;
 			filmPass: any;
 			glitchPass: any;
+			instancedBufferAttribute: any;
 			instancedMesh: any; //ReactThreeFiber.Object3DNode<THREE.InstancedMesh, typeof THREE.InstancedMesh>;
 			effectComposer: any; //ReactThreeFiber.Node<EffectComposer, typeof EffectComposer>;
 		}
 	}
-}
-
-function Swarm({ count, mouse }: { count: number; mouse: MutableRefObject<number[]> }) {
-	const mesh = useRef() as MutableRefObject<any>;
-	const [done, setDone] = useState(false);
-
-	const dummy = useMemo(() => new THREE.Object3D(), []);
-	// Generate some random positions, speed factors and timings
-	useFrame(() => {
-		if (!!mesh && done) return;
-		setDone(true);
-		for (let i = 0; i < count; i++) {
-			const t = Math.random() * 100;
-			const factor = 20 + Math.random() * 100;
-			const xFactor = -50 + Math.random() * 100;
-			const yFactor = -50 + Math.random() * 100;
-			const zFactor = -50 + Math.random() * 100;
-			dummy.position.set(
-				xFactor + Math.cos((t / 10) * factor) + (Math.sin(t * 1) * factor) / 10,
-				yFactor + Math.sin((t / 10) * factor) + (Math.cos(t * 2) * factor) / 10,
-				zFactor + Math.cos((t / 10) * factor) + (Math.sin(t * 3) * factor) / 10
-			);
-			dummy.updateMatrix();
-			// And apply the matrix to the instanced item
-			mesh.current.setMatrixAt(i, dummy.matrix);
-		}
-		mesh.current.instanceMatrix.needsUpdate = true;
-	}, 1);
-	// The innards of this hook will run every frame
-	return (
-		<>
-			<instancedMesh ref={mesh} args={[null, null, count]}>
-				<boxBufferGeometry attach="geometry" args={[1, 0]} />
-				<meshStandardMaterial attach="material" color="#020000" />
-			</instancedMesh>
-		</>
-	);
 }
 
 function Effect({ down }: { down: any }) {
@@ -112,7 +76,7 @@ function Effect({ down }: { down: any }) {
 	return (
 		<effectComposer ref={composer} args={[gl]}>
 			<renderPass attachArray="passes" scene={scene} camera={camera} />
-			<unrealBloomPass attachArray="passes" args={[aspect, 2, 1, 0]} />
+			<unrealBloomPass attachArray="passes" args={[aspect, 2, 1, 0.9]} />
 		</effectComposer>
 	);
 }
@@ -121,9 +85,15 @@ function Tree({ tree, index, count }: any) {
 	const entries = useMemo(
 		() =>
 			tree.entries &&
-			Object.keys(tree.entries).map((n, i, a) => (
-				<Tree key={n} tree={tree.entries[n]} index={i} count={a.length} />
-			)),
+			Object.keys(tree.entries)
+				.sort((a, b) => {
+					if (tree.entries[a].entries && !tree.entries[b].entries) return -1;
+					if (tree.entries[b].entries && !tree.entries[a].entries) return 1;
+					return a.localeCompare(b);
+				})
+				.map((n, i, a) => (
+					<Tree key={n} tree={tree.entries[n]} index={i} count={a.length} />
+				)),
 		[tree]
 	);
 	const side = Math.ceil(Math.pow(count, 1 / 3));
@@ -147,7 +117,7 @@ function Tree({ tree, index, count }: any) {
 					blending={entries ? THREE.AdditiveBlending : THREE.NormalBlending}
 					color={`hsl(${Math.random() * 360}, 70%, ${entries ? 30 : 60}%)`}
 					depthWrite={!entries}
-					opacity={entries ? 0.07 : 1}
+					opacity={entries ? 0.1 : 1}
 				/>
 			</mesh>
 			{entries}
@@ -155,22 +125,178 @@ function Tree({ tree, index, count }: any) {
 	);
 }
 
-function TreeContainer({ fileTree }: { fileTree: FileTree }) {
-	const { scene, gl, size, camera } = useThree();
-	gl.setClearColor(0, 1);
-	const [rot, setRot] = useState([0, 0, 0]);
-	const tree = useMemo(() => <Tree tree={fileTree.tree} index={0} count={1} />, [fileTree]);
-	useFrame(() => {
-		camera.position.set(0, 0.5, 1);
-		camera.lookAt(new THREE.Vector3(0, 0, 0));
-		setRot([0, rot[1] + 0.01, 0]);
-	});
+function buildDirGeo(attrib: any, colorArray: any) {
+	const boxGeo = new THREE.BoxBufferGeometry(1, 1, 0.1);
+	const array = (boxGeo.getAttribute('position').array as Float32Array).map(
+		(v, i) => v + (i % 3 === 2 ? 0.05 : 0.5)
+	);
+	const geo = new THREE.BufferGeometry();
+	geo.setIndex(boxGeo.getIndex());
+	geo.setAttribute('position', new THREE.BufferAttribute(array, 3));
+	geo.setAttribute('normal', boxGeo.getAttribute('normal'));
 	return (
-		<group position={[0, 0, 0]}>
-			<group rotation={rot}>
-				<group position={[-0.5, -0.5, -0.5]}>{tree}</group>
-			</group>
-		</group>
+		<bufferGeometry attach="geometry" attributes={geo.attributes} index={geo.index}>
+			<instancedBufferAttribute
+				ref={attrib}
+				attachObject={['attributes', 'color']}
+				args={[colorArray, 3]}
+			/>
+		</bufferGeometry>
+	);
+}
+
+function buildFileGeo(attrib: any, colorArray: any) {
+	const boxGeo = new THREE.BoxBufferGeometry(1, 1, 0.1);
+	const array = (boxGeo.getAttribute('position').array as Float32Array).map(
+		(v, i) => v + (i % 3 === 2 ? 0.05 : 0.5)
+	);
+	const geo = new THREE.BufferGeometry();
+	geo.setIndex(boxGeo.getIndex());
+	geo.setAttribute('position', new THREE.BufferAttribute(array, 3));
+	geo.setAttribute('normal', boxGeo.getAttribute('normal'));
+	return (
+		<bufferGeometry attach="geometry" attributes={geo.attributes} index={geo.index}>
+			<instancedBufferAttribute
+				ref={attrib}
+				attachObject={['attributes', 'color']}
+				args={[colorArray, 3]}
+			/>
+		</bufferGeometry>
+	);
+}
+
+const _color = new THREE.Color();
+
+function TreeContainer({
+	fileTree,
+	mouse,
+	down,
+}: {
+	fileTree: FileTree;
+	mouse: any;
+	down: boolean;
+}) {
+	const { scene, gl, size, camera } = useThree();
+	// const tree = useMemo(() => <Tree tree={fileTree.tree} index={0} count={1} />, [fileTree]);
+	const dirMesh = useRef<any>();
+	const fileMesh = useRef<any>();
+	const dirColors = useRef<any>();
+	const fileColors = useRef<any>();
+	const [sel, setSel] = useState(-1);
+	const count = 10000;
+	const dummy = useMemo(() => new THREE.Object3D(), []);
+	const lookV = useMemo(() => new THREE.Vector3(0.2, 0.2, 0.2), []);
+	const clickTargetMatrix = useMemo(() => new THREE.Matrix4(), []);
+	const dColors = useMemo(
+		() => new Array(count).fill([]).map(() => new THREE.Color(1, 1, 1)),
+		[]
+	);
+	const fColors = useMemo(
+		() => new Array(count).fill([]).map(() => new THREE.Color(0.3, 0.3, 0.3)),
+		[]
+	);
+	const dirColorArray = useMemo(() => {
+		const color = new Float32Array(count * 3);
+		for (let i = 0; i < count; i++) {
+			_color.set(dColors[i]);
+			_color.toArray(color, i * 3);
+		}
+		return color;
+	}, [dColors]);
+	const fileColorArray = useMemo(() => {
+		const color = new Float32Array(count * 3);
+		for (let i = 0; i < count; i++) {
+			_color.set(fColors[i]);
+			_color.toArray(color, i * 3);
+		}
+		return color;
+	}, [fColors]);
+	const dirGeo = useMemo(() => buildDirGeo(dirColors, dirColorArray), [dirColors, dirColorArray]);
+	const fileGeo = useMemo(() => buildFileGeo(fileColors, fileColorArray), [
+		fileColors,
+		fileColorArray,
+	]);
+	useEffect(() => {
+		const fMesh = fileMesh.current;
+		const dMesh = dirMesh.current;
+
+		dMesh.index = {};
+		fMesh.index = {};
+
+		function updateTree(
+			tree: any,
+			index: any,
+			count: any,
+			idx: any,
+			ps: number,
+			px: number,
+			py: number,
+			pz: number
+		) {
+			const side = Math.ceil(Math.pow(count, 1 / 2));
+			const invSide = 1 / side;
+			const zr = 0; //(index * invSide * invSide) | 0;
+			const yr = ((index - zr * side * side) * invSide) | 0;
+			const xr = index - (zr * side * side + yr * side);
+			const s = ps * (0.8 / side);
+			const x = px + ps * (xr + 0.1) * invSide;
+			const y = py + ps * (yr + 0.1) * invSide;
+			const z = pz + ps * zr * invSide;
+
+			dummy.position.set(x, y, z);
+			dummy.scale.set(s, s, s);
+			dummy.updateMatrix();
+			if (tree.entries) {
+				// And apply the matrix to the instanced item
+				dMesh.setMatrixAt(idx.dir, dummy.matrix);
+				dMesh.index[idx.dir] = tree;
+				tree.instanceId = idx.dir;
+				idx.dir++;
+				Object.keys(tree.entries).forEach((n, i, a) => {
+					updateTree(tree.entries[n], i, a.length, idx, s, x, y, z + 0.1 * s);
+				});
+			} else {
+				fMesh.setMatrixAt(idx.file, dummy.matrix);
+				fMesh.index[idx.file] = tree;
+				tree.instanceId = idx.file;
+				idx.file++;
+			}
+		}
+		const idx = { file: 0, dir: 0 };
+		updateTree(fileTree.tree, 0, 1, idx, 0.4, 0, 0, 0);
+		fMesh.count = idx.file;
+		fMesh.instanceMatrix.needsUpdate = true;
+		dMesh.count = idx.dir;
+		dMesh.instanceMatrix.needsUpdate = true;
+	}, [dummy, fileTree.tree, fileMesh, dirMesh]);
+	useFrame(() => {
+		gl.setClearColor(0, 1);
+		camera.position.set(0.2, 0.5, 1);
+		camera.lookAt(lookV);
+	});
+	const onClick = (ev: any) => {
+		dirMesh.current.getMatrixAt(ev.instanceId, clickTargetMatrix);
+		if (sel !== -1) {
+			_color.set(dColors[sel]);
+			_color.toArray(dirColorArray, sel * 3);
+		}
+		_color.set('red');
+		_color.toArray(dirColorArray, ev.instanceId * 3);
+		setSel(ev.instanceId);
+		dirColors.current.needsUpdate = true;
+		console.log(ev, clickTargetMatrix);
+	};
+	return (
+		<>
+			<instancedMesh ref={dirMesh} args={[null, null, count]} onClick={onClick}>
+				{dirGeo}
+				<meshStandardMaterial attach="material" vertexColors={THREE.VertexColors} />
+			</instancedMesh>
+			<instancedMesh ref={fileMesh} args={[null, null, count]}>
+				{fileGeo}
+				<meshStandardMaterial attach="material" vertexColors={THREE.VertexColors} />
+			</instancedMesh>
+		</>
 	);
 }
 
@@ -185,15 +311,32 @@ function TreeView({ fileTree }: TreeViewProps) {
 	return (
 		<div className={styles.TreeView}>
 			<Canvas
-				camera={{ fov: 60, position: [0, 1, 1] }}
+				camera={{ fov: 30, position: [0, 1, 1] }}
 				onMouseMove={onMouseMove}
 				onMouseUp={() => setDown(false)}
 				onMouseDown={() => setDown(true)}
 				pixelRatio={2}
+				invalidateFrameloop={true}
 			>
-				<pointLight color="white" intensity={3} distance={60} position={[5, 20, 10]} />
-				<pointLight color="lightblue" intensity={1} distance={60} position={[-10, -2, 5]} />
-				<TreeContainer fileTree={fileTree} />
+				<pointLight
+					color={new THREE.Color('#cccccc')}
+					intensity={2}
+					distance={60}
+					position={[5, 20, 20]}
+				/>
+				<pointLight
+					color={new THREE.Color('#cccccc')}
+					intensity={1}
+					distance={60}
+					position={[-5, -5, -3]}
+				/>
+				<pointLight
+					color={new THREE.Color('#cccccc')}
+					intensity={1}
+					distance={60}
+					position={[10, 5, 3]}
+				/>
+				<TreeContainer mouse={mouse} down={down} fileTree={fileTree} />
 				{/* <Swarm mouse={mouse} count={20000} /> */}
 				{/* <Effect down={down} /> */}
 			</Canvas>

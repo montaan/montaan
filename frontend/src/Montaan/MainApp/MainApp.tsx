@@ -777,51 +777,53 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 					setLinks={this.setLinks}
 					links={this.state.links}
 				/>
-				<TreeView
-					navUrl={this.state.navUrl}
-					activeCommitData={this.state.activeCommitData}
-					diffsLoaded={this.state.diffsLoaded}
-					fileTree={this.state.fileTree}
-					commitData={this.state.commitData}
-					frameRequestTime={this.state.frameRequestTime}
-					api={this.props.api}
-					repoPrefix={this.state.repoPrefix}
-					navigationTarget={this.state.navigationTarget}
-					searchLinesRequest={this.state.searchLinesRequest}
-					searchResults={this.state.searchResults}
-					searchQuery={this.state.searchQuery}
-					commitFilter={this.state.commitFilter}
-					addLinks={this.addLinks}
-					setLinks={this.setLinks}
-					links={this.state.links}
-					setNavigationTarget={this.setNavigationTarget}
-					requestDirs={this.requestDirs}
-					requestDitchDirs={this.requestDitchDirs}
-				/>
-				{/* 
-				<MainView
-					goToTarget={this.state.goToTarget}
-					navUrl={this.state.navUrl}
-					activeCommitData={this.state.activeCommitData}
-					diffsLoaded={this.state.diffsLoaded}
-					fileTree={this.state.fileTree}
-					commitData={this.state.commitData}
-					frameRequestTime={this.state.frameRequestTime}
-					api={this.props.api}
-					apiPrefix={this.props.apiPrefix}
-					repoPrefix={this.state.repoPrefix}
-					navigationTarget={this.state.navigationTarget}
-					searchLinesRequest={this.state.searchLinesRequest}
-					searchResults={this.state.searchResults}
-					searchQuery={this.state.searchQuery}
-					commitFilter={this.state.commitFilter}
-					addLinks={this.addLinks}
-					setLinks={this.setLinks}
-					links={this.state.links}
-					setNavigationTarget={this.setNavigationTarget}
-					requestDirs={this.requestDirs}
-					requestDitchDirs={this.requestDitchDirs}
-				/> */}
+				{this.props.location.search === '?beta' ? (
+					<TreeView
+						navUrl={this.state.navUrl}
+						activeCommitData={this.state.activeCommitData}
+						diffsLoaded={this.state.diffsLoaded}
+						fileTree={this.state.fileTree}
+						commitData={this.state.commitData}
+						frameRequestTime={this.state.frameRequestTime}
+						api={this.props.api}
+						repoPrefix={this.state.repoPrefix}
+						navigationTarget={this.state.navigationTarget}
+						searchLinesRequest={this.state.searchLinesRequest}
+						searchResults={this.state.searchResults}
+						searchQuery={this.state.searchQuery}
+						commitFilter={this.state.commitFilter}
+						addLinks={this.addLinks}
+						setLinks={this.setLinks}
+						links={this.state.links}
+						setNavigationTarget={this.setNavigationTarget}
+						requestDirs={this.requestDirs}
+						requestDitchDirs={this.requestDitchDirs}
+					/>
+				) : (
+					<MainView
+						goToTarget={this.state.goToTarget}
+						navUrl={this.state.navUrl}
+						activeCommitData={this.state.activeCommitData}
+						diffsLoaded={this.state.diffsLoaded}
+						fileTree={this.state.fileTree}
+						commitData={this.state.commitData}
+						frameRequestTime={this.state.frameRequestTime}
+						api={this.props.api}
+						apiPrefix={this.props.apiPrefix}
+						repoPrefix={this.state.repoPrefix}
+						navigationTarget={this.state.navigationTarget}
+						searchLinesRequest={this.state.searchLinesRequest}
+						searchResults={this.state.searchResults}
+						searchQuery={this.state.searchQuery}
+						commitFilter={this.state.commitFilter}
+						addLinks={this.addLinks}
+						setLinks={this.setLinks}
+						links={this.state.links}
+						setNavigationTarget={this.setNavigationTarget}
+						requestDirs={this.requestDirs}
+						requestDitchDirs={this.requestDitchDirs}
+					/>
+				)}
 			</div>
 		);
 	}
