@@ -183,7 +183,9 @@ function TreeContainer({
 	const dirColors = useRef<any>();
 	const fileColors = useRef<any>();
 	const [sel, setSel] = useState(-1);
-	const count = 10000;
+	const count = 100000;
+	const targetMatrix = useMemo(() => new THREE.Matrix4(), []);
+	const currentTargetMatrix = useMemo(() => new THREE.Matrix4(), []);
 	const dummy = useMemo(() => new THREE.Object3D(), []);
 	const lookV = useMemo(() => new THREE.Vector3(0.2, 0.2, 0.2), []);
 	const clickTargetMatrix = useMemo(() => new THREE.Matrix4(), []);
@@ -216,75 +218,95 @@ function TreeContainer({
 		fileColors,
 		fileColorArray,
 	]);
-	useEffect(() => {
+	useEffect(() => reLayout(targetMatrix), [dummy, fileTree.tree, fileMesh, dirMesh, reLayout, targetMatrix]);
+	useFrame(() => {
+		gl.setClearColor(0, 1);
+		camera.near = targetMatrix.elements[0];
+		camera.far = targetMatrix.elements[0] * 16;
+		camera.updateProjectionMatrix();
+		camera.position.set(
+			targetMatrix.elements[12] + targetMatrix.elements[0] * 0.5,
+			targetMatrix.elements[13] + targetMatrix.elements[0] * 0.5,
+			targetMatrix.elements[14] + targetMatrix.elements[0] * 4
+		);
+		lookV.set(
+			targetMatrix.elements[12] + targetMatrix.elements[0] * 0.5,
+			targetMatrix.elements[13] + targetMatrix.elements[0] * 0.5,
+			targetMatrix.elements[14]
+		);
+		camera.lookAt(lookV);
+	});
+	function reLayout(relativeMatrix: THREE.Matrix4) {
 		const fMesh = fileMesh.current;
 		const dMesh = dirMesh.current;
 
-		dMesh.index = {};
-		fMesh.index = {};
+		dMesh.fsEntries = {};
+		fMesh.fsEntries = {};
 
-		function updateTree(
-			tree: any,
-			index: any,
-			count: any,
-			idx: any,
-			ps: number,
-			px: number,
-			py: number,
-			pz: number
-		) {
-			const side = Math.ceil(Math.pow(count, 1 / 2));
-			const invSide = 1 / side;
-			const zr = 0; //(index * invSide * invSide) | 0;
-			const yr = ((index - zr * side * side) * invSide) | 0;
-			const xr = index - (zr * side * side + yr * side);
-			const s = ps * (0.8 / side);
-			const x = px + ps * (xr + 0.1) * invSide;
-			const y = py + ps * (yr + 0.1) * invSide;
-			const z = pz + ps * zr * invSide;
-
-			dummy.position.set(x, y, z);
-			dummy.scale.set(s, s, s);
+		function updateTree(tree: any, idx: any, ps: number, px: number, py: number, pz: number) {
+			dummy.position.set(px, py, pz);
+			dummy.scale.set(ps, ps, ps);
 			dummy.updateMatrix();
 			if (tree.entries) {
 				// And apply the matrix to the instanced item
 				dMesh.setMatrixAt(idx.dir, dummy.matrix);
-				dMesh.index[idx.dir] = tree;
+				dMesh.fsEntries[idx.dir] = tree;
 				tree.instanceId = idx.dir;
 				idx.dir++;
-				Object.keys(tree.entries).forEach((n, i, a) => {
-					updateTree(tree.entries[n], i, a.length, idx, s, x, y, z + 0.1 * s);
+				const keys = Object.keys(tree.entries);
+				const side = Math.ceil(Math.pow(keys.length, 1 / 2));
+				const invSide = 1 / side;
+				const s = ps * (0.8 / side);
+				keys.forEach((n, i) => {
+					const zr = 0; //(index * invSide * invSide) | 0;
+					const yr = ((i - zr * side * side) * invSide) | 0;
+					const xr = i - (zr * side * side + yr * side);
+					const x = px + ps * (xr + 0.1) * invSide;
+					const y = py + ps * (yr + 0.1) * invSide;
+					const z = pz;
+					updateTree(tree.entries[n], idx, s, x, y, z + ps * 0.1);
 				});
 			} else {
 				fMesh.setMatrixAt(idx.file, dummy.matrix);
-				fMesh.index[idx.file] = tree;
+				fMesh.fsEntries[idx.file] = tree;
 				tree.instanceId = idx.file;
 				idx.file++;
 			}
 		}
 		const idx = { file: 0, dir: 0 };
-		updateTree(fileTree.tree, 0, 1, idx, 0.4, 0, 0, 0);
+		const sc = 1 / relativeMatrix.elements[0];
+		updateTree(
+			fileTree.tree,
+			idx,
+			sc,
+			-sc * relativeMatrix.elements[12],
+			-sc * relativeMatrix.elements[13],
+			-sc * relativeMatrix.elements[14]
+		);
+		dMesh.getMatrixAt(0, targetMatrix);
 		fMesh.count = idx.file;
 		fMesh.instanceMatrix.needsUpdate = true;
 		dMesh.count = idx.dir;
 		dMesh.instanceMatrix.needsUpdate = true;
-	}, [dummy, fileTree.tree, fileMesh, dirMesh]);
-	useFrame(() => {
-		gl.setClearColor(0, 1);
-		camera.position.set(0.2, 0.5, 1);
-		camera.lookAt(lookV);
-	});
+	}
 	const onClick = (ev: any) => {
-		dirMesh.current.getMatrixAt(ev.instanceId, clickTargetMatrix);
 		if (sel !== -1) {
 			_color.set(dColors[sel]);
 			_color.toArray(dirColorArray, sel * 3);
 		}
 		_color.set('red');
 		_color.toArray(dirColorArray, ev.instanceId * 3);
-		setSel(ev.instanceId);
+		dirMesh.current.getMatrixAt(ev.instanceId, clickTargetMatrix);
+		const fsEntry = dirMesh.current.fsEntries[ev.instanceId];
+		if (clickTargetMatrix.elements[0] < 0.01 || clickTargetMatrix.elements[0] > 100) {
+			clickTargetMatrix.multiplyMatrices(currentTargetMatrix, clickTargetMatrix);
+			currentTargetMatrix.copy(clickTargetMatrix);
+			reLayout(clickTargetMatrix);
+			dirMesh.current.getMatrixAt(fsEntry.instanceId, clickTargetMatrix);
+		}
+		targetMatrix.copy(clickTargetMatrix);
+		setSel(fsEntry.instanceId);
 		dirColors.current.needsUpdate = true;
-		console.log(ev, clickTargetMatrix);
 	};
 	return (
 		<>
@@ -311,29 +333,26 @@ function TreeView({ fileTree }: TreeViewProps) {
 	return (
 		<div className={styles.TreeView}>
 			<Canvas
-				camera={{ fov: 30, position: [0, 1, 1] }}
+				camera={{ fov: 30, position: [0, 0, 1], near: 0.0001, far: 2 }}
 				onMouseMove={onMouseMove}
 				onMouseUp={() => setDown(false)}
 				onMouseDown={() => setDown(true)}
 				pixelRatio={2}
 				invalidateFrameloop={true}
 			>
-				<pointLight
+				<directionalLight
 					color={new THREE.Color('#cccccc')}
-					intensity={2}
-					distance={60}
+					intensity={1.25}
 					position={[5, 20, 20]}
 				/>
-				<pointLight
-					color={new THREE.Color('#cccccc')}
-					intensity={1}
-					distance={60}
+				<directionalLight
+					color={new THREE.Color('#ccffcc')}
+					intensity={0.5}
 					position={[-5, -5, -3]}
 				/>
-				<pointLight
-					color={new THREE.Color('#cccccc')}
-					intensity={1}
-					distance={60}
+				<directionalLight
+					color={new THREE.Color('#ffcccc')}
+					intensity={0.5}
 					position={[10, 5, 3]}
 				/>
 				<TreeContainer mouse={mouse} down={down} fileTree={fileTree} />
