@@ -1,0 +1,8 @@
+#!/bin/bash
+
+cd src
+for f in */*/*.stories.tsx
+do
+  p=`dirname $f`
+  yarn updateComponent "`basename $p`" "`dirname $p`"
+done

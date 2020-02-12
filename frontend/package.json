@@ -58,6 +58,7 @@
 		"eject": "react-scripts eject",
 		"makeComponent": "bin/makeComponent",
 		"updateComponent": "bin/updateComponent.js",
+		"updateComponents": "bin/updateComponents",
 		"analyze": "source-map-explorer 'build/static/js/*.js'",
 		"storybook": "start-storybook -p 9009 -s public",
 		"build-storybook": "build-storybook -s public"
@@ -71,11 +72,14 @@
 		}
 	},
 	"lint-staged": {
-		"src/**/*.{js,jsx,ts,tsx,json,css,scss,md}": [
-			"prettier --write"
+		"src/**/*.tsx": [
+			"yarn updateComponents"
 		],
 		"src/**/*.{js,jsx,ts,tsx,json}": [
 			"eslint --fix"
+		],
+		"src/**/*.{js,jsx,ts,tsx,json,css,scss,md}": [
+			"prettier --write"
 		]
 	},
 	"browserslist": {
