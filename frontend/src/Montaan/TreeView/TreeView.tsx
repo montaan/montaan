@@ -218,7 +218,14 @@ function TreeContainer({
 		fileColors,
 		fileColorArray,
 	]);
-	useEffect(() => reLayout(targetMatrix), [dummy, fileTree.tree, fileMesh, dirMesh, reLayout, targetMatrix]);
+	useEffect(() => reLayout(targetMatrix), [
+		dummy,
+		fileTree.tree,
+		fileMesh,
+		dirMesh,
+		reLayout,
+		targetMatrix,
+	]);
 	useFrame(() => {
 		gl.setClearColor(0, 1);
 		camera.near = targetMatrix.elements[0];
@@ -308,6 +315,7 @@ function TreeContainer({
 		setSel(fsEntry.instanceId);
 		dirColors.current.needsUpdate = true;
 	};
+
 	return (
 		<>
 			<instancedMesh ref={dirMesh} args={[null, null, count]} onClick={onClick}>
