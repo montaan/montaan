@@ -29,9 +29,16 @@
 
 ## Use cases
 
-Select a source file and see the dependency graph laid out around the file vs. on the filesystem - Custom layouter - Overlay tree for the dep links - Custom tree provider
+Select a source file and see the dependency graph laid out around the file vs. on the filesystem
 
-Show all image files in a long list - Custom layouter - Custom tree provider
+    - Custom layouter
+    - Overlay tree for the dep links
+    - Custom tree provider
+
+Show all image files in a long list
+
+    - Custom layouter
+    - Custom tree provider
 
 ## Different methods for working with files
 

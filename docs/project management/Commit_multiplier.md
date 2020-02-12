@@ -10,9 +10,9 @@ Commit velocity is how many raw commits per day a single developer can generate.
 
 A commit multiplier increases the amount of raw commits generated per commit. A commit multiplier system with a commit factor of three would generate three raw commits of value per commit.
 
-E.g. Tests increase group commit velocity by baking "fix bug" commits into the feature commit. Documentation increases group commit velocity by making it faster and easier to commit against the codebase. 
+E.g. Tests increase group commit velocity by baking "fix bug" commits into the feature commit. Documentation increases group commit velocity by making it faster and easier to commit against the codebase.
 
-Imagine a giant digger vs a shovel. 
+Imagine a giant digger vs a shovel.
 
 ## Types of commit multipliers
 
@@ -48,22 +48,13 @@ E.g. if you need to write a React component, a commit multiplier would generate 
 
 The Grail System would allow you to commit small changes that have commit factors in the thousands: You commit something like "add fireworks at moments of success", and the Grail System builds a fully tested and document high-performance fireworks animation with different levels of intensity, defines moments of success and threads the implementation in a self-confined scalable fashion through the codebase. To finish the commit, you'd work with the Grail System to refine and evolve the look and feel of the fireworks and the moments of success, and ask for audio and background music. The whole process would take a few hours and the resulting commit would be equal to thousands of raw commits.
 
-To make something like the Grail System, you need to:
-    - recognize "fireworks"
-    - create visual that matches "fireworks"
-    - create code that creates a similar visual
-    - evolve code to higher-quality code
-    - create tests for code
-    - create documentation for code
-    - recognize "moments of success"
-    - match "moments of success" to UI states
-    - add a visual to UI states
-    - evolve visual according to developer feedback
-    - evolve moments of success matcher
-    - create audio
-    - create background music
+To make something like the Grail System, you need to: - recognize "fireworks" - create visual that matches "fireworks" - create code that creates a similar visual - evolve code to higher-quality code - create tests for code - create documentation for code - recognize "moments of success" - match "moments of success" to UI states - add a visual to UI states - evolve visual according to developer feedback - evolve moments of success matcher - create audio - create background music
 
 Snippets for algorithms (indexed for-loop, foo[x] ||= [], binary search, tree algos, heap algos, DFS, BFS, graph algos, add test property)
+
+## Training a model to generate code
+
+Spider StackOverflow for highly ranked answers. Spider GitHub for commits. Combine to create high quality commits on top of an existing codebase.
 
 ## Compound growth
 
@@ -73,13 +64,15 @@ The amount of raw commits in the above system would be 378 at commit 100, 421 at
 
 ## Limits of human performance
 
+GitHub receives 1800 commits per minute (gitlive), or 30 commits per second. If each commit is roughly 30 lines of code and about 1 kB in size, that's 30 kB per second or 2.6 GB per day.
+
 Massive corporations generate on the order of 5 GB of commits per year (5M commits at 1 kB each.) That's around 14 MB per day.
 
 GitHub has around 40 million developer accounts. If each of these developers generates 100 commits per year, they'd generate 4 TB of commits per year, or 11 GB per day.
 
 If every person in the world was a developer and did 100 commits per year, the maximum output of humanity would be 2 TB per day.
 
-The fastest speaker in the world can speak 4.3 MB of text in a day. 24 hours non-stop. Over a year that would amount to 1.6 GB. The theoretical maximum output for humanity is 30 PB of spoken text per day. 
+The fastest speaker in the world can speak 4.3 MB of text in a day. 24 hours non-stop. Over a year that would amount to 1.6 GB. The theoretical maximum output for humanity is 30 PB of spoken text per day.
 
 If you can generate more than 4.3 MB of code per day, you're weakly superhuman.
 If you can generate more than 15 MB of code per day, you're surpassing large corporations.
