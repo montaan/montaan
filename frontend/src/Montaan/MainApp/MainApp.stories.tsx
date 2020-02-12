@@ -32,39 +32,74 @@ storiesOf('Montaan/MainApp', module).add('MainApp', () => (
 }
 export interface FSEntry {
 	title: string;
-	entries: { [propType: string]: FSEntry };
+	entries: null | { [filename: string]: FSEntry };
 }
-export interface FSLink {
-	src: Element | FSEntry;
-	dst: Element | FSEntry;
-	color: THREE.Color;
+export interface TreeLink {
+	src: Element | FSEntry | string;
+	dst: Element | FSEntry | string;
+	color: { r: number; g: number; b: number };
+}
+export interface SearchResult {
+	fsEntry: FSEntry;
+	filename: string;
+	line: number;
+	snippet?: string;
+	hitType: number;
 }
 export interface UserInfo {
 	name: string;
 }
+export interface FileTree {
+	count: number;
+	tree: FSEntry;
+}
+export interface GoToTarget {
+	fsEntry: FSEntry;
+	line?: number;
+	col?: number;
+}
+export interface FileContents {
+	content: string;
+	path: string;
+	hash: string;
+	original?: string;
+}
+export interface CommitFilter {
+	path?: string;
+	author?: string;
+	authorSearch?: string;
+	search?: string;
+	date?: string;
+}
+export interface ActiveCommitData {
+	commits: Commit[];
+	authors: string[];
+	authorCommitCounts: { [author: string]: number };
+	files: any[];
+}
 interface MainAppState {
 	repoPrefix: string;
-	commitFilter: any;
+	commitFilter: CommitFilter;
 	searchQuery: string;
-	commits: any[];
-	activeCommitData: any;
-	fileTree: { count: number; tree: FSEntry };
+	commits: Commit[];
+	activeCommitData: null | ActiveCommitData;
+	fileTree: FileTree;
 	commitLog: string;
 	commitChanges: string;
 	files: string;
-	searchResults: any[];
+	searchResults: SearchResult[];
 	navigationTarget: string;
-	goToTarget: null | { fsEntry: FSEntry; line?: number; col?: number };
+	goToTarget: null | GoToTarget;
 	frameRequestTime: number;
 	searchLinesRequest: number;
 	diffsLoaded: number;
-	fileContents: null | any;
-	links: any[];
-	repos: any[];
+	fileContents: null | FileContents;
+	links: TreeLink[];
+	repos: Repo[];
 	repoError: any;
 	processing: boolean;
 	processingCommits: boolean;
-	commitData: any;
+	commitData: null | CommitData;
 	navUrl: string;
 	ref: string;
 	searchHover?: any;
