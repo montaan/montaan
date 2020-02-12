@@ -87,6 +87,324 @@ export interface MainAppProps extends RouteComponentProps {
 }
 export interface FSEntry {
 	title: string;
+	entries: null | { [filename: string]: FSEntry };
+}
+export interface TreeLink {
+	src: Element | FSEntry | string;
+	dst: Element | FSEntry | string;
+	color: { r: number; g: number; b: number };
+}
+export interface SearchResult {
+	fsEntry: FSEntry;
+	filename: string;
+	line: number;
+	snippet?: string;
+	hitType: number;
+}
+export interface UserInfo {
+	name: string;
+}
+export interface FileTree {
+	count: number;
+	tree: FSEntry;
+}
+export interface GoToTarget {
+	fsEntry: FSEntry;
+	line?: number;
+	col?: number;
+}
+export interface FileContents {
+	content: string;
+	path: string;
+	hash: string;
+	original?: string;
+}
+export interface CommitFilter {
+	path?: string;
+	author?: string;
+	authorSearch?: string;
+	search?: string;
+	date?: string;
+}
+export interface ActiveCommitData {
+	commits: Commit[];
+	authors: string[];
+	authorCommitCounts: { [author: string]: number };
+	files: any[];
+}
+interface MainAppState {
+	repoPrefix: string;
+	commitFilter: CommitFilter;
+	searchQuery: string;
+	commits: Commit[];
+	activeCommitData: null | ActiveCommitData;
+	fileTree: FileTree;
+	commitLog: string;
+	commitChanges: string;
+	files: string;
+	searchResults: SearchResult[];
+	navigationTarget: string;
+	goToTarget: null | GoToTarget;
+	frameRequestTime: number;
+	searchLinesRequest: number;
+	diffsLoaded: number;
+	fileContents: null | FileContents;
+	links: TreeLink[];
+	repos: Repo[];
+	repoError: any;
+	processing: boolean;
+	processingCommits: boolean;
+	commitData: null | CommitData;
+	navUrl: string;
+	ref: string;
+	searchHover?: any;
+}
+```
+
+### Declares
+
+```tsx
+declare global {
+	interface Navigator {
+		standalone?: boolean;
+	}
+}
+```
+
+### Props
+
+```tsx
+export interface MainAppProps extends RouteComponentProps {
+	match: any;
+	userInfo: any;
+	api: any;
+	apiPrefix: string;
+}
+```
+
+### Interfaces
+
+```tsx
+export interface MainAppProps extends RouteComponentProps {
+	match: any;
+	userInfo: any;
+	api: any;
+	apiPrefix: string;
+}
+export interface FSEntry {
+	title: string;
+	entries: null | { [filename: string]: FSEntry };
+}
+export interface TreeLink {
+	src: Element | FSEntry | string;
+	dst: Element | FSEntry | string;
+	color: { r: number; g: number; b: number };
+}
+export interface SearchResult {
+	fsEntry: FSEntry;
+	filename: string;
+	line: number;
+	snippet?: string;
+	hitType: number;
+}
+export interface UserInfo {
+	name: string;
+}
+export interface FileTree {
+	count: number;
+	tree: FSEntry;
+}
+export interface GoToTarget {
+	fsEntry: FSEntry;
+	line?: number;
+	col?: number;
+}
+export interface FileContents {
+	content: string;
+	path: string;
+	hash: string;
+	original?: string;
+}
+export interface CommitFilter {
+	path?: string;
+	author?: string;
+	authorSearch?: string;
+	search?: string;
+	date?: string;
+}
+export interface ActiveCommitData {
+	commits: Commit[];
+	authors: string[];
+	authorCommitCounts: { [author: string]: number };
+	files: any[];
+}
+interface MainAppState {
+	repoPrefix: string;
+	commitFilter: CommitFilter;
+	searchQuery: string;
+	commits: Commit[];
+	activeCommitData: null | ActiveCommitData;
+	fileTree: FileTree;
+	commitLog: string;
+	commitChanges: string;
+	files: string;
+	searchResults: SearchResult[];
+	navigationTarget: string;
+	goToTarget: null | GoToTarget;
+	frameRequestTime: number;
+	searchLinesRequest: number;
+	diffsLoaded: number;
+	fileContents: null | FileContents;
+	links: TreeLink[];
+	repos: Repo[];
+	repoError: any;
+	processing: boolean;
+	processingCommits: boolean;
+	commitData: null | CommitData;
+	navUrl: string;
+	ref: string;
+	searchHover?: any;
+}
+```
+
+### Declares
+
+```tsx
+declare global {
+	interface Navigator {
+		standalone?: boolean;
+	}
+}
+```
+
+### Props
+
+```tsx
+export interface MainAppProps extends RouteComponentProps {
+	match: any;
+	userInfo: any;
+	api: any;
+	apiPrefix: string;
+}
+```
+
+### Interfaces
+
+```tsx
+export interface MainAppProps extends RouteComponentProps {
+	match: any;
+	userInfo: any;
+	api: any;
+	apiPrefix: string;
+}
+export interface FSEntry {
+	title: string;
+	entries: null | { [filename: string]: FSEntry };
+}
+export interface TreeLink {
+	src: Element | FSEntry | string;
+	dst: Element | FSEntry | string;
+	color: { r: number; g: number; b: number };
+}
+export interface SearchResult {
+	fsEntry: FSEntry;
+	filename: string;
+	line: number;
+	snippet?: string;
+	hitType: number;
+}
+export interface UserInfo {
+	name: string;
+}
+export interface FileTree {
+	count: number;
+	tree: FSEntry;
+}
+export interface GoToTarget {
+	fsEntry: FSEntry;
+	line?: number;
+	col?: number;
+}
+export interface FileContents {
+	content: string;
+	path: string;
+	hash: string;
+	original?: string;
+}
+export interface CommitFilter {
+	path?: string;
+	author?: string;
+	authorSearch?: string;
+	search?: string;
+	date?: string;
+}
+export interface ActiveCommitData {
+	commits: Commit[];
+	authors: string[];
+	authorCommitCounts: { [author: string]: number };
+	files: any[];
+}
+interface MainAppState {
+	repoPrefix: string;
+	commitFilter: CommitFilter;
+	searchQuery: string;
+	commits: Commit[];
+	activeCommitData: null | ActiveCommitData;
+	fileTree: FileTree;
+	commitLog: string;
+	commitChanges: string;
+	files: string;
+	searchResults: SearchResult[];
+	navigationTarget: string;
+	goToTarget: null | GoToTarget;
+	frameRequestTime: number;
+	searchLinesRequest: number;
+	diffsLoaded: number;
+	fileContents: null | FileContents;
+	links: TreeLink[];
+	repos: Repo[];
+	repoError: any;
+	processing: boolean;
+	processingCommits: boolean;
+	commitData: null | CommitData;
+	navUrl: string;
+	ref: string;
+	searchHover?: any;
+}
+```
+
+### Declares
+
+```tsx
+declare global {
+	interface Navigator {
+		standalone?: boolean;
+	}
+}
+```
+
+### Props
+
+```tsx
+export interface MainAppProps extends RouteComponentProps {
+	match: any;
+	userInfo: any;
+	api: any;
+	apiPrefix: string;
+}
+```
+
+### Interfaces
+
+```tsx
+export interface MainAppProps extends RouteComponentProps {
+	match: any;
+	userInfo: any;
+	api: any;
+	apiPrefix: string;
+}
+export interface FSEntry {
+	title: string;
 	entries: { [propType: string]: FSEntry };
 }
 export interface FSLink {

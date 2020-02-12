@@ -78,3 +78,219 @@ import myImage from './assets/myImage.svg';
 ```
 
 ## API
+
+### Props
+
+```tsx
+export interface TreeViewProps extends RouteComponentProps {
+	api: QFrameAPI;
+	repoPrefix: string;
+	fileTree: FileTree;
+	commitData: null | CommitData;
+	activeCommitData: null | ActiveCommitData;
+	commitFilter: any;
+	navigationTarget: string;
+	searchResults: SearchResult[];
+	searchLinesRequest: number;
+	diffsLoaded: number;
+	addLinks(links: TreeLink[]): void;
+	setLinks(links: TreeLink[]): void;
+	links: TreeLink[];
+	navUrl?: string;
+	frameRequestTime: number;
+	setNavigationTarget(target: string): void;
+	searchQuery: string;
+	requestDirs(paths: string[]): void;
+	requestDitchDirs(fsEntries: any[]): void;
+}
+```
+
+### Interfaces
+
+```tsx
+export interface TreeViewProps extends RouteComponentProps {
+	api: QFrameAPI;
+	repoPrefix: string;
+	fileTree: FileTree;
+	commitData: null | CommitData;
+	activeCommitData: null | ActiveCommitData;
+	commitFilter: any;
+	navigationTarget: string;
+	searchResults: SearchResult[];
+	searchLinesRequest: number;
+	diffsLoaded: number;
+	addLinks(links: TreeLink[]): void;
+	setLinks(links: TreeLink[]): void;
+	links: TreeLink[];
+	navUrl?: string;
+	frameRequestTime: number;
+	setNavigationTarget(target: string): void;
+	searchQuery: string;
+	requestDirs(paths: string[]): void;
+	requestDitchDirs(fsEntries: any[]): void;
+}
+```
+
+### Declares
+
+```tsx
+declare global {
+	// eslint-disable-next-line
+	namespace JSX {
+		interface IntrinsicElements {
+			renderPass: any;
+			waterPass: any;
+			unrealBloomPass: any;
+			filmPass: any;
+			glitchPass: any;
+			instancedBufferAttribute: any;
+			instancedMesh: any; //ReactThreeFiber.Object3DNode<THREE.InstancedMesh, typeof THREE.InstancedMesh>;
+			effectComposer: any; //ReactThreeFiber.Node<EffectComposer, typeof EffectComposer>;
+		}
+	}
+}
+```
+
+### Props
+
+```tsx
+export interface TreeViewProps extends RouteComponentProps {
+	api: QFrameAPI;
+	repoPrefix: string;
+	fileTree: FileTree;
+	commitData: null | CommitData;
+	activeCommitData: null | ActiveCommitData;
+	commitFilter: any;
+	navigationTarget: string;
+	searchResults: SearchResult[];
+	searchLinesRequest: number;
+	diffsLoaded: number;
+	addLinks(links: TreeLink[]): void;
+	setLinks(links: TreeLink[]): void;
+	links: TreeLink[];
+	navUrl?: string;
+	frameRequestTime: number;
+	setNavigationTarget(target: string): void;
+	searchQuery: string;
+	requestDirs(paths: string[]): void;
+	requestDitchDirs(fsEntries: any[]): void;
+}
+```
+
+### Interfaces
+
+```tsx
+export interface TreeViewProps extends RouteComponentProps {
+	api: QFrameAPI;
+	repoPrefix: string;
+	fileTree: FileTree;
+	commitData: null | CommitData;
+	activeCommitData: null | ActiveCommitData;
+	commitFilter: any;
+	navigationTarget: string;
+	searchResults: SearchResult[];
+	searchLinesRequest: number;
+	diffsLoaded: number;
+	addLinks(links: TreeLink[]): void;
+	setLinks(links: TreeLink[]): void;
+	links: TreeLink[];
+	navUrl?: string;
+	frameRequestTime: number;
+	setNavigationTarget(target: string): void;
+	searchQuery: string;
+	requestDirs(paths: string[]): void;
+	requestDitchDirs(fsEntries: any[]): void;
+}
+```
+
+### Declares
+
+```tsx
+declare global {
+	// eslint-disable-next-line
+	namespace JSX {
+		interface IntrinsicElements {
+			renderPass: any;
+			waterPass: any;
+			unrealBloomPass: any;
+			filmPass: any;
+			glitchPass: any;
+			instancedBufferAttribute: any;
+			instancedMesh: any; //ReactThreeFiber.Object3DNode<THREE.InstancedMesh, typeof THREE.InstancedMesh>;
+			effectComposer: any; //ReactThreeFiber.Node<EffectComposer, typeof EffectComposer>;
+		}
+	}
+}
+```
+
+### Props
+
+```tsx
+export interface TreeViewProps extends RouteComponentProps {
+	api: QFrameAPI;
+	repoPrefix: string;
+	fileTree: FileTree;
+	commitData: null | CommitData;
+	activeCommitData: null | ActiveCommitData;
+	commitFilter: any;
+	navigationTarget: string;
+	searchResults: SearchResult[];
+	searchLinesRequest: number;
+	diffsLoaded: number;
+	addLinks(links: TreeLink[]): void;
+	setLinks(links: TreeLink[]): void;
+	links: TreeLink[];
+	navUrl?: string;
+	frameRequestTime: number;
+	setNavigationTarget(target: string): void;
+	searchQuery: string;
+	requestDirs(paths: string[]): void;
+	requestDitchDirs(fsEntries: any[]): void;
+}
+```
+
+### Interfaces
+
+```tsx
+export interface TreeViewProps extends RouteComponentProps {
+	api: QFrameAPI;
+	repoPrefix: string;
+	fileTree: FileTree;
+	commitData: null | CommitData;
+	activeCommitData: null | ActiveCommitData;
+	commitFilter: any;
+	navigationTarget: string;
+	searchResults: SearchResult[];
+	searchLinesRequest: number;
+	diffsLoaded: number;
+	addLinks(links: TreeLink[]): void;
+	setLinks(links: TreeLink[]): void;
+	links: TreeLink[];
+	navUrl?: string;
+	frameRequestTime: number;
+	setNavigationTarget(target: string): void;
+	searchQuery: string;
+	requestDirs(paths: string[]): void;
+	requestDitchDirs(fsEntries: any[]): void;
+}
+```
+
+### Declares
+
+```tsx
+declare global {
+	// eslint-disable-next-line
+	namespace JSX {
+		interface IntrinsicElements {
+			renderPass: any;
+			waterPass: any;
+			unrealBloomPass: any;
+			filmPass: any;
+			glitchPass: any;
+			instancedBufferAttribute: any;
+			instancedMesh: any; //ReactThreeFiber.Object3DNode<THREE.InstancedMesh, typeof THREE.InstancedMesh>;
+			effectComposer: any; //ReactThreeFiber.Node<EffectComposer, typeof EffectComposer>;
+		}
+	}
+}
+```
