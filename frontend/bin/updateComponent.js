@@ -35,7 +35,7 @@ ${declares ? `### Declares\n\`\`\`tsx\n${declares.join('\n')}\n\`\`\`` : ''}
 console.log(`Updating src/${target}/${name}/${name}.stories.tsx`);
 const storiesSource = fs.readFileSync(`src/${target}/${name}/${name}.stories.tsx`).toString();
 const newStories = storiesSource.replace(
-	/<h4>API<\/h4>[.|\n]+^\t\t<\/div>/m,
+	/<h4>API<\/h4>(.|\n)*^\t\t<\/div>/m,
 	'<h4>API</h4>' + apiHTML + '\n\t\t</div>'
 );
 fs.writeFileSync(`src/${target}/${name}/${name}.stories.tsx`, newStories);
@@ -43,7 +43,7 @@ execSync(`yarn prettier --write "src/${target}/${name}/${name}.stories.tsx"`);
 
 console.log(`Updating src/${target}/${name}/README.md`);
 const readme = fs.readFileSync(`src/${target}/${name}/README.md`).toString();
-const newReadme = readme.replace(/^## API\s*$[.|\n]*/m, '## API\n\n' + apiCode);
+const newReadme = readme.replace(/^## API\s*$(.|\n)*/m, '## API\n\n' + apiCode);
 fs.writeFileSync(`src/${target}/${name}/README.md`, newReadme);
 execSync(`yarn prettier --write "src/${target}/${name}/README.md"`);
 

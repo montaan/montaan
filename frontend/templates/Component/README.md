@@ -12,16 +12,6 @@ The primary reviewer for NAME is AUTHOR.
 <NAME PROPS_USE />
 ```
 
-## Props
-
-This is the description of the NAME component's NAMEProps interface.
-
-```ts
-interface NAMEProps extends RouteComponentProps {
-	PROPS;
-}
-```
-
 ## Styling
 
 The NAME component uses [CSS Modules](https://github.com/css-modules/css-modules) for styling. The component stylesheet is at [NAME.module.css].
@@ -37,7 +27,6 @@ Example of using the stylesheet:
 		opacity: 0.1;
 	}
 }
-
 .title {
 	color: red;
 }
@@ -63,3 +52,5 @@ import myImage from './assets/myImage.svg';
 ```
 
 ## API
+
+Anything here will be replaced by definitions pulled from the code.
