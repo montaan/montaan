@@ -68,6 +68,9 @@
 	},
 	"husky": {
 		"hooks": {
+			"post-checkout": "if [[ $HUSKY_GIT_PARAMS =~ $1 ]]; then yarn install --frozen-lockfile; fi",
+			"post-merge": "yarn install --frozen-lockfile",
+			"post-rebase": "yarn install",
 			"pre-commit": "lint-staged"
 		}
 	},
@@ -76,10 +79,10 @@
 			"yarn updateComponents"
 		],
 		"*.{json,js,yml}": [
-			"yarn jest -- --env=jsdom --bail —-findRelatedTests --passWithNoTests"
+			"yarn jest --env=jsdom --bail --passWithNoTests"
 		],
 		"src/**/*.{js,jsx,ts,tsx,json}": [
-			"yarn jest -- --env=jsdom --bail —-findRelatedTests --passWithNoTests",
+			"yarn jest --env=jsdom --bail —-findRelatedTests",
 			"eslint --fix"
 		],
 		"src/**/*.{js,jsx,ts,tsx,json,css,scss,md}": [
