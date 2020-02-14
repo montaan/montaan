@@ -118,7 +118,89 @@ function buildFileGeo(attrib: any, colorArray: any) {
 
 const _color = new THREE.Color();
 
-function TreeContainer({
+const moveTowards = function(
+	v: THREE.Vector3,
+	x: number,
+	y: number,
+	z: number,
+	scale: number
+): void {
+	const dx = x - v.x;
+	const dy = y - v.y;
+	const dz = z - v.z;
+	const lenSq = dx * dx + dy * dy + dz * dz;
+	if (lenSq < 0.0000001 * scale) {
+		v.set(x, y, z);
+	} else {
+		v.set(v.x + dx * 0.1, v.y + dy * 0.1, v.z + dz * 0.1);
+	}
+};
+
+const dummy = new THREE.Object3D();
+
+function updateTree(
+	fMesh: any,
+	dMesh: any,
+	tree: any,
+	idx: any,
+	ps: number,
+	px: number,
+	py: number,
+	pz: number
+) {
+	dummy.position.set(px, py, pz);
+	dummy.scale.set(ps, ps, ps);
+	dummy.updateMatrix();
+	if (tree.entries) {
+		// And apply the matrix to the instanced item
+		dMesh.setMatrixAt(idx.dir, dummy.matrix);
+		dMesh.fsEntries[idx.dir] = tree;
+		tree.instanceId = idx.dir;
+		idx.dir++;
+		const keys = Object.keys(tree.entries);
+		const side = Math.ceil(Math.pow(keys.length, 1 / 2));
+		const invSide = 1 / side;
+		const s = ps * (0.8 / side);
+		keys.forEach((n, i) => {
+			const zr = 0; //(index * invSide * invSide) | 0;
+			const yr = ((i - zr * side * side) * invSide) | 0;
+			const xr = i - (zr * side * side + yr * side);
+			const x = px + ps * (xr + 0.1) * invSide;
+			const y = py + ps * (yr + 0.1) * invSide;
+			const z = pz;
+			updateTree(fMesh, dMesh, tree.entries[n], idx, s, x, y, z + ps * 0.1);
+		});
+	} else {
+		fMesh.setMatrixAt(idx.file, dummy.matrix);
+		fMesh.fsEntries[idx.file] = tree;
+		tree.instanceId = idx.file;
+		idx.file++;
+	}
+}
+
+function reLayout(fileTree: FileTree, relativeMatrix: THREE.Matrix4, fMesh: any, dMesh: any) {
+	dMesh.fsEntries = {};
+	fMesh.fsEntries = {};
+
+	const idx = { file: 0, dir: 0 };
+	const sc = 1 / relativeMatrix.elements[0];
+	updateTree(
+		fMesh,
+		dMesh,
+		fileTree.tree,
+		idx,
+		sc,
+		-sc * relativeMatrix.elements[12],
+		-sc * relativeMatrix.elements[13],
+		-sc * relativeMatrix.elements[14]
+	);
+	fMesh.count = idx.file;
+	fMesh.instanceMatrix.needsUpdate = true;
+	dMesh.count = idx.dir;
+	dMesh.instanceMatrix.needsUpdate = true;
+}
+
+function TreeContainerInstanceArrays({
 	fileTree,
 	mouse,
 	down,
@@ -138,7 +220,6 @@ function TreeContainer({
 	const count = 1000000;
 	const targetMatrix = useMemo(() => new THREE.Matrix4(), []);
 	const currentTargetMatrix = useMemo(() => new THREE.Matrix4(), []);
-	const dummy = useMemo(() => new THREE.Object3D(), []);
 	const lookV = useMemo(() => new THREE.Vector3(0.2, 0.2, 0.2), []);
 	const clickTargetMatrix = useMemo(() => new THREE.Matrix4(), []);
 	const dColors = useMemo(
@@ -170,28 +251,13 @@ function TreeContainer({
 		fileColors,
 		fileColorArray,
 	]);
-	const moveTowards = function(
-		v: THREE.Vector3,
-		x: number,
-		y: number,
-		z: number,
-		scale: number
-	): void {
-		const dx = x - v.x;
-		const dy = y - v.y;
-		const dz = z - v.z;
-		const lenSq = dx * dx + dy * dy + dz * dz;
-		if (lenSq < 0.0000001 * scale) {
-			v.set(x, y, z);
-		} else {
-			v.set(v.x + dx * 0.1, v.y + dy * 0.1, v.z + dz * 0.1);
-		}
-	};
 	useFrame(() => {
 		if (init !== fileTree) {
 			targetMatrix.identity();
 			currentTargetMatrix.identity();
-			reLayout(targetMatrix);
+			reLayout(fileTree, targetMatrix, fileMesh.current, dirMesh.current);
+			dirMesh.current.getMatrixAt(0, targetMatrix);
+			dirMesh.current.getMatrixAt(0, currentTargetMatrix);
 			setInit(fileTree);
 			gl.setClearColor(0, 1);
 		}
@@ -263,60 +329,6 @@ function TreeContainer({
 		}
 	});
 
-	function reLayout(relativeMatrix: THREE.Matrix4) {
-		const fMesh = fileMesh.current;
-		const dMesh = dirMesh.current;
-
-		dMesh.fsEntries = {};
-		fMesh.fsEntries = {};
-
-		function updateTree(tree: any, idx: any, ps: number, px: number, py: number, pz: number) {
-			dummy.position.set(px, py, pz);
-			dummy.scale.set(ps, ps, ps);
-			dummy.updateMatrix();
-			if (tree.entries) {
-				// And apply the matrix to the instanced item
-				dMesh.setMatrixAt(idx.dir, dummy.matrix);
-				dMesh.fsEntries[idx.dir] = tree;
-				tree.instanceId = idx.dir;
-				idx.dir++;
-				const keys = Object.keys(tree.entries);
-				const side = Math.ceil(Math.pow(keys.length, 1 / 2));
-				const invSide = 1 / side;
-				const s = ps * (0.8 / side);
-				keys.forEach((n, i) => {
-					const zr = 0; //(index * invSide * invSide) | 0;
-					const yr = ((i - zr * side * side) * invSide) | 0;
-					const xr = i - (zr * side * side + yr * side);
-					const x = px + ps * (xr + 0.1) * invSide;
-					const y = py + ps * (yr + 0.1) * invSide;
-					const z = pz;
-					updateTree(tree.entries[n], idx, s, x, y, z + ps * 0.1);
-				});
-			} else {
-				fMesh.setMatrixAt(idx.file, dummy.matrix);
-				fMesh.fsEntries[idx.file] = tree;
-				tree.instanceId = idx.file;
-				idx.file++;
-			}
-		}
-		const idx = { file: 0, dir: 0 };
-		const sc = 1 / relativeMatrix.elements[0];
-		updateTree(
-			fileTree.tree,
-			idx,
-			sc,
-			-sc * relativeMatrix.elements[12],
-			-sc * relativeMatrix.elements[13],
-			-sc * relativeMatrix.elements[14]
-		);
-		dMesh.getMatrixAt(0, targetMatrix);
-		fMesh.count = idx.file;
-		fMesh.instanceMatrix.needsUpdate = true;
-		dMesh.count = idx.dir;
-		dMesh.instanceMatrix.needsUpdate = true;
-	}
-
 	const onClick = (ev: any) => {
 		if (sel !== -1) {
 			_color.set(dColors[sel]);
@@ -355,7 +367,7 @@ function TreeContainer({
 			camera.far *= prevScale / newScale;
 
 			// TODO re-root the tree to fsEntry.parent.parent whatever is the smallest visible
-			reLayout(currentTargetMatrix);
+			reLayout(fileTree, currentTargetMatrix, fileMesh.current, dirMesh.current);
 			dirMesh.current.getMatrixAt(fsEntry.instanceId, clickTargetMatrix);
 		}
 		targetMatrix.copy(clickTargetMatrix);
@@ -379,6 +391,77 @@ function TreeContainer({
 				<meshBasicMaterial attach="material" vertexColors={THREE.VertexColors} />
 			</instancedMesh>
 		</>
+	);
+}
+
+function Tree({ tree, index, count }: any) {
+	const entries = useMemo(
+		() =>
+			tree.entries &&
+			Object.keys(tree.entries)
+				.sort((a, b) => {
+					if (tree.entries[a].entries && !tree.entries[b].entries) return -1;
+					if (tree.entries[b].entries && !tree.entries[a].entries) return 1;
+					return a.localeCompare(b);
+				})
+				.map((n, i, a) => (
+					<Tree key={n} tree={tree.entries[n]} index={i} count={a.length} />
+				)),
+		[tree]
+	);
+	const side = Math.ceil(Math.pow(count, 1 / 3));
+	const z = (index / (side * side)) | 0;
+	const y = ((index - z * side * side) / side) | 0;
+	const x = index - (z * side * side + y * side);
+	const s = 0.8 / side;
+	return (
+		<group
+			position={[x / side + 0.1 / side, y / side + 0.1 / side, z / side + 0.1 / side]}
+			scale={[s, s, s]}
+		>
+			<mesh position={[0.5, 0.5, 0.5]} scale={[1, 1, 1]}>
+				{entries ? (
+					<boxBufferGeometry attach="geometry" args={[1, 0]} />
+				) : (
+					<octahedronBufferGeometry attach="geometry" args={[0.5, 0]} />
+				)}
+				<meshStandardMaterial
+					attach="material"
+					blending={entries ? THREE.AdditiveBlending : THREE.NormalBlending}
+					color={`hsl(${Math.random() * 360}, 70%, ${entries ? 30 : 60}%)`}
+					depthWrite={!entries}
+					opacity={entries ? 0.1 : 1}
+				/>
+			</mesh>
+			{entries}
+		</group>
+	);
+}
+
+function TreeContainer({
+	fileTree,
+	mouse,
+	down,
+}: {
+	fileTree: FileTree;
+	mouse: any;
+	down: boolean;
+}) {
+	const { scene, gl, size, camera } = useThree();
+	gl.setClearColor(0, 1);
+	const [rot, setRot] = useState([0, 0, 0]);
+	const tree = useMemo(() => <Tree tree={fileTree.tree} index={0} count={1} />, [fileTree]);
+	useFrame(() => {
+		camera.position.set(0, 0.5, 1);
+		camera.lookAt(new THREE.Vector3(0, 0, 0));
+		setRot([0, rot[1] + 0.01, 0]);
+	});
+	return (
+		<group position={[0, 0, 0]}>
+			<group rotation={rot}>
+				<group position={[-0.5, -0.5, -0.5]}>{tree}</group>
+			</group>
+		</group>
 	);
 }
 
