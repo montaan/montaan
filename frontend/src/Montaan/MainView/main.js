@@ -75,6 +75,8 @@ class Tabletree {
 		this.textMinScale = 1000;
 		this.textMaxScale = 0;
 
+		this.history = undefined;
+
 		this.changed = true;
 		this.model = null;
 		this.authorModel = null;
@@ -1765,6 +1767,11 @@ class Tabletree {
 		} else this.goToFSEntry(fsEntry);
 	}
 
+	getURLForFSEntry(fsEntry, location = []) {
+		const locationStr = location.length > 0 ? '#' + location.join(',') : '';
+		return getFullPath(fsEntry) + locationStr;
+	}
+
 	zoomToEntry(ev) {
 		const intersection = this.getEntryAtMouse(ev);
 		if (intersection) {
@@ -1779,7 +1786,8 @@ class Tabletree {
 			if (this.highlighted !== fsEntry) {
 				this.highlighted = fsEntry;
 				this.setPlaylist(this.highlighted);
-				this.goToFSEntry(fsEntry, intersection.object);
+				const url = this.getURLForFSEntry(fsEntry);
+				this.history.push(url);
 			} else {
 				if (this.highlighted.entries === null) {
 					var fovDiff = (this.highlighted.scale * 50) / this.camera.fov;
@@ -1788,13 +1796,16 @@ class Tabletree {
 							!fsEntry.lineCount ||
 							!this.handleTextClick(ev, this.highlighted, intersection)
 						) {
-							this.goToFSEntry(this.highlighted, intersection.object);
+							const url = this.getURLForFSEntry(this.highlighted);
+							this.history.push(url);
 						}
 					} else {
-						this.goToFSEntryText(this.highlighted, intersection.object);
+						const url = this.getURLForFSEntry(this.highlighted, [0]);
+						this.history.push(url);
 					}
 				} else {
-					this.goToFSEntry(this.highlighted, intersection.object);
+					const url = this.getURLForFSEntry(this.highlighted);
+					this.history.push(url);
 				}
 			}
 			this.changed = true;
