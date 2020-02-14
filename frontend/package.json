@@ -75,7 +75,11 @@
 		"src/**/*.tsx": [
 			"yarn updateComponents"
 		],
+		"*.{json,js,yml}": [
+			"yarn jest -- --env=jsdom --bail —-findRelatedTests --passWithNoTests"
+		],
 		"src/**/*.{js,jsx,ts,tsx,json}": [
+			"yarn jest -- --env=jsdom --bail —-findRelatedTests --passWithNoTests",
 			"eslint --fix"
 		],
 		"src/**/*.{js,jsx,ts,tsx,json,css,scss,md}": [
