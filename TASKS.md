@@ -55,6 +55,10 @@ _ Do video review right after & next morning & rehearse without mistakes
 
 ## Active
 
+Trying to do too many things in one go.
+TreeView shouldn't at this stage be about efficient megascene rendering.
+It should be about flexible rendering with an eye towards megascenes.
+
 # KEY FEATURES
 
     [] Dynamic tree loading

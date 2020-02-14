@@ -30,10 +30,44 @@ export default {
 		}
 	},
 
+	matrixInsideFrustum: function(m, modelViewMatrix, camera) {
+		const n = this.mTmp4.copy(m);
+		this.projectMatrixToFrustum(n, modelViewMatrix, camera);
+		const a = this.qTmp1.set(0, 0, 0).applyMatrix4(n);
+		const b = this.qTmp2.set(0, 0, 1).applyMatrix4(n);
+		const c = this.qTmp3.set(0, 1, 0).applyMatrix4(n);
+		const d = this.qTmp4.set(0, 1, 1).applyMatrix4(n);
+		const e = this.qTmp5.set(1, 0, 0).applyMatrix4(n);
+		const f = this.qTmp6.set(1, 0, 1).applyMatrix4(n);
+		const g = this.qTmp7.set(1, 1, 0).applyMatrix4(n);
+		const h = this.qTmp8.set(1, 1, 1).applyMatrix4(n);
+		const maxX = Math.max(a.x, b.x, c.x, d.x, e.x, f.x, g.x, h.x);
+		const minX = Math.min(a.x, b.x, c.x, d.x, e.x, f.x, g.x, h.x);
+		const minY = Math.min(a.y, b.y, c.y, d.y, e.y, f.y, g.y, h.y);
+		const maxY = Math.max(a.y, b.y, c.y, d.y, e.y, f.y, g.y, h.y);
+		return maxX > -1 && minX < 1 && maxY > -1 && minY < 1;
+	},
+
+	matrixCoversFrustum: function(m, camera) {
+		return false;
+	},
+
+	matrixAtFrustumCenter: function(m, camera) {
+		return false;
+	},
+
+	matrixIsBigOnScreen: function(m, camera) {
+		return false;
+	},
+
 	qTmp1: new THREE.Vector3(),
 	qTmp2: new THREE.Vector3(),
 	qTmp3: new THREE.Vector3(),
 	qTmp4: new THREE.Vector3(),
+	qTmp5: new THREE.Vector3(),
+	qTmp6: new THREE.Vector3(),
+	qTmp7: new THREE.Vector3(),
+	qTmp8: new THREE.Vector3(),
 	mTmp4: new THREE.Matrix4(),
 	quadInsideFrustum: function(quadIndex, model, camera) {
 		var vertexOff = quadIndex * 6 * this.quadCount;
@@ -149,6 +183,12 @@ export default {
 		x = x1 + mua * (x2 - x1);
 		y = y1 + mua * (y2 - y1);
 		return { x: x, y: y };
+	},
+
+	projectMatrixToFrustum: function(m, modelViewMatrix, camera) {
+		m.multiply(modelViewMatrix);
+		m.multiply(camera.projectionMatrix);
+		return m;
 	},
 
 	projectVertexToFrustum: function(u, vertexIndex, model, camera) {

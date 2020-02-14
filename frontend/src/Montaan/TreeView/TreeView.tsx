@@ -8,15 +8,16 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass';
-import { FilmPass } from 'three/examples/jsm/postprocessing/FilmPass';
-import { GlitchPass } from './Glitchpass';
-import { WaterPass } from './Waterpass';
 
 import styles from './TreeView.module.scss';
 
 import QFrameAPI from '../../lib/api';
 import { FileTree, SearchResult, ActiveCommitData, TreeLink } from '../MainApp';
 import { CommitData } from '../lib/parse_commits';
+import utils from '../lib/utils';
+import Geometry from '../lib/Geometry';
+import { getFullPath } from '../lib/filetree';
+import Colors from '../lib/Colors';
 
 export interface TreeViewProps extends RouteComponentProps {
 	api: QFrameAPI;
@@ -45,10 +46,7 @@ extend({
 	EffectComposer,
 	ShaderPass,
 	RenderPass,
-	WaterPass,
 	UnrealBloomPass,
-	FilmPass,
-	GlitchPass,
 });
 
 declare global {
@@ -56,10 +54,7 @@ declare global {
 	namespace JSX {
 		interface IntrinsicElements {
 			renderPass: any;
-			waterPass: any;
 			unrealBloomPass: any;
-			filmPass: any;
-			glitchPass: any;
 			instancedBufferAttribute: any;
 			instancedMesh: any; //ReactThreeFiber.Object3DNode<THREE.InstancedMesh, typeof THREE.InstancedMesh>;
 			effectComposer: any; //ReactThreeFiber.Node<EffectComposer, typeof EffectComposer>;
@@ -78,50 +73,6 @@ function Effect({ down }: { down: any }) {
 			<renderPass attachArray="passes" scene={scene} camera={camera} />
 			<unrealBloomPass attachArray="passes" args={[aspect, 2, 1, 0.9]} />
 		</effectComposer>
-	);
-}
-
-function Tree({ tree, index, count }: any) {
-	const entries = useMemo(
-		() =>
-			tree.entries &&
-			Object.keys(tree.entries)
-				.sort((a, b) => {
-					if (tree.entries[a].entries && !tree.entries[b].entries) return -1;
-					if (tree.entries[b].entries && !tree.entries[a].entries) return 1;
-					return a.localeCompare(b);
-				})
-				.map((n, i, a) => (
-					<Tree key={n} tree={tree.entries[n]} index={i} count={a.length} />
-				)),
-		[tree]
-	);
-	const side = Math.ceil(Math.pow(count, 1 / 3));
-	const z = (index / (side * side)) | 0;
-	const y = ((index - z * side * side) / side) | 0;
-	const x = index - (z * side * side + y * side);
-	const s = 0.8 / side;
-	return (
-		<group
-			position={[x / side + 0.1 / side, y / side + 0.1 / side, z / side + 0.1 / side]}
-			scale={[s, s, s]}
-		>
-			<mesh position={[0.5, 0.5, 0.5]} scale={[1, 1, 1]}>
-				{entries ? (
-					<boxBufferGeometry attach="geometry" args={[1, 0]} />
-				) : (
-					<octahedronBufferGeometry attach="geometry" args={[0.5, 0]} />
-				)}
-				<meshStandardMaterial
-					attach="material"
-					blending={entries ? THREE.AdditiveBlending : THREE.NormalBlending}
-					color={`hsl(${Math.random() * 360}, 70%, ${entries ? 30 : 60}%)`}
-					depthWrite={!entries}
-					opacity={entries ? 0.1 : 1}
-				/>
-			</mesh>
-			{entries}
-		</group>
 	);
 }
 
@@ -183,7 +134,8 @@ function TreeContainer({
 	const dirColors = useRef<any>();
 	const fileColors = useRef<any>();
 	const [sel, setSel] = useState(-1);
-	const count = 100000;
+	const [init, setInit] = useState<FileTree | undefined>(undefined);
+	const count = 1000000;
 	const targetMatrix = useMemo(() => new THREE.Matrix4(), []);
 	const currentTargetMatrix = useMemo(() => new THREE.Matrix4(), []);
 	const dummy = useMemo(() => new THREE.Object3D(), []);
@@ -218,31 +170,82 @@ function TreeContainer({
 		fileColors,
 		fileColorArray,
 	]);
-	useEffect(() => reLayout(targetMatrix), [
-		dummy,
-		fileTree.tree,
-		fileMesh,
-		dirMesh,
-		reLayout,
-		targetMatrix,
-	]);
 	useFrame(() => {
-		gl.setClearColor(0, 1);
-		camera.near = targetMatrix.elements[0];
-		camera.far = targetMatrix.elements[0] * 16;
-		camera.updateProjectionMatrix();
+		if (init !== fileTree) {
+			targetMatrix.identity();
+			reLayout(targetMatrix);
+			setInit(fileTree);
+			gl.setClearColor(0, 1);
+		}
+		camera.near = camera.near + (targetMatrix.elements[0] - camera.near) * 0.1;
+		camera.far = camera.far + (targetMatrix.elements[0] * 16 - camera.far) * 0.1;
 		camera.position.set(
-			targetMatrix.elements[12] + targetMatrix.elements[0] * 0.5,
-			targetMatrix.elements[13] + targetMatrix.elements[0] * 0.5,
-			targetMatrix.elements[14] + targetMatrix.elements[0] * 4
+			camera.position.x +
+				(targetMatrix.elements[12] + targetMatrix.elements[0] * 0.5 - camera.position.x) *
+					0.1,
+			camera.position.y +
+				(targetMatrix.elements[13] + targetMatrix.elements[0] * 0.5 - camera.position.y) *
+					0.1,
+			camera.position.z +
+				(targetMatrix.elements[14] + targetMatrix.elements[0] * 4 - camera.position.z) * 0.1
 		);
 		lookV.set(
-			targetMatrix.elements[12] + targetMatrix.elements[0] * 0.5,
-			targetMatrix.elements[13] + targetMatrix.elements[0] * 0.5,
-			targetMatrix.elements[14]
+			lookV.x + (targetMatrix.elements[12] + targetMatrix.elements[0] * 0.5 - lookV.x) * 0.1,
+			lookV.y + (targetMatrix.elements[13] + targetMatrix.elements[0] * 0.5 - lookV.y) * 0.1,
+			lookV.z + (targetMatrix.elements[14] - lookV.z) * 0.1
 		);
 		camera.lookAt(lookV);
+		camera.updateProjectionMatrix();
+		return;
+
+		const fMesh = fileMesh.current;
+		const dMesh = dirMesh.current;
+		const m = new THREE.Matrix4();
+		var zoomedInPath = '';
+		var navigationTarget = '';
+		var smallestCovering = fileTree.tree;
+		var visibleFiles: any = new THREE.Group();
+
+		// Breadth-first traversal of this.fileTree
+		// - determines fsEntry visibility
+		// - finds the covering fsEntry
+		// - finds the currently zoomed-in path and breadcrumb path
+		var stack = [fileTree.tree];
+		while (stack.length > 0) {
+			var obj = stack.pop() as any;
+			for (var name in obj.entries) {
+				var o = obj.entries[name];
+				const mesh = o.entries ? dMesh : fMesh;
+				mesh.getMatrixAt(o.instanceId, m);
+				if (!Geometry.matrixInsideFrustum(m, mesh.modelViewMatrix, camera)) {
+					continue;
+				}
+				if (Geometry.matrixIsBigOnScreen(m, camera)) {
+					if (Geometry.matrixCoversFrustum(m, camera)) {
+						zoomedInPath += '/' + o.name;
+						navigationTarget += '/' + o.name;
+						smallestCovering = o;
+					} else if (Geometry.matrixAtFrustumCenter(m, camera)) {
+						navigationTarget += '/' + o.name;
+					}
+					if (o.entries) {
+						stack.push(o);
+					} else {
+						let fullPath = getFullPath(o);
+						if (
+							visibleFiles.children.length < 30 &&
+							!visibleFiles.visibleSet[fullPath]
+						) {
+							// if (Colors.imageRE.test(fullPath))
+							// 	loadImage(visibleFiles, fullPath, o, m);
+							// else loadTextFile(visibleFiles, fullPath, o, m);
+						}
+					}
+				}
+			}
+		}
 	});
+
 	function reLayout(relativeMatrix: THREE.Matrix4) {
 		const fMesh = fileMesh.current;
 		const dMesh = dirMesh.current;
@@ -296,6 +299,7 @@ function TreeContainer({
 		dMesh.count = idx.dir;
 		dMesh.instanceMatrix.needsUpdate = true;
 	}
+
 	const onClick = (ev: any) => {
 		if (sel !== -1) {
 			_color.set(dColors[sel]);
@@ -305,10 +309,36 @@ function TreeContainer({
 		_color.toArray(dirColorArray, ev.instanceId * 3);
 		dirMesh.current.getMatrixAt(ev.instanceId, clickTargetMatrix);
 		const fsEntry = dirMesh.current.fsEntries[ev.instanceId];
+		// Keep up the matrix precision
 		if (clickTargetMatrix.elements[0] < 0.01 || clickTargetMatrix.elements[0] > 100) {
-			clickTargetMatrix.multiplyMatrices(currentTargetMatrix, clickTargetMatrix);
-			currentTargetMatrix.copy(clickTargetMatrix);
-			reLayout(clickTargetMatrix);
+			const prevScale = currentTargetMatrix.elements[0];
+			const prevOrigin = new THREE.Vector3(
+				currentTargetMatrix.elements[12],
+				currentTargetMatrix.elements[13],
+				currentTargetMatrix.elements[14]
+			);
+			currentTargetMatrix.multiplyMatrices(currentTargetMatrix, clickTargetMatrix);
+			const newScale = currentTargetMatrix.elements[0];
+			const newOrigin = new THREE.Vector3(
+				currentTargetMatrix.elements[12],
+				currentTargetMatrix.elements[13],
+				currentTargetMatrix.elements[14]
+			);
+			camera.position
+				.multiplyScalar(prevScale)
+				.add(prevOrigin)
+				.sub(newOrigin)
+				.divideScalar(newScale);
+			lookV
+				.multiplyScalar(prevScale)
+				.add(prevOrigin)
+				.sub(newOrigin)
+				.divideScalar(newScale);
+			camera.near *= prevScale / newScale;
+			camera.far *= prevScale / newScale;
+
+			// TODO re-root the tree to fsEntry.parent.parent whatever is the smallest visible
+			reLayout(currentTargetMatrix);
 			dirMesh.current.getMatrixAt(fsEntry.instanceId, clickTargetMatrix);
 		}
 		targetMatrix.copy(clickTargetMatrix);
@@ -320,11 +350,11 @@ function TreeContainer({
 		<>
 			<instancedMesh ref={dirMesh} args={[null, null, count]} onClick={onClick}>
 				{dirGeo}
-				<meshStandardMaterial attach="material" vertexColors={THREE.VertexColors} />
+				<meshBasicMaterial attach="material" vertexColors={THREE.VertexColors} />
 			</instancedMesh>
 			<instancedMesh ref={fileMesh} args={[null, null, count]}>
 				{fileGeo}
-				<meshStandardMaterial attach="material" vertexColors={THREE.VertexColors} />
+				<meshBasicMaterial attach="material" vertexColors={THREE.VertexColors} />
 			</instancedMesh>
 		</>
 	);
@@ -346,7 +376,7 @@ function TreeView({ fileTree }: TreeViewProps) {
 				onMouseUp={() => setDown(false)}
 				onMouseDown={() => setDown(true)}
 				pixelRatio={2}
-				invalidateFrameloop={true}
+				// invalidateFrameloop={true}
 			>
 				<directionalLight
 					color={new THREE.Color('#cccccc')}
