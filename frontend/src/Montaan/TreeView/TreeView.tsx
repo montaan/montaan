@@ -170,29 +170,46 @@ function TreeContainer({
 		fileColors,
 		fileColorArray,
 	]);
+	const moveTowards = function(
+		v: THREE.Vector3,
+		x: number,
+		y: number,
+		z: number,
+		scale: number
+	): void {
+		const dx = x - v.x;
+		const dy = y - v.y;
+		const dz = z - v.z;
+		const lenSq = dx * dx + dy * dy + dz * dz;
+		if (lenSq < 0.0000001 * scale) {
+			v.set(x, y, z);
+		} else {
+			v.set(v.x + dx * 0.1, v.y + dy * 0.1, v.z + dz * 0.1);
+		}
+	};
 	useFrame(() => {
 		if (init !== fileTree) {
 			targetMatrix.identity();
+			currentTargetMatrix.identity();
 			reLayout(targetMatrix);
 			setInit(fileTree);
 			gl.setClearColor(0, 1);
 		}
 		camera.near = camera.near + (targetMatrix.elements[0] - camera.near) * 0.1;
 		camera.far = camera.far + (targetMatrix.elements[0] * 16 - camera.far) * 0.1;
-		camera.position.set(
-			camera.position.x +
-				(targetMatrix.elements[12] + targetMatrix.elements[0] * 0.5 - camera.position.x) *
-					0.1,
-			camera.position.y +
-				(targetMatrix.elements[13] + targetMatrix.elements[0] * 0.5 - camera.position.y) *
-					0.1,
-			camera.position.z +
-				(targetMatrix.elements[14] + targetMatrix.elements[0] * 4 - camera.position.z) * 0.1
+		moveTowards(
+			camera.position,
+			targetMatrix.elements[12] + targetMatrix.elements[0] * 0.5,
+			targetMatrix.elements[13] + targetMatrix.elements[0] * 0.5,
+			targetMatrix.elements[14] + targetMatrix.elements[0] * 4,
+			targetMatrix.elements[0]
 		);
-		lookV.set(
-			lookV.x + (targetMatrix.elements[12] + targetMatrix.elements[0] * 0.5 - lookV.x) * 0.1,
-			lookV.y + (targetMatrix.elements[13] + targetMatrix.elements[0] * 0.5 - lookV.y) * 0.1,
-			lookV.z + (targetMatrix.elements[14] - lookV.z) * 0.1
+		moveTowards(
+			lookV,
+			targetMatrix.elements[12] + targetMatrix.elements[0] * 0.5,
+			targetMatrix.elements[13] + targetMatrix.elements[0] * 0.5,
+			targetMatrix.elements[14],
+			targetMatrix.elements[0]
 		);
 		camera.lookAt(lookV);
 		camera.updateProjectionMatrix();
@@ -348,11 +365,16 @@ function TreeContainer({
 
 	return (
 		<>
-			<instancedMesh ref={dirMesh} args={[null, null, count]} onClick={onClick}>
+			<instancedMesh
+				ref={dirMesh}
+				args={[null, null, count]}
+				onClick={onClick}
+				frustumCulled={false}
+			>
 				{dirGeo}
 				<meshBasicMaterial attach="material" vertexColors={THREE.VertexColors} />
 			</instancedMesh>
-			<instancedMesh ref={fileMesh} args={[null, null, count]}>
+			<instancedMesh ref={fileMesh} args={[null, null, count]} frustumCulled={false}>
 				{fileGeo}
 				<meshBasicMaterial attach="material" vertexColors={THREE.VertexColors} />
 			</instancedMesh>

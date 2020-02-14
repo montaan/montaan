@@ -114,10 +114,7 @@ declare global {
 	namespace JSX {
 		interface IntrinsicElements {
 			renderPass: any;
-			waterPass: any;
 			unrealBloomPass: any;
-			filmPass: any;
-			glitchPass: any;
 			instancedBufferAttribute: any;
 			instancedMesh: any; //ReactThreeFiber.Object3DNode<THREE.InstancedMesh, typeof THREE.InstancedMesh>;
 			effectComposer: any; //ReactThreeFiber.Node<EffectComposer, typeof EffectComposer>;
