@@ -1,38 +1,44 @@
 const numCPUs = require('os').cpus().length;
 const fs = require('fs');
+const path = require('path');
 require('dotenv').config();
 
 const config = {
-    port: 8008, 
-    fallbackRoute: () => {},
-    pg: {user: process.env.PGUSER, database: process.env.PGDATABASE}, 
-    root: 'frontend/build', 
-    saltRounds: 10,
-    allowCORSHeaders: 'csrf,scantoken',
-    logAccess: (req, status, elapsed) => { console.log(status, req.method, req.url); },
-    logError: (req, status, error, trace, elapsed) => { console.error(status, error, trace); },
-    workerCount: numCPUs
+	port: 8008,
+	// fallbackRoute: () => {},
+	pg: { user: process.env.PGUSER, database: process.env.PGDATABASE },
+	root: path.join(process.cwd(), '../frontend/build'),
+	pathFor404: '/index.html',
+	saltRounds: 10,
+	allowCORSHeaders: 'csrf,scantoken',
+	logAccess: (req, status, elapsed) => {
+		console.log(status, req.method, req.url);
+	},
+	logError: (req, status, error, trace, elapsed) => {
+		console.error(status, error, trace);
+	},
+	workerCount: numCPUs,
 };
 
 if (process.env.PGHOST || process.env.PGPORT) {
-    if (process.env.PGHOST && process.env.PGHOST.startsWith('/')) {
-        config.pgport = process.env.PGHOST + '/.s.PGSQL.' + (process.env.PGPORT || '5432');
-    } else {
-        config.pghost = process.env.PGHOST || 'localhost';
-        config.pgport = process.env.PGPORT || 5432;
-    }
+	if (process.env.PGHOST && process.env.PGHOST.startsWith('/')) {
+		config.pgport = process.env.PGHOST + '/.s.PGSQL.' + (process.env.PGPORT || '5432');
+	} else {
+		config.pghost = process.env.PGHOST || 'localhost';
+		config.pgport = process.env.PGPORT || 5432;
+	}
 } else {
-    if (fs.existsSync('/var/run/postgresql/.s.PGSQL.5432')) {
-        config.pgport = '/var/run/postgresql/.s.PGSQL.5432';
-    } else if (fs.existsSync('/tmp/.s.PGSQL.5432')) {
-        config.pgport = '/tmp/.s.PGSQL.5432';
-    }
+	if (fs.existsSync('/var/run/postgresql/.s.PGSQL.5432')) {
+		config.pgport = '/var/run/postgresql/.s.PGSQL.5432';
+	} else if (fs.existsSync('/tmp/.s.PGSQL.5432')) {
+		config.pgport = '/tmp/.s.PGSQL.5432';
+	}
 }
 
 config.api = {
-    user: require('./src/user'),
-    repo: require('./src/repo'),
-    items: {}
+	user: require('./src/user'),
+	repo: require('./src/repo'),
+	items: {},
 };
 
 config.replaceMigrations = require('./src/migrations');

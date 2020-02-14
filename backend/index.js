@@ -246,7 +246,7 @@ async function migrate(migrations, migrationTarget) {                           
 }                                                                                                    // Our migrations have been applied and all is well under the moon.
 
 // File serving
-global.serveDirectory = function(baseDirectory) {                                                    // I wish to serve you a directory of files.
+global.serveDirectory = function(baseDirectory, pathFor404) {                                        // I wish to serve you a directory of files.
     const cache = {};                                                                                // But first, let me read all of it into memory.
     chokidar.watch('.', {cwd: baseDirectory, ignored: /(^|[\/\\])\../}).on('all', (_, filename) => { try { // And refresh the memory whenever files change.
         delete cache['/'+filename];                                                                  // When a file changes, delete the previously cached version.
@@ -256,7 +256,7 @@ global.serveDirectory = function(baseDirectory) {                               
     } catch (e) {} });                                                                               // I don't care if reading the file fails (maybe it's a directory). It'll just be 404 for you.
     return async function(req, res) {                                                                // Oh right, I need to give you a HTTP request handler.
         const reqPath = req.url.split("?")[0];                                                       // You can use GET parameters for bypassing Expires headers. If your filename has question marks, you're going to get a 404 though.
-        const cached = getOwnProperty(cache, reqPath) || getOwnProperty(cache, path.join(reqPath, 'index.html')); // Check if the request path is in cache. Maybe it's a directory and we should test path/index.html as well.
+        const cached = getOwnProperty(cache, reqPath) || getOwnProperty(cache, path.join(reqPath, 'index.html')) || getOwnProperty(cache, pathFor404); // Check if the request path is in cache. Maybe it's a directory and we should test path/index.html as well.
         if (!cached) return;                                                                         // Not in cache, pass the buck to whatever fallback handler there is.
         if (res.targetEncoding && cached.encodings[res.targetEncoding]) res.setHeader('content-encoding', res.targetEncoding); // If we can use a compressed version of the file, let's tell the client that we're using that.
         res.writeHead(200, cached.headers);                                                          // Okay, found the file, you get to taste the sweet 200 of success.
@@ -363,7 +363,7 @@ global.DB.connect(config.pgport, config.pghost).then(() => {
     } else { // The cluster workers start HTTP servers on config.port and deal with all the hard work.
             // Routes
             const routes = config.routes || { _: {items, user, ...config.api} };                             // Route to either config.routes or the default routes extended with config.api. These are under /_/ for create-react-app service worker compatibility.
-            const fallbackRoute = config.fallbackRoute || serveDirectory(config.root);                       // If no route is found, pass the request to config.fallbackRoute or the static file server rooted at config.root.
+            const fallbackRoute = config.fallbackRoute || serveDirectory(config.root, config.pathFor404);                       // If no route is found, pass the request to config.fallbackRoute or the static file server rooted at config.root.
 
             // HTTP Server
             const encRe = zlib.brotliCompress ? /\b(br|gzip)\b/g : /\bgzip\b/g;                              // Figure out what accept-encoding values to support
