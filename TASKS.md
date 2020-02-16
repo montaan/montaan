@@ -53,11 +53,38 @@ _ Record coding sessions
 _ Do video review right after & next morning & rehearse without mistakes
 \_ Record and spot mistakes and immediately correct
 
+_ Each function in its own file.
+_ Functions can't access globals and closure, you have to pass them in.
+_ Well-defined and enforced function structure to quickly parse information about the function to auto-test fuzz and perf and QuickCheck and SmallCheck.
+_ Conflicts arise from simultaneous edits into same file -> smaller files. If edits are randomly distributed across all files, and a conflict happens when two edits edit the same file.
+
+Use https://github.com/microsoft/TypeScript/wiki/Using-the-Compiler-API to generate a fully resolved AST of codebase, visualize it and make it navigable.
+Combine with type-based test generators, auto-perf, V8 emitted code, code coverage, inline editor, live feed of git commits to repo & package updates across all the deps, LM for generating docs from source, LM for suggesting high-quality replacements for AST subtrees + auto-replacement if tests pass / proven functional equivalence.
+Live view of the codebase. Live perf of codebase. Live tests update as you write. Live docs update as you write. Live deploy as you write.
+
+A beautiful landscape with your files and folders in it as 3D models. People and processes as characters doing things in the landscape.
+
+react-component-benchmark
+https://buildtracker.dev/
+https://sentry.io/welcome/
+componentDidCatch
+https://astexplorer.net/
+Use TypeScript compiler to automate coding & docs & tests:
+
+- Pull type defs to top of file
+- Grab all exports
+- Use function parameters type to generate tests
+- Make generators for native types & use interface declarations to auto-generate generators for interfaces
+
 ## Active
 
 Trying to do too many things in one go.
 TreeView shouldn't at this stage be about efficient megascene rendering.
 It should be about flexible rendering with an eye towards megascenes.
+
+[] Compute element screen
+[] Partial tree render
+[x] View re-parenting
 
 # KEY FEATURES
 
