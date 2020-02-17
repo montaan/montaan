@@ -436,7 +436,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		}
 		try {
 			const tour = await this.props.api.getType(
-				'/repo/fs/' + repoPrefix + '/.tour.md',
+				'/repo/file/' + repoPrefix + '/.tour.md',
 				{},
 				'text'
 			);
@@ -916,7 +916,9 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 					navigationTarget={this.state.navigationTarget}
 					fileTree={this.state.fileTree}
 				/>
-				{this.state.tour && <Tour tourMarkdown={this.state.tour} />}
+				{this.state.tour && (
+					<Tour tourMarkdown={this.state.tour} repoPrefix={this.state.repoPrefix} />
+				)}
 				<CommitControls
 					activeCommitData={this.state.activeCommitData}
 					commitData={this.state.commitData}

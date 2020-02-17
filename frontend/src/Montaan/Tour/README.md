@@ -58,6 +58,7 @@ import myImage from './assets/myImage.svg';
 ```tsx
 export interface TourProps extends RouteComponentProps {
 	tourMarkdown: string;
+	repoPrefix: string;
 }
 ```
 
@@ -66,5 +67,6 @@ export interface TourProps extends RouteComponentProps {
 ```tsx
 export interface TourProps extends RouteComponentProps {
 	tourMarkdown: string;
+	repoPrefix: string;
 }
 ```

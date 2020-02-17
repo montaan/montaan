@@ -19,18 +19,20 @@ storiesOf('Montaan/Tour', module).add('Tour', () => (
 			<pre>
 				<code>{`export interface TourProps extends RouteComponentProps {
 	tourMarkdown: string;
+	repoPrefix: string;
 }`}</code>
 			</pre>
 			<h5>Interfaces</h5>
 			<pre>
 				<code>{`export interface TourProps extends RouteComponentProps {
 	tourMarkdown: string;
+	repoPrefix: string;
 }`}</code>
 			</pre>
 		</div>
 		<hr />
 		<Router>
-			<Tour tourMarkdown="### FoonnStep 1nn### BarnnStep 2n" />
+			<Tour tourMarkdown="### Foo\n\nStep 1nn### Bar\n\nStep 2\n" repoPrefix="foo/bar" />
 		</Router>
 	</div>
 ));
