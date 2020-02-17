@@ -1,0 +1,4 @@
+#!/bin/bash
+
+cd repos
+parallel 'cd ..; bin/process_tree' ::: */*
