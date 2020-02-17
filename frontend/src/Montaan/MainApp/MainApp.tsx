@@ -10,6 +10,7 @@ import MainView from '../MainView';
 import CommitControls from '../CommitControls';
 import CommitInfo from '../CommitInfo';
 import Search from '../Search';
+import Tour from '../Tour';
 import Breadcrumb from '../Breadcrumb';
 import RepoSelector, { Repo } from '../RepoSelector';
 
@@ -20,6 +21,8 @@ import { getPathEntry, getFullPath } from '../lib/filetree';
 
 import styles from './MainApp.module.scss';
 import TreeView from '../TreeView';
+import { findAllInRenderedTree } from 'react-dom/test-utils';
+import { QFrameAPI } from '../../lib/api';
 
 export interface MainAppProps extends RouteComponentProps {
 	match: any;
@@ -108,6 +111,7 @@ interface MainAppState {
 	commitData: null | CommitData;
 	navUrl: string;
 	ref: string;
+	tour?: string;
 	searchHover?: any;
 }
 
@@ -132,6 +136,162 @@ const HitType = {
 	TEST: 3,
 };
 
+class NotImplementedError extends Error {}
+
+interface IFilesystem {
+	readDir(path: string): Promise<FSEntry[]>;
+	readFile(path: string): Promise<ArrayBuffer>;
+	writeFile(path: string, contents: ArrayBuffer): Promise<boolean>;
+	rm(path: string): Promise<boolean>;
+	rmdir(path: string): Promise<boolean>;
+}
+
+type Constructor<T> = {
+	new (...args: any[]): T;
+};
+
+class Namespace implements IFilesystem {
+	root: FileTree;
+	constructor(rootFS: FileTree) {
+		this.root = rootFS;
+	}
+
+	findFilesystemForPath(path: string) {
+		let fsEntry = getPathEntry(this.root.tree, path);
+		let relativePath = '';
+		while (!fsEntry.filesystem) {
+			relativePath = '/' + fsEntry.name + relativePath;
+			fsEntry = fsEntry.parent;
+		}
+		return { relativePath, fsEntry };
+	}
+
+	async readDir(path: string) {
+		const { relativePath, fsEntry } = this.findFilesystemForPath(path);
+		return fsEntry.filesystem.readDir(relativePath);
+	}
+
+	async readFile(path: string) {
+		const { relativePath, fsEntry } = this.findFilesystemForPath(path);
+		return fsEntry.filesystem.readFile(relativePath);
+	}
+
+	async writeFile(path: string, contents: ArrayBuffer) {
+		const { relativePath, fsEntry } = this.findFilesystemForPath(path);
+		return fsEntry.filesystem.writeFile(relativePath);
+	}
+	async rm(path: string) {
+		const { relativePath, fsEntry } = this.findFilesystemForPath(path);
+		return fsEntry.filesystem.rm(relativePath);
+	}
+	async rmdir(path: string) {
+		const { relativePath, fsEntry } = this.findFilesystemForPath(path);
+		return fsEntry.filesystem.rmdir(relativePath);
+	}
+}
+
+class Filesystem implements IFilesystem {
+	url: string;
+	api: QFrameAPI;
+
+	constructor(url: string, api: QFrameAPI) {
+		this.url = url;
+		this.api = api;
+	}
+
+	async readDir(path: string) {
+		throw new NotImplementedError("Filesystem doesn't support reads");
+		return [];
+	}
+	async readFile(path: string) {
+		throw new NotImplementedError("Filesystem doesn't support reads");
+		return new ArrayBuffer(0);
+	}
+	async writeFile(path: string, contents: ArrayBuffer) {
+		throw new NotImplementedError("Filesystem doesn't support writes");
+		return true;
+	}
+	async rm(path: string) {
+		throw new NotImplementedError("Filesystem doesn't support writes");
+		return true;
+	}
+	async rmdir(path: string) {
+		throw new NotImplementedError("Filesystem doesn't support writes");
+		return true;
+	}
+}
+
+class MontaanGitFileSystem extends Filesystem {
+	repo: string;
+	ref: string;
+
+	constructor(url: string, api: QFrameAPI) {
+		super(url, api);
+		const urlSegments = url.split('/');
+		this.repo = urlSegments.slice(0, -1).join('/');
+		this.ref = urlSegments[urlSegments.length - 1];
+	}
+
+	async readDir(path: string) {
+		return await this.api.post('/_/repo/dir', { repo: this.repo, path: path, head: this.ref });
+	}
+
+	async readFile(path: string) {
+		return this.api.postType(
+			'/_/repo/checkout',
+			{ repo: this.repo, path: path, head: this.ref },
+			{},
+			'arrayBuffer'
+		);
+	}
+
+	async writeFile(path: string, contents: ArrayBuffer) {
+		throw new NotImplementedError("montaanGit doesn't support writes");
+		return true;
+	}
+
+	async rm(path: string) {
+		throw new NotImplementedError("montaanGit doesn't support writes");
+		return true;
+	}
+
+	async rmdir(path: string) {
+		throw new NotImplementedError("montaanGit doesn't support writes");
+		return true;
+	}
+}
+
+const RegisteredFileSystems: { [fsType: string]: Constructor<Filesystem> } = {
+	montaanGit: MontaanGitFileSystem,
+};
+
+function getFSType(url: string) {
+	return 'montaanGit';
+}
+
+function createFSTree(name: string, url: string, fsType: string) {
+	return {
+		name,
+		title: name,
+		entries: {},
+		fetched: false,
+		url,
+		fsType,
+		filesystem: RegisteredFileSystems[fsType],
+	};
+}
+
+function mount(fileTree: FileTree, url: string, mountPoint: string, fsType: string) {
+	if (!fsType) fsType = getFSType(url);
+	const cleanedMountPoint = mountPoint.replace(/\/+$/, '');
+	const mountPointSegments = cleanedMountPoint.split('/');
+	const fsEntry = getPathEntry(fileTree, mountPointSegments.slice(0, -1).join('/'));
+	if (!fsEntry) throw new Error('fileTree does not contain path');
+	const name = mountPointSegments[mountPointSegments.length - 1];
+	fsEntry.entries[name] = createFSTree(name, url, fsType);
+	return fileTree;
+}
+
 class MainApp extends React.Component<MainAppProps, MainAppState> {
 	emptyState = {
 		repoPrefix: '',
@@ -154,6 +314,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		processingCommits: true,
 		processing: true,
 		repoError: '',
+		tour: undefined,
 	};
 
 	repoTimeout: number;
@@ -273,7 +434,16 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		} catch (err) {
 			/* No deps */
 		}
-		// this.animateRandomLinks(fileTree.tree, files.split("\0"), repoPrefix);
+		try {
+			const tour = await this.props.api.getType(
+				'/repo/fs/' + repoPrefix + '/.tour.md',
+				{},
+				'text'
+			);
+			this.setState({ tour });
+		} catch (err) {
+			/* No deps */
+		} // this.animateRandomLinks(fileTree.tree, files.split("\0"), repoPrefix);
 	};
 
 	// animateRandomLinks(fileTree, files, repoPrefix) {
@@ -746,6 +916,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 					navigationTarget={this.state.navigationTarget}
 					fileTree={this.state.fileTree}
 				/>
+				{this.state.tour && <Tour tourMarkdown={this.state.tour} />}
 				<CommitControls
 					activeCommitData={this.state.activeCommitData}
 					commitData={this.state.commitData}

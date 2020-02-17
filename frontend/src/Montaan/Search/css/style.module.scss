@@ -1,19 +1,18 @@
- .searchInput {
+.searchInput {
 	position: absolute;
-	left: 50%;
-	top: 20px;
+	left: 0;
+	top: 5px;
 	width: 500px;
-	margin-left: -250px;
 	font-size: 24px;
 	z-index: 20001;
-	border:0;
+	border: 0;
 	height: 48px;
 	box-sizing: border-box;
 	padding: 6px;
 	padding-left: 12px;
 	padding-right: 12px;
 	border-radius: 2px;
-	box-shadow: 0px 2px 3px rgba(0,0,0,0.3);
+	box-shadow: 0px 2px 3px rgba(0, 0, 0, 0.3);
 }
 
 .searchResults {
@@ -124,20 +123,22 @@
 
 			> .searchTitle {
 				font-size: 10px;
-				display:inline;
+				display: inline;
 				vertical-align: top;
 			}
 			> .searchFullPath {
 				font-size: 10px;
-				display:inline;
+				display: inline;
 				vertical-align: top;
-				margin-left:4px;
+				margin-left: 4px;
 			}
 		}
 
 		position: relative;
 
-		&.collapsed > ul { display: none; }
+		&.collapsed > ul {
+			display: none;
+		}
 
 		.collapseToggle {
 			position: absolute;
@@ -149,7 +150,7 @@
 			color: #fafafa;
 
 			&:after {
-				content: "V";
+				content: 'V';
 				position: relative;
 				font-weight: bold;
 				top: -9px;
@@ -165,7 +166,7 @@
 			list-style: none;
 			margin: 0;
 			padding: 0;
-			
+
 			.searchTitle {
 				display: block;
 				float: left;
@@ -186,5 +187,4 @@
 			}
 		}
 	}
-
 }
