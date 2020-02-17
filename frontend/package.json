@@ -80,7 +80,6 @@
 		"src/**/*.tsx": [
 			"yarn updateComponents"
 		],
-		"*.{json,js,yml}": [],
 		"src/**/*.{js,jsx,ts,tsx,json}": [
 			"eslint --fix"
 		],

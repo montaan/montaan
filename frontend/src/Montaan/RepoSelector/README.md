@@ -10,10 +10,16 @@ The primary reviewer for RepoSelector is Ilmari Heikkinen <hei@heichen.hk>.
 
 ```tsx
 <RepoSelector
-	repos={[{ name: 'foo', owner: 'bar', url: '', commit_count: 20, processing: false }]}
+	repos={[{ name: 'foo', owner: 'bar', url: '', branches: [['master', 20]], processing: false }]}
 	createRepo={async (name: string, url?: string) =>
-		new Promise((r) =>
-			r({ name: 'foo', owner: 'bar', url: '', commit_count: 20, processing: false })
+		new Promise((resolve) =>
+			resolve({
+				name: 'baz',
+				owner: 'qux',
+				url: '',
+				branches: [['dev', 20]],
+				processing: false,
+			})
 		)
 	}
 />
@@ -86,7 +92,7 @@ interface RepoSelectorProps extends RouteComponentProps {
 ```tsx
 export interface Repo {
 	name: string;
-	commit_count: number;
+	branches: any[];
 	url: string;
 	owner: string;
 	processing: boolean;

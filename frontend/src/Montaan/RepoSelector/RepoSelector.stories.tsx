@@ -28,7 +28,7 @@ storiesOf('Montaan/RepoSelector', module).add('RepoSelector', () => (
 			<pre>
 				<code>{`export interface Repo {
 	name: string;
-	commit_count: number;
+	branches: any[];
 	url: string;
 	owner: string;
 	processing: boolean;
@@ -52,7 +52,13 @@ interface RepoSelectorState {
 		<Router>
 			<RepoSelector
 				repos={[
-					{ name: 'foo', owner: 'bar', url: '', commit_count: 20, processing: false },
+					{
+						name: 'foo',
+						owner: 'bar',
+						url: '',
+						branches: [['master', 20]],
+						processing: false,
+					},
 				]}
 				createRepo={async (name: string, url?: string) =>
 					new Promise((r) =>
@@ -60,7 +66,7 @@ interface RepoSelectorState {
 							name: 'foo',
 							owner: 'bar',
 							url: '',
-							commit_count: 20,
+							branches: [['master', 20]],
 							processing: false,
 						})
 					)

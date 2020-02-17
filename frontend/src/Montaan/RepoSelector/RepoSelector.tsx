@@ -23,7 +23,7 @@ const schema = yup.object({
 
 export interface Repo {
 	name: string;
-	commit_count: number;
+	branches: any[];
 	url: string;
 	owner: string;
 	processing: boolean;
@@ -97,7 +97,7 @@ class RepoSelector extends Component<RepoSelectorProps, RepoSelectorState> {
 		return a.name.localeCompare(b.name);
 	}
 	repoCmpCommitCount(a: Repo, b: Repo): number {
-		return b.commit_count - a.commit_count;
+		return b.branches[0][1] - a.branches[0][1];
 	}
 
 	getRepoCmp(repoSort: string): RepoSorter {
@@ -142,7 +142,7 @@ class RepoSelector extends Component<RepoSelectorProps, RepoSelectorState> {
 										<span className={styles.repoOwner}>{repo.owner}</span>
 										<span className={styles.repoName}>{repo.name}</span>
 										<span className={styles.repoCommits}>
-											{repo.commit_count}
+											{repo.branches.map((b) => b.join(' ')).join(', ')}
 										</span>
 										{repo.processing && (
 											<span className={styles.repoProcessing}>

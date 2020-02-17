@@ -102,7 +102,15 @@ interface MainAppState {
 	commitData: null | CommitData;
 	navUrl: string;
 	ref: string;
+	tour?: string;
 	searchHover?: any;
+}
+interface IFilesystem {
+	readDir(path: string): Promise<FSEntry[]>;
+	readFile(path: string): Promise<ArrayBuffer>;
+	writeFile(path: string, contents: ArrayBuffer): Promise<boolean>;
+	rm(path: string): Promise<boolean>;
+	rmdir(path: string): Promise<boolean>;
 }`}</code>
 			</pre>
 

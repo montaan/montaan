@@ -11,7 +11,13 @@ it('renders without crashing', () => {
 		<Router>
 			<RepoSelector
 				repos={[
-					{ name: 'foo', owner: 'bar', url: '', commit_count: 20, processing: false },
+					{
+						name: 'foo',
+						owner: 'bar',
+						url: '',
+						branches: [['master', 20]],
+						processing: false,
+					},
 				]}
 				createRepo={async (name: string, url?: string) =>
 					new Promise((r) =>
@@ -19,7 +25,7 @@ it('renders without crashing', () => {
 							name: 'foo',
 							owner: 'bar',
 							url: '',
-							commit_count: 20,
+							branches: [['master', 20]],
 							processing: false,
 						})
 					)
