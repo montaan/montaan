@@ -1,0 +1,22 @@
+/* src/Montaan/TourSelector/TourSelector.module.css */
+@import '../../css/partials/variables';
+@import '../../css/partials/mixins';
+
+.TourSelector {
+	position: absolute;
+	top: 97px;
+	right: 0;
+	text-align: right;
+	z-index: 1000;
+	border: 0;
+	box-sizing: border-box;
+	padding: 0;
+	margin: 0;
+	min-width: 300px;
+	margin-right: 12px;
+	color: black;
+
+	:global(.form-group) {
+		margin-bottom: 0;
+	}
+}

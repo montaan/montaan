@@ -10,7 +10,7 @@ import MainView from '../MainView';
 import CommitControls from '../CommitControls';
 import CommitInfo from '../CommitInfo';
 import Search from '../Search';
-import Tour from '../Tour';
+import TourSelector from '../TourSelector';
 import Breadcrumb from '../Breadcrumb';
 import RepoSelector, { Repo } from '../RepoSelector';
 
@@ -21,7 +21,6 @@ import { getPathEntry, getFullPath } from '../lib/filetree';
 
 import styles from './MainApp.module.scss';
 import TreeView from '../TreeView';
-import { findAllInRenderedTree } from 'react-dom/test-utils';
 import { QFrameAPI } from '../../lib/api';
 
 export interface MainAppProps extends RouteComponentProps {
@@ -111,7 +110,6 @@ interface MainAppState {
 	commitData: null | CommitData;
 	navUrl: string;
 	ref: string;
-	tour?: string;
 	searchHover?: any;
 }
 
@@ -314,7 +312,6 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		processingCommits: true,
 		processing: true,
 		repoError: '',
-		tour: undefined,
 	};
 
 	repoTimeout: number;
@@ -434,16 +431,6 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		} catch (err) {
 			/* No deps */
 		}
-		try {
-			const tour = await this.props.api.getType(
-				'/repo/file/' + repoPrefix + '/.tour.md',
-				{},
-				'text'
-			);
-			this.setState({ tour });
-		} catch (err) {
-			/* No deps */
-		} // this.animateRandomLinks(fileTree.tree, files.split("\0"), repoPrefix);
 	};
 
 	// animateRandomLinks(fileTree, files, repoPrefix) {
@@ -916,9 +903,12 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 					navigationTarget={this.state.navigationTarget}
 					fileTree={this.state.fileTree}
 				/>
-				{this.state.tour && (
-					<Tour tourMarkdown={this.state.tour} repoPrefix={this.state.repoPrefix} />
-				)}
+				<TourSelector
+					repoPrefix={this.state.repoPrefix}
+					fileTree={this.state.fileTree}
+					navigationTarget={this.state.navigationTarget}
+					api={this.props.api}
+				/>
 				<CommitControls
 					activeCommitData={this.state.activeCommitData}
 					commitData={this.state.commitData}

@@ -102,7 +102,6 @@ interface MainAppState {
 	commitData: null | CommitData;
 	navUrl: string;
 	ref: string;
-	tour?: string;
 	searchHover?: any;
 }
 interface IFilesystem {

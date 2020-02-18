@@ -2,14 +2,14 @@
 
 The Tour component is a tour through a directory tree for quick on-boarding..
 
-The Tour component is used by MainApp.
+The Tour component is used by TourSelector.
 
 The primary reviewer for Tour is Ilmari Heikkinen <hei@heichen.hk>.
 
 ## Usage
 
 ```tsx
-<Tour tourMarkdown="### FoonnStep 1nn### BarnnStep 2n" />
+<Tour tourMarkdown="### Foo\n\nStep 1\n\n### Bar\n\nStep 2\n" />
 ```
 
 ## Styling
@@ -59,6 +59,7 @@ import myImage from './assets/myImage.svg';
 export interface TourProps extends RouteComponentProps {
 	tourMarkdown: string;
 	repoPrefix: string;
+	name: string;
 }
 ```
 
@@ -68,5 +69,6 @@ export interface TourProps extends RouteComponentProps {
 export interface TourProps extends RouteComponentProps {
 	tourMarkdown: string;
 	repoPrefix: string;
+	name: string;
 }
 ```

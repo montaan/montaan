@@ -20,6 +20,7 @@ storiesOf('Montaan/Tour', module).add('Tour', () => (
 				<code>{`export interface TourProps extends RouteComponentProps {
 	tourMarkdown: string;
 	repoPrefix: string;
+	name: string;
 }`}</code>
 			</pre>
 			<h5>Interfaces</h5>
@@ -27,12 +28,13 @@ storiesOf('Montaan/Tour', module).add('Tour', () => (
 				<code>{`export interface TourProps extends RouteComponentProps {
 	tourMarkdown: string;
 	repoPrefix: string;
+	name: string;
 }`}</code>
 			</pre>
 		</div>
 		<hr />
 		<Router>
-			<Tour tourMarkdown="### Foo\n\nStep 1nn### Bar\n\nStep 2\n" repoPrefix="foo/bar" />
+			{/* <Tour tourMarkdown="### Foo\n\nStep 1nn### Bar\n\nStep 2\n" repoPrefix="foo/bar" /> */}
 		</Router>
 	</div>
 ));

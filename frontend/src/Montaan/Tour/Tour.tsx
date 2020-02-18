@@ -5,64 +5,72 @@ import { withRouter, RouteComponentProps, Link } from 'react-router-dom';
 
 import styles from './Tour.module.scss';
 import Button from 'react-bootstrap/Button';
-import showdown from 'showdown';
+import MarkdownIt from 'markdown-it';
+import DOMPurify from 'dompurify';
 import parse, { domToReact, HTMLReactParserOptions } from 'html-react-parser';
+import { FileTree } from '../MainApp';
+import { getPathEntry, getFullPath } from '../lib/filetree';
+
+function parseMarkdown(tourMarkdown: string, repoPrefix: string) {
+	const converter = new MarkdownIt();
+	const html = DOMPurify.sanitize(converter.render(tourMarkdown));
+	const doc = new DOMParser().parseFromString('<body>' + html + '</body>', 'text/html');
+	const htmlSections = doc.body.children;
+	const sections = [];
+	let currentSection = document.createElement('div');
+	for (let i = 0; i < htmlSections.length; i++) {
+		let el = htmlSections[i];
+		if (el.tagName === 'H3') {
+			currentSection = document.createElement('div');
+			sections.push(currentSection);
+		}
+		currentSection.appendChild(el.cloneNode(true));
+	}
+	return sections.map((d, i) => {
+		const links = d.querySelectorAll('a');
+		const baseHref =
+			links.length > 0 ? '/' + repoPrefix + links[0].getAttribute('href') : undefined;
+		for (let i = 0; i < links.length; i++) {
+			const href = links[i].getAttribute('href');
+			if (!href || /^[a-z0-9]+:/i.test(href)) continue;
+			const absoluteHref = href.startsWith('/')
+				? '/' + repoPrefix + href
+				: baseHref + '/' + href;
+			links[i].setAttribute('href', absoluteHref.replace(/\/\/+/g, '/'));
+		}
+		const options: HTMLReactParserOptions = {
+			replace: (d) => {
+				if (
+					d.attribs &&
+					d.attribs.href &&
+					d.children &&
+					!/^[a-z0-9]+:/i.test(d.attribs.href)
+				)
+					return <Link to={d.attribs.href}>{domToReact(d.children, options)}</Link>;
+				else return false;
+			},
+		};
+		const parsed = parse(d.innerHTML, options);
+		return {
+			href: baseHref,
+			title: d.firstElementChild?.textContent,
+			el: <div key={i}>{parsed}</div>,
+		};
+	});
+}
 
 export interface TourProps extends RouteComponentProps {
 	tourMarkdown: string;
 	repoPrefix: string;
+	name: string;
 }
 
-const Tour = ({ tourMarkdown, history, repoPrefix }: TourProps) => {
+const Tour = ({ tourMarkdown, history, repoPrefix, name }: TourProps) => {
 	const [position, setPosition] = useState(0);
 	const [tocOpen, setTOCOpen] = useState(false);
 	const tourSections = useMemo(() => {
 		setPosition(0);
-		const converter = new showdown.Converter();
-		const html = converter.makeHtml(tourMarkdown);
-		const doc = new DOMParser().parseFromString('<body>' + html + '</body>', 'text/html');
-		const htmlSections = doc.body.children;
-		const sections = [];
-		let currentSection = document.createElement('div');
-		for (let i = 0; i < htmlSections.length; i++) {
-			let el = htmlSections[i];
-			if (el.tagName === 'H3') {
-				currentSection = document.createElement('div');
-				sections.push(currentSection);
-			}
-			currentSection.appendChild(el.cloneNode(true));
-		}
-		return sections.map((d, i) => {
-			const links = d.querySelectorAll('a');
-			const baseHref =
-				links.length > 0 ? '/' + repoPrefix + links[0].getAttribute('href') : undefined;
-			for (let i = 0; i < links.length; i++) {
-				const href = links[i].getAttribute('href');
-				if (!href || /^[a-z0-9]+:/i.test(href)) continue;
-				const absoluteHref = href.startsWith('/')
-					? '/' + repoPrefix + href
-					: baseHref + '/' + href;
-				links[i].setAttribute('href', absoluteHref.replace(/\/\/+/g, '/'));
-			}
-			const options: HTMLReactParserOptions = {
-				replace: (d) => {
-					if (
-						d.attribs &&
-						d.attribs.href &&
-						d.children &&
-						!/^[a-z0-9]+:/i.test(d.attribs.href)
-					)
-						return <Link to={d.attribs.href}>{domToReact(d.children, options)}</Link>;
-					else return false;
-				},
-			};
-			const parsed = parse(d.innerHTML, options);
-			return {
-				href: baseHref,
-				title: d.firstElementChild?.textContent,
-				el: <div key={i}>{parsed}</div>,
-			};
-		});
+		return parseMarkdown(tourMarkdown, repoPrefix);
 	}, [tourMarkdown, repoPrefix]);
 	const decrementPosition = useCallback(() => setPosition(Math.max(0, position - 1)), [
 		setPosition,
@@ -81,6 +89,7 @@ const Tour = ({ tourMarkdown, history, repoPrefix }: TourProps) => {
 			history.push(tourSections[position]?.href);
 		}
 	}, [history, position, tourSections]);
+
 	return (
 		<div className={styles.Tour}>
 			<div className={styles.TourControls}>
@@ -111,6 +120,7 @@ const Tour = ({ tourMarkdown, history, repoPrefix }: TourProps) => {
 				))}
 			</ol>
 			<div className={styles.TourPage}>
+				<span className={styles.TourName}>{name}</span>
 				{position + 1} / {tourSections.length}
 			</div>
 			<div className={styles.TourSection}>{tourSections[position].el}</div>

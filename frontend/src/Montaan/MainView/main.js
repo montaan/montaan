@@ -207,7 +207,7 @@ class Tabletree {
 	}
 
 	setGoToHighlight(fsEntry, line) {
-		// this.addHighlightedLine(fsEntry, line);
+		this.addHighlightedLine(fsEntry, line);
 	}
 
 	addHighlightedLine(fsEntry, line) {
@@ -535,6 +535,7 @@ class Tabletree {
 			fsEntry.targetLine = { line };
 			return this.goToFSEntry(fsEntry, model);
 		}
+		this.setGoToHighlight(fsEntry, line);
 		const textYOff = ((line + 0.5) / fsEntry.lineCount) * fsEntry.textHeight;
 		scene.updateMatrixWorld();
 		var textX = fsEntry.textX;
@@ -545,6 +546,24 @@ class Tabletree {
 		camera.targetFOV = (fsEntry.scale * fsEntry.textScale * 2000 * 50) / this.pageZoom;
 		fsEntry.textFOV = camera.targetFOV;
 		this.changed = true;
+	}
+
+	goToFSEntryTextAtSearch(fsEntry, search, model = this.model) {
+		if (!fsEntry.textHeight) {
+			fsEntry.targetLine = { search };
+			return this.goToFSEntry(fsEntry, model);
+		}
+		const text = fsEntry.contentObject.geometry.layout._opt.text;
+		let line = 1;
+		let index = 0;
+		if (search.startsWith('/')) {
+			const lastSlash = search.lastIndexOf('/');
+			const re = new RegExp(search.slice(1, lastSlash), search.slice(lastSlash + 1));
+			const res = re.exec(text);
+			if (res) index = res.index;
+		} else index = text.indexOf(search);
+		for (let i = 0; i < index; i++) if (text.charCodeAt(i) === 10) line++;
+		return this.goToFSEntryTextAtLine(fsEntry, line, model);
 	}
 
 	async setPlaylist(fsEntry) {
@@ -983,9 +1002,10 @@ class Tabletree {
 			text.position.y += fsEntry.scale * 0.75 * (1 - vAspect);
 
 			if (fsEntry.targetLine) {
-				const { line } = fsEntry.targetLine;
+				const { line, search } = fsEntry.targetLine;
 				fsEntry.targetLine = null;
-				this.goToFSEntryTextAtLine(fsEntry, line);
+				if (line !== undefined) this.goToFSEntryTextAtLine(fsEntry, line);
+				else if (search !== undefined) this.goToFSEntryTextAtSearch(fsEntry, search);
 			}
 			this.changed = true;
 		});
@@ -1752,18 +1772,21 @@ class Tabletree {
 
 	getFSEntryForURL(url) {
 		const [treePath, coords] = url.split('#');
-		const point = coords && coords.split(';').map(parseFloat);
+		const point =
+			coords && /^[\.\d]+(,[\.\d]+)*$/.test(coords) && coords.split(',').map(parseFloat);
+		const search = coords && /^find:/.test(coords) && decodeURIComponent(coords.slice(5));
 		const { path, tree } = this.getTree(treePath);
 		const fsEntry = getPathEntry(tree, path);
-		return { fsEntry, point };
+		return { fsEntry, point, search };
 	}
 
 	goToURL(url) {
 		if (!this.fileTree) return;
-		const { fsEntry, point } = this.getFSEntryForURL(url);
+		const { fsEntry, point, search } = this.getFSEntryForURL(url);
 		if (point && !isNaN(point[0])) {
-			this.setGoToHighlight(fsEntry, point[0]);
 			this.goToFSEntryTextAtLine(fsEntry, point[0]);
+		} else if (search) {
+			this.goToFSEntryTextAtSearch(fsEntry, search);
 		} else this.goToFSEntry(fsEntry);
 	}
 
