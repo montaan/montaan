@@ -4,7 +4,7 @@
 
 .TourSelector {
 	position: absolute;
-	top: 97px;
+	top: 94px;
 	right: 0;
 	text-align: right;
 	z-index: 1000;
@@ -13,10 +13,17 @@
 	padding: 0;
 	margin: 0;
 	min-width: 300px;
-	margin-right: 12px;
+	margin-right: 10px;
 	color: black;
 
 	:global(.form-group) {
 		margin-bottom: 0;
+	}
+
+	.close {
+		position: absolute;
+		z-index: 1;
+		top: 60px;
+		right: 12px;
 	}
 }

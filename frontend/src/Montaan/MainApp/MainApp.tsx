@@ -22,6 +22,7 @@ import { getPathEntry, getFullPath } from '../lib/filetree';
 import styles from './MainApp.module.scss';
 import TreeView from '../TreeView';
 import { QFrameAPI } from '../../lib/api';
+import Player from '../Player';
 
 export interface MainAppProps extends RouteComponentProps {
 	match: any;
@@ -904,6 +905,12 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 					fileTree={this.state.fileTree}
 				/>
 				<TourSelector
+					repoPrefix={this.state.repoPrefix}
+					fileTree={this.state.fileTree}
+					navigationTarget={this.state.navigationTarget}
+					api={this.props.api}
+				/>
+				<Player
 					repoPrefix={this.state.repoPrefix}
 					fileTree={this.state.fileTree}
 					navigationTarget={this.state.navigationTarget}

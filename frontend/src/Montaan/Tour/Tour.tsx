@@ -93,7 +93,7 @@ const Tour = ({ tourMarkdown, history, repoPrefix, name }: TourProps) => {
 	return (
 		<div className={styles.Tour}>
 			<div className={styles.TourControls}>
-				<Button onClick={goToStart} disabled={position === 0}>
+				<Button variant="secondary" onClick={goToStart} disabled={position === 0}>
 					Restart
 				</Button>
 				<Button onClick={decrementPosition} disabled={position === 0}>
