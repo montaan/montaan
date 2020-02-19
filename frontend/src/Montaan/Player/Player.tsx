@@ -57,11 +57,15 @@ const PlayerCard = ({ url }: { url: string }) => {
 		return (
 			<div className={styles.card + ' ' + styles.spotify}>
 				<iframe
-					src={'https://embed.spotify.com/?uri=' + encodeURIComponent(v)}
+					src={
+						'https://open.spotify.com/embed/' +
+						v.replace(/^spotify:/, '').replace(/:/g, '/')
+					}
 					width="300"
 					height="380"
 					frameBorder="0"
 					allowTransparency={true}
+					allow="encrypted-media"
 				></iframe>
 			</div>
 		);
