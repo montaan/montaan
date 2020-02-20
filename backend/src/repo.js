@@ -185,18 +185,6 @@ const Repos = {
 		});
 	},
 
-	playSpotify: async function(req, res) {
-		var [error, { user_id }] = await guardPostWithSession(req);
-		if (error) return error;
-		var [error, { uri }] = assertShape(
-			{ uri: isRegExp(/^spotify:[a-z]+:[a-zA-Z0-9]+$/) },
-			await bodyAsJson(req)
-		);
-		if (error) return error;
-		res.json('ok');
-		Exec(`osascript -e "tell application \\"Spotify\\" to play track \\"${uri}\\""`);
-	},
-
 	tree: async function(req, res) {
 		var [error, { repo, hash, paths, recursive }] = assertShape(
 			{ repo: isString, hash: isString, paths: isArray(isString), recursive: isBoolean },

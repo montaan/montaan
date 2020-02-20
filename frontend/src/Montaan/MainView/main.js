@@ -566,22 +566,6 @@ class Tabletree {
 		return this.goToFSEntryTextAtLine(fsEntry, line, model);
 	}
 
-	async setPlaylist(fsEntry) {
-		var path = null;
-		while (fsEntry.parent) {
-			if (fsEntry.entries && fsEntry.entries['.playlist']) {
-				path = getFullPath(fsEntry.entries['.playlist']);
-				break;
-			}
-			fsEntry = fsEntry.parent;
-		}
-		if (this.playlist === fsEntry) return;
-		this.playlist = fsEntry;
-		if (path === null) return;
-		var playlistURL = await this.api.getType('/repo/file' + path, {}, 'text');
-		await this.api.post('/repo/playSpotify', { uri: playlistURL });
-	}
-
 	async createFileTreeModel(fileCount, fileTree) {
 		const { font, camera } = this;
 		const self = this;
@@ -1808,7 +1792,6 @@ class Tabletree {
 			}
 			if (this.highlighted !== fsEntry) {
 				this.highlighted = fsEntry;
-				this.setPlaylist(this.highlighted);
 				const url = this.getURLForFSEntry(fsEntry);
 				this.history.push(url);
 			} else {
