@@ -9,7 +9,7 @@ import MarkdownIt from 'markdown-it';
 import DOMPurify from 'dompurify';
 import parse, { domToReact, HTMLReactParserOptions } from 'html-react-parser';
 import { FileTree } from '../MainApp';
-import { getPathEntry, getFullPath } from '../lib/filetree';
+import { getPathEntry, getFullPath } from '../lib/filesystem';
 
 function parseMarkdown(tourMarkdown: string, repoPrefix: string) {
 	const converter = new MarkdownIt();

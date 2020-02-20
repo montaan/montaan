@@ -16,7 +16,7 @@ import { FileTree, SearchResult, ActiveCommitData, TreeLink } from '../MainApp';
 import { CommitData } from '../lib/parse_commits';
 import utils from '../lib/utils';
 import Geometry from '../lib/Geometry';
-import { getFullPath } from '../lib/filetree';
+import { getFullPath } from '../lib/filesystem';
 import Colors from '../lib/Colors';
 
 export interface TreeViewProps extends RouteComponentProps {

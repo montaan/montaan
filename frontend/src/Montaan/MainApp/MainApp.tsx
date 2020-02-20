@@ -17,23 +17,19 @@ import RepoSelector, { Repo } from '../RepoSelector';
 import utils from '../lib/utils';
 import { parseCommits, CommitData, RawCommitData } from '../lib/parse_commits';
 import { authorCmp, Commit, CommitFile } from '../lib/parse-diff';
-import { getPathEntry, getFullPath } from '../lib/filetree';
+import { getPathEntry, getFullPath } from '../lib/filesystem';
 
 import styles from './MainApp.module.scss';
 import TreeView from '../TreeView';
 import { QFrameAPI } from '../../lib/api';
 import Player from '../Player';
+import { FSEntry } from '../lib/filesystem/filesystem';
 
 export interface MainAppProps extends RouteComponentProps {
 	match: any;
 	userInfo: any;
 	api: any;
 	apiPrefix: string;
-}
-
-export interface FSEntry {
-	title: string;
-	entries: null | { [filename: string]: FSEntry };
 }
 
 export interface TreeLink {
@@ -58,6 +54,7 @@ export interface FileTree {
 	count: number;
 	tree: FSEntry;
 }
+
 export interface GoToTarget {
 	fsEntry: FSEntry;
 	line?: number;
@@ -135,162 +132,6 @@ const HitType = {
 	TEST: 3,
 };
 
-class NotImplementedError extends Error {}
-
-interface IFilesystem {
-	readDir(path: string): Promise<FSEntry[]>;
-	readFile(path: string): Promise<ArrayBuffer>;
-	writeFile(path: string, contents: ArrayBuffer): Promise<boolean>;
-	rm(path: string): Promise<boolean>;
-	rmdir(path: string): Promise<boolean>;
-}
-
-type Constructor<T> = {
-	new (...args: any[]): T;
-};
-
-class Namespace implements IFilesystem {
-	root: FileTree;
-	constructor(rootFS: FileTree) {
-		this.root = rootFS;
-	}
-
-	findFilesystemForPath(path: string) {
-		let fsEntry = getPathEntry(this.root.tree, path);
-		let relativePath = '';
-		while (!fsEntry.filesystem) {
-			relativePath = '/' + fsEntry.name + relativePath;
-			fsEntry = fsEntry.parent;
-		}
-		return { relativePath, fsEntry };
-	}
-
-	async readDir(path: string) {
-		const { relativePath, fsEntry } = this.findFilesystemForPath(path);
-		return fsEntry.filesystem.readDir(relativePath);
-	}
-
-	async readFile(path: string) {
-		const { relativePath, fsEntry } = this.findFilesystemForPath(path);
-		return fsEntry.filesystem.readFile(relativePath);
-	}
-
-	async writeFile(path: string, contents: ArrayBuffer) {
-		const { relativePath, fsEntry } = this.findFilesystemForPath(path);
-		return fsEntry.filesystem.writeFile(relativePath);
-	}
-	async rm(path: string) {
-		const { relativePath, fsEntry } = this.findFilesystemForPath(path);
-		return fsEntry.filesystem.rm(relativePath);
-	}
-	async rmdir(path: string) {
-		const { relativePath, fsEntry } = this.findFilesystemForPath(path);
-		return fsEntry.filesystem.rmdir(relativePath);
-	}
-}
-
-class Filesystem implements IFilesystem {
-	url: string;
-	api: QFrameAPI;
-
-	constructor(url: string, api: QFrameAPI) {
-		this.url = url;
-		this.api = api;
-	}
-
-	async readDir(path: string) {
-		throw new NotImplementedError("Filesystem doesn't support reads");
-		return [];
-	}
-	async readFile(path: string) {
-		throw new NotImplementedError("Filesystem doesn't support reads");
-		return new ArrayBuffer(0);
-	}
-	async writeFile(path: string, contents: ArrayBuffer) {
-		throw new NotImplementedError("Filesystem doesn't support writes");
-		return true;
-	}
-	async rm(path: string) {
-		throw new NotImplementedError("Filesystem doesn't support writes");
-		return true;
-	}
-	async rmdir(path: string) {
-		throw new NotImplementedError("Filesystem doesn't support writes");
-		return true;
-	}
-}
-
-class MontaanGitFileSystem extends Filesystem {
-	repo: string;
-	ref: string;
-
-	constructor(url: string, api: QFrameAPI) {
-		super(url, api);
-		const urlSegments = url.split('/');
-		this.repo = urlSegments.slice(0, -1).join('/');
-		this.ref = urlSegments[urlSegments.length - 1];
-	}
-
-	async readDir(path: string) {
-		return await this.api.post('/_/repo/dir', { repo: this.repo, path: path, head: this.ref });
-	}
-
-	async readFile(path: string) {
-		return this.api.postType(
-			'/_/repo/checkout',
-			{ repo: this.repo, path: path, head: this.ref },
-			{},
-			'arrayBuffer'
-		);
-	}
-
-	async writeFile(path: string, contents: ArrayBuffer) {
-		throw new NotImplementedError("montaanGit doesn't support writes");
-		return true;
-	}
-
-	async rm(path: string) {
-		throw new NotImplementedError("montaanGit doesn't support writes");
-		return true;
-	}
-
-	async rmdir(path: string) {
-		throw new NotImplementedError("montaanGit doesn't support writes");
-		return true;
-	}
-}
-
-const RegisteredFileSystems: { [fsType: string]: Constructor<Filesystem> } = {
-	montaanGit: MontaanGitFileSystem,
-};
-
-function getFSType(url: string) {
-	return 'montaanGit';
-}
-
-function createFSTree(name: string, url: string, fsType: string) {
-	return {
-		name,
-		title: name,
-		entries: {},
-		fetched: false,
-		url,
-		fsType,
-		filesystem: RegisteredFileSystems[fsType],
-	};
-}
-
-function mount(fileTree: FileTree, url: string, mountPoint: string, fsType: string) {
-	if (!fsType) fsType = getFSType(url);
-	const cleanedMountPoint = mountPoint.replace(/\/+$/, '');
-	const mountPointSegments = cleanedMountPoint.split('/');
-	const fsEntry = getPathEntry(fileTree, mountPointSegments.slice(0, -1).join('/'));
-	if (!fsEntry) throw new Error('fileTree does not contain path');
-	const name = mountPointSegments[mountPointSegments.length - 1];
-	fsEntry.entries[name] = createFSTree(name, url, fsType);
-	return fileTree;
-}
-
 class MainApp extends React.Component<MainAppProps, MainAppState> {
 	emptyState = {
 		repoPrefix: '',
@@ -298,7 +139,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		searchQuery: '',
 		commits: [],
 		activeCommitData: null,
-		fileTree: { count: 0, tree: { title: '', entries: {} } },
+		fileTree: { count: 0, tree: { name: '', title: '', entries: {} } },
 		commitLog: '',
 		commitChanges: '',
 		files: '',
@@ -419,11 +260,11 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 			)) as { modules: { source: string; dependencies: { resolved: string }[] }[] };
 			const links: { src: FSEntry; dst: FSEntry; color: THREE.Color }[] = [];
 			deps.modules.forEach(({ source, dependencies }, i) => {
-				var src = getPathEntry(fileTree.tree, repoPrefix + '/' + source);
+				const src = getPathEntry(fileTree.tree, repoPrefix + '/' + source);
 				if (!src) return;
 				const color = new THREE.Color().setHSL((i / 7) % 1, 0.5, 0.6);
 				dependencies.forEach(({ resolved }) => {
-					var dst = getPathEntry(fileTree.tree, repoPrefix + '/' + resolved);
+					const dst = getPathEntry(fileTree.tree, repoPrefix + '/' + resolved);
 					if (!dst) return;
 					links.push({ src, dst, color });
 				});

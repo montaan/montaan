@@ -1,49 +1,50 @@
 .login-form-container {
-    position: absolute;
-    top: 0px;
-    left: 0px;
-    width: 100%;
-    height: 100%;
-    overflow: auto;
-    background: white;
-    z-index: 1;
+	position: absolute;
+	top: 0px;
+	left: 0px;
+	width: 100%;
+	height: 100%;
+	overflow: auto;
+	background: white;
+	color: black;
+	z-index: 1;
 }
 
 .login-form-container h1 {
-    margin-bottom: 40px;
-    text-align: center;
-    font-weight: 700;
-    font-size: 100%;
-    font-family: Avenir Next, Segoe UI, Helvetica, sans-serif;
-    text-transform: uppercase;
-    letter-spacing: 0.3em;
-    margin-left: 0.3em;
+	margin-bottom: 40px;
+	text-align: center;
+	font-weight: 700;
+	font-size: 100%;
+	font-family: Avenir Next, Segoe UI, Helvetica, sans-serif;
+	text-transform: uppercase;
+	letter-spacing: 0.3em;
+	margin-left: 0.3em;
 }
 
 .login-form-container form {
-    width: 300px;
-    margin-top: 30px;
-    padding-top: 50px;
-    padding-bottom: 50px;
-    padding-left: 30px;
-    padding-right: 30px;
-    display: inline-block;
-    text-align: left;
+	width: 300px;
+	margin-top: 30px;
+	padding-top: 50px;
+	padding-bottom: 50px;
+	padding-left: 30px;
+	padding-right: 30px;
+	display: inline-block;
+	text-align: left;
 
-    border: 1px solid #eeeeee;
-    box-shadow: 0px 4px 8px rgba(0,0,0,0.25);
-    border-radius: 2px;
+	border: 1px solid #eeeeee;
+	box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.25);
+	border-radius: 2px;
 
-    animation: qcard-form-fade-in 0.25s ease-in-out both;
-    animation-iteration-count: 1;
+	animation: qcard-form-fade-in 0.25s ease-in-out both;
+	animation-iteration-count: 1;
 }
 
 .login-form-container button {
-    position: relative;
+	position: relative;
 }
 
 .login-form-container button svg {
-    position: absolute;
-    top: 10px;
-    left: 12px;
+	position: absolute;
+	top: 10px;
+	left: 12px;
 }

@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { withRouter, Link, RouteComponentProps } from 'react-router-dom';
 
 import styles from './Breadcrumb.module.scss';
-import { getSiblings } from '../lib/filetree';
+import { getSiblings } from '../lib/filesystem';
 
 const BreadcrumbSegment = ({
 	path,

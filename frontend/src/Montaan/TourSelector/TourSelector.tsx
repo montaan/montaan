@@ -4,7 +4,7 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { withRouter, RouteComponentProps } from 'react-router-dom';
 
 import styles from './TourSelector.module.scss';
-import { FileTree, FSEntry } from '../MainApp';
+import { FileTree } from '../MainApp';
 import Dropdown from 'react-bootstrap/Dropdown';
 import QFrameAPI from '../../lib/api';
 import DropdownButton from 'react-bootstrap/DropdownButton';
@@ -14,6 +14,7 @@ import Tour from '../Tour';
 import utils from '../lib/utils';
 import { faTimes } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { FSEntry } from '../lib/filesystem';
 
 export interface TourSelectorProps extends RouteComponentProps {
 	fileTree: FileTree;

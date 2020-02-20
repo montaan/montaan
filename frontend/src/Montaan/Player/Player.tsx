@@ -11,9 +11,10 @@ import { faTimes } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 import styles from './Player.module.scss';
-import { FileTree, FSEntry } from '../MainApp';
+import { FileTree } from '../MainApp';
 import QFrameAPI from '../../lib/api';
 import utils from '../lib/utils';
+import { FSEntry } from '../lib/filesystem';
 
 const PlayerCard = ({ url }: { url: string }) => {
 	var v = url;

@@ -58,8 +58,17 @@ class _GoBack extends React.Component<GoBackProps> {
 }
 const GoBack = withRouter(_GoBack);
 
-class App extends React.Component<any, any> {
+interface AppProps {}
+
+interface AppState {
+	authHeaders: any;
+	userInfo: any;
 	api: QFrameAPI;
+	firstFetchDone: boolean;
+	showHelp: boolean;
+}
+
+class App extends React.Component<AppProps, AppState> {
 	history: any;
 
 	constructor(props: any) {
@@ -67,14 +76,16 @@ class App extends React.Component<any, any> {
 		this.state = {
 			authHeaders: {},
 			userInfo: {},
+			firstFetchDone: false,
+			showHelp: false,
+			api: new QFrameAPI(APIServer),
 		};
 		this.authHeaders = this.state.authHeaders;
-		this.api = new QFrameAPI(APIServer);
 	}
 
 	setAuthHeaders = (authHeaders: any, fetchUserInfo = true) => {
 		const { csrf } = authHeaders;
-		this.api.authHeaders = { csrf };
+		this.state.api.authHeaders = { csrf };
 		authHeaders = csrf ? { csrf } : {};
 		this.setState({ authHeaders });
 		if (fetchUserInfo) this.fetchUserInfo();
@@ -102,7 +113,7 @@ class App extends React.Component<any, any> {
 
 	fetchUserDetails = async () => {
 		// Used cached userInfo if we have such
-		const res = await this.api.get('/user/view');
+		const res = await this.state.api.get('/user/view');
 		if (res.status || res.length === 0) {
 			this.setState({ authHeaders: {}, userInfo: {} });
 			delete localStorage.authHeaders;
@@ -169,7 +180,7 @@ class App extends React.Component<any, any> {
 					{/* { showHelp && <HelpOverlay /> } */}
 					{/* <header className="App-header">
                         <TopBar 
-                            api={this.api} 
+                            api={this.state.api} 
                             userInfo={userInfo}
                             setAuthHeaders={this.setAuthHeaders} 
                             loggedIn={loggedIn} 
@@ -186,7 +197,7 @@ class App extends React.Component<any, any> {
 										<Redirect to="/" />
 									) : (
 										<LoginForm
-											api={this.api}
+											api={this.state.api}
 											onSuccess={this.setAuthHeaders}
 											onCancel={this.goHome}
 										/>
@@ -201,7 +212,7 @@ class App extends React.Component<any, any> {
 										<Redirect to="/" />
 									) : (
 										<SignUpForm
-											api={this.api}
+											api={this.state.api}
 											onSuccess={this.setAuthHeaders}
 											onCancel={this.goHome}
 										/>
@@ -212,7 +223,11 @@ class App extends React.Component<any, any> {
 								exact
 								path="/recoverAccount"
 								component={() =>
-									loggedIn ? <Redirect to="/" /> : <RecoverForm api={this.api} />
+									loggedIn ? (
+										<Redirect to="/" />
+									) : (
+										<RecoverForm api={this.state.api} />
+									)
 								}
 							/>
 							<Route
@@ -223,7 +238,7 @@ class App extends React.Component<any, any> {
 										<Redirect to="/" />
 									) : (
 										<PasswordResetForm
-											api={this.api}
+											api={this.state.api}
 											setAuthHeaders={this.setAuthHeaders}
 										/>
 									);
@@ -233,19 +248,23 @@ class App extends React.Component<any, any> {
 								exact
 								path="/logout"
 								component={() =>
-									!loggedIn ? <Redirect to="/" /> : <Logout api={this.api} />
+									!loggedIn ? (
+										<Redirect to="/" />
+									) : (
+										<Logout api={this.state.api} />
+									)
 								}
 							/>
 							<Route
 								path="/activate/:activationToken"
-								component={() => <UserActivation api={this.api} />}
+								component={() => <UserActivation api={this.state.api} />}
 							/>
 							<Route
 								path="/:user/:name"
 								component={() => (
 									<Montaan
-										api={this.api}
-										apiPrefix={this.api.server}
+										api={this.state.api}
+										apiPrefix={this.state.api.server}
 										userInfo={this.state.userInfo}
 									/>
 								)}
@@ -256,13 +275,13 @@ class App extends React.Component<any, any> {
 								component={() =>
 									loggedIn ? (
 										<Montaan
-											api={this.api}
-											apiPrefix={this.api.server}
+											api={this.state.api}
+											apiPrefix={this.state.api.server}
 											userInfo={this.state.userInfo}
 										/>
 									) : (
 										<LoginForm
-											api={this.api}
+											api={this.state.api}
 											onSuccess={this.setAuthHeaders}
 											onCancel={this.goHome}
 										/>

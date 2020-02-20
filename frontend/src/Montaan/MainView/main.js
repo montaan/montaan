@@ -1,4 +1,4 @@
-import { getPathEntry, getFullPath } from '../lib/filetree';
+import { getPathEntry, getFullPath, getFSEntryForURL } from '../lib/filesystem';
 import Colors from '../lib/Colors.ts';
 import prettyPrintWorker from '../lib/pretty-print';
 import createText from '../lib/third_party/three-bmfont-text-modified';
@@ -1480,7 +1480,7 @@ class Tabletree {
 
 	parseTarget(dst, dstPoint) {
 		if (typeof dst === 'string') {
-			const { fsEntry, point } = this.getFSEntryForURL(dst);
+			const { fsEntry, point } = getFSEntryForURL(this.fileTree, dst);
 			return { fsEntry, point };
 		} else {
 			return { fsEntry: dst, point: dstPoint };
@@ -1750,23 +1750,9 @@ class Tabletree {
 		deletions.forEach((n) => delete this.urlIndex[n]);
 	}
 
-	getTree(path) {
-		return { tree: this.fileTree, path: path };
-	}
-
-	getFSEntryForURL(url) {
-		const [treePath, coords] = url.split('#');
-		const point =
-			coords && /^[\.\d]+(,[\.\d]+)*$/.test(coords) && coords.split(',').map(parseFloat);
-		const search = coords && /^find:/.test(coords) && decodeURIComponent(coords.slice(5));
-		const { path, tree } = this.getTree(treePath);
-		const fsEntry = getPathEntry(tree, path);
-		return { fsEntry, point, search };
-	}
-
 	goToURL(url) {
 		if (!this.fileTree) return;
-		const { fsEntry, point, search } = this.getFSEntryForURL(url);
+		const { fsEntry, point, search } = getFSEntryForURL(this.fileTree, url);
 		if (point && !isNaN(point[0])) {
 			this.goToFSEntryTextAtLine(fsEntry, point[0]);
 		} else if (search) {
