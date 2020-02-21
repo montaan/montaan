@@ -2,6 +2,7 @@ FROM node
 
 WORKDIR /montaan
 
+RUN apt update
 RUN apt install golang
 RUN mkdir /root/go
 RUN GOPATH=/root/go go get github.com/google/codesearch/cmd/...
