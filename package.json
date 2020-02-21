@@ -1,7 +1,4 @@
 {
-    "dependencies": {
-        "prettier": "^1.19.1"
-    },
     "name": "montaan",
     "description": "Montaan is everything.",
     "version": "0.0.0",
@@ -9,7 +6,9 @@
         "doc": "docs"
     },
     "scripts": {
-        "init": "createdb montaan",
+        "install-deps": "cd backend && yarn && cd ../frontend && yarn",
+        "start-db": "docker-compose up -d",
+        "stop-db": "docker-compose down",
         "watch": "(cd backend && yarn watch) & (cd frontend && yarn start)",
         "build": "cd frontend && yarn build",
         "start": "cd backend && yarn start",

@@ -9,7 +9,81 @@ Montaan is an in-browser git repo visualizer.
 
 Montaan displays the git repo as an easy-to-understand 2D hierarchy, with folders surrounding their contents. 
 
-Projects in supported languages (read: JavaScript) also have dependency graphs to show the dependencies of source files.
+## Install
+
+If you have Docker, here's how you get a dev server running:
+
+```bash
+yarn install-deps
+yarn start-db
+
+# Start dev server:
+yarn watch
+# Opens http://localhost:3000/ automatically.
+
+# If you want to start a production build instead:
+yarn build
+yarn start
+# You need to open http://localhost:8008/
+```
+
+If you want to use a local PostgreSQL install or want to understand what's going on, here's a step-by-step guide.
+
+### Install dependencies
+
+First, install the dependencies.
+
+```bash
+yarn install-deps
+```
+
+### Set up database
+
+Set up the PostgreSQL database.
+
+#### If you have Docker
+
+```bash
+yarn start-db
+```
+
+#### If you want to use a local PostgreSQL install
+
+```bash
+# Create user montaan. When prompted for password, type montaan
+createuser --superuser --password montaan
+# Create database.
+createdb -O montaan montaan
+# Update backend/.env if you used a different password
+```
+
+### Start server
+Finally, start the server.
+
+### Development
+
+Start server in development mode. Starts the backend server on port 8008 and the frontend Webpack development server on port 3000.
+
+```bash
+yarn watch
+```
+
+Open `http://localhost:3000/`
+
+### Deployment
+
+Build the frontend for deployment and start the backend server.
+
+```bash
+yarn build
+yarn start
+```
+
+Open `http://localhost:8008`
+
+## Features
+
+Projects in supported languages (read: JavaScript & TypeScript) also have dependency graphs using depcruise to show the dependencies of source files.
 
 There's code search that splits the results into Definition, Documentation, Uses and Tests, making it quick to things in the tree. The search results are overlaid on top of the tree with little pins, making huge result sets navigable.
 
