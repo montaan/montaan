@@ -180,9 +180,7 @@ const Player = ({ fileTree, navigationTarget, api }: PlayerProps) => {
 		[setCurrentPlaylist, playlists]
 	);
 	const searchOnChange = useCallback((ev) => setSearch(ev.target.value), [setSearch]);
-	const endPlaylist = useCallback(() => setPlaylistContent(EMPTY_PLAYLIST_CONTENT), [
-		setPlaylistContent,
-	]);
+	const endPlaylist = useCallback(() => setCurrentPlaylist(EMPTY_PLAYLIST), [setCurrentPlaylist]);
 
 	return (
 		<div className={styles.Player}>
@@ -219,6 +217,7 @@ const Player = ({ fileTree, navigationTarget, api }: PlayerProps) => {
 			{playlistContent.url && (
 				<>
 					<PlayerCard url={playlistContent.url} />
+					<div className={styles.playerName}>{playlistContent.name}</div>
 					<Button
 						type="button"
 						variant="secondary"

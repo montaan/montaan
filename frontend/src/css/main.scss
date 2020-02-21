@@ -1,96 +1,99 @@
-@import "partials/variables";
-@import "partials/mixins";
+@import 'partials/variables';
+@import 'partials/mixins';
 
 html {
-  background: white;
-  color: black;
-  background-size: cover;
-  min-height: 100%;
+	background: white;
+	color: black;
+	background-size: cover;
+	min-height: 100%;
 }
 
 body {
-  margin: 0;
-  font-family: Avenir Next, Segoe UI, Helvetica, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  background: transparent;
+	margin: 0;
+	font-family: Avenir Next, Segoe UI, Helvetica, sans-serif;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+	background: transparent;
 }
 
 * {
-  box-sizing: border-box;
+	box-sizing: border-box;
 }
 
-.form-control.is-valid, .was-validated .form-control:valid,
-.form-control.is-invalid, .was-validated .form-control:invalid
-{
-  background-position: right 10px top calc(.375em + .1875rem);
+.form-control.is-valid,
+.was-validated .form-control:valid,
+.form-control.is-invalid,
+.was-validated .form-control:invalid {
+	background-position: right 10px top calc(0.375em + 0.1875rem);
 }
 
 .error-message {
-  font-weight: 700;
-  color: #d80459;
-  font-family: Avenir Next, Segoe UI, Helvetica, sans-serif;
-  text-transform: uppercase;
-  font-size: x-small;
-  letter-spacing: 0.05em;
-  position: absolute;
-  top: -15px;
-  text-align: center;
-  width: 100%;
-  left: 0;
+	font-weight: 700;
+	color: #d80459;
+	font-family: Avenir Next, Segoe UI, Helvetica, sans-serif;
+	text-transform: uppercase;
+	font-size: x-small;
+	letter-spacing: 0.05em;
+	position: absolute;
+	top: -15px;
+	text-align: center;
+	width: 100%;
+	left: 0;
 }
 
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
-    monospace;
+	font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
 }
 
 a {
-  color: #444;
+	color: #444;
 }
 
-.btn-primary, .btn-secondary, .btn-outline-danger, .btn-outline-primary {
-  font-weight: 700;
-  font-size: 80%;
-  font-family: Avenir Next, Segoe UI, Helvetica, sans-serif;
-  text-transform: uppercase;
-  padding-top: 8px;
-  padding-bottom: 8px;
+.btn-primary,
+.btn-secondary,
+.btn-outline-danger,
+.btn-outline-primary {
+	font-weight: 700;
+	font-size: 80%;
+	font-family: Avenir Next, Segoe UI, Helvetica, sans-serif;
+	text-transform: uppercase;
+	padding-top: 8px;
+	padding-bottom: 7px;
 }
 
 .btn-primary {
-  background: #1b6ec2
+	background: #1b6ec2;
 }
 
 .btn-secondary {
-  background: #5d656d;
+	background: #5d656d;
 }
 
 .svg-inline--fa {
-  vertical-align: -0.06125em;
+	vertical-align: -0.06125em;
 }
 
 .close {
 	position: absolute;
 	right: 12px;
 	top: 12px;
-  z-index: 10;
+	z-index: 10;
 	cursor: pointer;
 }
 
 #processing {
-  position: fixed;
-  display: block;
-  z-index: 10008;
-  top: 50%;
-  left: 50%;
-  width: 160px;
-  height: 70px;
-  padding: 10px;
-  text-align: center;
-  margin-top: -35px;
-  margin-left: -80px;
-  border-radius: 4px;
-  color: black;
-  background-color: rgba(255,255,255, 0.9);
+	position: fixed;
+	display: block;
+	z-index: 10008;
+	top: 50%;
+	left: 50%;
+	width: 160px;
+	height: 70px;
+	padding: 10px;
+	text-align: center;
+	margin-top: -35px;
+	margin-left: -80px;
+	border-radius: 4px;
+	color: black;
+	background-color: rgba(255, 255, 255, 0.9);
 }

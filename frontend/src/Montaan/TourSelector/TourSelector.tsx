@@ -66,7 +66,7 @@ const TourSelector = ({ fileTree, navigationTarget, api, repoPrefix }: TourSelec
 		[setCurrentTour, tours]
 	);
 	const tourSearchOnChange = useCallback((ev) => setSearch(ev.target.value), [setSearch]);
-	const endTour = useCallback(() => setTourContent(EMPTY_TOUR_CONTENT), [setTourContent]);
+	const endTour = useCallback(() => setCurrentTour(EMPTY_TOUR), [setCurrentTour]);
 
 	return (
 		<div className={styles.TourSelector}>

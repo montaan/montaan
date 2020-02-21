@@ -30,10 +30,6 @@ storiesOf('Montaan/MainApp', module).add('MainApp', () => (
 	api: any;
 	apiPrefix: string;
 }
-export interface FSEntry {
-	title: string;
-	entries: null | { [filename: string]: FSEntry };
-}
 export interface TreeLink {
 	src: Element | FSEntry | string;
 	dst: Element | FSEntry | string;
@@ -103,13 +99,6 @@ interface MainAppState {
 	navUrl: string;
 	ref: string;
 	searchHover?: any;
-}
-interface IFilesystem {
-	readDir(path: string): Promise<FSEntry[]>;
-	readFile(path: string): Promise<ArrayBuffer>;
-	writeFile(path: string, contents: ArrayBuffer): Promise<boolean>;
-	rm(path: string): Promise<boolean>;
-	rmdir(path: string): Promise<boolean>;
 }`}</code>
 			</pre>
 
