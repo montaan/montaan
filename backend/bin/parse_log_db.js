@@ -1,7 +1,7 @@
 require('dotenv').config();
 const fs = require('fs');
 const { Client } = require('../src/lib/quickgres');
-const dbConfig = {user: process.env.PGUSER, database: process.env.PGDATABASE};
+const dbConfig = { user: process.env.PGUSER, database: process.env.PGDATABASE, password: process.env.PGPASSWORD };
 const DB = new Client(dbConfig);
 
 const config = {};
@@ -25,7 +25,7 @@ async function parseCommits(userName, repoName) {
     console.error(`Processing ${userName}/${repoName}`);
 
     await DB.connect(config.pgport, config.pghost);
-    const {rows: [{repo_id}]} = await DB.query(`SELECT r.id as repo_id FROM repos r, users u WHERE u.name = $1 AND r.user_id = u.id AND r.name = $2`, [userName, repoName]);
+    const { rows: [{ repo_id }] } = await DB.query(`SELECT r.id as repo_id FROM repos r, users u WHERE u.name = $1 AND r.user_id = u.id AND r.name = $2`, [userName, repoName]);
     const commitsRes = await DB.query(`SELECT sha FROM commits WHERE repo_id = $1`, [repo_id]);
     const shaIdx = {};
 
@@ -57,7 +57,7 @@ async function parseCommits(userName, repoName) {
 
     function parseBlock(block) {
         for (let i = 0; i < block.length; ++i) {
-            while (block[i] !== 10 && i < block.length) ++i;
+            while (block[i] !== 10 && i < block.length)++i;
             if (i < block.length) {
                 if ((lineBufSize + i) > lineStart) {
                     let buf = block;
@@ -69,7 +69,7 @@ async function parseCommits(userName, repoName) {
                     if (buf[lineStart] === 32) commitQueryValues[5] += line.substring(4) + "\n";
                     else if (fileRE.test(line)) {
                         const [action, path, renamed] = line.split("\t");
-                        commitQueryValues[6].push({action, path, renamed});
+                        commitQueryValues[6].push({ action, path, renamed });
                     } else if (commitRE.test(line)) {
                         if (sha) {
                             commitQueryValues[6] = JSON.stringify(commitQueryValues[6]);
@@ -79,7 +79,7 @@ async function parseCommits(userName, repoName) {
                         sha = line.substring(7);
                         if (!head) head = sha;
                         if (shaIdx[sha]) {
-                            console.error("Early exit at "+sha);
+                            console.error("Early exit at " + sha);
                             sha = null;
                             done();
                             instream.pause();
@@ -91,11 +91,11 @@ async function parseCommits(userName, repoName) {
                         commitQueryValues[5] = "";
                         commitQueryValues[6] = [];
                     }
-                    else if (mergeRE.test(line)) commitQueryValues[3] = line.substring(7); 
+                    else if (mergeRE.test(line)) commitQueryValues[3] = line.substring(7);
                     else if (authorRE.test(line)) commitQueryValues[2] = line.substring(8);
                     else if (dateRE.test(line)) commitQueryValues[4] = line.substring(8);
                 }
-                lineStart = (i+1 < block.length) ? i+1 : 0;
+                lineStart = (i + 1 < block.length) ? i + 1 : 0;
                 if (lineBufs.length > 0) lineBufs.splice(0);
                 lineBufSize = 0;
             } else {

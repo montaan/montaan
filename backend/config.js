@@ -6,7 +6,7 @@ require('dotenv').config();
 const config = {
 	port: 8008,
 	// fallbackRoute: () => {},
-	pg: { user: process.env.PGUSER, database: process.env.PGDATABASE },
+	pg: { user: process.env.PGUSER, database: process.env.PGDATABASE, password: process.env.PGPASSWORD },
 	root: path.join(process.cwd(), '../frontend/build'),
 	pathFor404: '/index.html',
 	saltRounds: 10,

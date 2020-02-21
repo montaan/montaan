@@ -31,7 +31,7 @@ function assertRepoDir(fsPath) {
 }
 
 const Repos = {
-	create: async function(req, res) {
+	create: async function (req, res) {
 		var [error, { user_id }] = await guardPostWithSession(req);
 		if (error) return error;
 		var [error, { url, name }] = assertShape(repoDataShape, await bodyAsJson(req));
@@ -41,7 +41,7 @@ const Repos = {
 			`INSERT INTO repos (url, name, user_id) VALUES ($1, $2, $3) RETURNING id`,
 			[url, name, user_id]
 		);
-		const repoCreated = async function(error, stdout, stderr) {
+		const repoCreated = async function (error, stdout, stderr) {
 			try {
 				const log = 'error:\n' + error + '\nSTDOUT:\n' + stdout + '\nSTDERR:\n' + stderr;
 				const dbRes = await DB.query(
@@ -66,7 +66,7 @@ const Repos = {
 		}
 	},
 
-	pull: async function(req, res) {
+	pull: async function (req, res) {
 		var [error, { user_id }] = await guardPostWithSession(req);
 		if (error) return error;
 		var [error, { url, name }] = assertShape(repoDataShape, await bodyAsJson(req));
@@ -80,7 +80,7 @@ const Repos = {
 		if (rows.length === 0) return '404: Repo not found';
 		const repoData = rows[0];
 		await DB.queryTo(res, 'UPDATE repos SET processing = true WHERE id = $1', [repoData.id]);
-		const repoCreated = async function(error, stdout, stderr) {
+		const repoCreated = async function (error, stdout, stderr) {
 			try {
 				const log = 'error:\n' + error + '\nSTDOUT:\n' + stdout + '\nSTDERR:\n' + stderr;
 				const dbRes = await DB.query(
@@ -95,14 +95,14 @@ const Repos = {
 			if (url)
 				Exec(
 					`${process.cwd()}/bin/process_tree '${url}' '${
-						repoData.userName
+					repoData.userName
 					}/${name}' 2>&1`,
 					repoCreated
 				);
 			else
 				Exec(
 					`${process.cwd()}/bin/process_tree '${repoData.url}' '${
-						repoData.userName
+					repoData.userName
 					}/${name}' 2>&1`,
 					repoCreated
 				);
@@ -111,7 +111,7 @@ const Repos = {
 		}
 	},
 
-	list: async function(req, res) {
+	list: async function (req, res) {
 		const [error, { user_id }] = await guardPostWithSession(req);
 		if (error) return error;
 		await DB.queryTo(
@@ -133,7 +133,7 @@ const Repos = {
 		);
 	},
 
-	view: async function(req, res, repoPath) {
+	view: async function (req, res, repoPath) {
 		const session = await sessionGet(req);
 		const [userName, repoName] = repoPath.split('/');
 		if (!userName || !repoName) return '404: Repo not found';
@@ -159,7 +159,7 @@ const Repos = {
 		}
 	},
 
-	delete: async function(req, res) {
+	delete: async function (req, res) {
 		var [error, { user_id }] = await guardPostWithSession(req);
 		if (error) return error;
 		var [error, { id }] = assertShape({ id: isStrlen(36, 36) }, await bodyAsJson(req));
@@ -170,7 +170,7 @@ const Repos = {
 		]);
 	},
 
-	fs: async function(req, res, fsPath) {
+	fs: async function (req, res, fsPath) {
 		const [error, { filePath, stat }] = assertRepoFile(decodeURIComponent(fsPath));
 		if (error) return error;
 		res.writeHeader(200, {
@@ -185,7 +185,7 @@ const Repos = {
 		});
 	},
 
-	tree: async function(req, res) {
+	tree: async function (req, res) {
 		var [error, { repo, hash, paths, recursive }] = assertShape(
 			{ repo: isString, hash: isString, paths: isArray(isString), recursive: isBoolean },
 			await bodyAsJson(req)
@@ -197,10 +197,10 @@ const Repos = {
 		await new Promise((resolve, reject) => {
 			Exec(
 				`cd ${filePath} && git ls-tree --full-tree -l ${
-					recursive ? '-r' : ''
+				recursive ? '-r' : ''
 				} -z ${hash} ${paths.join(' ')}`,
 				{ maxBuffer: 100000000 },
-				async function(error, stdout, stderr) {
+				async function (error, stdout, stderr) {
 					if (error) reject(error);
 					res.writeHeader(200, { 'Content-Type': 'text/plain' });
 					await res.end(stdout || '');
@@ -210,12 +210,12 @@ const Repos = {
 		});
 	},
 
-	file: async function(req, res, fsPath) {
+	file: async function (req, res, fsPath) {
 		const repoFilePath = decodeURIComponent(fsPath).replace(/^([^\/]+\/[^\/]+\/)/, '$1repo/');
 		return Repos.fs(req, res, repoFilePath);
 	},
 
-	search: async function(req, res) {
+	search: async function (req, res) {
 		var [error, { repo, query }] = assertShape(
 			{ repo: isString, query: isString },
 			await bodyAsJson(req)
@@ -226,7 +226,7 @@ const Repos = {
 		await new Promise((resolve, reject) => {
 			Exec(
 				`CSEARCHINDEX='${filePath}' $HOME/go/bin/csearch -i -n '${query}' | sed -E 's:^.+/repo/::'`,
-				async function(error, stdout, stderr) {
+				async function (error, stdout, stderr) {
 					res.writeHeader(200, { 'Content-Type': 'text/plain' });
 					await res.end(stdout || '');
 					resolve();
@@ -235,7 +235,7 @@ const Repos = {
 		});
 	},
 
-	diff: async function(req, res) {
+	diff: async function (req, res) {
 		var [error, { repo, hash }] = assertShape(
 			{ repo: isString, hash: isString },
 			await bodyAsJson(req)
@@ -248,7 +248,7 @@ const Repos = {
 			Exec(
 				`cd ${filePath} && git show --pretty=format:%b ${hash}`,
 				{ maxBuffer: 100000000 },
-				async function(error, stdout, stderr) {
+				async function (error, stdout, stderr) {
 					if (error) reject(error);
 					res.writeHeader(200, { 'Content-Type': 'text/plain' });
 					await res.end(stdout || '');
@@ -260,7 +260,7 @@ const Repos = {
 
 	// Returns the file in repo/path at the commit hash.
 	// Useful for fetching individual file history.
-	checkout: async function(req, res) {
+	checkout: async function (req, res) {
 		var [error, { repo, path, hash }] = assertShape(
 			{ repo: isString, path: isString, hash: isString },
 			await bodyAsJson(req)
@@ -273,7 +273,7 @@ const Repos = {
 			Exec(
 				`cd ${filePath} && git show ${hash}:${path}`,
 				{ maxBuffer: 100000000 },
-				async function(error, stdout, stderr) {
+				async function (error, stdout, stderr) {
 					if (error) reject(error);
 					res.writeHeader(200, { 'Content-Type': 'text/plain' });
 					await res.end(stdout || '');

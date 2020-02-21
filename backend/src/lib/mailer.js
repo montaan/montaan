@@ -1,15 +1,12 @@
-const nodemailer = require('nodemailer');
-
-const transporter = nodemailer.createTransport({sendmail: true});
-const sendMail = transporter.sendMail.bind(transporter);
+const sendmail = require('sendmail')();
 
 async function sendActivationEmail(email, activationToken) {
-    return transporter.sendMail({
+    return sendmail({
         from: 'no-reply@montaan.com',
         to: email,
         subject: 'Activate Montaan account',
-        text: 
-`Hi, it's Ilmari from Montaan!
+        text:
+            `Hi, it's Ilmari from Montaan!
 
 Activate your Montaan account at the URL below:
 https://montaan.com/activate/${activationToken}
@@ -34,12 +31,12 @@ Ilmari
 }
 
 async function sendRecoveryEmail(email, activationToken) {
-    return transporter.sendMail({
+    return sendmail({
         from: 'no-reply@montaan.com',
         to: email,
         subject: 'Recover Montaan account',
-        text: 
-`Hi from Montaan!
+        text:
+            `Hi from Montaan!
 
 Recover your Montaan account at the URL below:
 https://montaan.com/recover/${activationToken}
@@ -54,12 +51,12 @@ Montaan Account Recovery Bot
 
 
 async function sendAuthenticationEmail(email, activationToken) {
-    return transporter.sendMail({
+    return sendmail({
         from: 'no-reply@montaan.com',
         to: email,
         subject: 'Log in to Montaan',
-        text: 
-`Hi from Montaan!
+        text:
+            `Hi from Montaan!
 
 Log in to your Montaan account at the URL below:
 https://montaan.com/login/${activationToken}
@@ -73,7 +70,7 @@ Montaan
 }
 
 module.exports = {
-    sendMail,
+    sendMail: sendmail,
     sendActivationEmail,
     sendRecoveryEmail,
     sendAuthenticationEmail

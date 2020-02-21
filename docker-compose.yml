@@ -6,7 +6,7 @@ services:
   db:
     image: postgres
     ports:
-      - "5432"
+      - 54321:5432
     volumes:
       - pgdata:/var/lib/postgresql/data
       - pgconf:/etc/postgresql
@@ -15,6 +15,19 @@ services:
     environment:
       POSTGRES_USER: montaan
       POSTGRES_PASSWORD: montaan
+
+  montaan:
+    image: node
+    working_dir: /montaan/backend
+    command: yarn watch
+    ports:
+      - 8008:8008
+    restart: always
+    depends_on:
+      - db
+    volumes:
+      - .:/montaan
+
 
   adminer:
     image: adminer

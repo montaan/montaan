@@ -6,6 +6,7 @@
         "mime-types": "^2.1.25",
         "nodemailer": "^6.4.2",
         "qframe": "^0.11.0",
+        "sendmail": "^1.6.1",
         "typescript": "^3.7.5"
     },
     "name": "montaan-backend",
@@ -29,6 +30,7 @@
         "@typescript-eslint/parser": "^2.17.0",
         "husky": ">=4",
         "lint-staged": ">=10",
+        "nodemon": "^2.0.2",
         "prettier": "1.19.1"
     },
     "husky": {
