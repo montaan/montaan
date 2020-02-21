@@ -1,0 +1,28 @@
+/* src/Montaan/Introduction/Introduction.module.css */
+@import '../../css/partials/variables';
+@import '../../css/partials/mixins';
+
+.Introduction {
+	/* Placeholder to make the compiler create this class. */
+	position: fixed;
+
+	left: 50%;
+	top: 50%;
+    z-index: 1;
+
+	width: 600px;
+	height: 400px;
+
+	margin-left: -300px;
+	margin-top: -200px;
+	padding: 32px;
+
+	overflow: auto;
+
+	border-radius: 2px;
+
+	color: black;
+    background: linear-gradient(180deg, #f0f0f0, #ccc);
+
+	text-align: center;
+}
