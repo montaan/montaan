@@ -31,63 +31,62 @@ function getStatusMessage() {
   });
 }
 
-setInterval(
-  () =>
-    getStatusMessage().then(function(statusMessage) {
-      const lines = statusMessage.split("\n").filter(l => !/^\?\?/.test(l));
-      const tags = {};
-      const addTag = (tag, path) => (tags[tag] = tags[tag] || []).push(path);
-      const paths = [];
-      lines.forEach(l => {
-        if (!l) return;
-        let [_, action, path] = l.match(/^\s*(\S+)\s+(.*)/);
-        if (path.startsWith('"')) path = JSON.parse(path);
-        tagPatterns.forEach(
-          ([tag, pattern]) => pattern.test(path) && addTag(tag, path)
-        );
-        const dir = path.split("/")[0];
-        if (dir) {
-          const name =
-            dir.split(".")[0].toLowerCase() || dir.split(".")[1].toLowerCase();
-          if (name) addTag(name, path);
-        }
-        paths.push([action, path]);
-      });
-      if (paths.length === 0) {
-        console.log("No changes");
-        return;
+const tick = () =>
+  getStatusMessage().then(function(statusMessage) {
+    const lines = statusMessage.split("\n").filter(l => !/^\?\?/.test(l));
+    const tags = {};
+    const addTag = (tag, path) => (tags[tag] = tags[tag] || []).push(path);
+    const paths = [];
+    lines.forEach(l => {
+      if (!l) return;
+      let [_, action, path] = l.match(/^\s*(\S+)\s+(.*)/);
+      if (path.startsWith('"')) path = JSON.parse(path);
+      tagPatterns.forEach(
+        ([tag, pattern]) => pattern.test(path) && addTag(tag, path)
+      );
+      const dir = path.split("/")[0];
+      if (dir) {
+        const name =
+          dir.split(".")[0].toLowerCase() || dir.split(".")[1].toLowerCase();
+        if (name) addTag(name, path);
       }
-      console.log(
-        Object.keys(tags)
-          .sort()
-          .map(t => `[${t}]`),
-        paths
-      );
+      paths.push([action, path]);
+    });
+    if (paths.length === 0) {
+      console.log("No changes");
+      return;
+    }
+    console.log(
+      Object.keys(tags)
+        .sort()
+        .map(t => `[${t}]`),
+      paths
+    );
 
-      const messageLine =
-        Object.keys(tags)
-          .sort()
-          .map(t => `[${t}]`)
-          .join("") +
-        " " +
-        (process.argv[2] ||
-          paths
-            .map(([action, path]) => actionToString(action) + " " + path)
-            .join(", "));
-      const messageBody = paths
-        .map(([action, path]) => actionToString(action) + " " + path)
-        .join("\n");
-      const commitMessage = messageLine + "\n\n" + messageBody;
-      var bash = spawn("bash");
-      bash.stdin.end(
-        'git commit -m "' + commitMessage.replace(/"/g, '\\"') + '"'
-      );
-      bash.stdout.on("data", function(data) {
-        console.log(data.toString());
-      });
-      bash.stderr.on("data", function(data) {
-        console.log(data.toString());
-      });
-    }),
-  60000
-);
+    const messageLine =
+      Object.keys(tags)
+        .sort()
+        .map(t => `[${t}]`)
+        .join("") +
+      " " +
+      (process.argv[2] ||
+        paths
+          .map(([action, path]) => actionToString(action) + " " + path)
+          .join(", "));
+    const messageBody = paths
+      .map(([action, path]) => actionToString(action) + " " + path)
+      .join("\n");
+    const commitMessage = messageLine + "\n\n" + messageBody;
+    var bash = spawn("bash");
+    bash.stdin.end(
+      'git commit -m "' + commitMessage.replace(/"/g, '\\"') + '"'
+    );
+    bash.stdout.on("data", function(data) {
+      console.log(data.toString());
+    });
+    bash.stderr.on("data", function(data) {
+      console.log(data.toString());
+    });
+  });
+tick();
+setInterval(tick, 60000);
