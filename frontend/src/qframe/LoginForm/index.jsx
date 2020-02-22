@@ -35,15 +35,12 @@ class LoginForm extends React.Component {
 	};
 
 	handleSubmit = async (values) => {
-		const res = await this.props.api('/user/authenticate', {
-			method: 'POST',
-			body: JSON.stringify({
+		const json = await this.props.api.post('/user/authenticate',
+			{
 				email: values.email,
 				password: values.password,
 				rememberme: values.rememberme,
-			}),
-		});
-		const json = await res.json();
+			});
 		this.props.onSuccess(json);
 	};
 
@@ -79,67 +76,67 @@ class LoginForm extends React.Component {
 						isSubmitting,
 						/* and other goodies */
 					}) => (
-						<Form onSubmit={handleSubmit} disabled={isSubmitting}>
-							<h1>Montaan login</h1>
-							<Form.Group controlId="formBasicEmail">
-								<Form.Label size="lg">Email address</Form.Label>
-								<Form.Control
-									name="email"
-									value={values.email}
-									onChange={handleChange}
-									onBlur={handleBlur}
-									isValid={touched.email && !errors.email}
-									isInvalid={touched.email && errors.email}
-									type="email"
-									placeholder="Enter email"
-								/>
-								<ErrorMessage name="email">
-									{(msg) => <div className="error error-message">{msg}</div>}
-								</ErrorMessage>
-							</Form.Group>
+							<Form onSubmit={handleSubmit} disabled={isSubmitting}>
+								<h1>Montaan login</h1>
+								<Form.Group controlId="formBasicEmail">
+									<Form.Label size="lg">Email address</Form.Label>
+									<Form.Control
+										name="email"
+										value={values.email}
+										onChange={handleChange}
+										onBlur={handleBlur}
+										isValid={touched.email && !errors.email}
+										isInvalid={touched.email && errors.email}
+										type="email"
+										placeholder="Enter email"
+									/>
+									<ErrorMessage name="email">
+										{(msg) => <div className="error error-message">{msg}</div>}
+									</ErrorMessage>
+								</Form.Group>
 
-							<Form.Group controlId="formBasicPassword">
-								<Form.Label size="lg">Password</Form.Label>
-								<Form.Control
-									name="password"
-									value={values.password}
-									onChange={handleChange}
-									onBlur={handleBlur}
-									isValid={touched.password && !errors.password}
-									isInvalid={touched.password && errors.password}
-									type="password"
-									placeholder="Password"
-								/>
-								<ErrorMessage name="password">
-									{(msg) => <div className="error error-message">{msg}</div>}
-								</ErrorMessage>
-								<Link to="/recoverAccount">Forgot your password?</Link>
-							</Form.Group>
+								<Form.Group controlId="formBasicPassword">
+									<Form.Label size="lg">Password</Form.Label>
+									<Form.Control
+										name="password"
+										value={values.password}
+										onChange={handleChange}
+										onBlur={handleBlur}
+										isValid={touched.password && !errors.password}
+										isInvalid={touched.password && errors.password}
+										type="password"
+										placeholder="Password"
+									/>
+									<ErrorMessage name="password">
+										{(msg) => <div className="error error-message">{msg}</div>}
+									</ErrorMessage>
+									<Link to="/recoverAccount">Forgot your password?</Link>
+								</Form.Group>
 
-							<Form.Group controlId="formBasicChecbox">
-								<Link to="/signup">Sign up for a new account</Link>
-							</Form.Group>
+								<Form.Group controlId="formBasicChecbox">
+									<Link to="/signup">Sign up for a new account</Link>
+								</Form.Group>
 
-							<Form.Group controlId="formBasicChecbox">
-								<Form.Check
-									name="rememberme"
-									value={values.rememberme}
-									onChange={handleChange}
-									size="sm"
-									type="checkbox"
-									label="Remember me"
-								/>
-							</Form.Group>
+								<Form.Group controlId="formBasicChecbox">
+									<Form.Check
+										name="rememberme"
+										value={values.rememberme}
+										onChange={handleChange}
+										size="sm"
+										type="checkbox"
+										label="Remember me"
+									/>
+								</Form.Group>
 
-							<Button block variant="primary" type="submit">
-								<FontAwesomeIcon icon={faKey} /> Log in
+								<Button block variant="primary" type="submit">
+									<FontAwesomeIcon icon={faKey} /> Log in
 							</Button>
 
-							<Button block variant="secondary" type="close" onClick={this.onCancel}>
-								<FontAwesomeIcon icon={faArrowLeft} /> Go back
+								<Button block variant="secondary" type="close" onClick={this.onCancel}>
+									<FontAwesomeIcon icon={faArrowLeft} /> Go back
 							</Button>
-						</Form>
-					)}
+							</Form>
+						)}
 				</Formik>
 			</div>
 		);

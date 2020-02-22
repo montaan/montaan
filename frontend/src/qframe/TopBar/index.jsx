@@ -16,7 +16,7 @@ class TopBar extends React.Component {
 	logout = async (ev) => {
 		ev.preventDefault();
 		ev.stopPropagation();
-		await this.props.api('/user/logout', { method: 'POST' });
+		await this.props.api.post('/user/logout', {});
 		window.location = '/';
 	};
 
