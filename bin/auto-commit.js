@@ -35,10 +35,6 @@ setInterval(
   () =>
     getStatusMessage().then(function(statusMessage) {
       const lines = statusMessage.split("\n").filter(l => !/^\?\?/.test(l));
-      if (lines.length === 0) {
-        console.log("No changes");
-        return;
-      }
       const tags = {};
       const addTag = (tag, path) => (tags[tag] = tags[tag] || []).push(path);
       const paths = [];
@@ -57,6 +53,10 @@ setInterval(
         }
         paths.push([action, path]);
       });
+      if (paths.length === 0) {
+        console.log("No changes");
+        return;
+      }
       console.log(
         Object.keys(tags)
           .sort()
@@ -70,7 +70,10 @@ setInterval(
           .map(t => `[${t}]`)
           .join("") +
         " " +
-        process.argv[2];
+        (process.argv[2] ||
+          paths
+            .map(([action, path]) => actionToString(action) + " " + path)
+            .join(", "));
       const messageBody = paths
         .map(([action, path]) => actionToString(action) + " " + path)
         .join("\n");
