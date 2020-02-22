@@ -1,16 +1,15 @@
 # Use postgres/example user/password credentials
-version: '3.1'
+version: "3.1"
 
 services:
-
   db:
     image: postgres
     ports:
       - 54321:5432
     volumes:
-      - pgdata:/var/lib/postgresql/data
-      - pgconf:/etc/postgresql
-      - pglog:/var/log/postgresql
+      - ./database/pgdata:/var/lib/postgresql/data
+      - ./database/pgconf:/etc/postgresql
+      - ./database/pglog:/var/log/postgresql
     restart: always
     environment:
       POSTGRES_USER: montaan
@@ -28,17 +27,8 @@ services:
     volumes:
       - .:/montaan
 
-
   adminer:
     image: adminer
     restart: always
     ports:
       - 8080:8080
-
-volumes:
-  pgdata:
-    driver: local
-  pgconf:
-    driver: local
-  pglog:
-    driver: local
