@@ -56,6 +56,28 @@ Snippets for algorithms (indexed for-loop, foo[x] ||= [], binary search, tree al
 
 Spider StackOverflow for highly ranked answers. Spider GitHub for commits. Combine to create high quality commits on top of an existing codebase.
 
+Find recipes, algorithms, bugfixes, improved versions of code, microcopy, styles, color schemes.
+
+## Faster commits
+
+To hit a million commits in ten years (necessary for building something like Chromium or the Linux kernel), you need a commit every three waking minutes. More realistically, the minimum commit velocity that'd get you there is one commit per minute.
+
+How could you reach a commit per minute?
+
+It takes a minute just to write a commit message. So you need to get rid of writing commit messages. Use git status output, diff, and AI to generate one.
+
+In a minute, you can write around 60 words of text, or speak around 200 words. Using speech as the input device would allow for a higher commit rate when you know what you're doing.
+
+Commits should be made automatically. Commit messages should be spoken or generated automatically.
+
+It's easy to create breaking changes in a minute, so the codebase should be difficult to break. This points towards a non-textual editor, where you work with a visual editor, node graph or AST, or some other symbolic syntatically & parse-level correct representation (Also, getting away from text would allow each keystroke encode for a more complete symbol vs verbose syntax. Read-time syntax should be auto-generated.)
+
+Having slow blocking pre-commit tests is going to negatively impact commit rate. Tests should be extremely fast and in-editor so that introducing breakage is very difficult.
+
+You need to be able to commit from the mobile. This again points towards speech + touch manipulation as the UI for development. If you want to commit every three minutes, it has to be quite ambient, driven by ambient speech (always-on mic on the phone) and gesturing (3d pose tracking, gesture recognition from poses).
+
+The impact achievable in a 200-word commit is moderate. It's about a kilobyte in size, or 30 lines of code. About 300 kB in a day. Expansion is crucial to create impact. A thousand-fold expansion would allow for creation of meaningful projects. A ten million -fold expansion is required for superhuman performance.
+
 ## Compound growth
 
 A commit multiplier system that can be applied to its own codebase will show compound growth. If every raw commit to the multiplier system increases its commit factor by 1%, the commit factor grows as 1.01^n where n is the number of commits to the commit multiplier system.
