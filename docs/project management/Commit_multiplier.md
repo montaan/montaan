@@ -70,7 +70,7 @@ In a minute, you can write around 60 words of text, or speak around 200 words. U
 
 Commits should be made automatically. Commit messages should be spoken or generated automatically.
 
-It's easy to create breaking changes in a minute, so the codebase should be difficult to break. This points towards a non-textual editor, where you work with a visual editor, node graph or AST, or some other symbolic syntatically & parse-level correct representation (Also, getting away from text would allow each keystroke encode for a more complete symbol vs verbose syntax. Read-time syntax should be auto-generated.)
+It's easy to create breaking changes in a minute, so the codebase should be difficult to break. This points towards a non-textual editor, where you work with a visual editor, node graph or AST, or some other symbolic syntactically & parse-level correct representation (Also, getting away from text would allow each keystroke encode for a more complete symbol vs verbose syntax. Read-time syntax should be auto-generated.)
 
 Having slow blocking pre-commit tests is going to negatively impact commit rate. Tests should be extremely fast and in-editor so that introducing breakage is very difficult.
 
