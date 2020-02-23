@@ -7,7 +7,6 @@ import createText, { SDFTextGeometry } from '../lib/third_party/three-bmfont-tex
 import SDFShader from '../lib/third_party/three-bmfont-text-modified/shaders/msdf';
 import Layout from '../lib/Layout';
 import Colors from '../lib/Colors';
-import { BufferGeometry } from 'three';
 
 type PrettyPrintResult = {
 	language: string;

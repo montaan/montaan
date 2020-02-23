@@ -526,8 +526,8 @@ class Tabletree {
 				? (fsEntry.scale * fsEntry.textScale * window.innerHeight) / this.pageZoom
 				: ((line + 0.5) / fsEntry.lineCount) * fsEntry.textHeight;
 		scene.updateMatrixWorld();
-		var textX = fsEntry.textX;
-		textX += fsEntry.scale * fsEntry.textScale * window.innerWidth;
+		var textX = fsEntry.textXZero;
+		textX += (fsEntry.scale * fsEntry.textScale * window.innerWidth) / 1.33;
 		var fsPoint = new THREE.Vector3(textX, fsEntry.textYZero - textYOff, fsEntry.z);
 		fsPoint.applyMatrix4(model.matrixWorld);
 		camera.targetPosition.copy(fsPoint);
