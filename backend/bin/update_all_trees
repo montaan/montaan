@@ -1,4 +1,4 @@
 #!/bin/bash
 
 cd repos
-parallel 'cd ..; bin/process_tree' ::: */*
+for f in */*; do (cd .. && bin/process_tree $f); done
