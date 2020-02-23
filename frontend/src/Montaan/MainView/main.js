@@ -7,6 +7,9 @@ import Layout from '../lib/Layout';
 import utils from '../lib/utils';
 import Geometry from '../lib/Geometry';
 
+import fontDescription from './assets/fnt/Inconsolata-Regular.fnt';
+import fontSDF from './assets/fnt/Inconsolata-Regular.png';
+
 // import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter';
 import * as THREE from 'three';
 import loadFont from 'load-bmfont';
@@ -106,24 +109,29 @@ class Tabletree {
 		this.api = api;
 		this.apiPrefix = apiPrefix;
 		this.repoPrefix = repoPrefix;
-		loadFont('/fnt/Inconsolata-Regular.fnt', (err, font) => {
+		var fontTex, fontDesc;
+		new THREE.TextureLoader().load(fontSDF, (tex) => {
+			fontTex = tex;
+			if (fontDesc && fontTex) this.start(fontDesc, fontTex);
+		});
+		loadFont(fontDescription, (err, font) => {
 			if (err) throw err;
-			new THREE.TextureLoader().load('/fnt/Inconsolata-Regular.png', (tex) =>
-				this.start(font, tex)
-			);
+			fontDesc = font;
+			if (fontDesc && fontTex) this.start(fontDesc, fontTex);
 		});
 	}
 
 	async start(font, fontTexture) {
-		this.lastFrameTime = performance.now();
-		this.previousFrameTime = performance.now();
-
 		this.setupScene(); // Renderer, scene and camera setup.
 		this.setupTextModel(font, fontTexture); // Text model for files
 		this.setupSearchHighlighting(); // Search highlighting
 		this.setupEventListeners(); // UI event listeners
 		if (this._fileTree) await this.setFileTree(this._fileTree); // Show possibly pre-loaded file tree.
 		if (this.commitData) this.setCommitData(this.commitData); // Set pre-loaded commit data.
+
+		this.lastFrameTime = performance.now();
+		this.previousFrameTime = performance.now();
+
 		this.tick(); // Main render loop
 	}
 
@@ -134,8 +142,6 @@ class Tabletree {
 		this._fileTree = fileTree;
 		if (this.renderer) {
 			await this.showFileTree(fileTree);
-			// const topEntry = fileTree.tree.entries[Object.keys(fileTree.tree.entries)[0]];
-			// if (topEntry) this.goToFSEntry(topEntry);
 			this._fileTree = null;
 		}
 	}
@@ -207,15 +213,18 @@ class Tabletree {
 	}
 
 	setGoToHighlight(fsEntry, line) {
-		this.addHighlightedLine(fsEntry, line);
+		this.addHighlightedLine(fsEntry, line, 0);
 	}
 
-	addHighlightedLine(fsEntry, line) {
+	addHighlightedLine(fsEntry, line, indexOverride = -1) {
 		if (fsEntry.textHeight) {
 			const lineCount = fsEntry.lineCount;
 			var geo = this.searchHighlights.geometry;
-			var index = this.searchHighlights.index;
-			this.searchHighlights.index++;
+			var index = indexOverride;
+			if (indexOverride < 0) {
+				index = this.searchHighlights.index;
+				this.searchHighlights.index++;
+			}
 
 			const lineBottom = fsEntry.textYZero - ((line + 1) / lineCount) * fsEntry.textHeight;
 			const lineTop = fsEntry.textYZero - (line / lineCount) * fsEntry.textHeight;
@@ -251,7 +260,7 @@ class Tabletree {
 			v.x = v.y = v.z = 0;
 		}
 		geo.verticesNeedUpdate = true;
-		this.searchHighlights.index = 0;
+		this.searchHighlights.index = 1;
 		this.highlightLater = [];
 		this.changed = true;
 	}
@@ -402,7 +411,7 @@ class Tabletree {
 			})
 		);
 		this.searchHighlights.frustumCulled = false;
-		this.searchHighlights.index = 0;
+		this.searchHighlights.index = 1;
 		for (let i = 0; i < 40000; i++) {
 			this.searchHighlights.geometry.vertices.push(new THREE.Vector3());
 		}
@@ -511,35 +520,20 @@ class Tabletree {
 		this.changed = true;
 	}
 
-	goToFSEntryText(fsEntry, model = this.model) {
-		const { scene, camera } = this;
-		scene.updateMatrixWorld();
-		var textX = fsEntry.textX;
-		textX += (fsEntry.scale * fsEntry.textScale * window.innerWidth) / 1.5;
-		var fsPoint = new THREE.Vector3(
-			textX,
-			fsEntry.textYZero -
-				(fsEntry.scale * fsEntry.textScale * window.innerHeight) / this.pageZoom,
-			fsEntry.z
-		);
-		fsPoint.applyMatrix4(model.matrixWorld);
-		camera.targetPosition.copy(fsPoint);
-		camera.targetFOV = (fsEntry.scale * fsEntry.textScale * 2000 * 50) / this.pageZoom;
-		fsEntry.textFOV = camera.targetFOV;
-		this.changed = true;
-	}
-
 	goToFSEntryTextAtLine(fsEntry, line, model = this.model) {
 		const { scene, camera } = this;
 		if (!fsEntry.textHeight) {
 			fsEntry.targetLine = { line };
 			return this.goToFSEntry(fsEntry, model);
 		}
-		this.setGoToHighlight(fsEntry, line);
-		const textYOff = ((line + 0.5) / fsEntry.lineCount) * fsEntry.textHeight;
+		if (line > 0) this.setGoToHighlight(fsEntry, line);
+		const textYOff =
+			line === 0
+				? (fsEntry.scale * fsEntry.textScale * window.innerHeight) / this.pageZoom
+				: ((line + 0.5) / fsEntry.lineCount) * fsEntry.textHeight;
 		scene.updateMatrixWorld();
 		var textX = fsEntry.textX;
-		textX += (fsEntry.scale * fsEntry.textScale * window.innerWidth) / 2;
+		textX += fsEntry.scale * fsEntry.textScale * window.innerWidth;
 		var fsPoint = new THREE.Vector3(textX, fsEntry.textYZero - textYOff, fsEntry.z);
 		fsPoint.applyMatrix4(model.matrixWorld);
 		camera.targetPosition.copy(fsPoint);
@@ -1753,11 +1747,9 @@ class Tabletree {
 	goToURL(url) {
 		if (!this.fileTree) return;
 		const { fsEntry, point, search } = getFSEntryForURL(this.fileTree, url);
-		if (point && !isNaN(point[0])) {
-			this.goToFSEntryTextAtLine(fsEntry, point[0]);
-		} else if (search) {
-			this.goToFSEntryTextAtSearch(fsEntry, search);
-		} else this.goToFSEntry(fsEntry);
+		if (point && !isNaN(point[0])) this.goToFSEntryTextAtLine(fsEntry, point[0]);
+		else if (search) this.goToFSEntryTextAtSearch(fsEntry, search);
+		else this.goToFSEntry(fsEntry);
 	}
 
 	getURLForFSEntry(fsEntry, location = []) {
@@ -1975,11 +1967,11 @@ class Tabletree {
 							const fsEntry = intersection.fsEntry;
 							const fovDiff = (fsEntry.scale * 50) / self.camera.fov;
 							if (self.highlighted === fsEntry) {
-								if (fsEntry.textScale) self.goToFSEntryText(fsEntry);
+								if (fsEntry.textScale) self.goToFSEntryTextAtLine(fsEntry, 0);
 								else dz = -50;
 							} else {
 								if (fovDiff > 0.95) {
-									if (fsEntry.textScale) self.goToFSEntryText(fsEntry);
+									if (fsEntry.textScale) self.goToFSEntryTextAtLine(fsEntry, 0);
 									else dz = -50;
 								} else self.goToFSEntry(fsEntry);
 							}
