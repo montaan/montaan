@@ -271,15 +271,14 @@ export default {
 		const fileXOff = dirs.length === 0 ? 0 : 1;
 		const filesPerRow = dirs.length === 0 ? 4 : 2;
 
-		const dirSquareSide = Math.ceil(Math.sqrt(Math.ceil(dirScale*dirs.length)));
+		const dirSquareSide = Math.ceil(Math.sqrt(Math.ceil(dirScale * dirs.length)));
 		const fileSquareSide = Math.ceil(Math.sqrt(Math.ceil(files.length / filesPerRow)));
 
 		var maxX = 0,
 			maxY = 0;
-		outer:
-		for (let x = 0; x < dirSquareSide; x++) {
-			for (let y = 0; y < dirSquareSide/dirScale; y++) {
-				const off = x * Math.ceil(dirSquareSide/dirScale) + y;
+		outer: for (let x = 0; x < dirSquareSide; x++) {
+			for (let y = 0; y < dirSquareSide / dirScale; y++) {
+				const off = x * Math.ceil(dirSquareSide / dirScale) + y;
 				if (off >= dirs.length) {
 					break outer;
 				}
@@ -291,7 +290,8 @@ export default {
 				const subX = xOff + 0.1 / dirSquareSide;
 				const subY = yOff + 0.125 / dirSquareSide;
 				dir.x = fileTree.x + fileTree.scale * subX * dirScale;
-				dir.y = fileTree.y + fileTree.scale * subY * dirScale + (1-dirScale) * fileTree.scale;
+				dir.y =
+					fileTree.y + fileTree.scale * subY * dirScale + (1 - dirScale) * fileTree.scale;
 				dir.scale = fileTree.scale * (0.8 / dirSquareSide) * dirScale;
 				dir.z = fileTree.z + dir.scale * 0.2;
 				dir.index = fileIndex;
@@ -333,8 +333,7 @@ export default {
 
 		maxX = 0;
 		maxY = 0;
-		outer:
-		for (let x = 0; x < fileSquareSide*filesPerRow; x++) {
+		outer: for (let x = 0; x < fileSquareSide * filesPerRow; x++) {
 			for (let y = 0; y < fileSquareSide; y++) {
 				const off = x * fileSquareSide + y;
 				if (off >= files.length) {
@@ -350,7 +349,10 @@ export default {
 				const file = files[off];
 				const fileColor = file.color || Colors.getFileColor(file);
 				file.x = fileTree.x + fileTree.scale * subX * filesScale;
-				file.y = fileTree.y + fileTree.scale * subY * filesScale + fileTree.scale * (1-filesScale);
+				file.y =
+					fileTree.y +
+					fileTree.scale * subY * filesScale +
+					fileTree.scale * (1 - filesScale);
 				file.scale = fileTree.scale * (0.9 / fileSquareSide) * filesScale;
 				file.z = fileTree.z + file.scale * 0.2;
 				file.index = fileIndex;
@@ -386,7 +388,7 @@ export default {
 		return fileIndex;
 	},
 
-	createTextForEntry: async function(obj, parentText, textVertexIndex, yieldFn, xScale=1) {
+	createTextForEntry: async function(obj, parentText, textVertexIndex, yieldFn, xScale = 1) {
 		var title = obj.title;
 		if (obj.entries == null) {
 			if (title.indexOf('\n') === -1 && title.length > 16) {
@@ -407,7 +409,7 @@ export default {
 			} else {
 				lineBreakLength = title.length + 10;
 			}
-			var re = new RegExp('.{' + lineBreakLength + '}|.+$', 'g');
+			var re = new RegExp('.{1,' + lineBreakLength + '}', 'g');
 			for (var i = 0; i < words.length; i++) {
 				var w = words[i];
 				if (lineLength + w.length >= lineBreakLength) {
@@ -415,7 +417,7 @@ export default {
 						var prefix = w.substring(0, lineBreakLength - lineLength);
 						s += prefix + '\n';
 						var suffix = w.substring(lineBreakLength - lineLength);
-						var bits = suffix.match(re);
+						var bits = suffix.match(re) || [''];
 						s += bits.slice(0, -1).join('\n') + '\n';
 						s += bits[bits.length - 1] + ' ';
 						lineLength = bits[bits.length - 1].length + 1;

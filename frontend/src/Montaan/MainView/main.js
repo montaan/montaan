@@ -1,6 +1,6 @@
 import { getPathEntry, getFullPath, getFSEntryForURL } from '../lib/filesystem';
 import Colors from '../lib/Colors.ts';
-import prettyPrintWorker from '../lib/pretty-print';
+import TextFileView from './TextFileView';
 import createText from '../lib/third_party/three-bmfont-text-modified';
 import SDFShader from '../lib/third_party/three-bmfont-text-modified/shaders/msdf';
 import Layout from '../lib/Layout';
@@ -498,13 +498,7 @@ class Tabletree {
 		this.updateSearchLines();
 	}
 
-	goToTarget(target) {
-		if (!target) return;
-		if (target.line !== undefined) this.goToFSEntryTextAtLine(target.fsEntry, target.line);
-		else this.goToFSEntry(target.fsEntry);
-	}
-
-	goToFSEntry(fsEntry, model = this.model) {
+	goToFSEntry = (fsEntry, model = this.model) => {
 		if (!fsEntry) return;
 		const { scene, camera } = this;
 		scene.updateMatrixWorld();
@@ -518,9 +512,9 @@ class Tabletree {
 		camera.targetFOV = fsEntry.scale * (fsEntry.entries ? 22 : 50);
 		fsEntry.fov = camera.targetFOV;
 		this.changed = true;
-	}
+	};
 
-	goToFSEntryTextAtLine(fsEntry, line, model = this.model) {
+	goToFSEntryTextAtLine = (fsEntry, line, model = this.model) => {
 		const { scene, camera } = this;
 		if (!fsEntry.textHeight) {
 			fsEntry.targetLine = { line };
@@ -540,9 +534,9 @@ class Tabletree {
 		camera.targetFOV = (fsEntry.scale * fsEntry.textScale * 2000 * 50) / this.pageZoom;
 		fsEntry.textFOV = camera.targetFOV;
 		this.changed = true;
-	}
+	};
 
-	goToFSEntryTextAtSearch(fsEntry, search, model = this.model) {
+	goToFSEntryTextAtSearch = (fsEntry, search, model = this.model) => {
 		if (!fsEntry.textHeight) {
 			fsEntry.targetLine = { search };
 			return this.goToFSEntry(fsEntry, model);
@@ -558,7 +552,7 @@ class Tabletree {
 		} else index = text.indexOf(search);
 		for (let i = 0; i < index; i++) if (text.charCodeAt(i) === 10) line++;
 		return this.goToFSEntryTextAtLine(fsEntry, line, model);
-	}
+	};
 
 	async createFileTreeModel(fileCount, fileTree) {
 		const { font, camera } = this;
@@ -750,243 +744,20 @@ class Tabletree {
 		this.changed = true;
 	};
 
-	async fillElement(html, element) {
-		let i = 0,
-			start = 0,
-			spanStack = [],
-			stackLen = 0,
-			prefix = '',
-			tagStart = 0,
-			inTag = false,
-			closeSpan = false,
-			lines = 0,
-			totalLines = 1,
-			chars = 0;
-		const lt = '<'.charCodeAt(0);
-		const gt = '>'.charCodeAt(0);
-		const slash = '/'.charCodeAt(0);
-		for (; i < html.length; i++) {
-			var ch = html.charCodeAt(i);
-			chars++;
-			if (ch === 10) {
-				lines++;
-				totalLines++;
-			} else if (ch === lt) {
-				tagStart = i;
-				closeSpan = false;
-				inTag = true;
-			} else if (i - 1 === tagStart && ch === slash) {
-				closeSpan = true;
-				stackLen -= 2;
-			} else if (!closeSpan && ch === gt) {
-				inTag = false;
-				spanStack[stackLen++] = tagStart;
-				spanStack[stackLen++] = i + 1;
-			}
-			if (!inTag && (lines > 100 || chars > 3000)) {
-				const str = html.substring(start, i + 1);
-				const d = document.createElement('template');
-				d.innerHTML = prefix + str;
-				prefix = '';
-				for (let k = 0; k < stackLen; k += 2) {
-					prefix += html.substring(spanStack[k], spanStack[k + 1]);
-				}
-				element.appendChild(d.content);
-				await this.yield();
-				lines = 0;
-				chars = 0;
-				start = i + 1;
-			}
-		}
-		if (start < i) {
-			const str = html.substring(start);
-			const d = document.createElement('template');
-			d.innerHTML = prefix + str;
-			element.appendChild(d.content);
-			await this.yield();
-		}
-		return totalLines;
-	}
-
-	async collectNodeStyles(doc, txt, palette, paletteIndex) {
-		await this.yield();
-		var style = getComputedStyle(doc);
-		var color = style.color;
-		if (!paletteIndex[color]) {
-			paletteIndex[color] = palette.length;
-			var c = new THREE.Color(color);
-			palette.push(new THREE.Vector3(c.r, c.g, c.b));
-		}
-		color = paletteIndex[color];
-		var bold = style.fontWeight !== 'normal';
-		var italic = style.fontStyle === 'italic';
-		var underline = style.textDecoration === 'underline';
-		for (var i = 0; i < doc.childNodes.length; i++) {
-			var cc = doc.childNodes[i];
-			if (cc.tagName) {
-				await this.collectNodeStyles(cc, txt, palette, paletteIndex);
-			} else {
-				txt.push({
-					color: color,
-					bold: bold,
-					italic: italic,
-					underline: underline,
-					text: cc.textContent,
-				});
-			}
-		}
-	}
-
-	async parsePrettyPrintResult(result) {
-		await this.yield();
-		const doc = document.createElement('pre');
-		doc.className = 'hljs ' + result.language;
-		doc.style.display = 'none';
-		document.body.appendChild(doc);
-
-		const lineCount = await this.fillElement(result.value, doc);
-
-		var paletteIndex = {};
-		var palette = [];
-		var txt = [];
-		await this.collectNodeStyles(doc, txt, palette, paletteIndex);
-		document.body.removeChild(doc);
-		return { txt, palette, lineCount };
-	}
-
 	async loadTextFile(visibleFiles, fullPath, fsEntry) {
 		if (fsEntry.size > 1e5) return;
-
-		const text = new THREE.Mesh();
-		text.visible = false;
-		text.fsEntry = fsEntry;
-		fsEntry.contentObject = text;
+		fsEntry.contentObject = new TextFileView(
+			this.fontTexture,
+			fsEntry,
+			fullPath,
+			this.api,
+			this.yield,
+			this.requestFrame,
+			this.goToFSEntryTextAtLine,
+			this.goToFSEntryTextAtSearch
+		);
 		visibleFiles.visibleSet[fullPath] = true;
-		visibleFiles.add(text);
-
-		let responseBuffer = await (
-			await fetch(this.apiPrefix + '/repo/file' + fullPath)
-		).arrayBuffer();
-		if (responseBuffer.byteLength > 1e5 || !text.parent) return;
-
-		const u8 = new Uint8Array(responseBuffer);
-		const isBinary = u8.slice(0, 4096).some((x) => x < 9);
-		var responseText = '';
-		if (isBinary) {
-			if (responseBuffer.byteLength > 1e4) return;
-			const hex = [];
-			for (let i = 0; i < 256; i++) hex[i] = (i < 16 ? ' 0' : ' ') + i.toString(16);
-			const pad = [
-				'         ',
-				'        ',
-				'       ',
-				'      ',
-				'     ',
-				'    ',
-				'   ',
-				'  ',
-				' ',
-				'',
-			];
-			let accum = ['HEXDUMP'];
-			for (let i = 0; i < u8.length; i++) {
-				if (i % 64 === 0) accum.push(`\n${pad[Math.log10(i) | 0]}${i} `);
-				accum.push(hex[u8[i]]);
-			}
-			responseText += accum.join('');
-		} else {
-			responseText = new TextDecoder().decode(responseBuffer);
-		}
-
-		await this.yield();
-
-		const contents = responseText.replace(/\r/g, '');
-		if (contents.length === 0) return;
-
-		prettyPrintWorker.prettyPrint(contents, fsEntry.name, async (result) => {
-			await this.yield();
-			text.geometry = await createText(
-				{ font: Layout.font, text: contents, mode: 'pre' },
-				this.yield
-			);
-			if (result.language) {
-				const { txt, palette, lineCount } = await this.parsePrettyPrintResult(result);
-				const verts = text.geometry.attributes.position.array;
-				for (let i = 0, off = 3; i < txt.length; i++) {
-					const t = txt[i];
-					for (let j = 0; j < t.text.length; j++) {
-						const c = t.text.charCodeAt(j);
-						if (c === 10 || c === 32 || c === 9 || c === 13) continue;
-						for (let k = 0; k < 6; k++) {
-							if (t.italic) {
-								verts[off - 3] += (k <= 3 && k !== 0 ? -1 : 1) * 2.5;
-							}
-							verts[off] = t.color + 256 * t.bold;
-							off += 4;
-						}
-					}
-					if (off % 12004 === 12003) await this.yield();
-				}
-				text.material = this.makeTextMaterial(palette);
-				fsEntry.lineCount = lineCount;
-			} else {
-				let lineCount = 0;
-				for (let i = 0; i < contents.length; i++)
-					if (contents.charCodeAt(i) === 10) lineCount++;
-				text.material = this.makeTextMaterial();
-				fsEntry.lineCount = lineCount;
-			}
-			text.visible = true;
-			text.material.uniforms.opacity.value = 0;
-			const self = this;
-			text.ontick = function(t, dt) {
-				if (this.material.uniforms.opacity.value === 1) return;
-				this.material.uniforms.opacity.value += dt / 1000 / 0.5;
-				if (this.material.uniforms.opacity.value > 1) {
-					this.material.uniforms.opacity.value = 1;
-				}
-				self.changed = true;
-			};
-
-			var textScale = Math.min(
-				0.5 / (text.geometry.layout.width + 60),
-				1 / ((text.geometry.layout.height + 30) / 0.75)
-			);
-			var scale = fsEntry.scale * textScale;
-			var vAspect = Math.min(
-				1,
-				(text.geometry.layout.height + 30) /
-					0.75 /
-					((text.geometry.layout.width + 60) / 0.5)
-			);
-			text.material.depthTest = false;
-			text.scale.multiplyScalar(scale);
-			text.scale.y *= -1;
-			text.position.copy(fsEntry);
-			text.fsEntry = fsEntry;
-			text.position.x += fsEntry.scale * textScale * 30;
-			text.position.y -= fsEntry.scale * textScale * 7.5;
-			text.position.y += fsEntry.scale * 0.25;
-
-			fsEntry.textScale = textScale;
-			fsEntry.textXZero = text.position.x;
-			fsEntry.textX =
-				text.position.x +
-				scale * Math.min(40 * 30 + 60, text.geometry.layout.width + 60) * 0.5;
-			fsEntry.textYZero = text.position.y + fsEntry.scale * 0.75;
-			fsEntry.textY = text.position.y + fsEntry.scale * 0.75 - scale * 900;
-			fsEntry.textHeight = scale * text.geometry.layout.height;
-
-			text.position.y += fsEntry.scale * 0.75 * (1 - vAspect);
-
-			if (fsEntry.targetLine) {
-				const { line, search } = fsEntry.targetLine;
-				fsEntry.targetLine = null;
-				if (line !== undefined) this.goToFSEntryTextAtLine(fsEntry, line);
-				else if (search !== undefined) this.goToFSEntryTextAtSearch(fsEntry, search);
-			}
-			this.changed = true;
-		});
+		visibleFiles.add(fsEntry.contentObject);
 	}
 
 	async createFileListModel(fileCount, fileTree) {
@@ -2214,12 +1985,12 @@ class Tabletree {
 		this.requestFrame();
 	}
 
-	requestFrame() {
+	requestFrame = () => {
 		if (!this.frameRequested) {
 			this.frameRequested = true;
 			window.requestAnimationFrame(this.tick);
 		}
-	}
+	};
 }
 
 export default new Tabletree();

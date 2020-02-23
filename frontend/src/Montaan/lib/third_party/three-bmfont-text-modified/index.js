@@ -9,18 +9,18 @@ var utils = require('./lib/utils');
 var Base = THREE.BufferGeometry;
 
 export default async function createTextGeometry(opt, yieldFn) {
-	var geo = new TextGeometry();
+	var geo = new SDFTextGeometry();
 	await geo.update(opt, yieldFn);
 	return geo;
 }
 
-function TextGeometry() {
+export function SDFTextGeometry() {
 	Base.call(this);
 }
 
-inherits(TextGeometry, Base);
+inherits(SDFTextGeometry, Base);
 
-TextGeometry.prototype.update = async function(opt, yieldFn) {
+SDFTextGeometry.prototype.update = async function(opt, yieldFn) {
 	if (typeof opt === 'string') {
 		opt = { text: opt };
 	}
@@ -77,7 +77,7 @@ TextGeometry.prototype.update = async function(opt, yieldFn) {
 	if (!opt.noBounds) await this.computeBounds(yieldFn);
 };
 
-TextGeometry.prototype.computeBounds = async function(yieldFn) {
+SDFTextGeometry.prototype.computeBounds = async function(yieldFn) {
 	this.boundingBox = new THREE.Box3();
 	this.boundingSphere = new THREE.Sphere();
 
@@ -132,7 +132,7 @@ TextGeometry.prototype.computeBounds = async function(yieldFn) {
 	this.boundingBox.max.set(box.max[0], box.max[1], box.max[2]);
 };
 
-TextGeometry.prototype.computeBoundingSphere = function() {
+SDFTextGeometry.prototype.computeBoundingSphere = function() {
 	if (this.boundingSphere === null) {
 		this.boundingSphere = new THREE.Sphere();
 	}
@@ -154,7 +154,7 @@ TextGeometry.prototype.computeBoundingSphere = function() {
 	}
 };
 
-TextGeometry.prototype.computeBoundingBox = function() {
+SDFTextGeometry.prototype.computeBoundingBox = function() {
 	if (this.boundingBox === null) {
 		this.boundingBox = new THREE.Box3();
 	}

@@ -23,7 +23,7 @@ import styles from './MainApp.module.scss';
 import TreeView from '../TreeView';
 import { QFrameAPI } from '../../lib/api';
 import Player from '../Player';
-import { FSEntry } from '../lib/filesystem/filesystem';
+import { FSEntry, createFSTree } from '../lib/filesystem/filesystem';
 import Introduction from '../Introduction';
 
 export interface MainAppProps extends RouteComponentProps {
@@ -146,7 +146,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		searchQuery: '',
 		commits: [],
 		activeCommitData: null,
-		fileTree: { count: 0, tree: { name: '', title: '', entries: {} } },
+		fileTree: { count: 0, tree: createFSTree('', '') },
 		commitLog: '',
 		commitChanges: '',
 		files: '',
@@ -826,7 +826,6 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 					/>
 				) : (
 					<MainView
-						goToTarget={this.state.goToTarget}
 						navUrl={this.state.navUrl}
 						activeCommitData={this.state.activeCommitData}
 						diffsLoaded={this.state.diffsLoaded}

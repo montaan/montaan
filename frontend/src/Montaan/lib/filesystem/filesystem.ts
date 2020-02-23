@@ -1,6 +1,21 @@
 import QFrameAPI from '../../../lib/api';
 
 export interface FSEntry {
+	scale: number;
+
+	x: number;
+	y: number;
+	z: number;
+
+	textScale: number;
+	textXZero: number;
+	textX: number;
+	textYZero: number;
+	textY: number;
+	textHeight: number;
+	targetLine: any;
+	lineCount: number;
+
 	name: string;
 	title: string;
 	entries: null | { [filename: string]: FSEntry };
@@ -144,13 +159,27 @@ function getFSType(url: string) {
 	return 'montaanGit';
 }
 
-function createFSTree(name: string, url: string, fsType: string): FSEntry {
+export function createFSTree(name: string, url: string, fsType?: string): FSEntry {
 	return {
 		name,
 		title: name,
 		entries: {},
 		fetched: false,
-		filesystem: new RegisteredFileSystems[fsType](url),
+		filesystem: fsType ? new RegisteredFileSystems[fsType](url) : undefined,
+		scale: 0,
+
+		x: 0,
+		y: 0,
+		z: 0,
+
+		textScale: 0,
+		textXZero: 0,
+		textX: 0,
+		textYZero: 0,
+		textY: 0,
+		textHeight: 0,
+		targetLine: undefined,
+		lineCount: 0,
 	};
 }
 

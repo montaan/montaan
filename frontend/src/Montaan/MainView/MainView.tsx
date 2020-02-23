@@ -17,7 +17,6 @@ interface MainViewProps extends RouteComponentProps {
 	commitFilter: any;
 	navigationTarget: string;
 	searchResults: any[];
-	goToTarget: any;
 	searchQuery: string;
 	searchLinesRequest: number;
 	addLinks(links: TreeLink[]): void;
@@ -46,8 +45,6 @@ class MainView extends React.Component<MainViewProps, {}> {
 			tabletree.setActiveCommits(nextProps.activeCommitData);
 		if (this.props.searchResults !== nextProps.searchResults)
 			tabletree.setSearchResults(nextProps.searchResults);
-		if (this.props.goToTarget !== nextProps.goToTarget)
-			tabletree.goToTarget(nextProps.goToTarget);
 		if (this.props.searchLinesRequest !== nextProps.searchLinesRequest)
 			tabletree.updateSearchLines();
 		tabletree.updateLinks();
