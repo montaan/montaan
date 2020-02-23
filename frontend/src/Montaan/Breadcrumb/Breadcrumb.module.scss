@@ -52,8 +52,17 @@
 		background: rgba(255, 255, 255, 0.9);
 
 		> li {
+			padding-top: 0px;
+			padding-bottom: 4px;
+			padding-right: 12px;
 			white-space: nowrap;
 			display: block;
+			&:first-child {
+				padding-top: 8px;
+			}
+			&:last-child {
+				padding-bottom: 12px;
+			}
 		}
 	}
 

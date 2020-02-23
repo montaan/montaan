@@ -80,11 +80,17 @@ export default class TextFileView extends THREE.Mesh {
 	ontick(t: number, dt: number): void {}
 
 	async load(fullPath: string) {
-		let responseBuffer = (await this.api.getType(
-			'/repo/file' + fullPath,
-			{},
-			'arrayBuffer'
-		)) as ArrayBuffer;
+		let responseBuffer;
+		try {
+			responseBuffer = (await this.api.getType(
+				'/repo/file' + fullPath,
+				{},
+				'arrayBuffer'
+			)) as ArrayBuffer;
+		} catch (e) {
+			console.error(e);
+			return;
+		}
 		if (responseBuffer.byteLength > this.MAX_SIZE || !this.parent) return;
 
 		const u8 = new Uint8Array(responseBuffer);
@@ -217,15 +223,13 @@ export default class TextFileView extends THREE.Mesh {
 			};
 
 			var textScale = Math.min(
-				0.5 / (this.geometry.layout.width + 60),
+				1 / (this.geometry.layout.width + 60),
 				1 / ((this.geometry.layout.height + 30) / 0.75)
 			);
 			var scale = fsEntry.scale * textScale;
 			var vAspect = Math.min(
 				1,
-				(this.geometry.layout.height + 30) /
-					0.75 /
-					((this.geometry.layout.width + 60) / 0.5)
+				(this.geometry.layout.height + 30) / 0.75 / ((this.geometry.layout.width + 60) / 1)
 			);
 			this.material.depthTest = false;
 			this.scale.multiplyScalar(scale);

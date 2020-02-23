@@ -138,11 +138,17 @@ class Tabletree {
 	setCommitLog = (txt) => (this._commitLog = txt);
 	setCommitChanges = (txt) => (this._commitChanges = txt);
 
-	async setFileTree(fileTree) {
-		this._fileTree = fileTree;
+	setFileTree(fileTree) {
 		if (this.renderer) {
-			await this.showFileTree(fileTree);
-			this._fileTree = null;
+			return this.showFileTree(fileTree);
+		} else {
+			return new Promise((resolve, reject) => {
+				const tick = () => {
+					if (this.renderer) this.showFileTree(fileTree).then(resolve);
+					else setTimeout(tick, 10);
+				};
+				tick();
+			});
 		}
 	}
 
@@ -509,7 +515,7 @@ class Tabletree {
 		);
 		fsPoint.applyMatrix4(model.matrixWorld);
 		camera.targetPosition.copy(fsPoint);
-		camera.targetFOV = fsEntry.scale * (fsEntry.entries ? 22 : 50);
+		camera.targetFOV = fsEntry.scale * (fsEntry.entries ? 25 : 50);
 		fsEntry.fov = camera.targetFOV;
 		this.changed = true;
 	};
@@ -608,11 +614,20 @@ class Tabletree {
 
 		var mesh = new THREE.Mesh(
 			geo,
-			new THREE.MeshBasicMaterial({ color: 0xffffff, vertexColors: THREE.VertexColors })
+			new THREE.MeshBasicMaterial({
+				color: 0xffffff,
+				vertexColors: THREE.VertexColors,
+				side: THREE.DoubleSide,
+			})
 		);
+		mesh.fileTree = fileTree;
+
 		const visibleFiles = new THREE.Object3D();
-		mesh.add(visibleFiles);
 		visibleFiles.visibleSet = {};
+
+		mesh.add(visibleFiles);
+		mesh.add(textMesh);
+		mesh.add(thumbnails);
 
 		mesh.ontick = function(t, dt) {
 			// Dispose loaded files that are outside the current view
@@ -692,10 +707,7 @@ class Tabletree {
 				smallestCovering.lastTextVertexIndex - smallestCovering.textVertexIndex
 			);
 		};
-		mesh.fileTree = fileTree;
-		mesh.material.side = THREE.DoubleSide;
-		mesh.add(textMesh);
-		mesh.add(thumbnails);
+
 		return mesh;
 	}
 

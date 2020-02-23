@@ -25,6 +25,7 @@ interface MainViewProps extends RouteComponentProps {
 	navUrl?: string;
 	frameRequestTime: number;
 	setNavigationTarget(target: string): void;
+	treeLoaded(): void;
 }
 
 class MainView extends React.Component<MainViewProps, {}> {
@@ -38,7 +39,9 @@ class MainView extends React.Component<MainViewProps, {}> {
 	}
 
 	shouldComponentUpdate(nextProps: MainViewProps) {
-		if (this.props.fileTree !== nextProps.fileTree) tabletree.setFileTree(nextProps.fileTree);
+		if (this.props.fileTree !== nextProps.fileTree) {
+			tabletree.setFileTree(nextProps.fileTree).then(() => this.props.treeLoaded());
+		}
 		if (this.props.commitData !== nextProps.commitData)
 			tabletree.setCommitData(nextProps.commitData);
 		if (this.props.activeCommitData !== nextProps.activeCommitData)

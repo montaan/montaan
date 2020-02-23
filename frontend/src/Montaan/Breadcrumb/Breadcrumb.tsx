@@ -21,11 +21,14 @@ const BreadcrumbSegment = ({
 			<Link to={path}>{segment}</Link>
 			{open && (
 				<ul>
-					{getSiblings(fileTree.tree, path).map((path) => (
-						<li key={path}>
-							<Link to={path}>{path.split('/').pop()}</Link>
-						</li>
-					))}
+					{getSiblings(fileTree.tree, path).map(
+						(siblingPath) =>
+							siblingPath !== path && (
+								<li key={siblingPath}>
+									<Link to={siblingPath}>{siblingPath.split('/').pop()}</Link>
+								</li>
+							)
+					)}
 				</ul>
 			)}
 		</li>

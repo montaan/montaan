@@ -116,6 +116,7 @@ interface MainAppState {
 	navUrl: string;
 	ref: string;
 	searchHover?: any;
+	treeLoaded: boolean;
 }
 
 declare global {
@@ -161,10 +162,13 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		processingCommits: true,
 		processing: true,
 		repoError: '',
+		treeLoaded: false,
 	};
 
 	repoTimeout: number;
 	commitIndex: number;
+
+	animatedFiles: number;
 
 	constructor(props: MainAppProps) {
 		super(props);
@@ -182,13 +186,14 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		};
 		this.repoTimeout = 0;
 		this.commitIndex = 0;
+		this.animatedFiles = 0;
 		if (props.userInfo) this.updateUserRepos(props.userInfo);
 		if (props.match && props.match.params.user) {
 			this.setRepo(props.match.params.name, props.match.params.user);
 		}
 	}
 
-	parseFiles(text: string, repoPrefix: string, changedFiles = []) {
+	parseFiles(text: string, repoPrefix: string, changedFiles: CommitFile[] = []) {
 		const fileTree = utils.parseFileList(text, {}, true, repoPrefix + '/');
 		if (false && this.state.repos) {
 			const reposEntry = fileTree.tree.entries[this.props.userInfo.name];
@@ -280,6 +285,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		} catch (err) {
 			/* No deps */
 		}
+		// this.animateFileTreeHistory(commitData.commits, repoPrefix);
 	};
 
 	// animateRandomLinks(fileTree, files, repoPrefix) {
@@ -322,23 +328,33 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 	// 	}, 16);
 	// }
 
-	// async animateFileTreeHistory(commits, repoPrefix) {
-	// 	clearInterval(this.animatedFiles);
-	// 	const fileTrees = await Promise.all(
-	// 		commits.map(async (commit) => {
-	// 			const files = await this.props.api.post('/repo/tree', {
-	// 				repo: repoPrefix,
-	// 				hash: commit.sha,
-	// 			});
-	// 			return this.parseFiles(files, repoPrefix, commit.files);
-	// 		})
-	// 	);
-	// 	this.animatedFiles = setInterval(() => {
-	// 		const idx = commits.length - 1 - this.commitIndex;
-	// 		this.commitIndex = (this.commitIndex + 1) % commits.length;
-	// 		this.setState({ fileTree: fileTrees[idx] });
-	// 	}, 16);
-	// }
+	async animateFileTreeHistory(commits: Commit[], repoPrefix: string) {
+		window.clearInterval(this.animatedFiles);
+		const fileTrees = await Promise.all(
+			commits.map(async (commit) => {
+				console.log(commit.sha);
+				const files = await this.props.api.postType(
+					'/repo/tree',
+					{
+						repo: repoPrefix,
+						hash: commit.sha,
+						paths: [''],
+						recursive: true,
+					},
+					{},
+					'arrayBuffer'
+				);
+				return this.parseFiles(files, repoPrefix, commit.files);
+			})
+		);
+		this.animatedFiles = window.setInterval(() => {
+			if (this.state.treeLoaded) {
+				const idx = commits.length - 1 - this.commitIndex;
+				this.commitIndex = (this.commitIndex + 1) % commits.length;
+				this.setState({ fileTree: fileTrees[idx], treeLoaded: false });
+			}
+		}, 16);
+	}
 
 	requestDirs = async (paths: string[]) => {
 		const files = await this.props.api.postType(
@@ -711,6 +727,10 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		}
 	};
 
+	onTreeLoaded = () => {
+		this.setState({ treeLoaded: true });
+	};
+
 	render() {
 		const titlePrefix = /Chrome/.test(navigator.userAgent) ? '' : '🏔 ';
 		const title = this.state.repoPrefix
@@ -827,6 +847,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 				) : (
 					<MainView
 						navUrl={this.state.navUrl}
+						treeLoaded={this.onTreeLoaded}
 						activeCommitData={this.state.activeCommitData}
 						diffsLoaded={this.state.diffsLoaded}
 						fileTree={this.state.fileTree}

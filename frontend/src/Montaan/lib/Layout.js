@@ -241,7 +241,7 @@ export default {
 		parentText,
 		thumbnails,
 		index,
-		accum
+		vertexIndices
 	) {
 		var dirs = [];
 		var files = [];
@@ -260,26 +260,83 @@ export default {
 
 		fileTree.index = fileIndex;
 		fileIndex++;
-		if (!accum) {
-			accum = { textVertexIndex: 0, vertexIndex: 0 };
+		if (!vertexIndices) {
+			vertexIndices = { textVertexIndex: 0, vertexIndex: 0 };
 			fileTree.textVertexIndex = 0;
 			fileTree.vertexIndex = 0;
 		}
 
-		const dirScale = files.length === 0 ? 1 : 0.5;
+		const dirScale = files.length === 0 ? 1 : 1;
 		const filesScale = dirs.length === 0 ? 0.5 : 0.5;
-		const fileXOff = dirs.length === 0 ? 0 : 1;
-		const filesPerRow = dirs.length === 0 ? 4 : 2;
+		const fileXOff = dirs.length === 0 ? 0 : 0;
+		let filesPerRow = dirs.length === 0 ? 2 : 2;
 
-		const dirSquareSide = Math.ceil(Math.sqrt(Math.ceil(dirScale * dirs.length)));
-		const fileSquareSide = Math.ceil(Math.sqrt(Math.ceil(files.length / filesPerRow)));
+		const dirSquareSide = Math.ceil(
+			Math.sqrt(Math.ceil(dirScale * (dirs.length + (files.length > 0 ? 1 : 0))))
+		);
+		let fileSquareSide = Math.ceil(Math.sqrt(Math.ceil(files.length / filesPerRow)));
 
 		var maxX = 0,
 			maxY = 0;
+		var filesBox = fileTree;
 		outer: for (let x = 0; x < dirSquareSide; x++) {
 			for (let y = 0; y < dirSquareSide / dirScale; y++) {
 				const off = x * Math.ceil(dirSquareSide / dirScale) + y;
 				if (off >= dirs.length) {
+					if (dirs.length > 0) {
+						if (dirs.length <= 2) {
+							x = 1;
+							y = 1;
+							filesPerRow = 1;
+							fileSquareSide = Math.ceil(
+								Math.sqrt(Math.ceil(files.length / filesPerRow))
+							);
+							const yOff = 1 - (0.675 * y + 1) * (1 / dirSquareSide);
+							const xOff = 1.0 * x * (1 / dirSquareSide);
+							const subX = xOff + 0.0 / dirSquareSide;
+							const subY = yOff + 0.0 / dirSquareSide;
+							fileTree.filesBox = filesBox = {};
+							filesBox.x = fileTree.x + fileTree.scale * subX * dirScale;
+							filesBox.y =
+								fileTree.y +
+								fileTree.scale * subY * dirScale +
+								(1 - dirScale) * fileTree.scale;
+							filesBox.scale = 2 * fileTree.scale * (0.8 / dirSquareSide) * dirScale;
+							filesBox.z = fileTree.z;
+						} else if (dirs.length >= 4 && dirs.length <= 6) {
+							x = 2;
+							y = 2;
+							filesPerRow = 1;
+							fileSquareSide = Math.ceil(
+								Math.sqrt(Math.ceil(files.length / filesPerRow))
+							);
+							const yOff = 1 - (0.5 * y + 1) * (1 / dirSquareSide);
+							const xOff = 1.0 * x * (1 / dirSquareSide);
+							const subX = xOff - 0.1 / dirSquareSide;
+							const subY = yOff - 0.05 / dirSquareSide;
+							fileTree.filesBox = filesBox = {};
+							filesBox.x = fileTree.x + fileTree.scale * subX * dirScale;
+							filesBox.y =
+								fileTree.y +
+								fileTree.scale * subY * dirScale +
+								(1 - dirScale) * fileTree.scale;
+							filesBox.scale = 2 * fileTree.scale * (1 / dirSquareSide) * dirScale;
+							filesBox.z = fileTree.z;
+						} else {
+							const yOff = 1 - (0.5 * y + 1) * (1 / dirSquareSide);
+							const xOff = 0.9 * x * (1 / dirSquareSide);
+							const subX = xOff + 0.1 / dirSquareSide;
+							const subY = yOff + 0.125 / dirSquareSide;
+							fileTree.filesBox = filesBox = {};
+							filesBox.x = fileTree.x + fileTree.scale * subX * dirScale;
+							filesBox.y =
+								fileTree.y +
+								fileTree.scale * subY * dirScale +
+								(1 - dirScale) * fileTree.scale;
+							filesBox.scale = fileTree.scale * (0.8 / dirSquareSide) * dirScale;
+							filesBox.z = fileTree.z;
+						}
+					}
 					break outer;
 				}
 				maxX = Math.max(x, maxX);
@@ -295,13 +352,13 @@ export default {
 				dir.scale = fileTree.scale * (0.8 / dirSquareSide) * dirScale;
 				dir.z = fileTree.z + dir.scale * 0.2;
 				dir.index = fileIndex;
-				dir.vertexIndex = accum.vertexIndex;
-				dir.textVertexIndex = accum.textVertexIndex;
+				dir.vertexIndex = vertexIndices.vertexIndex;
+				dir.textVertexIndex = vertexIndices.textVertexIndex;
 				dir.parent = fileTree;
 				index[fileIndex] = dir;
 				var dirColor = dir.color || Colors.getDirectoryColor(dir);
 				Geometry.setColor(colorVerts, dir.index, dirColor);
-				accum.vertexIndex = Geometry.makeQuad(
+				vertexIndices.vertexIndex = Geometry.makeQuad(
 					verts,
 					dir.index,
 					dir.x,
@@ -310,12 +367,12 @@ export default {
 					dir.scale * 0.5,
 					dir.z
 				);
-				accum.textVertexIndex = await this.createTextForEntry(
+				vertexIndices.textVertexIndex = await this.createTextForEntry(
 					dir,
 					parentText,
-					accum.textVertexIndex,
+					vertexIndices.textVertexIndex,
 					yieldFn,
-					1
+					0.8
 				);
 				fileIndex = await this.createFileTreeQuads(
 					yieldFn,
@@ -326,7 +383,7 @@ export default {
 					dir.text,
 					thumbnails,
 					index,
-					accum
+					vertexIndices
 				);
 			}
 		}
@@ -342,49 +399,49 @@ export default {
 				maxX = Math.max(x, maxX);
 				maxY = Math.max(y, maxY);
 				const yOff = 1 - (y + 1) * (1 / fileSquareSide);
-				const xOff = fileXOff + 0.5 * x * (1 / fileSquareSide);
+				const xOff = fileXOff + x * (1 / fileSquareSide);
 				const subX = xOff + 0.05 / fileSquareSide;
 				const subY = yOff + 0.05 / fileSquareSide;
 
 				const file = files[off];
 				const fileColor = file.color || Colors.getFileColor(file);
-				file.x = fileTree.x + fileTree.scale * subX * filesScale;
+				file.x = filesBox.x + filesBox.scale * subX * filesScale;
 				file.y =
-					fileTree.y +
-					fileTree.scale * subY * filesScale +
-					fileTree.scale * (1 - filesScale);
-				file.scale = fileTree.scale * (0.9 / fileSquareSide) * filesScale;
-				file.z = fileTree.z + file.scale * 0.2;
+					filesBox.y +
+					filesBox.scale * subY * filesScale +
+					filesBox.scale * (1 - filesScale);
+				file.scale = filesBox.scale * (0.9 / fileSquareSide) * filesScale;
+				file.z = filesBox.z + file.scale * 0.2;
 				file.index = fileIndex;
-				file.vertexIndex = accum.vertexIndex;
+				file.vertexIndex = vertexIndices.vertexIndex;
 				file.lastIndex = fileIndex;
 				file.parent = fileTree;
 				index[fileIndex] = file;
 				Geometry.setColor(colorVerts, file.index, fileColor);
-				accum.vertexIndex = Geometry.makeQuad(
+				vertexIndices.vertexIndex = Geometry.makeQuad(
 					verts,
 					file.index,
 					file.x,
 					file.y,
-					file.scale * 0.5,
+					file.scale,
 					file.scale,
 					file.z
 				);
-				accum.textVertexIndex = await this.createTextForEntry(
+				vertexIndices.textVertexIndex = await this.createTextForEntry(
 					file,
 					parentText,
-					accum.textVertexIndex,
+					vertexIndices.textVertexIndex,
 					yieldFn,
-					0.5
+					1
 				);
-				file.lastVertexIndex = accum.vertexIndex;
+				file.lastVertexIndex = vertexIndices.vertexIndex;
 				fileIndex++;
 			}
 		}
 
 		fileTree.lastIndex = fileIndex - 1;
-		fileTree.lastTextVertexIndex = accum.textVertexIndex;
-		fileTree.lastVertexIndex = accum.vertexIndex;
+		fileTree.lastTextVertexIndex = vertexIndices.textVertexIndex;
+		fileTree.lastVertexIndex = vertexIndices.vertexIndex;
 		return fileIndex;
 	},
 
