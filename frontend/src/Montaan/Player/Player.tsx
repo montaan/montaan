@@ -16,18 +16,22 @@ import QFrameAPI from '../../lib/api';
 import utils from '../lib/utils';
 import { FSEntry } from '../lib/filesystem';
 
+let iframeID = 0;
+
 const PlayerCard = ({ url }: { url: string }) => {
-	var v = url;
-	var yt = v.match(
+	const v = url;
+	const yt = v.match(
 		/^(https?:\/\/)?(www\.)?(youtu\.be\/|youtube\.com\/watch(\/|\/?(\?v=)?))([a-zA-Z0-9_-]+)/
 	);
-	var vimeo = v.match(/^(https?:\/\/)?((www\.)?vimeo\.com)\/([a-zA-Z0-9_-]+)/);
-	var soundcloud = v.match(/^(https?:\/\/)?((www\.)?soundcloud\.com)\//);
-	var skfbly = v.match(/^(https?:\/\/)?skfb.ly\//);
+	const vimeo = v.match(/^(https?:\/\/)?((www\.)?vimeo\.com)\/([a-zA-Z0-9_-]+)/);
+	const soundCloud = v.match(/^(https?:\/\/)?((www\.)?soundcloud\.com)\//);
+	const sketchFab = v.match(/^(https?:\/\/)?skfb.ly\//);
+	const iframeTitle = 'player-card-' + (iframeID++).toString();
 	if (yt) {
 		return (
 			<div className={styles.card + ' ' + styles.youtube}>
 				<iframe
+					title={iframeTitle}
 					width="720"
 					height="480"
 					src={"http://www.youtube.com/embed/' + encodeURIComponent(yt[6]) + '?html5=1"}
@@ -40,6 +44,7 @@ const PlayerCard = ({ url }: { url: string }) => {
 		return (
 			<div className={styles.card + ' ' + styles.vimeo}>
 				<iframe
+					title={iframeTitle}
 					width="720"
 					height="480"
 					src={
@@ -51,16 +56,15 @@ const PlayerCard = ({ url }: { url: string }) => {
 			</div>
 		);
 	} else if (/^spotify:\S+$/.test(v) || /^http:\/\/open\.spotify\.com\/.+$/.test(v)) {
-		var urls = v.match(/spotify\.com\/(.+)$/);
-		if (urls) {
-			v = 'spotify:' + urls[1].replace(/\//g, ':');
-		}
+		const urls = v.match(/spotify\.com\/(.+)$/);
+		const sv = urls ? 'spotify:' + urls[1].replace(/\//g, ':') : v;
 		return (
 			<div className={styles.card + ' ' + styles.spotify}>
 				<iframe
+					title={iframeTitle}
 					src={
 						'https://open.spotify.com/embed/' +
-						v.replace(/^spotify:/, '').replace(/:/g, '/')
+						sv.replace(/^spotify:/, '').replace(/:/g, '/')
 					}
 					width="300"
 					height="380"
@@ -70,10 +74,11 @@ const PlayerCard = ({ url }: { url: string }) => {
 				></iframe>
 			</div>
 		);
-	} else if (soundcloud) {
+	} else if (soundCloud) {
 		return (
 			<div className={styles.card + ' ' + styles.soundcloud}>
 				<iframe
+					title={iframeTitle}
 					src={'https://w.soundcloud.com/player/?url=' + encodeURIComponent(v)}
 					width="320"
 					height="400"
@@ -82,10 +87,11 @@ const PlayerCard = ({ url }: { url: string }) => {
 				/>
 			</div>
 		);
-	} else if (skfbly) {
+	} else if (sketchFab) {
 		return (
-			<div className={styles.card + ' ' + styles.skfbly}>
+			<div className={styles.card + ' ' + styles.sketchFab}>
 				<iframe
+					title={iframeTitle}
 					src={v + '?autostart=0&transparent=0&autospin=0.2&controls=1'}
 					width="720"
 					height="480"
@@ -99,7 +105,7 @@ const PlayerCard = ({ url }: { url: string }) => {
 		if (/\.(png|gif|jpe?g|webp)$/.test(v)) {
 			return (
 				<div className={styles.card + ' ' + styles.image}>
-					<img src={v} />
+					<img alt={''} src={v} />
 				</div>
 			);
 		} else if (/\.(webm|mp4)$/.test(v)) {
@@ -117,7 +123,7 @@ const PlayerCard = ({ url }: { url: string }) => {
 		} else {
 			return (
 				<div className={styles.card + ' ' + styles.link}>
-					<a href={v} target="_blank">
+					<a href={v} target="_blank" rel="noopener noreferrer">
 						{v}
 					</a>
 				</div>

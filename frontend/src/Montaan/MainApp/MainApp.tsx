@@ -28,8 +28,8 @@ import Introduction from '../Introduction';
 
 export interface MainAppProps extends RouteComponentProps {
 	match: any;
-	userInfo: any;
-	api: any;
+	userInfo: UserInfo;
+	api: QFrameAPI;
 	apiPrefix: string;
 }
 
@@ -47,9 +47,15 @@ export interface SearchResult {
 	hitType: number;
 }
 
-export interface UserInfo {
+export class UserInfo {
 	name: string;
+	static mock: UserInfo;
+	constructor(name: string) {
+		this.name = name;
+	}
 }
+
+UserInfo.mock = new UserInfo('foo');
 
 export interface FileTree {
 	count: number;
@@ -501,7 +507,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 
 	searchTree(query: RegExp[], fileTree: FSEntry, results: any[], rawQueryRE: RegExp) {
 		if (
-			query.every(function (re) {
+			query.every(function(re) {
 				return re.test(fileTree.title);
 			})
 		) {
@@ -539,7 +545,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		if (rawQuery.length > 2) {
 			const rawQueryRE = new RegExp(
 				rawQuery.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&') +
-				'[a-zA-Z0-9_]*\\s*(\\([^)]*\\)\\s*\\{|=([^=]|$))'
+					'[a-zA-Z0-9_]*\\s*(\\([^)]*\\)\\s*\\{|=([^=]|$))'
 			);
 			var myNumber = ++searchQueryNumber;
 			var text = await this.props.api.post('/repo/search', {
@@ -599,7 +605,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 			const re = [];
 			try {
 				re[0] = new RegExp(searchQuery, 'i');
-			} catch (e) { }
+			} catch (e) {}
 			this.search(re, searchQuery);
 		}
 	}
@@ -729,9 +735,9 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 				)}
 				{this.state.repoError && <div id="repoError">{this.state.repoError}</div>}
 
-				{(this.state.repoPrefix === '' && this.state.repos.length === 0) &&
+				{this.state.repoPrefix === '' && this.state.repos.length === 0 && (
 					<Introduction userInfo={this.props.userInfo} />
-				}
+				)}
 
 				<RepoSelector repos={this.state.repos} createRepo={this.createRepo} />
 
@@ -819,30 +825,30 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 						requestDitchDirs={this.requestDitchDirs}
 					/>
 				) : (
-						<MainView
-							goToTarget={this.state.goToTarget}
-							navUrl={this.state.navUrl}
-							activeCommitData={this.state.activeCommitData}
-							diffsLoaded={this.state.diffsLoaded}
-							fileTree={this.state.fileTree}
-							commitData={this.state.commitData}
-							frameRequestTime={this.state.frameRequestTime}
-							api={this.props.api}
-							apiPrefix={this.props.apiPrefix}
-							repoPrefix={this.state.repoPrefix}
-							navigationTarget={this.state.navigationTarget}
-							searchLinesRequest={this.state.searchLinesRequest}
-							searchResults={this.state.searchResults}
-							searchQuery={this.state.searchQuery}
-							commitFilter={this.state.commitFilter}
-							addLinks={this.addLinks}
-							setLinks={this.setLinks}
-							links={this.state.links}
-							setNavigationTarget={this.setNavigationTarget}
-							requestDirs={this.requestDirs}
-							requestDitchDirs={this.requestDitchDirs}
-						/>
-					)}
+					<MainView
+						goToTarget={this.state.goToTarget}
+						navUrl={this.state.navUrl}
+						activeCommitData={this.state.activeCommitData}
+						diffsLoaded={this.state.diffsLoaded}
+						fileTree={this.state.fileTree}
+						commitData={this.state.commitData}
+						frameRequestTime={this.state.frameRequestTime}
+						api={this.props.api}
+						apiPrefix={this.props.apiPrefix}
+						repoPrefix={this.state.repoPrefix}
+						navigationTarget={this.state.navigationTarget}
+						searchLinesRequest={this.state.searchLinesRequest}
+						searchResults={this.state.searchResults}
+						searchQuery={this.state.searchQuery}
+						commitFilter={this.state.commitFilter}
+						addLinks={this.addLinks}
+						setLinks={this.setLinks}
+						links={this.state.links}
+						setNavigationTarget={this.setNavigationTarget}
+						requestDirs={this.requestDirs}
+						requestDitchDirs={this.requestDitchDirs}
+					/>
+				)}
 			</div>
 		);
 	}

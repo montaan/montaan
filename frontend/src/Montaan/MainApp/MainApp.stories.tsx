@@ -4,6 +4,8 @@ import { storiesOf } from '@storybook/react';
 import 'bootstrap/dist/css/bootstrap.css';
 
 import MainApp from './';
+import { UserInfo } from './MainApp';
+import QFrameAPI from '../../lib/api';
 
 storiesOf('Montaan/MainApp', module).add('MainApp', () => (
 	<div>
@@ -17,8 +19,8 @@ storiesOf('Montaan/MainApp', module).add('MainApp', () => (
 			<pre>
 				<code>{`export interface MainAppProps extends RouteComponentProps {
 	match: any;
-	userInfo: any;
-	api: any;
+	userInfo: UserInfo;
+	api: QFrameAPI;
 	apiPrefix: string;
 }`}</code>
 			</pre>
@@ -26,8 +28,8 @@ storiesOf('Montaan/MainApp', module).add('MainApp', () => (
 			<pre>
 				<code>{`export interface MainAppProps extends RouteComponentProps {
 	match: any;
-	userInfo: any;
-	api: any;
+	userInfo: UserInfo;
+	api: QFrameAPI;
 	apiPrefix: string;
 }
 export interface TreeLink {
@@ -41,9 +43,6 @@ export interface SearchResult {
 	line: number;
 	snippet?: string;
 	hitType: number;
-}
-export interface UserInfo {
-	name: string;
 }
 export interface FileTree {
 	count: number;
@@ -112,7 +111,7 @@ interface MainAppState {
 			</pre>
 		</div>
 		<Router>
-			<MainApp userInfo={{}} api={{}} apiPrefix="" />
+			<MainApp userInfo={UserInfo.mock} api={QFrameAPI.mock} apiPrefix="" />
 		</Router>
 	</div>
 ));

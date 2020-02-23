@@ -85,7 +85,8 @@ class App extends React.Component<AppProps, AppState> {
 
 	setAuthHeaders = (authHeaders: any, fetchUserInfo = true) => {
 		const { csrf } = authHeaders;
-		this.state.api.authHeaders = { csrf };
+		const api = this.state.api;
+		api.authHeaders = { csrf };
 		authHeaders = csrf ? { csrf } : {};
 		this.setState({ authHeaders });
 		if (fetchUserInfo) this.fetchUserInfo();

@@ -3,6 +3,8 @@ import { Client } from './quickgres-frontend';
 export type QFrameAPIResponseType = 'json' | 'text' | 'arrayBuffer' | 'raw';
 
 export class QFrameAPI {
+	static mock: QFrameAPI;
+
 	server: string;
 	authHeaders?: any;
 
@@ -46,14 +48,20 @@ export class QFrameAPI {
 	async getType(path: string, config: any, responseType: QFrameAPIResponseType) {
 		return this.parseResponse(await this.request(path, config), responseType);
 	}
-	async post(path: string, body: any, config?: object) {
+	async post(path: string, body?: any, config?: object) {
 		return this.parseResponse(
-			await this.request(path, { method: 'POST', body: JSON.stringify(body), ...config })
+			await this.request(path, {
+				method: 'POST',
+				body: body && JSON.stringify(body),
+				...config,
+			})
 		);
 	}
 	async get(path: string, config?: object) {
 		return this.parseResponse(await this.request(path, config));
 	}
 }
+
+QFrameAPI.mock = new QFrameAPI('/_');
 
 export default QFrameAPI;
