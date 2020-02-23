@@ -101,9 +101,9 @@ It should be about flexible rendering with an eye towards megascenes.
             [] Based on frustum
         [x] Lots of directories at a time
             [x] Batch fetch directories smaller than X
-    [] View re-parenting
-        [] Move camera instead of changing FOV
-        [] Change transformation matrices when containing object changes
+    [x] View re-parenting prototype
+        [x] Move camera instead of changing FOV
+        [x] Change transformation matrices  when containing object changes
     [] Dynamic commit loading
         [] 10k commits at a time
         [] Calendar data from server
@@ -114,16 +114,20 @@ It should be about flexible rendering with an eye towards megascenes.
         [] Save file positions in DB
         [] Load file positions from .layout
     [] Workflow to export file / dir models from Blender
-        [] Instanced rendering demo
+        [x] Instanced rendering demo
         [] Load demo models from GLB
         [] Add instancing & model loading to main app
         [] Load models based on directory scene file (e.g. add trees and other props)
         [] Palette editor for live editing of file type looks
+    [] Path tracer as renderer
+        - For easy instanced rendering of complex scenes
+        - For high visual quality
+        - Target machine is 3x 2080 Ti
 
 # Make a pleasant place
 
     [] Party
-    [] Theme music for tasks / parts of project
+    [x] Theme music for tasks / parts of project
         [x] Per-dir playlist URL
     [] Artwork
 
