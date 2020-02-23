@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# FIXME Port this to JS to benefit from JS tooling.
+
 NAME=$1
 TARGET=Montaan
 AUTHOR=$(echo `git config --get user.name` '<'`git config --get user.email`'>')
