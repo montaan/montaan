@@ -1,7 +1,7 @@
 #!/bin/bash
 
 NAME=$1
-TARGET=components
+TARGET=Montaan
 AUTHOR=$(echo `git config --get user.name` '<'`git config --get user.email`'>')
 
 if [ -z $1 ]
@@ -12,11 +12,11 @@ then
 	echo ""
 	echo "Examples:"
 	echo ""
-	echo "Create component MyComponent in src/components/"
+	echo "Create component MyComponent in src/Montaan/"
 	echo ""
 	echo "    makeComponent MyComponent"
 	echo "    OR"
-	echo "    makeComponent MyComponent components"
+	echo "    makeComponent MyComponent Montaan"
 	echo ""
 	echo "Create component Footer in src/containers/"
 	echo ""

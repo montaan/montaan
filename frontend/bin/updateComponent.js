@@ -3,7 +3,7 @@
 const fs = require('fs');
 const { execSync } = require('child_process');
 
-const target = process.argv[3] || 'components';
+const target = process.argv[3] || 'Montaan';
 const name = process.argv[2];
 
 console.log(`Parsing src/${target}/${name}/${name}.tsx`);
