@@ -70,8 +70,8 @@ import myImage from './assets/myImage.svg';
 ```tsx
 export interface MainAppProps extends RouteComponentProps {
 	match: any;
-	userInfo: any;
-	api: any;
+	userInfo: UserInfo;
+	api: QFrameAPI;
 	apiPrefix: string;
 }
 ```
@@ -81,8 +81,8 @@ export interface MainAppProps extends RouteComponentProps {
 ```tsx
 export interface MainAppProps extends RouteComponentProps {
 	match: any;
-	userInfo: any;
-	api: any;
+	userInfo: UserInfo;
+	api: QFrameAPI;
 	apiPrefix: string;
 }
 export interface TreeLink {
@@ -96,9 +96,6 @@ export interface SearchResult {
 	line: number;
 	snippet?: string;
 	hitType: number;
-}
-export interface UserInfo {
-	name: string;
 }
 export interface FileTree {
 	count: number;

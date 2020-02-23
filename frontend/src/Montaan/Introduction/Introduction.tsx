@@ -4,9 +4,10 @@ import React from 'react';
 import { withRouter, RouteComponentProps } from 'react-router-dom';
 
 import styles from './Introduction.module.scss';
+import { UserInfo } from '../MainApp';
 
 export interface IntroductionProps extends RouteComponentProps {
-	userInfo: any;
+	userInfo: UserInfo;
 }
 
 const Introduction = ({ userInfo }: IntroductionProps) => {

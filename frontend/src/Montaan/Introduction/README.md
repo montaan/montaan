@@ -53,4 +53,18 @@ import myImage from './assets/myImage.svg';
 
 ## API
 
-Anything here will be replaced by definitions pulled from the code.
+### Props
+
+```tsx
+export interface IntroductionProps extends RouteComponentProps {
+	userInfo: UserInfo;
+}
+```
+
+### Interfaces
+
+```tsx
+export interface IntroductionProps extends RouteComponentProps {
+	userInfo: UserInfo;
+}
+```
