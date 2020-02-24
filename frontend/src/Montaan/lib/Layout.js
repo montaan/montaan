@@ -303,24 +303,24 @@ export default {
 								(1 - dirScale) * fileTree.scale;
 							filesBox.scale = 2 * fileTree.scale * (0.8 / dirSquareSide) * dirScale;
 							filesBox.z = fileTree.z;
-						} else if (dirs.length >= 4 && dirs.length <= 6) {
-							x = 2;
-							y = 2;
+						} else if (dirs.length !== dirSquareSide * dirSquareSide - 1) {
+							y = x === dirSquareSide - 1 ? y + 2 : 2;
+							x = dirSquareSide - 1;
 							filesPerRow = 1;
 							fileSquareSide = Math.ceil(
 								Math.sqrt(Math.ceil(files.length / filesPerRow))
 							);
 							const yOff = 1 - (0.5 * y + 1) * (1 / dirSquareSide);
-							const xOff = 1.0 * x * (1 / dirSquareSide);
-							const subX = xOff - 0.1 / dirSquareSide;
-							const subY = yOff - 0.05 / dirSquareSide;
+							const xOff = 0.9 * x * (1 / dirSquareSide);
+							const subX = xOff + 0.1 / dirSquareSide;
+							const subY = yOff + 0.125 / dirSquareSide;
 							fileTree.filesBox = filesBox = {};
 							filesBox.x = fileTree.x + fileTree.scale * subX * dirScale;
 							filesBox.y =
 								fileTree.y +
 								fileTree.scale * subY * dirScale +
 								(1 - dirScale) * fileTree.scale;
-							filesBox.scale = 2 * fileTree.scale * (1 / dirSquareSide) * dirScale;
+							filesBox.scale = 2 * fileTree.scale * (0.9 / dirSquareSide) * dirScale;
 							filesBox.z = fileTree.z;
 						} else {
 							const yOff = 1 - (0.5 * y + 1) * (1 / dirSquareSide);

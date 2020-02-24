@@ -15,7 +15,7 @@ body {
 	color: rgb(33, 86, 43);
 }
 .imageDir {
-	color: rgb(33, 112, 165);
+	color: rgb(7, 58, 92);
 }
 .documentDir {
 	color: rgb(20, 54, 43);
@@ -30,7 +30,7 @@ body {
 	color: rgb(70, 23, 25);
 }
 .unknownDir {
-	color: rgb(10, 11, 12);
+	color: rgb(1, 9, 14);
 }
 .hiddenDir {
 	color: rgb(13, 13, 17);

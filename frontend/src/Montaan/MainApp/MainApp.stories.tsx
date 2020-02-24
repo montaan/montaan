@@ -98,6 +98,7 @@ interface MainAppState {
 	navUrl: string;
 	ref: string;
 	searchHover?: any;
+	treeLoaded: boolean;
 }`}</code>
 			</pre>
 

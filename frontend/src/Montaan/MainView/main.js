@@ -70,7 +70,7 @@ class Tabletree {
 		this.pageZoom = 1;
 		this.resAdjust = 1;
 		if (/Mac OS X/.test(navigator.userAgent)) {
-			if (window.screen.width !== 1280 && window.devicePixelRatio === 2) {
+			if (window.screen.width !== 1280 && window.devicePixelRatio >= 2) {
 				this.resAdjust = 1280 / window.screen.width;
 			}
 		}
@@ -510,12 +510,12 @@ class Tabletree {
 		scene.updateMatrixWorld();
 		var fsPoint = new THREE.Vector3(
 			fsEntry.x + fsEntry.scale * (fsEntry.entries ? 0.5 : 0.25),
-			fsEntry.y + fsEntry.scale * (fsEntry.entries ? 0.77 : 0.5),
+			fsEntry.y + fsEntry.scale * (fsEntry.entries ? 0.815 : 0.5),
 			fsEntry.z
 		);
 		fsPoint.applyMatrix4(model.matrixWorld);
 		camera.targetPosition.copy(fsPoint);
-		camera.targetFOV = fsEntry.scale * (fsEntry.entries ? 25 : 50);
+		camera.targetFOV = fsEntry.scale * (fsEntry.entries ? 23 : 50);
 		fsEntry.fov = camera.targetFOV;
 		this.changed = true;
 	};
