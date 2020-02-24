@@ -113,8 +113,8 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 		if (target.classList.contains('calendar-month') && target.parentElement) {
 			this.setDateFilter(
 				(target.parentElement.dataset.year || '') +
-					'-' +
-					this.pad2(target.dataset.month || '')
+				'-' +
+				this.pad2(target.dataset.month || '')
 			);
 		}
 	};
@@ -153,7 +153,7 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 
 		if (!el.parentElement) return;
 
-		el.parentElement.onscroll = function(ev) {
+		el.parentElement.onscroll = function (ev) {
 			if (!el.parentElement) return;
 			var bbox = el.parentElement.getBoundingClientRect();
 			var startIndex =
@@ -258,7 +258,7 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 					diffSpan
 				);
 			};
-			toggleDiffs.onmousedown = function(ev) {
+			toggleDiffs.onmousedown = function (ev) {
 				ev.preventDefault();
 				if (!toggleDiffs.parentElement) return;
 				toggleDiffs.parentElement.classList.toggle(styles['expanded-diffs']);
@@ -311,7 +311,7 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 			div.dataset.commitCount = authorCommitCounts[author].toString();
 			var nameSpan = span(styles['author-name'], author);
 			div.append(nameSpan);
-			div.onmousedown = function(ev) {
+			div.onmousedown = function (ev) {
 				ev.preventDefault();
 				if (self.props.commitFilter.author === author)
 					self.props.setCommitFilter({ ...self.props.commitFilter, author: undefined });
@@ -508,6 +508,7 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 					id="showFileCommits"
 					className={styles.showFileCommits}
 					onClick={this.onShowFileCommits}
+					data-filename={'frontend/' + __filename.replace(/\\/g, '/')}
 				>
 					Show commits
 				</Button>
@@ -518,6 +519,7 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 						' ' +
 						(this.state.visible ? styles.visible : styles.hidden)
 					}
+					data-filename={'frontend/' + __filename.replace(/\\/g, '/')}
 				>
 					<div className="close" onClick={this.hideCommitsPane}>
 						<FontAwesomeIcon icon={faTimes} />
@@ -573,8 +575,8 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 							<span className="message">
 								{this.props.commitData
 									? this.props.commitData.commitIndex[
-											this.props.fileContents.hash
-									  ].message.split('\n')[0]
+										this.props.fileContents.hash
+									].message.split('\n')[0]
 									: ''}
 							</span>
 						</h4>
@@ -600,15 +602,15 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 								}
 							/>
 						) : (
-							<Editor
-								editorDidMount={this.handleEditorDidMount}
-								options={
-									{
-										model: null,
-									} as editor.IEditorConstructionOptions
-								}
-							/>
-						)}
+								<Editor
+									editorDidMount={this.handleEditorDidMount}
+									options={
+										{
+											model: null,
+										} as editor.IEditorConstructionOptions
+									}
+								/>
+							)}
 					</div>
 				)}
 			</>

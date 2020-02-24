@@ -13,7 +13,7 @@ export default class CommitControls extends React.Component {
 
 	render() {
 		return (
-			<div id="commitControls" className={this.state.visible ? 'visible' : 'hidden'}>
+			<div id="commitControls" className={this.state.visible ? 'visible' : 'hidden'} data-filename={'frontend/' + __filename.replace(/\\/g, '/')} >
 				<div>
 					<input
 						id="commitSlider"

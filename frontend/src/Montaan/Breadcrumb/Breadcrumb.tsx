@@ -17,7 +17,7 @@ const BreadcrumbSegment = ({
 }) => {
 	const [open, setOpen] = useState(false);
 	return (
-		<li onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}>
+		<li onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)} data-filename={'frontend/' + __filename.replace(/\\/g, '/')} >
 			<Link to={path}>{segment}</Link>
 			{open && (
 				<ul>

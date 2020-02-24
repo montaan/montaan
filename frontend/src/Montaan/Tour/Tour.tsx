@@ -89,7 +89,7 @@ const Tour = ({ tourMarkdown, history, repoPrefix, name }: TourProps) => {
 	}, [history, position, tourSections]);
 
 	return (
-		<div className={styles.Tour}>
+		<div className={styles.Tour} data-filename={'frontend/' + __filename.replace(/\\/g, '/')} >
 			<div className={styles.TourControls}>
 				<Button variant="secondary" onClick={goToStart} disabled={position === 0}>
 					Restart

@@ -4,8 +4,6 @@ import React from 'react';
 import { withRouter, RouteComponentProps } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
 
-import * as THREE from 'three';
-
 import MainView from '../MainView';
 import CommitControls from '../CommitControls';
 import CommitInfo from '../CommitInfo';
@@ -23,7 +21,7 @@ import styles from './MainApp.module.scss';
 import TreeView from '../TreeView';
 import { QFrameAPI } from '../../lib/api';
 import Player from '../Player';
-import { FSEntry, createFSTree } from '../lib/filesystem/filesystem';
+import { FSEntry, createFSTree } from '../lib/filesystem';
 import Introduction from '../Introduction';
 
 export interface MainAppProps extends RouteComponentProps {
@@ -523,7 +521,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 
 	searchTree(query: RegExp[], fileTree: FSEntry, results: any[], rawQueryRE: RegExp) {
 		if (
-			query.every(function(re) {
+			query.every(function (re) {
 				return re.test(fileTree.title);
 			})
 		) {
@@ -561,7 +559,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		if (rawQuery.length > 2) {
 			const rawQueryRE = new RegExp(
 				rawQuery.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&') +
-					'[a-zA-Z0-9_]*\\s*(\\([^)]*\\)\\s*\\{|=([^=]|$))'
+				'[a-zA-Z0-9_]*\\s*(\\([^)]*\\)\\s*\\{|=([^=]|$))'
 			);
 			var myNumber = ++searchQueryNumber;
 			var text = await this.props.api.post('/repo/search', {
@@ -621,7 +619,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 			const re = [];
 			try {
 				re[0] = new RegExp(searchQuery, 'i');
-			} catch (e) {}
+			} catch (e) { }
 			this.search(re, searchQuery);
 		}
 	}
@@ -731,13 +729,25 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		this.setState({ treeLoaded: true });
 	};
 
+	goToSelf = (ev: React.MouseEvent) => {
+		let target: HTMLElement | null = ev.target as HTMLElement;
+		while (target) {
+			if (target.dataset.filename) {
+				this.props.history.push('/ilmari/montaan/' + target.dataset['filename'] + '#0');
+				ev.preventDefault();
+				return;
+			}
+			target = target.parentElement;
+		}
+	};
+
 	render() {
 		const titlePrefix = /Chrome/.test(navigator.userAgent) ? '' : '🏔 ';
 		const title = this.state.repoPrefix
 			? titlePrefix + this.state.repoPrefix.split('/')[1] + ' - Montaan'
 			: 'Montaan 🏔';
 		return (
-			<div id="mainApp" className={styles.MainApp}>
+			<div id="mainApp" className={styles.MainApp} data-filename={'frontend/' + __filename.replace(/\\/g, '/')} onContextMenu={this.goToSelf}>
 				<Helmet meta={[{ name: 'author', content: 'Montaan' }]}>
 					<link rel="canonical" href="https://montaan.com/" />
 					<meta name="description" content="Montaan." />
@@ -845,30 +855,30 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 						requestDitchDirs={this.requestDitchDirs}
 					/>
 				) : (
-					<MainView
-						navUrl={this.state.navUrl}
-						treeLoaded={this.onTreeLoaded}
-						activeCommitData={this.state.activeCommitData}
-						diffsLoaded={this.state.diffsLoaded}
-						fileTree={this.state.fileTree}
-						commitData={this.state.commitData}
-						frameRequestTime={this.state.frameRequestTime}
-						api={this.props.api}
-						apiPrefix={this.props.apiPrefix}
-						repoPrefix={this.state.repoPrefix}
-						navigationTarget={this.state.navigationTarget}
-						searchLinesRequest={this.state.searchLinesRequest}
-						searchResults={this.state.searchResults}
-						searchQuery={this.state.searchQuery}
-						commitFilter={this.state.commitFilter}
-						addLinks={this.addLinks}
-						setLinks={this.setLinks}
-						links={this.state.links}
-						setNavigationTarget={this.setNavigationTarget}
-						requestDirs={this.requestDirs}
-						requestDitchDirs={this.requestDitchDirs}
-					/>
-				)}
+						<MainView
+							navUrl={this.state.navUrl}
+							treeLoaded={this.onTreeLoaded}
+							activeCommitData={this.state.activeCommitData}
+							diffsLoaded={this.state.diffsLoaded}
+							fileTree={this.state.fileTree}
+							commitData={this.state.commitData}
+							frameRequestTime={this.state.frameRequestTime}
+							api={this.props.api}
+							apiPrefix={this.props.apiPrefix}
+							repoPrefix={this.state.repoPrefix}
+							navigationTarget={this.state.navigationTarget}
+							searchLinesRequest={this.state.searchLinesRequest}
+							searchResults={this.state.searchResults}
+							searchQuery={this.state.searchQuery}
+							commitFilter={this.state.commitFilter}
+							addLinks={this.addLinks}
+							setLinks={this.setLinks}
+							links={this.state.links}
+							setNavigationTarget={this.setNavigationTarget}
+							requestDirs={this.requestDirs}
+							requestDitchDirs={this.requestDitchDirs}
+						/>
+					)}
 			</div>
 		);
 	}

@@ -110,7 +110,7 @@ class RepoSelector extends Component<RepoSelectorProps, RepoSelectorState> {
 
 	render() {
 		return (
-			<div className={styles.RepoSelector}>
+			<div className={styles.RepoSelector} data-filename={'frontend/' + __filename.replace(/\\/g, '/')} >
 				<DropdownButton
 					id="repoDropdown"
 					alignRight
@@ -170,46 +170,46 @@ class RepoSelector extends Component<RepoSelectorProps, RepoSelectorState> {
 							isSubmitting,
 							/* and other goodies */
 						}) => (
-							<Form onSubmit={isSubmitting ? () => {} : handleSubmit}>
-								<FormGroupTextInput
-									label="Repo name"
-									control="name"
-									placeholder="Repo name"
-									values={values}
-									onChange={handleChange}
-									touched={touched}
-									onBlur={handleBlur}
-									errors={errors}
-								/>
-								<FormGroupTextInput
-									label="Import URL (optional)"
-									control="url"
-									placeholder="Import URL"
-									values={values}
-									onChange={handleChange}
-									touched={touched}
-									onBlur={handleBlur}
-									errors={errors}
-								/>
-								<Button
-									block
-									variant="primary"
-									type="submit"
-									disabled={isSubmitting}
-								>
-									Create Repo
+								<Form onSubmit={isSubmitting ? () => { } : handleSubmit}>
+									<FormGroupTextInput
+										label="Repo name"
+										control="name"
+										placeholder="Repo name"
+										values={values}
+										onChange={handleChange}
+										touched={touched}
+										onBlur={handleBlur}
+										errors={errors}
+									/>
+									<FormGroupTextInput
+										label="Import URL (optional)"
+										control="url"
+										placeholder="Import URL"
+										values={values}
+										onChange={handleChange}
+										touched={touched}
+										onBlur={handleBlur}
+										errors={errors}
+									/>
+									<Button
+										block
+										variant="primary"
+										type="submit"
+										disabled={isSubmitting}
+									>
+										Create Repo
 								</Button>
-								<Button
-									block
-									variant="secondary"
-									type="reset"
-									onClick={this.onCancel}
-									disabled={isSubmitting}
-								>
-									Cancel
+									<Button
+										block
+										variant="secondary"
+										type="reset"
+										onClick={this.onCancel}
+										disabled={isSubmitting}
+									>
+										Cancel
 								</Button>
-							</Form>
-						)}
+								</Form>
+							)}
 					</Formik>
 				)}
 			</div>

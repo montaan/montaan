@@ -69,7 +69,7 @@ const TourSelector = ({ fileTree, navigationTarget, api, repoPrefix }: TourSelec
 	const endTour = useCallback(() => setCurrentTour(EMPTY_TOUR), [setCurrentTour]);
 
 	return (
-		<div className={styles.TourSelector}>
+		<div className={styles.TourSelector} data-filename={'frontend/' + __filename.replace(/\\/g, '/')} >
 			{toursInTree.length > 0 && (
 				<DropdownButton id="tourDropdown" alignRight title="Tours" onSelect={onTourSelect}>
 					{toursInTree.length > 8 && (

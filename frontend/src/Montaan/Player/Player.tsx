@@ -189,7 +189,7 @@ const Player = ({ fileTree, navigationTarget, api }: PlayerProps) => {
 	const endPlaylist = useCallback(() => setCurrentPlaylist(EMPTY_PLAYLIST), [setCurrentPlaylist]);
 
 	return (
-		<div className={styles.Player}>
+		<div className={styles.Player} data-filename={'frontend/' + __filename.replace(/\\/g, '/')} >
 			{playlistsInTree.length > 0 && (
 				<DropdownButton
 					id="tourDropdown"

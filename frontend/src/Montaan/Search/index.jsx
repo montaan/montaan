@@ -28,7 +28,7 @@ class Search extends React.Component {
 		const li = document.createElement('li');
 		li.filename = result.filename;
 		li.hitType = result.hitType;
-        li.resultURL = result.filename + (line > 0 ? `#${line}` : '');
+		li.resultURL = result.filename + (line > 0 ? `#${line}` : '');
 
 		const title = document.createElement('div');
 		title.className = styles.searchTitle;
@@ -42,19 +42,19 @@ class Search extends React.Component {
 		li.result = result;
 		li.addEventListener(
 			'mouseover',
-			function(ev) { 
-                if (ev.target.parentNode === this) self.props.setSearchHover(this, this.resultURL);
+			function (ev) {
+				if (ev.target.parentNode === this) self.props.setSearchHover(this, this.resultURL);
 			},
 			false
 		);
 		li.addEventListener(
 			'mouseout',
-			function(ev) {
-                if (ev.target === this) self.props.clearSearchHover(this);
+			function (ev) {
+				if (ev.target === this) self.props.clearSearchHover(this);
 			},
 			false
 		);
-		li.onclick = function(ev) {
+		li.onclick = function (ev) {
 			if (ev.target.className === styles.collapseToggle) return;
 			ev.preventDefault();
 			ev.stopPropagation();
@@ -223,11 +223,13 @@ class Search extends React.Component {
 					placeholder="Search files"
 					value={this.props.searchQuery}
 					onChange={this.searchOnInput}
+					data-filename={'frontend/' + __filename.replace(/\\/g, '/')}
 				/>
 				<div
 					className={
 						styles.searchResults + (this.state.visible ? ' ' + styles.visible : '')
 					}
+					data-filename={'frontend/' + __filename.replace(/\\/g, '/')}
 				>
 					<div className="close" onClick={this.hideResults}>
 						<FontAwesomeIcon icon={faTimes} />

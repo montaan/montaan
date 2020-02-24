@@ -10,7 +10,7 @@ export interface NAMEProps extends RouteComponentProps {
 }
 
 const NAME = (props: NAMEProps) => {
-	return <div className={styles.NAME}></div>;
+	return <div className={styles.NAME} data-filename={'frontend/' + __filename.replace(/\\/g, '/')} ></div>;
 };
 
 export default withRouter(NAME);

@@ -1,5 +1,15 @@
-// const { override } = require('customize-cra');
+const { override, addWebpackModuleRule } = require('customize-cra');
 // const { addReactRefresh } = require('customize-cra-react-refresh');
 
-// /* config-overrides.js */
-// module.exports = override(addReactRefresh({ disableRefreshCheck: true }));
+const addWebpackNodeConfig = nodeConfig => config => {
+    config.node = { ...config.node, ...nodeConfig };
+    return config;
+};
+
+module.exports = override(
+    addWebpackNodeConfig({
+        __filename: true,
+        __dirname: true,
+    })
+    // addReactRefresh({ disableRefreshCheck: true })
+);

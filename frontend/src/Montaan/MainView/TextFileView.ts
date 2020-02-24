@@ -44,6 +44,7 @@ export default class TextFileView extends THREE.Mesh {
 	material: THREE.RawShaderMaterial;
 	geometry: ISDFTextGeometry;
 	requestFrame: any;
+	fullyVisible: boolean = false;
 
 	constructor(
 		fontTexture: THREE.Texture,
@@ -77,7 +78,7 @@ export default class TextFileView extends THREE.Mesh {
 		throw new Error('Method not implemented.');
 	}
 
-	ontick(t: number, dt: number): void {}
+	ontick(t: number, dt: number): void { }
 
 	async load(fullPath: string) {
 		let responseBuffer;
@@ -213,11 +214,12 @@ export default class TextFileView extends THREE.Mesh {
 			}
 			this.visible = true;
 			this.material.uniforms.opacity.value = 0;
-			this.ontick = function(t, dt) {
-				if (this.material.uniforms.opacity.value === 1) return;
+			this.ontick = function (t, dt) {
+				if (this.fullyVisible) return;
 				this.material.uniforms.opacity.value += dt / 1000 / 0.5;
 				if (this.material.uniforms.opacity.value > 1) {
 					this.material.uniforms.opacity.value = 1;
+					this.fullyVisible = true;
 				}
 				this.requestFrame();
 			};
@@ -380,11 +382,11 @@ export default class TextFileView extends THREE.Mesh {
 			while (palette.length < 8) {
 				palette.push(
 					palette[palette.length - 1] ||
-						new THREE.Vector3(
-							Colors.textColor.r,
-							Colors.textColor.g,
-							Colors.textColor.b
-						)
+					new THREE.Vector3(
+						Colors.textColor.r,
+						Colors.textColor.g,
+						Colors.textColor.b
+					)
 				);
 			}
 		}
