@@ -10,15 +10,23 @@ import * as serviceWorker from './serviceWorker';
 
 document.body.classList.add(/mobile/i.test(window.navigator.userAgent) ? 'mobile' : 'desktop');
 
-var firstPoint; // : MouseEventPoint | null;
 
-// declare global {
-// 	interface Window {
-// 		pageZoom?: number;
-// 	}
-// }
+declare global {
+	interface Window {
+		pageZoom?: number;
+	}
+}
 
-window.addEventListener('mousemove', function(event) {
+interface MouseEventPoint {
+	clientX: number;
+	clientY: number;
+	screenX: number;
+	screenY: number;
+}
+
+var firstPoint: MouseEventPoint | null;
+
+window.addEventListener('mousemove', function (event) {
 	if (!firstPoint) {
 		firstPoint = createPoint(event);
 	} else {
@@ -62,15 +70,8 @@ window.addEventListener('mousemove', function(event) {
 	}
 });
 
-// interface MouseEventPoint {
-// 	clientX: number;
-// 	clientY: number;
-// 	screenX: number;
-// 	screenY: number;
-// }
 
-function createPoint(event) {
-	// : MouseEvent): MouseEventPoint {
+function createPoint(event: MouseEvent): MouseEventPoint {
 	return {
 		clientX: event.clientX,
 		clientY: event.clientY,
@@ -79,14 +80,13 @@ function createPoint(event) {
 	};
 }
 
-function getDistance(x0, y0, x1, y1) {
-	//x0: number, y0: number, x1: number, y1: number) {
+function getDistance(x0: number, y0: number, x1: number, y1: number) {
 	var x = x0 - x1;
 	var y = y0 - y1;
 	return Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2));
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+(ReactDOM as any).createRoot(document.getElementById('root')).render(<App />);
 
 // If you want your app to work offline and load faster, you can change
 // unregister() to register() below. Note this comes with some pitfalls.
