@@ -1,11 +1,13 @@
 import { getPathEntry, getFullPath, getFSEntryForURL } from '../lib/filesystem';
 import Colors from '../lib/Colors.ts';
-import TextFileView from './TextFileView';
 import createText from '../lib/third_party/three-bmfont-text-modified';
 import SDFShader from '../lib/third_party/three-bmfont-text-modified/shaders/msdf';
 import Layout from '../lib/Layout';
 import utils from '../lib/utils';
 import Geometry from '../lib/Geometry';
+
+import TextFileView from './TextFileView';
+import ImageFileView from './ImageFileView';
 
 import fontDescription from './assets/fnt/Inconsolata-Regular.fnt';
 import fontSDF from './assets/fnt/Inconsolata-Regular.png';
@@ -714,37 +716,6 @@ class Tabletree {
 		return mesh;
 	}
 
-	loadImage(visibleFiles, fullPath, o) {
-		var obj3 = new THREE.Mesh();
-		obj3.visible = false;
-		obj3.fsEntry = o;
-		visibleFiles.visibleSet[fullPath] = true;
-		visibleFiles.add(obj3);
-		obj3.geometry = new THREE.PlaneBufferGeometry(1, 1);
-		obj3.scale.multiplyScalar(o.scale * 0.5);
-		obj3.position.set(o.x + o.scale * 0.25, o.y + o.scale * 0.5, o.z);
-		obj3.visible = false;
-		var img = new Image();
-		img.crossOrigin = 'anonymous';
-		img.src = this.apiPrefix + '/repo/file' + fullPath;
-		img.obj = obj3;
-		img.onload = function () {
-			if (this.obj.parent) {
-				var maxD = Math.max(this.width, this.height);
-				this.obj.scale.x *= this.width / maxD;
-				this.obj.scale.y *= this.height / maxD;
-				this.obj.material = new THREE.MeshBasicMaterial({
-					map: new THREE.Texture(this),
-					transparent: true,
-					depthTest: false,
-					depthWrite: false,
-				});
-				this.obj.material.map.needsUpdate = true;
-				this.obj.visible = true;
-			}
-		};
-	}
-
 	yield = () => {
 		if (this.frameStart > 0 && performance.now() - this.frameStart > 5) {
 			return new Promise((resolve, reject) => {
@@ -759,17 +730,31 @@ class Tabletree {
 		this.changed = true;
 	};
 
-	async loadTextFile(visibleFiles, fullPath, fsEntry) {
+	loadTextFile(visibleFiles, fullPath, fsEntry) {
 		if (fsEntry.size > 1e5) return;
 		fsEntry.contentObject = new TextFileView(
-			this.fontTexture,
 			fsEntry,
 			fullPath,
 			this.api,
 			this.yield,
 			this.requestFrame,
 			this.goToFSEntryTextAtLine,
-			this.goToFSEntryTextAtSearch
+			this.goToFSEntryTextAtSearch,
+			this.fontTexture
+		);
+		visibleFiles.visibleSet[fullPath] = true;
+		visibleFiles.add(fsEntry.contentObject);
+	}
+
+	loadImage(visibleFiles, fullPath, fsEntry) {
+		fsEntry.contentObject = new ImageFileView(fsEntry,
+			fullPath,
+			this.api,
+			this.yield,
+			this.requestFrame,
+			this.goToFSEntryTextAtLine,
+			this.goToFSEntryTextAtSearch,
+			this.fontTexture
 		);
 		visibleFiles.visibleSet[fullPath] = true;
 		visibleFiles.add(fsEntry.contentObject);

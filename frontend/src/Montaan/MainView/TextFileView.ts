@@ -47,14 +47,14 @@ export default class TextFileView extends THREE.Mesh {
 	fullyVisible: boolean = false;
 
 	constructor(
-		fontTexture: THREE.Texture,
 		fsEntry: FSEntry,
 		fullPath: string,
 		api: QFrameAPI,
 		yieldFn: any,
 		requestFrame: any,
 		goToLine: GoToLine,
-		goToSearch: GoToSearch
+		goToSearch: GoToSearch,
+		fontTexture: THREE.Texture,
 	) {
 		super();
 		this.visible = false;
@@ -66,9 +66,9 @@ export default class TextFileView extends THREE.Mesh {
 		this.material = emptyMaterial;
 		this.requestFrame = requestFrame;
 		this.geometry = emptyGeometry;
-		this.load(fullPath);
 		this.goToFSEntryTextAtLine = goToLine;
 		this.goToFSEntryTextAtSearch = goToSearch;
+		this.load(fullPath);
 	}
 
 	goToFSEntryTextAtLine(fsEntry: FSEntry, line: any) {
