@@ -383,7 +383,6 @@ class Tabletree {
 		if (needUpdate && lis.length <= verts.length / 3 / 4) {
 			for (var i = 0, l = lis.length; i < l; i++) {
 				var li = lis[i];
-				console.log('addScreenLine', i);
 				this.addScreenLine(
 					this.searchLine.geometry,
 					li.result.fsEntry,
@@ -397,7 +396,6 @@ class Tabletree {
 	}
 
 	clearSearchLine() {
-		console.log('resize searchLine from', this.previousSearchResults.length, 'to', this.searchResults.length);
 		var verts = this.searchLine.geometry.getAttribute('position').array;
 		for (var i = this.searchResults.length * 4 * 3; i < this.previousSearchResults.length * 4 * 3; i++) {
 			verts[i] = 0;
