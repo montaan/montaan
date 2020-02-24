@@ -23,6 +23,7 @@ import { QFrameAPI } from '../../lib/api';
 import Player from '../Player';
 import { FSEntry, createFSTree } from '../lib/filesystem';
 import Introduction from '../Introduction';
+import * as THREE from 'three';
 
 export interface MainAppProps extends RouteComponentProps {
 	match: any;
@@ -262,27 +263,27 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		this.setState({ processingCommits: false, commitData });
 		if (commitsOpen) this.setActiveCommits(commitData.commits);
 		this.setState({ navUrl: this.props.location.pathname + this.props.location.hash });
-		// try {
-		// 	const deps = (await this.props.api.getType(
-		// 		'/repo/fs/' + repoPrefix + '/deps.json',
-		// 		{},
-		// 		'json'
-		// 	)) as { modules: { source: string; dependencies: { resolved: string }[] }[] };
-		// 	const links: { src: FSEntry; dst: FSEntry; color: THREE.Color }[] = [];
-		// 	deps.modules.forEach(({ source, dependencies }, i) => {
-		// 		const src = getPathEntry(fileTree.tree, repoPrefix + '/' + source);
-		// 		if (!src) return;
-		// 		const color = new THREE.Color().setHSL((i / 7) % 1, 0.5, 0.6);
-		// 		dependencies.forEach(({ resolved }) => {
-		// 			const dst = getPathEntry(fileTree.tree, repoPrefix + '/' + resolved);
-		// 			if (!dst) return;
-		// 			links.push({ src, dst, color });
-		// 		});
-		// 	});
-		// 	this.setLinks(links);
-		// } catch (err) {
-		// 	/* No deps */
-		// }
+		try {
+			const deps = (await this.props.api.getType(
+				'/repo/fs/' + repoPrefix + '/deps.json',
+				{},
+				'json'
+			)) as { modules: { source: string; dependencies: { resolved: string }[] }[] };
+			const links: { src: FSEntry; dst: FSEntry; color: THREE.Color }[] = [];
+			deps.modules.forEach(({ source, dependencies }, i) => {
+				const src = getPathEntry(fileTree.tree, repoPrefix + '/' + source);
+				if (!src) return;
+				const color = new THREE.Color().setHSL((i / 7) % 1, 0.5, 0.6);
+				dependencies.forEach(({ resolved }) => {
+					const dst = getPathEntry(fileTree.tree, repoPrefix + '/' + resolved);
+					if (!dst) return;
+					links.push({ src, dst, color });
+				});
+			});
+			this.setLinks(links);
+		} catch (err) {
+			/* No deps */
+		}
 		// this.animateFileTreeHistory(commitData.commits, repoPrefix);
 	};
 
