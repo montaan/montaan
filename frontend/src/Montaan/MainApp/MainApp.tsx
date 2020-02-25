@@ -262,7 +262,12 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		console.timeEnd('parse commitObj');
 		this.setState({ processingCommits: false, commitData });
 		if (commitsOpen) this.setActiveCommits(commitData.commits);
-		this.setState({ navUrl: this.props.location.pathname + this.props.location.hash });
+		this.setState({
+			navUrl:
+				this.props.location.pathname +
+				this.props.location.search +
+				this.props.location.hash,
+		});
 		try {
 			const deps = (await this.props.api.getType(
 				'/repo/fs/' + repoPrefix + '/deps.json',
@@ -682,7 +687,12 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 			}
 		}
 		if (nextProps.location !== this.props.location) {
-			this.setState({ navUrl: nextProps.location.pathname + nextProps.location.hash });
+			this.setState({
+				navUrl:
+					nextProps.location.pathname +
+					nextProps.location.search +
+					nextProps.location.hash,
+			});
 		}
 
 		return true;
