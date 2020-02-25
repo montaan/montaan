@@ -58,7 +58,7 @@ import loadFont from 'load-bmfont';
 
 global.THREE = THREE;
 
-THREE.Object3D.prototype.tick = function (t, dt) {
+THREE.Object3D.prototype.tick = function(t, dt) {
 	if (this.ontick) this.ontick(t, dt);
 	for (var i = 0; i < this.children.length; i++) {
 		this.children[i].tick(t, dt);
@@ -276,7 +276,7 @@ class Tabletree {
 
 	highlightResults(results) {
 		var ca = this.model.geometry.attributes.color;
-		this.highlightedResults.forEach(function (highlighted) {
+		this.highlightedResults.forEach(function(highlighted) {
 			Geometry.setColor(
 				ca.array,
 				highlighted.fsEntry.index,
@@ -399,7 +399,11 @@ class Tabletree {
 
 	clearSearchLine() {
 		var verts = this.searchLine.geometry.getAttribute('position').array;
-		for (var i = this.searchResults.length * 4 * 3; i < this.previousSearchResults.length * 4 * 3; i++) {
+		for (
+			var i = this.searchResults.length * 4 * 3;
+			i < this.previousSearchResults.length * 4 * 3;
+			i++
+		) {
 			verts[i] = 0;
 		}
 		this.searchLine.geometry.getAttribute('position').needsUpdate = true;
@@ -596,7 +600,7 @@ class Tabletree {
 
 		var textGeo = await createText({ text: '', font: font, noBounds: true }, this.yield);
 		var vertCount = 0;
-		labels.traverse(function (c) {
+		labels.traverse(function(c) {
 			if (c.geometry) {
 				vertCount += c.geometry.attributes.position.array.length;
 			}
@@ -604,7 +608,7 @@ class Tabletree {
 		var parr = new Float32Array(vertCount);
 		var uarr = new Float32Array(vertCount / 2);
 		var j = 0;
-		labels.traverse(function (c) {
+		labels.traverse(function(c) {
 			if (c.geometry) {
 				parr.set(c.geometry.attributes.position.array, j);
 				uarr.set(c.geometry.attributes.uv.array, j / 2);
@@ -634,7 +638,7 @@ class Tabletree {
 		mesh.add(textMesh);
 		mesh.add(thumbnails);
 
-		mesh.ontick = function (t, dt) {
+		mesh.ontick = function(t, dt) {
 			// Dispose loaded files that are outside the current view
 			for (var i = 0; i < visibleFiles.children.length; i++) {
 				var c = visibleFiles.children[i];
@@ -747,7 +751,8 @@ class Tabletree {
 	}
 
 	loadImage(visibleFiles, fullPath, fsEntry) {
-		fsEntry.contentObject = new ImageFileView(fsEntry,
+		fsEntry.contentObject = new ImageFileView(
+			fsEntry,
 			fullPath,
 			this.api,
 			this.yield,
@@ -787,7 +792,7 @@ class Tabletree {
 
 		var bigGeo = await createText({ text: '', font: this.font, noBounds: true }, this.yield);
 		var vertCount = 0;
-		labels.traverse(function (c) {
+		labels.traverse(function(c) {
 			if (c.geometry) {
 				vertCount += c.geometry.attributes.position.array.length;
 			}
@@ -795,7 +800,7 @@ class Tabletree {
 		var parr = new Float32Array(vertCount);
 		var uarr = new Float32Array(vertCount / 2);
 		var j = 0;
-		labels.traverse(function (c) {
+		labels.traverse(function(c) {
 			if (c.geometry) {
 				parr.set(c.geometry.attributes.position.array, j);
 				uarr.set(c.geometry.attributes.uv.array, j / 2);
@@ -860,7 +865,7 @@ class Tabletree {
 		// }
 		if (this.model) {
 			this.model.parent.remove(this.model);
-			this.model.traverse(function (m) {
+			this.model.traverse(function(m) {
 				if (m.geometry) {
 					m.geometry.dispose();
 				}
@@ -899,7 +904,7 @@ class Tabletree {
 
 	textTick = (() => {
 		const self = this;
-		return function (t, dt) {
+		return function(t, dt) {
 			var m = this.children[0];
 			var visCount = 0;
 			if (this.isFirst) {
@@ -1588,7 +1593,7 @@ class Tabletree {
 
 		renderer.domElement.addEventListener(
 			'touchstart',
-			function (ev) {
+			function(ev) {
 				document.activeElement.blur();
 				ev.preventDefault();
 				if (ev.touches.length === 1) {
@@ -1610,7 +1615,7 @@ class Tabletree {
 
 		renderer.domElement.addEventListener(
 			'touchmove',
-			function (ev) {
+			function(ev) {
 				ev.preventDefault();
 				if (ev.touches.length === 1) {
 					if (!inGesture) {
@@ -1636,7 +1641,7 @@ class Tabletree {
 
 		renderer.domElement.addEventListener(
 			'touchend',
-			function (ev) {
+			function(ev) {
 				ev.preventDefault();
 				if (ev.touches.length === 0) {
 					if (!inGesture) {
@@ -1653,7 +1658,7 @@ class Tabletree {
 
 		renderer.domElement.addEventListener(
 			'touchcancel',
-			function (ev) {
+			function(ev) {
 				ev.preventDefault();
 				if (ev.touches.length === 0) {
 					if (!inGesture) {
@@ -1668,7 +1673,7 @@ class Tabletree {
 			false
 		);
 
-		window.onkeydown = function (ev) {
+		window.onkeydown = function(ev) {
 			if (!ev.target || ev.target.tagName !== 'INPUT') {
 				var factor = 0.0001;
 				var dx = 0,
@@ -1769,7 +1774,7 @@ class Tabletree {
 			}
 		};
 
-		renderer.domElement.onmousedown = function (ev) {
+		renderer.domElement.onmousedown = function(ev) {
 			document.activeElement.blur();
 			if (ev.preventDefault) ev.preventDefault();
 			down = true;
@@ -1778,7 +1783,7 @@ class Tabletree {
 			startY = previousY = ev.clientY;
 		};
 
-		window.onmousemove = function (ev, factor) {
+		window.onmousemove = function(ev, factor) {
 			if (down) {
 				if (!factor) {
 					factor = 0.0001;
@@ -1809,7 +1814,7 @@ class Tabletree {
 		var prevD = 0;
 		var wheelSnapTimer;
 		var wheelFreePan = false;
-		renderer.domElement.onwheel = function (ev) {
+		renderer.domElement.onwheel = function(ev) {
 			ev.preventDefault();
 
 			if (ev.ctrlKey) {
@@ -1833,7 +1838,7 @@ class Tabletree {
 				lastScroll = Date.now();
 			} else {
 				clearTimeout(wheelSnapTimer);
-				wheelSnapTimer = setTimeout(function () {
+				wheelSnapTimer = setTimeout(function() {
 					wheelFreePan = false;
 				}, 1000);
 
@@ -1857,11 +1862,11 @@ class Tabletree {
 		};
 
 		var gestureStartScale = 0;
-		window.addEventListener('gesturestart', function (e) {
+		window.addEventListener('gesturestart', function(e) {
 			e.preventDefault();
 			gestureStartScale = 1;
 		});
-		window.addEventListener('gesturechange', function (ev) {
+		window.addEventListener('gesturechange', function(ev) {
 			ev.preventDefault();
 			var cx = ((ev.clientX - window.innerWidth / 2) / window.innerWidth / 34) * camera.fov;
 			var cy = ((ev.clientY - window.innerHeight / 2) / window.innerHeight / 34) * camera.fov;
@@ -1869,12 +1874,12 @@ class Tabletree {
 			gestureStartScale = ev.scale;
 			self.zoomCamera(1 / d, cx, cy);
 		});
-		window.addEventListener('gestureend', function (e) {
+		window.addEventListener('gestureend', function(e) {
 			e.preventDefault();
 		});
 
 		this.highlighted = null;
-		window.onmouseup = function (ev) {
+		window.onmouseup = function(ev) {
 			if (down && ev.preventDefault) ev.preventDefault();
 			if (clickDisabled) {
 				down = false;
@@ -1886,19 +1891,19 @@ class Tabletree {
 			}
 		};
 
-		document.getElementById('playCommits').onclick = function (ev) {
+		document.getElementById('playCommits').onclick = function(ev) {
 			self.commitsPlaying = !self.commitsPlaying;
 			self.changed = true;
 		};
 
-		document.getElementById('commitSlider').oninput = function (ev) {
+		document.getElementById('commitSlider').oninput = function(ev) {
 			var v = parseInt(this.value);
 			if (self.activeCommits[v]) {
 				self.showCommit(self.activeCommits[v].sha);
 				self.changed = true;
 			}
 		};
-		document.getElementById('previousCommit').onclick = function (ev) {
+		document.getElementById('previousCommit').onclick = function(ev) {
 			var slider = document.getElementById('commitSlider');
 			var v = parseInt(slider.value) - 1;
 			if (self.activeCommits[v]) {
@@ -1906,7 +1911,7 @@ class Tabletree {
 				slider.oninput();
 			}
 		};
-		document.getElementById('nextCommit').onclick = function (ev) {
+		document.getElementById('nextCommit').onclick = function(ev) {
 			var slider = document.getElementById('commitSlider');
 			var v = parseInt(slider.value) + 1;
 			if (self.activeCommits[v]) {
@@ -1982,7 +1987,7 @@ class Tabletree {
 
 	set changed(v) {
 		this._changed = v;
-		this.requestFrame();
+		if (v) this.requestFrame();
 	}
 
 	requestFrame = () => {
