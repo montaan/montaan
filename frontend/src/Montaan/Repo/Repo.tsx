@@ -37,11 +37,11 @@ const Repo = ({ repo, renameRepo }: RepoProps) => {
 			</span>
 			{repo.processing && <span className={styles.repoProcessing}>[processing]</span>}
 			<span className={styles.repoUrl}>{repo.url}</span>
-			<Form onSubmit={rename}>
+			{/* <Form onSubmit={rename}>
 				<Form.Group>
 					<Form.Control onClick={stop} placeholder={'Rename'} />
 				</Form.Group>
-			</Form>
+			</Form> */}
 		</div>
 	);
 };
