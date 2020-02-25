@@ -245,6 +245,8 @@ export default {
 	) {
 		var dirs = [];
 		var files = [];
+		var dotDirs = [];
+		var dotFiles = [];
 		for (let i in fileTree.entries) {
 			const obj = fileTree.entries[i];
 			obj.x = 0;
@@ -252,9 +254,11 @@ export default {
 			obj.z = 0;
 			obj.scale = 0;
 			if (obj.entries === null) {
-				files.push(obj);
+				if (obj.name.startsWith('.')) dotFiles.push(obj);
+				else files.push(obj);
 			} else {
-				dirs.push(obj);
+				if (obj.name.startsWith('.')) dotDirs.push(obj);
+				else dirs.push(obj);
 			}
 		}
 
