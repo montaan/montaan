@@ -11,86 +11,33 @@ Montaan displays the git repo as an easy-to-understand 2D hierarchy, with folder
 
 ## Install
 
-If you have Docker, here's how you get a dev server running:
+The recommended way to develop and deploy the app is through Docker.
+
+If you don't want to use Docker, look below for [Manual installation](#Manual_installation) instructions.
+
+The next steps require Docker and `docker-compose`.
+
+### Development server
 
 ```bash
 yarn start-dev
 ```
 
-Now open [http://localhost:3000](http://localhost:3000) and once the frontend build finishes, you should see what's up.
+Open [http://localhost:3000](http://localhost:3000) and once the frontend build finishes, you should see what's up.
 
-The dev server mounts the local `backend` and `frontend` in the server containers, with file watchers. When you change backend or frontend files, the servers reload.
+The dev server mounts the local `backend` and `frontend` in server containers with file watchers. When you change backend or frontend files, the servers reload.
 
-To stop the server, run `yarn stop-dev`
+To stop the development server, run `yarn stop-dev`
 
-If you want to use a local PostgreSQL install or want to understand what's going on, here's a step-by-step guide.
-
-### Install dependencies
-
-First, install the dependencies.
-
-```bash
-yarn install-deps
-```
-
-### Set up database
-
-Set up the PostgreSQL database.
-
-```bash
-# Create user montaan. When prompted for password, type montaan
-createuser --superuser --password montaan
-# Create database.
-createdb -O montaan montaan
-# Update backend/.env if you used a different password
-```
-
-### Start server
-
-Finally, start the server.
-
-### Development
-
-Start server in development mode. Starts the backend server on port 8008 and the frontend Webpack development server on port 3000.
-
-```bash
-yarn watch
-```
-
-Open `http://localhost:3000/`
-
-You can also start the servers separately:
-
-#### Backend
-
-```bash
-cd backend
-yarn watch
-```
-
-#### Frontend
-
-```bash
-cd frontend
-yarn start
-```
-
-### Deployment
-
-Build the frontend for deployment and start the backend server.
-
-```bash
-yarn build
-yarn start
-```
-
-Open `http://localhost:8008`
-
-#### Docker deployment
+### Production
 
 ```bash
 yarn start-production
 ```
+
+Open [http://localhost:8888](http://localhost:8888).
+
+To stop the production server, run `yarn stop-production`
 
 ## Features
 
@@ -122,3 +69,68 @@ It's recommended to install the Code Spell Check VSCode plugin to maintain the t
 When writing functions, try to keep their domains as tight as possible. If the domain is tight enough, we can run an exhaustive test on the function and verify its operation and performance. For large domains, we do a partial domain exhaustive test and a random sampling of the rest of the domain. These tests are run as part of the in-editor lint runs, so you'll get immediate feedback on the any inputs that throw exceptions, and the performance of your function.
 
 If your code matches one of the earlier encountered shapes, we suggest auto-completion or optimized variants. This often saves a ton of time and converts O(n^2) nested loops into O(n lg n).
+
+## Manual installation
+
+### Production
+
+Build the frontend for deployment and start the backend server.
+
+```bash
+yarn build
+yarn start
+```
+
+Open `http://localhost:8008`
+
+### Development
+
+#### Install dependencies
+
+First, install the dependencies.
+
+```bash
+yarn install-deps
+```
+
+#### Set up database
+
+Set up the PostgreSQL database.
+
+```bash
+# Create user montaan. When prompted for password, type montaan
+createuser --superuser --password montaan
+# Create database.
+createdb -O montaan montaan
+# Update backend/.env if you used a different password
+```
+
+#### Start server
+
+Finally, start the servers. There's the backend API server and the frontend Create React App server.
+
+##### Development
+
+Start server in development mode. Starts the backend server on port 8008 and the frontend Webpack development server on port 3000.
+
+```bash
+yarn watch
+```
+
+Open `http://localhost:3000/`
+
+You can also start the servers separately:
+
+###### Backend
+
+```bash
+cd backend
+yarn watch
+```
+
+###### Frontend
+
+```bash
+cd frontend
+yarn start
+```
