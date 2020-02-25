@@ -1,27 +1,27 @@
 {
-    "name": "montaan",
-    "description": "Montaan is everything.",
-    "version": "0.0.0",
-    "directories": {
-        "doc": "docs"
-    },
-    "scripts": {
-        "install-deps": "cd backend && yarn && cd ../frontend && yarn",
-        "start-db": "docker-compose up -d",
-        "stop-db": "docker-compose down",
-        "watch": "(cd backend && yarn watch) & (cd frontend && yarn start)",
-        "build": "cd frontend && yarn build",
-        "start": "cd backend && yarn start",
-        "test": "(cd backend && yarn test); (cd frontend && yarn test)"
-    },
-    "repository": {
-        "type": "git",
-        "url": "git+https://github.com/kig/tabletree.git"
-    },
-    "author": "Ilmari Heikkinen <hei@heichen.hk>",
-    "license": "Apache-2.0",
-    "bugs": {
-        "url": "https://github.com/kig/tabletree/issues"
-    },
-    "homepage": "https://github.com/kig/tabletree#readme"
+	"name": "montaan",
+	"description": "Montaan is everything.",
+	"version": "0.0.0",
+	"directories": {
+		"doc": "docs"
+	},
+	"scripts": {
+		"install-deps": "cd backend && yarn && cd ../frontend && yarn",
+		"start-dev": "docker-compose up -d",
+		"stop-dev": "docker-compose down",
+		"watch": "(cd backend && yarn watch) & (cd frontend && yarn start)",
+		"build": "cd frontend && yarn build",
+		"start": "cd backend && yarn start",
+		"test": "(cd backend && yarn test); (cd frontend && yarn test)"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/kig/tabletree.git"
+	},
+	"author": "Ilmari Heikkinen <hei@heichen.hk>",
+	"license": "Apache-2.0",
+	"bugs": {
+		"url": "https://github.com/kig/tabletree/issues"
+	},
+	"homepage": "https://github.com/kig/tabletree#readme"
 }

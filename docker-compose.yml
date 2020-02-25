@@ -1,34 +1,33 @@
 # Use postgres/example user/password credentials
-version: "3.1"
+version: '3.1'
 
 services:
-  db:
-    image: postgres
-    ports:
-      - 54321:5432
-    volumes:
-      - ./database/pgdata:/var/lib/postgresql/data
-      - ./database/pgconf:/etc/postgresql
-      - ./database/pglog:/var/log/postgresql
-    restart: always
-    environment:
-      POSTGRES_USER: montaan
-      POSTGRES_PASSWORD: montaan
+    db:
+        image: postgres
+        volumes:
+            - ./database/pgdata:/var/lib/postgresql/data
+            - ./database/pgconf:/etc/postgresql
+            - ./database/pglog:/var/log/postgresql
+        restart: always
+        environment:
+            POSTGRES_USER: montaan
+            POSTGRES_PASSWORD: montaan
 
-  montaan:
-    image: node
-    working_dir: /montaan/backend
-    command: yarn watch
-    ports:
-      - 8008:8008
-    restart: always
-    depends_on:
-      - db
-    volumes:
-      - .:/montaan
+    montaan:
+        image: node
+        working_dir: /montaan
+        command: yarn watch
+        ports:
+            - 8008:8008
+            - 3000:3000
+        restart: always
+        depends_on:
+            - db
+        volumes:
+            - .:/montaan
 
-  adminer:
-    image: adminer
-    restart: always
-    ports:
-      - 8080:8080
+    adminer:
+        image: adminer
+        restart: always
+        ports:
+            - 8080:8080
