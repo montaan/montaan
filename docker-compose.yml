@@ -5,8 +5,6 @@ services:
         image: postgres
         volumes:
             - ./database/pgdata:/var/lib/postgresql/data
-            - ./database/pgconf:/etc/postgresql
-            - ./database/pglog:/var/log/postgresql
         restart: always
         environment:
             POSTGRES_USER: montaan
