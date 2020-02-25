@@ -19,6 +19,20 @@ storiesOf('Montaan/Repo', module).add('Repo', () => (
 			<p>The primary contact for Repo is {'Ilmari Heikkinen <hei@heichen.hk>'}.</p>
 
 			<h4>API</h4>
+			<h5>Props</h5>
+			<pre>
+				<code>{`export interface RepoProps extends RouteComponentProps {
+	repo: RepoInfo;
+	renameRepo(repo: RepoInfo, newName: string): Promise<void>;
+}`}</code>
+			</pre>
+			<h5>Interfaces</h5>
+			<pre>
+				<code>{`export interface RepoProps extends RouteComponentProps {
+	repo: RepoInfo;
+	renameRepo(repo: RepoInfo, newName: string): Promise<void>;
+}`}</code>
+			</pre>
 		</div>
 		<hr />
 		<Router>

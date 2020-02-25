@@ -90,7 +90,7 @@ interface MainAppState {
 	diffsLoaded: number;
 	fileContents: null | FileContents;
 	links: TreeLink[];
-	repos: Repo[];
+	repos: RepoInfo[];
 	repoError: any;
 	processing: boolean;
 	processingCommits: boolean;

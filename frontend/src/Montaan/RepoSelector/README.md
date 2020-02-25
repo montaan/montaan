@@ -82,24 +82,19 @@ import myImage from './assets/myImage.svg';
 
 ```tsx
 interface RepoSelectorProps extends RouteComponentProps {
-	repos: Repo[];
-	createRepo(name: string, url?: string): Promise<Repo>;
+	repos: RepoInfo[];
+	createRepo(name: string, url?: string): Promise<RepoInfo>;
+	renameRepo(repo: RepoInfo, newName: string): Promise<void>;
 }
 ```
 
 ### Interfaces
 
 ```tsx
-export interface Repo {
-	name: string;
-	branches: any[];
-	url: string;
-	owner: string;
-	processing: boolean;
-}
 interface RepoSelectorProps extends RouteComponentProps {
-	repos: Repo[];
-	createRepo(name: string, url?: string): Promise<Repo>;
+	repos: RepoInfo[];
+	createRepo(name: string, url?: string): Promise<RepoInfo>;
+	renameRepo(repo: RepoInfo, newName: string): Promise<void>;
 }
 interface RepoSelectorState {
 	showCreate: boolean;

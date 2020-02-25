@@ -53,4 +53,20 @@ import myImage from './assets/myImage.svg';
 
 ## API
 
-Anything here will be replaced by definitions pulled from the code.
+### Props
+
+```tsx
+export interface RepoProps extends RouteComponentProps {
+	repo: RepoInfo;
+	renameRepo(repo: RepoInfo, newName: string): Promise<void>;
+}
+```
+
+### Interfaces
+
+```tsx
+export interface RepoProps extends RouteComponentProps {
+	repo: RepoInfo;
+	renameRepo(repo: RepoInfo, newName: string): Promise<void>;
+}
+```

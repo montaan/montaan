@@ -20,22 +20,17 @@ storiesOf('Montaan/RepoSelector', module).add('RepoSelector', () => (
 			<h5>Props</h5>
 			<pre>
 				<code>{`interface RepoSelectorProps extends RouteComponentProps {
-	repos: Repo[];
-	createRepo(name: string, url?: string): Promise<Repo>;
+	repos: RepoInfo[];
+	createRepo(name: string, url?: string): Promise<RepoInfo>;
+	renameRepo(repo: RepoInfo, newName: string): Promise<void>;
 }`}</code>
 			</pre>
 			<h5>Interfaces</h5>
 			<pre>
-				<code>{`export interface Repo {
-	name: string;
-	branches: any[];
-	url: string;
-	owner: string;
-	processing: boolean;
-}
-interface RepoSelectorProps extends RouteComponentProps {
-	repos: Repo[];
-	createRepo(name: string, url?: string): Promise<Repo>;
+				<code>{`interface RepoSelectorProps extends RouteComponentProps {
+	repos: RepoInfo[];
+	createRepo(name: string, url?: string): Promise<RepoInfo>;
+	renameRepo(repo: RepoInfo, newName: string): Promise<void>;
 }
 interface RepoSelectorState {
 	showCreate: boolean;
