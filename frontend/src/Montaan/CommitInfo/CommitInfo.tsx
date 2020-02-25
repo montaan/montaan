@@ -113,8 +113,8 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 		if (target.classList.contains('calendar-month') && target.parentElement) {
 			this.setDateFilter(
 				(target.parentElement.dataset.year || '') +
-				'-' +
-				this.pad2(target.dataset.month || '')
+					'-' +
+					this.pad2(target.dataset.month || '')
 			);
 		}
 	};
@@ -153,7 +153,7 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 
 		if (!el.parentElement) return;
 
-		el.parentElement.onscroll = function (ev) {
+		el.parentElement.onscroll = function(ev) {
 			if (!el.parentElement) return;
 			var bbox = el.parentElement.getBoundingClientRect();
 			var startIndex =
@@ -258,7 +258,7 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 					diffSpan
 				);
 			};
-			toggleDiffs.onmousedown = function (ev) {
+			toggleDiffs.onmousedown = function(ev) {
 				ev.preventDefault();
 				if (!toggleDiffs.parentElement) return;
 				toggleDiffs.parentElement.classList.toggle(styles['expanded-diffs']);
@@ -306,12 +306,15 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 		var added50 = false,
 			added80 = false,
 			added95 = false;
-		authors.forEach((author) => {
-			var div = document.createElement('div');
+		let authorCount50 = 0,
+			authorCount80 = 0,
+			authorCount95 = 0;
+		authors.forEach((author, i) => {
+			const div = document.createElement('div');
 			div.dataset.commitCount = authorCommitCounts[author].toString();
-			var nameSpan = span(styles['author-name'], author);
+			const nameSpan = span(styles['author-name'], author);
 			div.append(nameSpan);
-			div.onmousedown = function (ev) {
+			div.onmousedown = function(ev) {
 				ev.preventDefault();
 				if (self.props.commitFilter.author === author)
 					self.props.setCommitFilter({ ...self.props.commitFilter, author: undefined });
@@ -322,16 +325,28 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 			if (authorSort === 'commits') {
 				if (runningCommitCount >= activeCommits.length * 0.95 && !added95) {
 					added50 = added80 = added95 = true;
+					authorCount95 = i + 1;
 					el.appendChild(span(styles.commits95Pct));
 				} else if (runningCommitCount >= activeCommits.length * 0.8 && !added80) {
 					added50 = added80 = true;
+					authorCount80 = i + 1;
 					el.appendChild(span(styles.commits80Pct));
 				} else if (runningCommitCount >= activeCommits.length * 0.5 && !added50) {
 					added50 = true;
+					authorCount50 = i + 1;
 					el.appendChild(span(styles.commits50Pct));
 				}
 			}
 		});
+		if (authorCount95 === 0) authorCount95 = authors.length;
+		if (authorCount80 === 0) authorCount80 = authorCount95;
+		if (authorCount50 === 0) authorCount50 = authorCount80;
+		el.dataset.pct50 =
+			(Math.round((authorCount50 / authors.length) * 1000) / 10).toString() + '%';
+		el.dataset.pct80 =
+			(Math.round((authorCount80 / authors.length) * 1000) / 10).toString() + '%';
+		el.dataset.pct95 =
+			(Math.round((authorCount95 / authors.length) * 1000) / 10).toString() + '%';
 	}
 
 	toggleVisible = (ev: MouseEvent) => {
@@ -575,8 +590,8 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 							<span className="message">
 								{this.props.commitData
 									? this.props.commitData.commitIndex[
-										this.props.fileContents.hash
-									].message.split('\n')[0]
+											this.props.fileContents.hash
+									  ].message.split('\n')[0]
 									: ''}
 							</span>
 						</h4>
@@ -602,15 +617,15 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 								}
 							/>
 						) : (
-								<Editor
-									editorDidMount={this.handleEditorDidMount}
-									options={
-										{
-											model: null,
-										} as editor.IEditorConstructionOptions
-									}
-								/>
-							)}
+							<Editor
+								editorDidMount={this.handleEditorDidMount}
+								options={
+									{
+										model: null,
+									} as editor.IEditorConstructionOptions
+								}
+							/>
+						)}
 					</div>
 				)}
 			</>
