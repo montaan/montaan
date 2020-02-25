@@ -17,18 +17,18 @@
 }
 
 .commits50Pct {
-    display: block;
-    border-bottom: 1px solid lime;
+	display: block;
+	border-bottom: 1px solid lime;
 }
 
 .commits80Pct {
-    display: block;
-    border-bottom: 1px solid orange;
+	display: block;
+	border-bottom: 1px solid orange;
 }
 
 .commits95Pct {
-    display: block;
-    border-bottom: 1px solid red;
+	display: block;
+	border-bottom: 1px solid red;
 }
 
 .showFileCommits {
@@ -61,7 +61,8 @@
 
 .authorList::before {
 	display: block;
-	content: attr(data-count) " authors";
+	content: attr(data-count) ' authors, ' attr(data-50pct) ' ' attr(data-80pct) ' '
+		attr(data-95pct);
 	font-size: 14px;
 	font-weight: bold;
 	margin-bottom: 8px;
@@ -69,16 +70,22 @@
 
 .commitList::before {
 	display: block;
-	content: attr(data-count) " commits";
+	content: attr(data-count) ' commits';
 	font-size: 14px;
 	font-weight: bold;
 	margin-bottom: 8px;
 }
 
-.authors .author-email:before { content: " <"; }
-.authors .author-email:after { content: ">"; }
+.authors .author-email:before {
+	content: ' <';
+}
+.authors .author-email:after {
+	content: '>';
+}
 
-.authorList div:after { content: " (" attr(data-commit-count) ")"; }
+.authorList div:after {
+	content: ' (' attr(data-commit-count) ')';
+}
 
 .activeCommits {
 	position: absolute;
@@ -137,7 +144,9 @@
 
 	transition: 0.3s;
 }
-.diffView:empty { width: 0px; }
+.diffView:empty {
+	width: 0px;
+}
 
 .fileView h4 {
 	font-size: 10px;
@@ -185,7 +194,7 @@
 }
 
 :global(.calendar-year):after {
-	content: attr(data-commit-count) " commits, " attr(data-author-count) " authors";
+	content: attr(data-commit-count) ' commits, ' attr(data-author-count) ' authors';
 	display: inline-block;
 	vertical-align: top;
 	font-size: 10px;
@@ -227,28 +236,59 @@
 	height: 2px;
 }
 
-:global(.calendar-day[data-day="1"]) { left: 0px; }
-:global(.calendar-day[data-day="2"]) { left: 3px; }
-:global(.calendar-day[data-day="3"]) { left: 6px; }
-:global(.calendar-day[data-day="4"]) { left: 9px; }
-:global(.calendar-day[data-day="5"]) { left: 12px; }
-:global(.calendar-day[data-day="6"]) { left: 15px; }
-:global(.calendar-day[data-day="0"]) { left: 18px; }
+:global(.calendar-day[data-day='1']) {
+	left: 0px;
+}
+:global(.calendar-day[data-day='2']) {
+	left: 3px;
+}
+:global(.calendar-day[data-day='3']) {
+	left: 6px;
+}
+:global(.calendar-day[data-day='4']) {
+	left: 9px;
+}
+:global(.calendar-day[data-day='5']) {
+	left: 12px;
+}
+:global(.calendar-day[data-day='6']) {
+	left: 15px;
+}
+:global(.calendar-day[data-day='0']) {
+	left: 18px;
+}
 
-:global(.calendar-day[data-week="0"]) { top: 0px; }
-:global(.calendar-day[data-week="1"]) { top: 3px; }
-:global(.calendar-day[data-week="2"]) { top: 6px; }
-:global(.calendar-day[data-week="3"]) { top: 9px; }
-:global(.calendar-day[data-week="4"]) { top: 12px; }
-:global(.calendar-day[data-week="5"]) { top: 15px; }
+:global(.calendar-day[data-week='0']) {
+	top: 0px;
+}
+:global(.calendar-day[data-week='1']) {
+	top: 3px;
+}
+:global(.calendar-day[data-week='2']) {
+	top: 6px;
+}
+:global(.calendar-day[data-week='3']) {
+	top: 9px;
+}
+:global(.calendar-day[data-week='4']) {
+	top: 12px;
+}
+:global(.calendar-day[data-week='5']) {
+	top: 15px;
+}
 
-:global(.calendar-day:not([data-commit-count="0"])) { background: red; }
-:global(.calendar-day[data-commit-count="1"]) { background: #62c43b; }
-:global(.calendar-day[data-commit-count="2"]) { background: #d860e6; }
+:global(.calendar-day:not([data-commit-count='0'])) {
+	background: red;
+}
+:global(.calendar-day[data-commit-count='1']) {
+	background: #62c43b;
+}
+:global(.calendar-day[data-commit-count='2']) {
+	background: #d860e6;
+}
 
 .commitList span,
-.diffView span
-{
+.diffView span {
 	display: block;
 	white-space: pre;
 }
@@ -259,20 +299,17 @@
 
 .commit-toggle,
 .commit-toggle-diffs,
-.commit-show-file
-{
+.commit-show-file {
 	font-weight: bold;
 	cursor: pointer;
 }
 
-.commit-hash, 
-.commit-diff
-{
+.commit-hash,
+.commit-diff {
 	transition: 0.3s;
 }
 
-.commitList .commits div:not(.expanded)
-{
+.commitList .commits div:not(.expanded) {
 	cursor: pointer;
 	width: 100%;
 	height: 30px;
@@ -280,16 +317,14 @@
 	white-space: nowrap;
 }
 
-div:not(.expanded) > .commit-hash, 
+div:not(.expanded) > .commit-hash,
 div:not(.expanded) > .commit-diff,
-div:not(.expanded) > .commit-toggle-diffs
-{
+div:not(.expanded) > .commit-toggle-diffs {
 	height: 0;
 	overflow: hidden;
 }
 
-div:not(.expanded) > .commit-message
-{
+div:not(.expanded) > .commit-message {
 	overflow: hidden;
 	font-weight: bold;
 	font-size: 12px;
@@ -300,8 +335,7 @@ div:not(.expanded) > .commit-message
 .commitList .commit-date,
 .commitList .commit-author,
 .diffView .commit-date,
-.diffView .commit-author
-{
+.diffView .commit-author {
 	display: inline-block;
 	white-space: nowrap;
 	text-overflow: ellipsis;
@@ -309,19 +343,17 @@ div:not(.expanded) > .commit-message
 }
 
 .commit-toggle:before,
-.commit-toggle-diffs:before
-{
-	content: "+ ";
+.commit-toggle-diffs:before {
+	content: '+ ';
 }
 
 div.expanded > .commit-toggle:before,
-div.expanded-diffs > .commit-toggle-diffs:before
-{
-	content: "- ";
+div.expanded-diffs > .commit-toggle-diffs:before {
+	content: '- ';
 }
 
 .commit-author:before {
-	content: "—";
+	content: '—';
 	margin-left: 4px;
 	margin-right: 4px;
 }
@@ -344,11 +376,11 @@ span.commit-diff {
 }
 .commit-diff :global(.add) {
 	background: rgba(158, 255, 179, 0.562);
-	color: rgb(0,40,0);
+	color: rgb(0, 40, 0);
 }
 .commit-diff :global(.sub) {
 	background: rgba(255, 158, 158, 0.562);
-	color: rgb(40,00,0);
+	color: rgb(40, 00, 0);
 }
 .commit-diff :global(.pos) {
 	background: rgba(158, 236, 255, 0.562);
@@ -375,8 +407,7 @@ span.commit-diff {
 }
 
 .commitList .commits > div:global(.collapsed),
-.authorList :global(.collapsed)
-{
+.authorList :global(.collapsed) {
 	height: 0px;
 	overflow: hidden;
 }
