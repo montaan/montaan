@@ -51,10 +51,10 @@ body {
 	color: rgb(7, 35, 43);
 }
 .documentFile {
-	color: rgb(8, 46, 56);
+	color: rgb(0, 0, 0);
 }
 .archiveFile {
-	color: rgb(18, 20, 26);
+	color: rgb(0, 0, 0);
 }
 .exeFile {
 	color: rgb(78, 28, 28);
@@ -69,7 +69,7 @@ body {
 	color: rgb(84, 86, 94);
 }
 .unknownFile {
-	color: rgb(33, 35, 43);
+	color: rgb(0, 0, 0);
 }
 
 .actionMFile {
