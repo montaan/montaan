@@ -52,10 +52,7 @@ class MainView extends React.Component<MainViewProps, {}> {
 			tabletree.updateSearchLines();
 		tabletree.updateLinks();
 		if (this.props.links !== nextProps.links) tabletree.setLinks(nextProps.links);
-		if (this.props.navUrl !== nextProps.navUrl) {
-			console.log(nextProps.navUrl);
-			tabletree.goToURL(nextProps.navUrl);
-		}
+		if (this.props.navUrl !== nextProps.navUrl) tabletree.goToURL(nextProps.navUrl);
 		if (this.props.frameRequestTime !== nextProps.frameRequestTime) tabletree.changed = true;
 		tabletree.history = nextProps.history;
 		return false;
