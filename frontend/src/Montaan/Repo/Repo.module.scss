@@ -1,0 +1,30 @@
+/* src/Montaan/Repo/Repo.module.css */
+@import '../../css/partials/variables';
+@import '../../css/partials/mixins';
+
+.Repo {
+	.repoOwner {
+		display: none;
+	}
+	.repoName {
+		font-size: 100%;
+	}
+	.repoCommits {
+		font-size: 80%;
+		&:before {
+			content: '(';
+		}
+		&:after {
+			content: ' commits)';
+		}
+		margin-left: 8px;
+	}
+	.repoProcessing {
+		font-size: 80%;
+		margin-left: 8px;
+	}
+	.repoUrl {
+		display: block;
+		font-size: 80%;
+	}
+}

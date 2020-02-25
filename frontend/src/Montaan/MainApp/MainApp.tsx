@@ -10,7 +10,7 @@ import CommitInfo from '../CommitInfo';
 import Search from '../Search';
 import TourSelector from '../TourSelector';
 import Breadcrumb from '../Breadcrumb';
-import RepoSelector, { Repo } from '../RepoSelector';
+import RepoSelector, { RepoInfo } from '../RepoSelector';
 
 import utils from '../lib/utils';
 import { parseCommits, CommitData, RawCommitData } from '../lib/parse_commits';
@@ -107,7 +107,7 @@ interface MainAppState {
 	diffsLoaded: number;
 	fileContents: null | FileContents;
 	links: TreeLink[];
-	repos: Repo[];
+	repos: RepoInfo[];
 	repoError: any;
 	processing: boolean;
 	processingCommits: boolean;
@@ -522,7 +522,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 
 	searchTree(query: RegExp[], fileTree: FSEntry, results: any[], rawQueryRE: RegExp) {
 		if (
-			query.every(function (re) {
+			query.every(function(re) {
 				return re.test(fileTree.title);
 			})
 		) {
@@ -560,7 +560,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		if (rawQuery.length > 2) {
 			const rawQueryRE = new RegExp(
 				rawQuery.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&') +
-				'[a-zA-Z0-9_]*\\s*(\\([^)]*\\)\\s*\\{|=([^=]|$))'
+					'[a-zA-Z0-9_]*\\s*(\\([^)]*\\)\\s*\\{|=([^=]|$))'
 			);
 			var myNumber = ++searchQueryNumber;
 			var text = await this.props.api.post('/repo/search', {
@@ -620,7 +620,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 			const re = [];
 			try {
 				re[0] = new RegExp(searchQuery, 'i');
-			} catch (e) { }
+			} catch (e) {}
 			this.search(re, searchQuery);
 		}
 	}
@@ -692,7 +692,24 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		if (!url) url = undefined;
 		const repo = await this.props.api.post('/repo/create', { name, url });
 		this.updateUserRepos(this.props.userInfo);
-		return repo as Repo;
+		return repo as RepoInfo;
+	};
+
+	renameRepo = async (repo: RepoInfo, newName: string) => {
+		const res = await this.props.api.post('/repo/rename', { name: repo.name, newName });
+		if (res === 'OK') {
+			this.updateUserRepos(this.props.userInfo);
+			if (this.props.userInfo.name + '/' + repo.name === this.state.repoPrefix) {
+				this.props.history.push(
+					this.props.location.pathname.replace(
+						this.state.repoPrefix,
+						this.props.userInfo.name + '/' + newName
+					) +
+						this.props.location.search +
+						this.props.location.hash
+				);
+			}
+		}
 	};
 
 	dots() {
@@ -748,7 +765,12 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 			? titlePrefix + this.state.repoPrefix.split('/')[1] + ' - Montaan'
 			: 'Montaan 🏔';
 		return (
-			<div id="mainApp" className={styles.MainApp} data-filename={'frontend/' + __filename.replace(/\\/g, '/')} onContextMenu={this.goToSelf}>
+			<div
+				id="mainApp"
+				className={styles.MainApp}
+				data-filename={'frontend/' + __filename.replace(/\\/g, '/')}
+				onContextMenu={this.goToSelf}
+			>
 				<Helmet meta={[{ name: 'author', content: 'Montaan' }]}>
 					<link rel="canonical" href="https://montaan.com/" />
 					<meta name="description" content="Montaan." />
@@ -770,7 +792,11 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 					<Introduction userInfo={this.props.userInfo} />
 				)}
 
-				<RepoSelector repos={this.state.repos} createRepo={this.createRepo} />
+				<RepoSelector
+					repos={this.state.repos}
+					createRepo={this.createRepo}
+					renameRepo={this.renameRepo}
+				/>
 
 				<Search
 					navigationTarget={this.state.navigationTarget}
@@ -856,30 +882,30 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 						requestDitchDirs={this.requestDitchDirs}
 					/>
 				) : (
-						<MainView
-							navUrl={this.state.navUrl}
-							treeLoaded={this.onTreeLoaded}
-							activeCommitData={this.state.activeCommitData}
-							diffsLoaded={this.state.diffsLoaded}
-							fileTree={this.state.fileTree}
-							commitData={this.state.commitData}
-							frameRequestTime={this.state.frameRequestTime}
-							api={this.props.api}
-							apiPrefix={this.props.apiPrefix}
-							repoPrefix={this.state.repoPrefix}
-							navigationTarget={this.state.navigationTarget}
-							searchLinesRequest={this.state.searchLinesRequest}
-							searchResults={this.state.searchResults}
-							searchQuery={this.state.searchQuery}
-							commitFilter={this.state.commitFilter}
-							addLinks={this.addLinks}
-							setLinks={this.setLinks}
-							links={this.state.links}
-							setNavigationTarget={this.setNavigationTarget}
-							requestDirs={this.requestDirs}
-							requestDitchDirs={this.requestDitchDirs}
-						/>
-					)}
+					<MainView
+						navUrl={this.state.navUrl}
+						treeLoaded={this.onTreeLoaded}
+						activeCommitData={this.state.activeCommitData}
+						diffsLoaded={this.state.diffsLoaded}
+						fileTree={this.state.fileTree}
+						commitData={this.state.commitData}
+						frameRequestTime={this.state.frameRequestTime}
+						api={this.props.api}
+						apiPrefix={this.props.apiPrefix}
+						repoPrefix={this.state.repoPrefix}
+						navigationTarget={this.state.navigationTarget}
+						searchLinesRequest={this.state.searchLinesRequest}
+						searchResults={this.state.searchResults}
+						searchQuery={this.state.searchQuery}
+						commitFilter={this.state.commitFilter}
+						addLinks={this.addLinks}
+						setLinks={this.setLinks}
+						links={this.state.links}
+						setNavigationTarget={this.setNavigationTarget}
+						requestDirs={this.requestDirs}
+						requestDitchDirs={this.requestDitchDirs}
+					/>
+				)}
 			</div>
 		);
 	}

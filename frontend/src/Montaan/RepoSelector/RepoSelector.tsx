@@ -15,23 +15,35 @@ import * as yup from 'yup';
 import FormGroupTextInput from '../../lib/FormGroupTextInput';
 
 import styles from './RepoSelector.module.scss';
+import Repo from '../Repo';
 
 const schema = yup.object({
 	name: yup.string().nullable(),
 	url: yup.string().nullable(),
 });
 
-export interface Repo {
+export class RepoInfo {
+	static mock: RepoInfo = new RepoInfo('my-repo', [['master', 1234]], 'url', 'bob', false);
+
 	name: string;
 	branches: any[];
 	url: string;
 	owner: string;
 	processing: boolean;
+
+	constructor(name: string, branches: any[], url: string, owner: string, processing: boolean) {
+		this.name = name;
+		this.branches = branches;
+		this.url = url;
+		this.owner = owner;
+		this.processing = processing;
+	}
 }
 
 interface RepoSelectorProps extends RouteComponentProps {
-	repos: Repo[];
-	createRepo(name: string, url?: string): Promise<Repo>;
+	repos: RepoInfo[];
+	createRepo(name: string, url?: string): Promise<RepoInfo>;
+	renameRepo(repo: RepoInfo, newName: string): Promise<void>;
 }
 
 interface RepoSelectorState {
@@ -44,7 +56,7 @@ interface RepoSelectorState {
 
 type SubmitValues = { name: string; url: string };
 type SetSubmitFunc = (value: boolean) => void;
-type RepoSorter = (a: Repo, b: Repo) => number;
+type RepoSorter = (a: RepoInfo, b: RepoInfo) => number;
 
 class RepoSelector extends Component<RepoSelectorProps, RepoSelectorState> {
 	constructor(props: RepoSelectorProps) {
@@ -93,10 +105,10 @@ class RepoSelector extends Component<RepoSelectorProps, RepoSelectorState> {
 		setSubmitting(false);
 	};
 
-	repoCmpName(a: Repo, b: Repo): number {
+	repoCmpName(a: RepoInfo, b: RepoInfo): number {
 		return a.name.localeCompare(b.name);
 	}
-	repoCmpCommitCount(a: Repo, b: Repo): number {
+	repoCmpCommitCount(a: RepoInfo, b: RepoInfo): number {
 		return b.branches[0][1] - a.branches[0][1];
 	}
 
@@ -106,11 +118,14 @@ class RepoSelector extends Component<RepoSelectorProps, RepoSelectorState> {
 	}
 
 	repoSearchOnChange = (ev: any) => this.setState({ search: ev.target.value });
-	repoFilter = (repo: Repo) => repo.name.includes(this.state.search);
+	repoFilter = (repo: RepoInfo) => repo.name.includes(this.state.search);
 
 	render() {
 		return (
-			<div className={styles.RepoSelector} data-filename={'frontend/' + __filename.replace(/\\/g, '/')} >
+			<div
+				className={styles.RepoSelector}
+				data-filename={'frontend/' + __filename.replace(/\\/g, '/')}
+			>
 				<DropdownButton
 					id="repoDropdown"
 					alignRight
@@ -139,17 +154,7 @@ class RepoSelector extends Component<RepoSelectorProps, RepoSelectorState> {
 										key={repo.owner + '/' + repo.name}
 										eventKey={'/' + repo.owner + '/' + repo.name}
 									>
-										<span className={styles.repoOwner}>{repo.owner}</span>
-										<span className={styles.repoName}>{repo.name}</span>
-										<span className={styles.repoCommits}>
-											{repo.branches.map((b) => b.join(' ')).join(', ')}
-										</span>
-										{repo.processing && (
-											<span className={styles.repoProcessing}>
-												[processing]
-											</span>
-										)}
-										<span className={styles.repoUrl}>{repo.url}</span>
+										<Repo repo={repo} renameRepo={this.props.renameRepo} />
 									</Dropdown.Item>
 								))}
 					</div>
@@ -170,46 +175,46 @@ class RepoSelector extends Component<RepoSelectorProps, RepoSelectorState> {
 							isSubmitting,
 							/* and other goodies */
 						}) => (
-								<Form onSubmit={isSubmitting ? () => { } : handleSubmit}>
-									<FormGroupTextInput
-										label="Repo name"
-										control="name"
-										placeholder="Repo name"
-										values={values}
-										onChange={handleChange}
-										touched={touched}
-										onBlur={handleBlur}
-										errors={errors}
-									/>
-									<FormGroupTextInput
-										label="Import URL (optional)"
-										control="url"
-										placeholder="Import URL"
-										values={values}
-										onChange={handleChange}
-										touched={touched}
-										onBlur={handleBlur}
-										errors={errors}
-									/>
-									<Button
-										block
-										variant="primary"
-										type="submit"
-										disabled={isSubmitting}
-									>
-										Create Repo
+							<Form onSubmit={isSubmitting ? () => {} : handleSubmit}>
+								<FormGroupTextInput
+									label="Repo name"
+									control="name"
+									placeholder="Repo name"
+									values={values}
+									onChange={handleChange}
+									touched={touched}
+									onBlur={handleBlur}
+									errors={errors}
+								/>
+								<FormGroupTextInput
+									label="Import URL (optional)"
+									control="url"
+									placeholder="Import URL"
+									values={values}
+									onChange={handleChange}
+									touched={touched}
+									onBlur={handleBlur}
+									errors={errors}
+								/>
+								<Button
+									block
+									variant="primary"
+									type="submit"
+									disabled={isSubmitting}
+								>
+									Create Repo
 								</Button>
-									<Button
-										block
-										variant="secondary"
-										type="reset"
-										onClick={this.onCancel}
-										disabled={isSubmitting}
-									>
-										Cancel
+								<Button
+									block
+									variant="secondary"
+									type="reset"
+									onClick={this.onCancel}
+									disabled={isSubmitting}
+								>
+									Cancel
 								</Button>
-								</Form>
-							)}
+							</Form>
+						)}
 					</Formik>
 				)}
 			</div>

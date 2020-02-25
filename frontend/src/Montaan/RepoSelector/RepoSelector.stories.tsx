@@ -71,6 +71,7 @@ interface RepoSelectorState {
 						})
 					)
 				}
+				renameRepo={async (a, b) => {}}
 			/>
 		</Router>
 	</div>

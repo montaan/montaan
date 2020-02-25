@@ -4,9 +4,11 @@ const ChildProcess = require('child_process');
 const Exec = ChildProcess.exec;
 const Mime = require('mime-types');
 
+const isRepoName = isRegExp(/^[a-zA-Z0-9._-]+$/);
+
 const repoDataShape = {
 	url: isMaybe(isURL),
-	name: isRegExp(/^[a-zA-Z0-9._-]+$/),
+	name: isRepoName,
 };
 
 function assertRepoFile(fsPath) {
@@ -35,6 +37,7 @@ module.exports = {
 	ChildProcess,
 	Exec,
 	Mime,
+	isRepoName,
 	repoDataShape,
 	assertRepoFile,
 	assertRepoDir,
