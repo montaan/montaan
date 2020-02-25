@@ -376,7 +376,7 @@ export default {
 					parentText,
 					vertexIndices.textVertexIndex,
 					yieldFn,
-					0.5
+					0.65
 				);
 				fileIndex = await this.createFileTreeQuads(
 					yieldFn,
