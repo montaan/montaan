@@ -22,7 +22,7 @@ services:
         depends_on:
             - db
         volumes:
-            - ./backend:/backend
+            - ./backend:/backend:cached
             - /backend/node_modules
 
     frontend:
@@ -35,7 +35,7 @@ services:
         depends_on:
             - backend
         volumes:
-            - ./frontend:/frontend
+            - ./frontend:/frontend:cached
             - /frontend/node_modules
 
     adminer:
