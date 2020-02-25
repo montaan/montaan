@@ -61,8 +61,8 @@
 
 .authorList::before {
 	display: block;
-	content: attr(data-count) ' authors, ' attr(data-50pct) ' ' attr(data-80pct) ' '
-		attr(data-95pct);
+	content: attr(data-count) ' authors, ' attr(data-pct50) ' ' attr(data-pct80) ' '
+		attr(data-pct95);
 	font-size: 14px;
 	font-weight: bold;
 	margin-bottom: 8px;
