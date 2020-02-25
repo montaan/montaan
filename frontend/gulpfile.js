@@ -1,38 +1,47 @@
 const gulp = require('gulp');
 const brotli = require('gulp-brotli');
 const gzip = require('gulp-gzip');
-const imageOptim = require('gulp-imageoptim');
+const imagemin = require('gulp-imagemin');
 
-gulp.task('imageOptim', () => {
-    let src  = "build/**/*.{jpg,png,gif,jpeg}",
-        dest = "build";
+const COMPRESS_IMAGES = 'build/**/*.{jpg,png,gif,jpeg}';
+const COMPRESS_FILES = 'build/**/*.{html,js,css,svg,json,webmanifest,ico,wasm}';
 
-    return gulp.src(src)
-        .pipe(imageOptim.optimize())
-        .pipe(gulp.dest(dest));
+gulp.task('imagemin', () => {
+	let src = COMPRESS_IMAGES,
+		dest = 'build';
+
+	return gulp
+		.src(src)
+		.pipe(imagemin())
+		.pipe(gulp.dest(dest));
 });
 
 gulp.task('brotli', () => {
-    let src  = "build/**/*.{html,js,css,svg,json,webmanifest,ico}",
-        dest = "build";
+	let src = COMPRESS_FILES,
+		dest = 'build';
 
-    return gulp.src(src)
-        .pipe(brotli.compress({
-            extension: "br",
-            quality: 11
-        }))
-        .pipe(gulp.dest(dest));
+	return gulp
+		.src(src)
+		.pipe(
+			brotli.compress({
+				extension: 'br',
+				quality: 11,
+			})
+		)
+		.pipe(gulp.dest(dest));
 });
 
 gulp.task('gzip', () => {
-    let src  = "build/**/*.{html,js,css,svg,json,webmanifest,ico}",
-        dest = "build";
+	let src = COMPRESS_FILES,
+		dest = 'build';
 
-    return gulp.src(src)
-        .pipe(gzip({
-            gzipOptions: { level: 9 },
-            extension: "gz"
-        }))
-        .pipe(gulp.dest(dest));
+	return gulp
+		.src(src)
+		.pipe(
+			gzip({
+				gzipOptions: { level: 9 },
+				extension: 'gz',
+			})
+		)
+		.pipe(gulp.dest(dest));
 });
-

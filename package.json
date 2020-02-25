@@ -1,14 +1,16 @@
 {
 	"name": "montaan",
-	"description": "Montaan is everything.",
-	"version": "0.0.0",
+	"description": "Montaan grows ever more.",
+	"version": "0.0.32",
 	"directories": {
 		"doc": "docs"
 	},
 	"scripts": {
 		"install-deps": "cd backend && yarn && cd ../frontend && yarn",
-		"start-dev": "docker-compose up -d",
-		"stop-dev": "docker-compose down",
+		"start-dev": "docker-compose -f docker-compose.yml -p montaan-dev up -d",
+		"stop-dev": "docker-compose -f docker-compose.yml -p montaan-dev down",
+		"start-production": "docker-compose -f docker-compose-production.yml -p montaan-production up -d",
+		"stop-production": "docker-compose -f docker-compose-production.yml -p montaan-production down",
 		"watch": "(cd backend && yarn watch) & (cd frontend && yarn start)",
 		"build": "cd frontend && yarn build",
 		"start": "cd backend && yarn start",

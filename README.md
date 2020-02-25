@@ -2,30 +2,26 @@
 
 Montaan is an in-browser git repo visualizer.
 
-- Understand a new project quickly (even old projects are new after a while - you forget how they work)
-- See who is working on what
-- See what is new and what has changed
-- See what is related to what
+-   Understand a new project quickly (even old projects are new after a while - you forget how they work)
+-   See who is working on what
+-   See what is new and what has changed
+-   See what is related to what
 
-Montaan displays the git repo as an easy-to-understand 2D hierarchy, with folders surrounding their contents. 
+Montaan displays the git repo as an easy-to-understand 2D hierarchy, with folders surrounding their contents.
 
 ## Install
 
 If you have Docker, here's how you get a dev server running:
 
 ```bash
-yarn install-deps
-yarn start-db
-
-# Start dev server:
-yarn watch
-# Opens http://localhost:3000/ automatically.
-
-# If you want to start a production build instead:
-yarn build
-yarn start
-# You need to open http://localhost:8008/
+yarn start-dev
 ```
+
+Now open [http://localhost:3000](http://localhost:3000) and once the frontend build finishes, you should see what's up.
+
+The dev server mounts the local `backend` and `frontend` in the server containers, with file watchers. When you change backend or frontend files, the servers reload.
+
+To stop the server, run `yarn stop-dev`
 
 If you want to use a local PostgreSQL install or want to understand what's going on, here's a step-by-step guide.
 
@@ -41,14 +37,6 @@ yarn install-deps
 
 Set up the PostgreSQL database.
 
-#### If you have Docker
-
-```bash
-yarn start-db
-```
-
-#### If you want to use a local PostgreSQL install
-
 ```bash
 # Create user montaan. When prompted for password, type montaan
 createuser --superuser --password montaan
@@ -58,6 +46,7 @@ createdb -O montaan montaan
 ```
 
 ### Start server
+
 Finally, start the server.
 
 ### Development
@@ -70,6 +59,22 @@ yarn watch
 
 Open `http://localhost:3000/`
 
+You can also start the servers separately:
+
+#### Backend
+
+```bash
+cd backend
+yarn watch
+```
+
+#### Frontend
+
+```bash
+cd frontend
+yarn start
+```
+
 ### Deployment
 
 Build the frontend for deployment and start the backend server.
@@ -81,6 +86,12 @@ yarn start
 
 Open `http://localhost:8008`
 
+#### Docker deployment
+
+```bash
+yarn start-production
+```
+
 ## Features
 
 Projects in supported languages (read: JavaScript & TypeScript) also have dependency graphs using depcruise to show the dependencies of source files.
@@ -88,7 +99,6 @@ Projects in supported languages (read: JavaScript & TypeScript) also have depend
 There's code search that splits the results into Definition, Documentation, Uses and Tests, making it quick to things in the tree. The search results are overlaid on top of the tree with little pins, making huge result sets navigable.
 
 To use https://www.montaan.com, you need Montaan Gems. You can get enough gems for a month of use by sending a PR with one commit. If your PR passes quick review and the Bors bot's CI run, your GitHub account is credited with Montaan Gems. If you commit more often, you can either save the gems or sell them on the market at the current prevailing price.
-
 
 ## Make it evolve
 
