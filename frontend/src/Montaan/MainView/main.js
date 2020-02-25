@@ -1522,7 +1522,9 @@ class Tabletree {
 
 	goToURL(url) {
 		if (!this.fileTree) return;
-		const { fsEntry, point, search } = getFSEntryForURL(this.fileTree, url);
+		const result = getFSEntryForURL(this.fileTree, url);
+		if (!result) return;
+		const { fsEntry, point, search } = result;
 		if (point && !isNaN(point[0])) this.goToFSEntryTextAtLine(fsEntry, point[0]);
 		else if (search) this.goToFSEntryTextAtSearch(fsEntry, search);
 		else this.goToFSEntry(fsEntry);
