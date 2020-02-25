@@ -250,18 +250,18 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		console.timeEnd('parse files');
 		const commitsOpen = this.state.activeCommitData !== null;
 		this.setState({ ...this.emptyState, processing: false, repoPrefix, fileTree });
-		console.time('load commitObj');
-		const commitObj = (await this.props.api.getType(
-			'/repo/fs/' + repoPrefix + '/log.json',
-			{},
-			'json'
-		)) as RawCommitData;
-		console.timeEnd('load commitObj');
-		console.time('parse commitObj');
-		const commitData = parseCommits(commitObj);
-		console.timeEnd('parse commitObj');
-		this.setState({ processingCommits: false, commitData });
-		if (commitsOpen) this.setActiveCommits(commitData.commits);
+		// console.time('load commitObj');
+		// const commitObj = (await this.props.api.getType(
+		// 	'/repo/fs/' + repoPrefix + '/log.json',
+		// 	{},
+		// 	'json'
+		// )) as RawCommitData;
+		// console.timeEnd('load commitObj');
+		// console.time('parse commitObj');
+		// const commitData = parseCommits(commitObj);
+		// console.timeEnd('parse commitObj');
+		// this.setState({ processingCommits: false, commitData });
+		// if (commitsOpen) this.setActiveCommits(commitData.commits);
 		this.setState({
 			navUrl:
 				this.props.location.pathname +
