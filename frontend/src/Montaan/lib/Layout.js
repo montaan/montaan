@@ -376,7 +376,7 @@ export default {
 					parentText,
 					vertexIndices.textVertexIndex,
 					yieldFn,
-					0.8
+					0.5
 				);
 				fileIndex = await this.createFileTreeQuads(
 					yieldFn,
@@ -475,7 +475,7 @@ export default {
 		var scale = Math.min(textScaleW, textScaleH);
 
 		text.position.x = obj.x + (obj.entries ? 0 : obj.scale * 0.02);
-		text.position.y = obj.y + (obj.entries ? obj.scale * 1.01 : obj.scale * 0.02);
+		text.position.y = obj.y + (obj.entries ? obj.scale * 1.02 : obj.scale * 0.02);
 		text.position.z = obj.z;
 		text.scale.multiplyScalar(xScale * obj.scale * 0.00436 * scale);
 		text.scale.y *= -1;
