@@ -23,7 +23,6 @@
 		"bootstrap": "^4.3.1",
 		"buffer": "^5.4.0",
 		"dompurify": "^2.0.8",
-		"enzyme": "^3.11.0",
 		"fast-check": "^1.22.1",
 		"flatten-vertex-data": "^1.0.2",
 		"formik": "^1.5.7",

@@ -14,4 +14,5 @@ test('renders without crashing', () => {
 		</Router>
 	);
 	expect(baseElement).toBeInTheDocument();
+	expect(baseElement.querySelector(`.${styles.NAME}`)).toBeDefined();
 });
