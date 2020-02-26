@@ -1,7 +1,21 @@
-Goals
+# Goals
 
+## Quality targets
 
-Understand & navigate contents
+    Total [300k commits]
+
+    World class:
+        - Collaboration system [120k]
+        - Structure vis [60k]
+        - Code understanding [50k]
+        - Art workflow [50k]
+
+    Successful:
+        - Content playback [5k]
+        - Content editing [5k]
+        - Repo activity vis [3k]
+
+## Understand & navigate contents
 
 [ ] Search file contents (either do server side or create compressed search index & send to client, fetch file to show search snippet)
 [ ] Show current path as breadcrumb (based on full coverage dirs & larger-than-x file at center of screen)
@@ -18,8 +32,7 @@ Understand & navigate contents
 [ ] Build inline text geometries in worker
 [ ] If need be, upload geometry & textures in chunks to maintain frame rate
 
-
-Visualize work done in the repo
+## Visualize work done in the repo
 
 [ ] Show authors for a file in file tree
 [ ] Show commits for a file in file tree
@@ -27,15 +40,13 @@ Visualize work done in the repo
 [ ] Show author tree next to commit tree
 [ ] Click author to highlight commits and files worked on by the author
 [ ] Click commit to highlight author and files in the commit
-[ ] Display dates in commit list, 2016-04-23_____ commit 1\n commit2\n commit3 -style
+[ ] Display dates in commit list, 2016-04-23**\_** commit 1\n commit2\n commit3 -style
 
-
-Third-party integration
+## Third-party integration
 
 [ ] Link from inline text to GitHub line number
 
-
-Make cooperation as easy as possible
+## Make cooperation as easy as possible
 
 [ ] Structure code in an understandable, easy to work with fashion
 [ ] Tests for layout algos and whatever that can be nailed down
@@ -43,5 +54,3 @@ Make cooperation as easy as possible
 [ ] Readme with usage docs
 [ ] Script to create/update repo visualization files (clone/pull repo, list files, get commit log, build file-commit index, build search index)
 [ ] Make a simple API to supply & stream structures (like, imagine this is an HTML file and you're pushing in SimCity buildings)
-
-

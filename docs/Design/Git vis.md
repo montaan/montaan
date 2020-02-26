@@ -1,9 +1,6 @@
-Source tree vis
-===
+# Source tree vis
 
-
-Git vis
----
+## Git vis
 
 1. Display git repo source tree at given revision
 2. Display commits, grouped & sorted by date, or grouped by author
@@ -11,24 +8,18 @@ Git vis
 4. Draw lines from people to commits & files
 5. Draw lines from issues to people & commits & files
 
-
-Dependency vis
----
+## Dependency vis
 
 1. Analyze requires / includes to draw dependency lines from one file to another
 2. Highlight unused requires (no symbols from dep used)
 
-
-Test vis
----
+## Test vis
 
 1. Color tests green / red based on test passing status
 2. Show test coverage by file
 3. Draw lines from tests to files & coverage
 
-
-Git vis UI model
----
+## Git vis UI model
 
 The two main ways to show an object are highlighting it in the tree and bringing it to fore.
 Highlighting displays the object in context but requires navigation to view object details.
@@ -44,3 +35,10 @@ Commits that modified the file
 Diffs that created the file
 Timeline of the file
 Dependencies of the file
+
+## Code vis
+
+Use https://github.com/microsoft/TypeScript/wiki/Using-the-Compiler-API to generate a fully resolved AST of codebase, visualize it and make it navigable.
+Combine with type-based test generators, auto-perf, V8 emitted code, code coverage, inline editor, live feed of git commits to repo & package updates across all the deps, LM for generating docs from source, LM for suggesting high-quality replacements for AST subtrees + auto-replacement if tests pass / proven functional equivalence.
+
+Live view of the codebase. Live perf of codebase. Live tests update as you write. Live docs update as you write. Live deploy as you write.
