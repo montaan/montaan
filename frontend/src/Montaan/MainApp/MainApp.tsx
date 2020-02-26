@@ -32,11 +32,15 @@ export interface MainAppProps extends RouteComponentProps {
 	apiPrefix: string;
 }
 
+export type TreeLinkKey = Element | FSEntry | string;
+
 export interface TreeLink {
-	src: Element | FSEntry | string;
-	dst: Element | FSEntry | string;
+	src: TreeLinkKey;
+	dst: TreeLinkKey;
 	color: { r: number; g: number; b: number };
 }
+
+type TreeLinkIndex = Map<TreeLinkKey, TreeLink[]>;
 
 export interface SearchResult {
 	fsEntry: FSEntry;
@@ -107,6 +111,9 @@ interface MainAppState {
 	diffsLoaded: number;
 	fileContents: null | FileContents;
 	links: TreeLink[];
+	dependencies: TreeLink[];
+	dependencySrcIndex: TreeLinkIndex;
+	dependencyDstIndex: TreeLinkIndex;
 	repos: RepoInfo[];
 	repoError: any;
 	processing: boolean;
@@ -158,6 +165,9 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		diffsLoaded: 0,
 		fileContents: null,
 		links: [],
+		dependencies: [],
+		dependencySrcIndex: new Map<TreeLinkKey, TreeLink[]>(),
+		dependencyDstIndex: new Map<TreeLinkKey, TreeLink[]>(),
 		processingCommits: true,
 		processing: true,
 		repoError: '',
@@ -239,7 +249,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 				repo: repoPrefix,
 				hash: ref,
 				paths: [''],
-				recursive: true,
+				recursive: false,
 			},
 			{},
 			'arrayBuffer'
@@ -268,28 +278,55 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 				this.props.location.search +
 				this.props.location.hash,
 		});
-		// try {
-		// 	const deps = (await this.props.api.getType(
-		// 		'/repo/fs/' + repoPrefix + '/deps.json',
-		// 		{},
-		// 		'json'
-		// 	)) as { modules: { source: string; dependencies: { resolved: string }[] }[] };
-		// 	const links: { src: FSEntry; dst: FSEntry; color: THREE.Color }[] = [];
-		// 	deps.modules.forEach(({ source, dependencies }, i) => {
-		// 		const src = getPathEntry(fileTree.tree, repoPrefix + '/' + source);
-		// 		if (!src) return;
-		// 		const color = new THREE.Color().setHSL((i / 7) % 1, 0.5, 0.6);
-		// 		dependencies.forEach(({ resolved }) => {
-		// 			const dst = getPathEntry(fileTree.tree, repoPrefix + '/' + resolved);
-		// 			if (!dst) return;
-		// 			links.push({ src, dst, color });
-		// 		});
-		// 	});
-		// 	this.setLinks(links);
-		// } catch (err) {
-		// 	/* No deps */
-		// }
+		try {
+			const deps = (await this.props.api.getType(
+				'/repo/fs/' + repoPrefix + '/deps.json',
+				{},
+				'json'
+			)) as { modules: { source: string; dependencies: { resolved: string }[] }[] };
+			const links: TreeLink[] = [];
+			deps.modules.forEach(({ source, dependencies }, i) => {
+				const src = '/' + repoPrefix + '/' + source;
+				const color = new THREE.Color().setHSL((i / 7) % 1, 0.5, 0.6);
+				dependencies.forEach(({ resolved }) => {
+					const dst = '/' + repoPrefix + '/' + resolved;
+					links.push({ src, dst, color });
+				});
+			});
+			const srcIndex = new Map<TreeLinkKey, TreeLink[]>();
+			const dstIndex = new Map<TreeLinkKey, TreeLink[]>();
+			links.forEach((link) => {
+				const { src, dst } = link;
+				if (!srcIndex.has(src)) srcIndex.set(src, []);
+				srcIndex.get(src)?.push(link);
+				if (!dstIndex.has(dst)) dstIndex.set(dst, []);
+				dstIndex.get(dst)?.push(link);
+			});
+			this.setState({
+				dependencies: links,
+				dependencySrcIndex: srcIndex,
+				dependencyDstIndex: dstIndex,
+			});
+		} catch (err) {
+			/* No deps */
+		}
 		// this.animateFileTreeHistory(commitData.commits, repoPrefix);
+	};
+
+	showAllDependencies = () => {
+		this.setLinks(this.state.dependencies);
+	};
+
+	showFileDependencies = (path: string) => {
+		this.setLinks(this.state.dependencies.filter(({ src }) => src === path));
+	};
+
+	showFileUsers = (path: string) => {
+		this.setLinks(this.state.dependencies.filter(({ dst }) => dst === path));
+	};
+
+	showFileDependencyGraph = (path: string) => {
+		// Traverse graph from path and set connected part as links
 	};
 
 	// animateRandomLinks(fileTree, files, repoPrefix) {

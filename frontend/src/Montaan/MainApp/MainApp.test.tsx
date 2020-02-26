@@ -6,11 +6,13 @@ import { render } from '@testing-library/react';
 import MainApp from './';
 
 import styles from './MainApp.module.scss';
+import { UserInfo } from './MainApp';
+import QFrameAPI from '../../lib/api';
 
 test('renders without crashing', () => {
 	const { baseElement } = render(
 		<Router>
-			<MainApp userInfo={{}} api={{}} apiPrefix="" />
+			<MainApp userInfo={UserInfo.mock} api={QFrameAPI.mock} apiPrefix="" />
 		</Router>
 	);
 	expect(baseElement).toBeInTheDocument();

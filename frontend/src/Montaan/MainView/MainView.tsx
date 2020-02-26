@@ -42,10 +42,6 @@ class MainView extends React.Component<MainViewProps, {}> {
 		if (this.props.fileTree !== nextProps.fileTree) {
 			tabletree.setFileTree(nextProps.fileTree).then(() => this.props.treeLoaded());
 		}
-		if (this.props.commitData !== nextProps.commitData)
-			tabletree.setCommitData(nextProps.commitData);
-		if (this.props.activeCommitData !== nextProps.activeCommitData)
-			tabletree.setActiveCommits(nextProps.activeCommitData);
 		if (this.props.searchResults !== nextProps.searchResults)
 			tabletree.setSearchResults(nextProps.searchResults);
 		if (this.props.searchLinesRequest !== nextProps.searchLinesRequest)

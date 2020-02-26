@@ -28,15 +28,13 @@ interface ISDFTextGeometry extends THREE.BufferGeometry {
 	};
 }
 
-type GoToLine = (fsEntry: FSEntry, line: number) => void;
-type GoToSearch = (fsEntry: FSEntry, search: string) => void;
-
 const emptyMaterial = new THREE.RawShaderMaterial();
 const emptyGeometry = (new SDFTextGeometry() as unknown) as ISDFTextGeometry;
 
 export default class TextFileView extends THREE.Mesh {
 	MAX_SIZE = 1e5;
 	fsEntry: FSEntry;
+	model: THREE.Mesh;
 	api: QFrameAPI;
 	yield: any;
 	path: string;
@@ -45,20 +43,21 @@ export default class TextFileView extends THREE.Mesh {
 	geometry: ISDFTextGeometry;
 	requestFrame: any;
 	fullyVisible: boolean = false;
+	loadListeners: (() => void)[];
 
 	constructor(
 		fsEntry: FSEntry,
+		model: THREE.Mesh,
 		fullPath: string,
 		api: QFrameAPI,
 		yieldFn: any,
 		requestFrame: any,
-		goToLine: GoToLine,
-		goToSearch: GoToSearch,
-		fontTexture: THREE.Texture,
+		fontTexture: THREE.Texture
 	) {
 		super();
 		this.visible = false;
 		this.fsEntry = fsEntry;
+		this.model = model;
 		this.api = api;
 		this.yield = yieldFn;
 		this.path = fullPath;
@@ -66,28 +65,71 @@ export default class TextFileView extends THREE.Mesh {
 		this.material = emptyMaterial;
 		this.requestFrame = requestFrame;
 		this.geometry = emptyGeometry;
-		this.goToFSEntryTextAtLine = goToLine;
-		this.goToFSEntryTextAtSearch = goToSearch;
-		this.load(fullPath);
+		this.loadListeners = [];
 	}
 
-	goToFSEntryTextAtLine(fsEntry: FSEntry, line: any) {
-		throw new Error('Method not implemented.');
-	}
-	goToFSEntryTextAtSearch(fsEntry: FSEntry, search: any) {
-		throw new Error('Method not implemented.');
+	goToCoords(coords: number[]) {
+		if (this.fsEntry.textHeight !== undefined) return this.__goToCoords(coords);
+		else
+			return new Promise((resolve, reject) => {
+				this.loadListeners.push(() => resolve(this.__goToCoords(coords)));
+			});
 	}
 
-	ontick(t: number, dt: number): void { }
+	goToSearch(search: string) {
+		if (this.fsEntry.textHeight !== undefined) return this.__goToSearch(search);
+		else
+			return new Promise((resolve, reject) => {
+				this.loadListeners.push(() => resolve(this.__goToSearch(search)));
+			});
+	}
 
-	async load(fullPath: string) {
+	__goToCoords(coords: number[]) {
+		const fsEntry = this.fsEntry;
+		if (!fsEntry.textHeight) return false;
+		const model = this.model;
+		const line = coords[0];
+		// if (line > 0) this.setGoToHighlight(fsEntry, line);
+		const textYOff =
+			line === 0
+				? (fsEntry.scale * fsEntry.textScale * window.innerHeight) /
+				  ((window.pageZoom || 100) / 100)
+				: ((line + 0.5) / fsEntry.lineCount) * fsEntry.textHeight;
+		let textX = fsEntry.textXZero;
+		textX += (fsEntry.scale * fsEntry.textScale * window.innerWidth) / 1.33;
+		const targetPoint = new THREE.Vector3(textX, fsEntry.textYZero - textYOff, fsEntry.z);
+		targetPoint.applyMatrix4(model.matrixWorld);
+		const targetFOV =
+			(fsEntry.scale * fsEntry.textScale * 2000 * 50) / ((window.pageZoom || 100) / 100);
+		return { targetPoint, targetFOV };
+	}
+
+	__goToSearch(search: string) {
+		const fsEntry = this.fsEntry;
+		if (!fsEntry.textHeight) return false;
+		const text = fsEntry.contentObject.geometry.layout._opt.text;
+		let line = 1;
+		let index = 0;
+		if (search.startsWith('/')) {
+			const lastSlash = search.lastIndexOf('/');
+			const re = new RegExp(search.slice(1, lastSlash), search.slice(lastSlash + 1));
+			const res = re.exec(text);
+			if (res) index = res.index;
+		} else index = text.indexOf(search);
+		for (let i = 0; i < index; i++) if (text.charCodeAt(i) === 10) line++;
+		return this.goToCoords([line]);
+	}
+
+	loaded() {
+		this.loadListeners.splice(0).forEach((f) => f());
+	}
+
+	ontick(t: number, dt: number): void {}
+
+	async load(src: string) {
 		let responseBuffer;
 		try {
-			responseBuffer = (await this.api.getType(
-				'/repo/file' + fullPath,
-				{},
-				'arrayBuffer'
-			)) as ArrayBuffer;
+			responseBuffer = await (await fetch(src)).arrayBuffer();
 		} catch (e) {
 			console.error(e);
 			return;
@@ -214,7 +256,7 @@ export default class TextFileView extends THREE.Mesh {
 			}
 			this.visible = true;
 			this.material.uniforms.opacity.value = 0;
-			this.ontick = function (t, dt) {
+			this.ontick = function(t, dt) {
 				if (this.fullyVisible) return;
 				this.material.uniforms.opacity.value += dt / 1000 / 0.5;
 				if (this.material.uniforms.opacity.value > 1) {
@@ -252,13 +294,7 @@ export default class TextFileView extends THREE.Mesh {
 			fsEntry.textHeight = scale * this.geometry.layout.height;
 
 			this.position.y += fsEntry.scale * 0.75 * (1 - vAspect);
-
-			if (fsEntry.targetLine) {
-				const { line, search } = fsEntry.targetLine;
-				fsEntry.targetLine = null;
-				if (line !== undefined) this.goToFSEntryTextAtLine(fsEntry, line);
-				else if (search !== undefined) this.goToFSEntryTextAtSearch(fsEntry, search);
-			}
+			this.loaded();
 			this.requestFrame();
 		});
 	}
@@ -382,11 +418,11 @@ export default class TextFileView extends THREE.Mesh {
 			while (palette.length < 8) {
 				palette.push(
 					palette[palette.length - 1] ||
-					new THREE.Vector3(
-						Colors.textColor.r,
-						Colors.textColor.g,
-						Colors.textColor.b
-					)
+						new THREE.Vector3(
+							Colors.textColor.r,
+							Colors.textColor.g,
+							Colors.textColor.b
+						)
 				);
 			}
 		}

@@ -12,49 +12,49 @@ import ImageFileView from './ImageFileView';
 import fontDescription from './assets/fnt/Inconsolata-Regular.fnt';
 import fontSDF from './assets/fnt/Inconsolata-Regular.png';
 
-// import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter';
+import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter';
 import * as THREE from 'three';
 import loadFont from 'load-bmfont';
 
-// function save(blob, filename) {
-// 	const link = document.createElement('a');
-// 	link.href = URL.createObjectURL(blob);
-// 	link.download = filename;
-// 	link.click();
+function save(blob, filename) {
+	const link = document.createElement('a');
+	link.href = URL.createObjectURL(blob);
+	link.download = filename;
+	link.click();
 
-// 	// URL.revokeObjectURL( url ); breaks Firefox...
-// }
+	// URL.revokeObjectURL( url ); breaks Firefox...
+}
 
-// function saveString(text, filename) {
-// 	save(new Blob([text], { type: 'text/plain' }), filename);
-// }
+function saveString(text, filename) {
+	save(new Blob([text], { type: 'text/plain' }), filename);
+}
 
-// function saveArrayBuffer(buffer, filename) {
-// 	save(new Blob([buffer], { type: 'application/octet-stream' }), filename);
-// }
+function saveArrayBuffer(buffer, filename) {
+	save(new Blob([buffer], { type: 'application/octet-stream' }), filename);
+}
 
-// function exportGLTF(input) {
-// 	var gltfExporter = new GLTFExporter();
+function exportGLTF(input) {
+	var gltfExporter = new GLTFExporter();
 
-// 	var options = {
-// 		onlyVisible: false,
-// 		truncateDrawRange: false,
-// 		binary: true,
-// 	};
-// 	gltfExporter.parse(
-// 		input,
-// 		function(result) {
-// 			if (result instanceof ArrayBuffer) {
-// 				saveArrayBuffer(result, 'scene.glb');
-// 			} else {
-// 				var output = JSON.stringify(result, null, 2);
-// 				saveString(output, 'scene.gltf');
-// 			}
-// 		},
-// 		options
-// 	);
-// }
-// global.exportGLTF = exportGLTF;
+	var options = {
+		onlyVisible: false,
+		truncateDrawRange: false,
+		binary: true,
+	};
+	gltfExporter.parse(
+		input,
+		function(result) {
+			if (result instanceof ArrayBuffer) {
+				saveArrayBuffer(result, 'scene.glb');
+			} else {
+				var output = JSON.stringify(result, null, 2);
+				saveString(output, 'scene.gltf');
+			}
+		},
+		options
+	);
+}
+global.exportGLTF = exportGLTF;
 
 global.THREE = THREE;
 
@@ -188,8 +188,8 @@ class Tabletree {
 		document.body.appendChild(renderer.domElement);
 
 		var scene = new THREE.Scene();
-		// window.scene3 = scene;
-		// window.GLTFExporter = GLTFExporter;
+		window.scene3 = scene;
+		window.GLTFExporter = GLTFExporter;
 
 		var camera = new THREE.PerspectiveCamera(
 			45,
@@ -529,45 +529,37 @@ class Tabletree {
 		this.changed = true;
 	};
 
-	goToFSEntryTextAtLine = (fsEntry, line, model = this.model) => {
+	async goToFSEntryCoords(fsEntry, coords, model = this.model) {
 		const { scene, camera } = this;
-		if (!fsEntry.textHeight) {
-			fsEntry.targetLine = { line };
+		scene.updateMatrixWorld();
+		const res =
+			fsEntry.contentObject && (await fsEntry.contentObject.goToCoords(coords, model));
+		if (!res) {
+			fsEntry.targetLine = { line: coords };
 			return this.goToFSEntry(fsEntry, model);
 		}
-		if (line > 0) this.setGoToHighlight(fsEntry, line);
-		const textYOff =
-			line === 0
-				? (fsEntry.scale * fsEntry.textScale * window.innerHeight) / this.pageZoom
-				: ((line + 0.5) / fsEntry.lineCount) * fsEntry.textHeight;
-		scene.updateMatrixWorld();
-		var textX = fsEntry.textXZero;
-		textX += (fsEntry.scale * fsEntry.textScale * window.innerWidth) / 1.33;
-		var fsPoint = new THREE.Vector3(textX, fsEntry.textYZero - textYOff, fsEntry.z);
-		fsPoint.applyMatrix4(model.matrixWorld);
-		camera.targetPosition.copy(fsPoint);
-		camera.targetFOV = (fsEntry.scale * fsEntry.textScale * 2000 * 50) / this.pageZoom;
+		const { targetPoint, targetFOV } = res;
+		camera.targetPosition.copy(targetPoint);
+		camera.targetFOV = targetFOV;
 		fsEntry.textFOV = camera.targetFOV;
 		this.changed = true;
-	};
+	}
 
-	goToFSEntryTextAtSearch = (fsEntry, search, model = this.model) => {
-		if (!fsEntry.textHeight) {
-			fsEntry.targetLine = { search };
+	async goToFSEntryAtSearch(fsEntry, search, model = this.model) {
+		const { scene, camera } = this;
+		scene.updateMatrixWorld();
+		const res =
+			fsEntry.contentObject && (await fsEntry.contentObject.goToSearch(search, model));
+		if (!res) {
+			fsEntry.targetSearch = { search };
 			return this.goToFSEntry(fsEntry, model);
 		}
-		const text = fsEntry.contentObject.geometry.layout._opt.text;
-		let line = 1;
-		let index = 0;
-		if (search.startsWith('/')) {
-			const lastSlash = search.lastIndexOf('/');
-			const re = new RegExp(search.slice(1, lastSlash), search.slice(lastSlash + 1));
-			const res = re.exec(text);
-			if (res) index = res.index;
-		} else index = text.indexOf(search);
-		for (let i = 0; i < index; i++) if (text.charCodeAt(i) === 10) line++;
-		return this.goToFSEntryTextAtLine(fsEntry, line, model);
-	};
+		const { targetPoint, targetFOV } = res;
+		camera.targetPosition.copy(targetPoint);
+		camera.targetFOV = targetFOV;
+		fsEntry.textFOV = camera.targetFOV;
+		this.changed = true;
+	}
 
 	async createFileTreeModel(fileCount, fileTree) {
 		const { font, camera } = this;
@@ -696,9 +688,7 @@ class Tabletree {
 								visibleFiles.children.length < 30 &&
 								!visibleFiles.visibleSet[fullPath]
 							) {
-								if (Colors.imageRE.test(fullPath))
-									self.loadImage(visibleFiles, fullPath, o);
-								else self.loadTextFile(visibleFiles, fullPath, o);
+								self.addFileView(visibleFiles, fullPath, o);
 							}
 						}
 					}
@@ -734,94 +724,29 @@ class Tabletree {
 		this.changed = true;
 	};
 
-	loadTextFile(visibleFiles, fullPath, fsEntry) {
-		if (fsEntry.size > 1e5) return;
-		fsEntry.contentObject = new TextFileView(
+	addFileView(visibleFiles, fullPath, fsEntry) {
+		const view = Colors.imageRE.test(fullPath) ? ImageFileView : TextFileView;
+		fsEntry.contentObject = new view(
 			fsEntry,
+			this.model,
 			fullPath,
 			this.api,
 			this.yield,
 			this.requestFrame,
-			this.goToFSEntryTextAtLine,
-			this.goToFSEntryTextAtSearch,
 			this.fontTexture
 		);
-		visibleFiles.visibleSet[fullPath] = true;
-		visibleFiles.add(fsEntry.contentObject);
-	}
-
-	loadImage(visibleFiles, fullPath, fsEntry) {
-		fsEntry.contentObject = new ImageFileView(
-			fsEntry,
-			fullPath,
-			this.api,
-			this.yield,
-			this.requestFrame,
-			this.goToFSEntryTextAtLine,
-			this.goToFSEntryTextAtSearch,
-			this.fontTexture
-		);
-		visibleFiles.visibleSet[fullPath] = true;
-		visibleFiles.add(fsEntry.contentObject);
-	}
-
-	async createFileListModel(fileCount, fileTree) {
-		var geo = Geometry.makeGeometry(fileCount);
-
-		var fileIndex = 0;
-
-		fileTree.index = [fileTree];
-
-		var labels = new THREE.Object3D();
-		var thumbnails = new THREE.Object3D();
-		await Layout.createFileListQuads(
-			this.yield,
-			fileTree,
-			fileIndex,
-			geo.attributes.position.array,
-			geo.attributes.color.array,
-			0,
-			0,
-			0,
-			1,
-			0,
-			labels,
-			thumbnails,
-			fileTree.index
-		);
-
-		var bigGeo = await createText({ text: '', font: this.font, noBounds: true }, this.yield);
-		var vertCount = 0;
-		labels.traverse(function(c) {
-			if (c.geometry) {
-				vertCount += c.geometry.attributes.position.array.length;
+		fsEntry.contentObject.loadListeners.push(() => {
+			if (fsEntry.targetLine) {
+				const { line, search } = fsEntry.targetLine;
+				if (line !== undefined) this.goToFSEntryCoords(fsEntry, line);
+				else if (search !== undefined) this.goToFSEntryAtSearch(fsEntry, search);
+				delete fsEntry.targetLine;
 			}
 		});
-		var parr = new Float32Array(vertCount);
-		var uarr = new Float32Array(vertCount / 2);
-		var j = 0;
-		labels.traverse(function(c) {
-			if (c.geometry) {
-				parr.set(c.geometry.attributes.position.array, j);
-				uarr.set(c.geometry.attributes.uv.array, j / 2);
-				j += c.geometry.attributes.position.array.length;
-			}
-		});
+		fsEntry.contentObject.load(this.api.server + '/repo/file' + fullPath);
 
-		bigGeo.setAttribute('position', new THREE.BufferAttribute(parr, 4));
-		bigGeo.setAttribute('uv', new THREE.BufferAttribute(uarr, 2));
-
-		var bigMesh = new THREE.Mesh(bigGeo, this.textMaterial);
-
-		var mesh = new THREE.Mesh(
-			geo,
-			new THREE.MeshBasicMaterial({ color: 0xffffff, vertexColors: THREE.VertexColors })
-		);
-		mesh.fileTree = fileTree;
-		mesh.material.side = THREE.DoubleSide;
-		mesh.add(bigMesh);
-		mesh.add(thumbnails);
-		return mesh;
+		visibleFiles.visibleSet[fullPath] = true;
+		visibleFiles.add(fsEntry.contentObject);
 	}
 
 	async addFile(tree) {
@@ -859,10 +784,10 @@ class Tabletree {
 	}
 
 	async showFileTree(fileTree) {
-		// if (fileTree.tree === this.fileTree) {
-		// 	await this.updateTree(fileTree.tree);
-		// 	return;
-		// }
+		if (fileTree.tree === this.fileTree) {
+			await this.updateTree(fileTree.tree);
+			return;
+		}
 		if (this.model) {
 			this.model.parent.remove(this.model);
 			this.model.traverse(function(m) {
@@ -901,40 +826,6 @@ class Tabletree {
 			})
 		);
 	}
-
-	textTick = (() => {
-		const self = this;
-		return function(t, dt) {
-			var m = this.children[0];
-			var visCount = 0;
-			if (this.isFirst) {
-				self.textMinScale = 1000;
-				self.textMaxScale = 0;
-			}
-			if (self.textMinScale > m.scale.x) self.textMinScale = m.scale.x;
-			if (self.textMaxScale < m.scale.x) self.textMaxScale = m.scale.x;
-			if (self.camera.projectionMatrix.elements[0] * m.scale.x < 0.00025) {
-				if (this.visible) {
-					this.visible = false;
-					// this.traverse(function(c) { c.visible = false; });
-				}
-			} else {
-				// if (!this.visible && visCount === 0) {
-				// 	// debugger;
-				// }
-				this.visible = true;
-				// m.visible = true;
-				visCount++;
-				for (var i = 0; i < this.children.length; i++) {
-					visCount += this.children[i].tick(t, dt) || 0;
-				}
-			}
-			if (this.isFirst) {
-				// window.debug.innerHTML = [camera.projectionMatrix.elements[0], m.scale.x*100, visCount, minScale, maxScale].join(" : ");
-			}
-			return visCount;
-		};
-	})();
 
 	setupTextModel(font, fontTexture) {
 		this.font = font;
@@ -1334,91 +1225,6 @@ class Tabletree {
 		}
 	}
 
-	showLinesForEntry(geo, entry, depth = 0, recurse = true, avoidModel = null, first = true) {
-		if (first)
-			for (var i = 0; i < geo.vertices.length; i++) geo.vertices[i].set(-100, -100, -100);
-		if (entry.outgoingLines) {
-			entry.outgoingLines.forEach((l) => {
-				if (l.dst.model !== avoidModel)
-					this.updateLineBetweenEntries(
-						geo,
-						l.index,
-						l.color,
-						l.src.model,
-						l.src.entry,
-						l.dst.model,
-						l.dst.entry
-					);
-				if (depth > 0)
-					this.showLinesForEntry(geo, l.dst.entry, depth - 1, false, l.src.model, false);
-			});
-		}
-		if (recurse) {
-			for (let e in entry.entries) {
-				this.showLinesForEntry(geo, entry.entries[e], depth, recurse, avoidModel, false);
-			}
-		}
-	}
-
-	showCommit(sha) {
-		// var c = this.commitData.commitIndex[sha];
-		this.showLinesForEntry(this.lineGeo, this.commitData.commitsFSEntry.entries[sha], 0);
-		// var commitDetails = document.getElementById('commitDetails');
-		// commitDetails.textContent = `${sha}\n${c.date.toString()}\n${c.author.name} <${c.author.email}>\n\n${c.message}\n\n${c.files.map(
-		// 	({action,path,renamed}) => `${action} ${path}${renamed ? ' '+renamed : ''}`
-		// ).join("\n")}`;
-	}
-
-	showCommitsByAuthor(authorName) {
-		this.showLinesForEntry(this.lineGeo, this.commitData.authors[authorName].fsEntry, 1);
-	}
-
-	showCommitsForFile(fsEntry) {
-		this.showLinesForEntry(this.lineGeo, fsEntry, 1);
-	}
-
-	setActiveCommits(activeCommits) {
-		this.activeCommits = activeCommits;
-		this.changed = true;
-	}
-
-	setCommitData(commitData) {
-		this.commitData = commitData;
-		if (!this.initDone) return;
-
-		// this.authorModel = createFileListModel(this.commitData.AuthorTree.count, this.commitData.AuthorTree.tree);
-		// this.authorModel.position.set(1.5, -0.5, 0.0);
-		// modelPivot.add(this.authorModel);
-
-		// this.processModel = createFileListModel(this.commitData.CommitTree.count, this.commitData.CommitTree.tree);
-		// this.processModel.position.set(0.5, -0.5, 0.0);
-		// modelPivot.add(this.processModel);
-
-		this.model.updateMatrix();
-		// this.processModel.updateMatrix();
-		// this.authorModel.updateMatrix();
-
-		// this.lineModel.ontick = () => {
-		// 	var cf = (this.currentFrame / 2) | 0;
-		// 	if (false) {
-		// 		var aks = Object.keys(this.commitData.authors);
-		// 		this.showCommitsByAuthor(aks[cf % aks.length]);
-		// 		this.changed = true;
-		// 	} else if (false) {
-		// 		this.showCommitsForFile(this.commitData.touchedFiles[cf % this.commitData.touchedFiles.length]);
-		// 		this.changed = true;
-		// 	} else if (this.commitsPlaying) {
-		// 		var idx = this.activeCommits.length-1-(cf % this.activeCommits.length);
-		// 		var c = this.activeCommits[idx];
-		// 		var slider = document.getElementById('commitSlider');
-		// 		slider.value = idx;
-		// 		this.showCommit(c.sha);
-		// 		this.changed = true;
-		// 	}
-		// };
-		this.changed = true;
-	}
-
 	zoomCamera(zf, cx, cy) {
 		const camera = this.camera;
 		if (zf < 1 || camera.fov < 120) {
@@ -1525,8 +1331,8 @@ class Tabletree {
 		const result = getFSEntryForURL(this.fileTree, url);
 		if (!result) return;
 		const { fsEntry, point, search } = result;
-		if (point && !isNaN(point[0])) this.goToFSEntryTextAtLine(fsEntry, point[0]);
-		else if (search) this.goToFSEntryTextAtSearch(fsEntry, search);
+		if (point && !isNaN(point[0])) this.goToFSEntryCoords(fsEntry, point);
+		else if (search) this.goToFSEntryAtSearch(fsEntry, search);
 		else this.goToFSEntry(fsEntry);
 	}
 
@@ -1745,11 +1551,11 @@ class Tabletree {
 							const fsEntry = intersection.fsEntry;
 							const fovDiff = (fsEntry.scale * 50) / self.camera.fov;
 							if (self.highlighted === fsEntry) {
-								if (fsEntry.textScale) self.goToFSEntryTextAtLine(fsEntry, 0);
+								if (fsEntry.textScale) self.goToFSEntryCoords(fsEntry, [0]);
 								else dz = -50;
 							} else {
 								if (fovDiff > 0.95) {
-									if (fsEntry.textScale) self.goToFSEntryTextAtLine(fsEntry, 0);
+									if (fsEntry.textScale) self.goToFSEntryCoords(fsEntry, [0]);
 									else dz = -50;
 								} else self.goToFSEntry(fsEntry);
 							}

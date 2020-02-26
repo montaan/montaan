@@ -86,8 +86,8 @@ export interface MainAppProps extends RouteComponentProps {
 	apiPrefix: string;
 }
 export interface TreeLink {
-	src: Element | FSEntry | string;
-	dst: Element | FSEntry | string;
+	src: TreeLinkKey;
+	dst: TreeLinkKey;
 	color: { r: number; g: number; b: number };
 }
 export interface SearchResult {
@@ -143,6 +143,9 @@ interface MainAppState {
 	diffsLoaded: number;
 	fileContents: null | FileContents;
 	links: TreeLink[];
+	dependencies: TreeLink[];
+	dependencySrcIndex: TreeLinkIndex;
+	dependencyDstIndex: TreeLinkIndex;
 	repos: RepoInfo[];
 	repoError: any;
 	processing: boolean;
