@@ -1,4 +1,4 @@
-version: '3.1'
+version: '3.7'
 
 services:
     db:
@@ -11,8 +11,8 @@ services:
             POSTGRES_PASSWORD: montaan
 
     backend:
-        build: ./backend
-        working_dir: /backend
+        image: node
+        working_dir: /montaan/backend
         command: yarn watch
         ports:
             - 8008:8008
@@ -20,24 +20,13 @@ services:
         depends_on:
             - db
         volumes:
-            - ./backend:/backend:cached
-            - /backend/node_modules
-
-    frontend:
-        build: ./frontend
-        working_dir: /frontend
-        command: yarn start
-        ports:
-            - 3000:3000
-        restart: always
-        depends_on:
-            - backend
-        volumes:
-            - ./frontend:/frontend:cached
-            - /frontend/node_modules
+            - ./:/montaan:cached
 
     adminer:
         image: adminer
         restart: always
         ports:
             - 8080:8080
+# volumes:
+#     pgdata:
+#         driver: local
