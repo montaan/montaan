@@ -11,7 +11,7 @@ services:
             POSTGRES_PASSWORD: montaan
 
     backend:
-        image: node
+        build: ./backend
         working_dir: /montaan/backend
         command: yarn watch
         ports:
