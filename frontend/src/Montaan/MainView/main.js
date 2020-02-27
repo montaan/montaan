@@ -105,14 +105,12 @@ class Tabletree {
 		this.setNavigationTarget = undefined;
 	}
 
-	init(api, apiPrefix, repoPrefix) {
+	init(api) {
 		if (this.api) {
 			console.error('ALREADY INITIALIZED');
 			return;
 		}
 		this.api = api;
-		this.apiPrefix = apiPrefix;
-		this.repoPrefix = repoPrefix;
 		var fontTex, fontDesc;
 		new THREE.TextureLoader().load(fontSDF, (tex) => {
 			fontTex = tex;
@@ -719,12 +717,17 @@ class Tabletree {
 						// }
 						continue;
 					}
+					if (
+						fsEntry.entries &&
+						fsEntry.fetched &&
+						(fsEntry.scale * 50) / Math.max(camera.fov, camera.targetFOV) > 0.03
+					) {
+						stack.push(fsEntry);
+					}
 					if (!fsEntry.fetched && fsEntry.entries) {
-						if ((fsEntry.scale * 50) / Math.max(camera.fov, camera.targetFOV) > 0.003) {
+						if ((fsEntry.scale * 50) / Math.max(camera.fov, camera.targetFOV) > 0.03) {
 							fsEntry.fetched = true;
-							if (fsEntry.parent.parent && fsEntry.parent.parent.parent) {
-								entriesToFetch.push(fsEntry);
-							}
+							entriesToFetch.push(fsEntry);
 						}
 					}
 					if ((fsEntry.scale * 50) / Math.max(camera.fov, camera.targetFOV) > 0.3) {
@@ -738,9 +741,7 @@ class Tabletree {
 						) {
 							navigationTarget += '/' + fsEntry.name;
 						}
-						if (fsEntry.entries) {
-							stack.push(fsEntry);
-						} else {
+						if (!fsEntry.entries) {
 							let fullPath = getFullPath(fsEntry);
 							if (
 								visibleFiles.children.length < 30 &&
@@ -852,7 +853,7 @@ class Tabletree {
 		utils.traverseFSEntry(
 			fileTree,
 			(tree, path) => {
-				if (tree.index === undefined && !tree.parent.building) {
+				if (tree.index === undefined && tree.parent && !tree.parent.building) {
 					// console.log(
 					// 	'building tree',
 					// 	getFullPath(tree.parent),

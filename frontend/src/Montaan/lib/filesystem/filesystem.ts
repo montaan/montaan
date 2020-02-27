@@ -1,4 +1,6 @@
 import QFrameAPI from '../../../lib/api';
+import utils from '../utils';
+import Repo from '../../Repo';
 
 export interface FSEntry {
 	scale: number;
@@ -33,7 +35,7 @@ export interface FSEntry {
 export class NotImplementedError extends Error {}
 
 export interface IFilesystem {
-	readDir(path: string): Promise<FSEntry[]>;
+	readDir(path: string): Promise<FSEntry | null>;
 	readFile(path: string): Promise<ArrayBuffer>;
 	writeFile(path: string, contents: ArrayBuffer): Promise<boolean>;
 	rm(path: string): Promise<boolean>;
@@ -90,9 +92,9 @@ class Filesystem implements IFilesystem {
 		this.api = api;
 	}
 
-	async readDir(path: string) {
+	async readDir(path: string): Promise<FSEntry | null> {
 		throw new NotImplementedError("Filesystem doesn't support reads");
-		return [];
+		return null;
 	}
 	async readFile(path: string) {
 		throw new NotImplementedError("Filesystem doesn't support reads");
@@ -112,6 +114,43 @@ class Filesystem implements IFilesystem {
 	}
 }
 
+class MontaanUserReposFilesystem extends Filesystem {
+	name: string;
+
+	constructor(url: string, api: QFrameAPI) {
+		super(url, api);
+		this.name = url;
+	}
+
+	async readDir(path: string): Promise<FSEntry | null> {
+		const tree = createFSTree('', '');
+		(await this.api.get('/repo/list')).forEach((r: { name: string }) => {
+			mount(tree, `${this.name}/${r.name}/HEAD`, `/${r.name}`, 'montaanGit', this.api);
+		});
+		return tree;
+	}
+
+	async readFile(path: string) {
+		throw new NotImplementedError("montaanUserRepos doesn't support readFile");
+		return new ArrayBuffer(0);
+	}
+
+	async writeFile(path: string, contents: ArrayBuffer) {
+		throw new NotImplementedError("montaanUserRepos doesn't support writes");
+		return true;
+	}
+
+	async rm(path: string) {
+		throw new NotImplementedError("montaanUserRepos doesn't support writes");
+		return true;
+	}
+
+	async rmdir(path: string) {
+		throw new NotImplementedError("montaanUserRepos doesn't support writes");
+		return true;
+	}
+}
+
 class MontaanGitFileSystem extends Filesystem {
 	repo: string;
 	ref: string;
@@ -123,13 +162,21 @@ class MontaanGitFileSystem extends Filesystem {
 		this.ref = urlSegments[urlSegments.length - 1];
 	}
 
-	async readDir(path: string) {
-		return await this.api.post('/_/repo/dir', { repo: this.repo, path: path, head: this.ref });
+	async readDir(path: string): Promise<FSEntry> {
+		if (path === '') path = '.';
+		const pathBuf: ArrayBuffer = await this.api.postType(
+			'/repo/tree',
+			{ repo: this.repo, paths: [path], hash: this.ref, recursive: false },
+			{},
+			'arrayBuffer'
+		);
+		const tree = utils.parseFileList_(pathBuf, true, '');
+		return tree.tree;
 	}
 
 	async readFile(path: string) {
 		return this.api.postType(
-			'/_/repo/checkout',
+			'/repo/checkout',
 			{ repo: this.repo, path: path, head: this.ref },
 			{},
 			'arrayBuffer'
@@ -154,19 +201,20 @@ class MontaanGitFileSystem extends Filesystem {
 
 const RegisteredFileSystems: { [fsType: string]: Constructor<Filesystem> } = {
 	montaanGit: MontaanGitFileSystem,
+	montaanUserRepos: MontaanUserReposFilesystem,
 };
 
-function getFSType(url: string) {
+export function getFSType(url: string) {
 	return 'montaanGit';
 }
 
-export function createFSTree(name: string, url: string, fsType?: string): FSEntry {
+export function createFSTree(name: string, url: string, fsType?: string, api?: QFrameAPI): FSEntry {
 	return {
 		name,
 		title: name,
 		entries: {},
 		fetched: false,
-		filesystem: fsType ? new RegisteredFileSystems[fsType](url) : undefined,
+		filesystem: fsType ? new RegisteredFileSystems[fsType](url, api) : undefined,
 		scale: 0,
 
 		x: 0,
@@ -184,7 +232,13 @@ export function createFSTree(name: string, url: string, fsType?: string): FSEntr
 	};
 }
 
-function mount(fileTree: FSEntry, url: string, mountPoint: string, fsType: string) {
+export function mount(
+	fileTree: FSEntry,
+	url: string,
+	mountPoint: string,
+	fsType: string,
+	api: QFrameAPI
+) {
 	if (!fsType) fsType = getFSType(url);
 	const cleanedMountPoint = mountPoint.replace(/\/+$/, '');
 	const mountPointSegments = cleanedMountPoint.split('/');
@@ -192,7 +246,9 @@ function mount(fileTree: FSEntry, url: string, mountPoint: string, fsType: strin
 	if (!fsEntry) throw new Error('fileTree does not contain path');
 	const name = mountPointSegments[mountPointSegments.length - 1];
 	if (!fsEntry.entries) throw new Error('mountPoint is not a directory');
-	fsEntry.entries[name] = createFSTree(name, url, fsType);
+	const fs = createFSTree(name, url, fsType, api);
+	fs.parent = fsEntry;
+	fsEntry.entries[name] = fs;
 	return fileTree;
 }
 
@@ -252,4 +308,27 @@ export function getFSEntryForURL(namespace: FSEntry, url: string): ExtendedFSEnt
 	const fsEntry = getPathEntry(fs.filesystem, fs.relativePath);
 	if (!fsEntry) return null;
 	return { fsEntry, point, search };
+}
+
+export async function readDir(tree: FSEntry, path: string): Promise<void> {
+	const fs = getFilesystemForPath(tree, path);
+	if (fs) {
+		const { filesystem, relativePath } = fs;
+		if (filesystem.filesystem) {
+			const dir = await filesystem.filesystem.readDir(relativePath);
+			if (!dir || !filesystem.entries || !dir.entries) return;
+			for (let i in dir.entries) {
+				if (!filesystem.entries[i]) {
+					filesystem.entries[i] = dir.entries[i];
+				}
+			}
+			const deletions = [];
+			for (let i in filesystem.entries) {
+				if (!dir.entries[i]) {
+					deletions.push(i);
+				}
+			}
+			for (let i = 0; i < deletions.length; i++) delete filesystem.entries[deletions[i]];
+		}
+	}
 }

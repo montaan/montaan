@@ -1,5 +1,5 @@
 module.exports = async function(req, res) {
-	const [error, { user_id }] = await guardPostWithSession(req);
+	const [error, { user_id }] = await guardGetWithSession(req);
 	if (error) return error;
 	await DB.queryTo(
 		res,

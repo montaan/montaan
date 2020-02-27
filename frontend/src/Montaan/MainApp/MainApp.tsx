@@ -15,7 +15,14 @@ import RepoSelector, { RepoInfo } from '../RepoSelector';
 import utils from '../lib/utils';
 import { parseCommits, CommitData, RawCommitData } from '../lib/parse_commits';
 import { authorCmp, Commit, CommitFile } from '../lib/parse-diff';
-import { getPathEntry, getFullPath, getFSEntryForURL } from '../lib/filesystem';
+import {
+	getPathEntry,
+	getFullPath,
+	getFSEntryForURL,
+	mount,
+	getFilesystemForPath,
+	readDir,
+} from '../lib/filesystem';
 
 import styles from './MainApp.module.scss';
 import TreeView from '../TreeView';
@@ -25,6 +32,7 @@ import { FSEntry, createFSTree } from '../lib/filesystem';
 import Introduction from '../Introduction';
 import * as THREE from 'three';
 import WorkQueue from '../lib/WorkQueue';
+import { readdir } from 'fs';
 
 export interface MainAppProps extends RouteComponentProps {
 	match: any;
@@ -158,7 +166,6 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		searchQuery: '',
 		commits: [],
 		activeCommitData: null,
-		fileTree: { count: 0, tree: createFSTree('', '') },
 		commitLog: '',
 		commitChanges: '',
 		files: '',
@@ -193,6 +200,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		}
 		this.state = {
 			...this.emptyState,
+			fileTree: { count: 0, tree: createFSTree('', '') },
 			repos: [],
 			navUrl: '',
 			commitData: null,
@@ -202,11 +210,86 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		this.repoTimeout = 0;
 		this.commitIndex = 0;
 		this.animatedFiles = 0;
-		if (props.userInfo) this.updateUserRepos(props.userInfo);
-		if (props.match && props.match.params.user) {
-			this.setRepo(props.match.params.name, props.match.params.user);
-		}
 	}
+
+	componentDidMount() {
+		if (this.props.userInfo) this.updateUserRepos(this.props.userInfo);
+		// if (props.match && props.match.params.user) {
+		// 	this.setRepo(props.match.params.name, props.match.params.user);
+		// }
+	}
+
+	async updateUserRepos(userInfo: UserInfo) {
+		if (!userInfo) return this.setState({ repos: [] });
+		const tree = this.state.fileTree.tree;
+		if (!tree.entries) return;
+
+		const user = this.props.userInfo.name;
+
+		if (!tree.entries[user]) {
+			mount(tree, user, `/${user}`, 'montaanUserRepos', this.props.api);
+		}
+
+		const repos = await this.props.api.get('/repo/list');
+
+		const reposEntry = tree.entries[user];
+		repos.forEach((repo: any) => {
+			if (!reposEntry.entries) return;
+			if (!reposEntry.entries[repo.name]) {
+				mount(
+					this.state.fileTree.tree,
+					`${repo.owner}/${repo.name}/HEAD`,
+					`/${user}/${repo.name}`,
+					'montaanGit',
+					this.props.api
+				);
+			}
+		});
+		await this.requestDirs(
+			repos.map((repo: any) => `/${user}/${repo.name}`),
+			[]
+		);
+
+		this.setState({
+			repos,
+			processing: false,
+			fileTreeUpdated: this.state.fileTreeUpdated + 1,
+		});
+	}
+
+	processDirRequest = async ({ tree, paths, dropEntries }: LoadDirWorkItem) => {
+		let files;
+		let fileTreeDrop = tree;
+		if (paths.length > 0) {
+			files = Promise.all(paths.map((p) => readDir(tree.tree, p)));
+		}
+		if (dropEntries.length > 0) {
+			dropEntries.forEach((fsEntry) => {
+				fsEntry.entries = {};
+				fsEntry.fetched = false;
+				fsEntry.building = false;
+			});
+			fileTreeDrop.count = 0;
+			utils.traverseTree(fileTreeDrop, () => fileTreeDrop.count++);
+		}
+		if (paths.length > 0) {
+			await files;
+			paths.forEach((p) => {
+				const entry = getPathEntry(fileTreeDrop.tree, p);
+				if (entry) entry.fetched = true;
+			});
+		}
+		this.setState({ fileTreeUpdated: this.state.fileTreeUpdated + 1 });
+	};
+
+	requestDirs = async (paths: string[], dropEntries: FSEntry[]) => {
+		if (paths.length === 0 && dropEntries.length === 0) return;
+		await LoadDirWorkQueue.push(this.processDirRequest, {
+			tree: this.state.fileTree,
+			paths,
+			dropEntries,
+		});
+	};
 
 	parseFiles(text: string, repoPrefix: string, changedFiles: CommitFile[] = []) {
 		const fileTree = utils.parseFileList(text, {}, true, repoPrefix + '/');
@@ -234,7 +317,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 	}
 
 	setRepo = async (repoPath: string, userName = this.props.userInfo.name, ref = 'HEAD') => {
-		LoadDirWorkQueue.clear();
+		// LoadDirWorkQueue.clear();
 		clearTimeout(this.repoTimeout);
 		// clearInterval(this.animatedFiles);
 		// clearInterval(this.randomLinksInterval);
@@ -252,7 +335,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		}
 		console.time('load files');
 		const prefixes = this.getURLPrefixes(this.props.location.pathname, repoPrefix) || [''];
-		console.log(prefixes);
+		// console.log(prefixes);
 		const files = await this.props.api.postType(
 			'/repo/tree',
 			{
@@ -267,21 +350,25 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		console.timeEnd('load files');
 		console.time('parse files');
 		const fileTree = this.parseFiles(files, repoPrefix);
+		prefixes.forEach((p) => {
+			const entry = getPathEntry(fileTree.tree, '/' + repoPrefix + '/' + p);
+			if (entry) entry.fetched = true;
+		});
 		console.timeEnd('parse files');
 		const commitsOpen = this.state.activeCommitData !== null;
 		this.setState({ ...this.emptyState, processing: false, repoPrefix, fileTree });
-		// console.time('load commitObj');
-		// const commitObj = (await this.props.api.getType(
-		// 	'/repo/fs/' + repoPrefix + '/log.json',
-		// 	{},
-		// 	'json'
-		// )) as RawCommitData;
-		// console.timeEnd('load commitObj');
-		// console.time('parse commitObj');
-		// const commitData = parseCommits(commitObj);
-		// console.timeEnd('parse commitObj');
-		// this.setState({ processingCommits: false, commitData });
-		// if (commitsOpen) this.setActiveCommits(commitData.commits);
+		console.time('load commitObj');
+		const commitObj = (await this.props.api.getType(
+			'/repo/fs/' + repoPrefix + '/log.json',
+			{},
+			'json'
+		)) as RawCommitData;
+		console.timeEnd('load commitObj');
+		console.time('parse commitObj');
+		const commitData = parseCommits(commitObj);
+		console.timeEnd('parse commitObj');
+		this.setState({ processingCommits: false, commitData });
+		if (commitsOpen) this.setActiveCommits(commitData.commits);
 		this.setState({
 			navUrl:
 				this.props.location.pathname +
@@ -339,46 +426,6 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		// Traverse graph from path and set connected part as links
 	};
 
-	// animateRandomLinks(fileTree, files, repoPrefix) {
-	// 	const del = document.createElement('div');
-	// 	for (var i = 0; i < 2; i++)
-	// 		for (var j = 0; j < 200; j++) {
-	// 			var el = document.createElement('div');
-	// 			el.style.border = '1px solid red';
-	// 			el.style.width = '4px';
-	// 			el.style.height = '1px';
-	// 			el.style.top = 2 + j * 4 + 'px';
-	// 			if (i) el.style.right = '10px';
-	// 			else el.style.left = '10px';
-	// 			el.style.zIndex = 20000;
-	// 			el.style.position = 'fixed';
-	// 			del.appendChild(el);
-	// 		}
-	// 	document.body.appendChild(del);
-	// 	this.randomLinksInterval = setInterval(() => {
-	// 		const links = [];
-	// 		for (var i = 0, l = Math.random() * 100; i < l; i++) {
-	// 			const src =
-	// 				Math.random() > 0.5
-	// 					? del.childNodes[(Math.random() * 400) | 0]
-	// 					: getPathEntry(
-	// 							fileTree,
-	// 							repoPrefix + '/' + files[(Math.random() * files.length) | 0]
-	// 					  );
-	// 			const dst =
-	// 				Math.random() > 0.5
-	// 					? del.childNodes[(Math.random() * 400) | 0]
-	// 					: getPathEntry(
-	// 							fileTree,
-	// 							repoPrefix + '/' + files[(Math.random() * files.length) | 0]
-	// 					  );
-	// 			const color = { r: Math.random(), g: Math.random(), b: Math.random() };
-	// 			links.push({ src, dst, color });
-	// 		}
-	// 		this.setLinks(links);
-	// 	}, 16);
-	// }
-
 	async animateFileTreeHistory(commits: Commit[], repoPrefix: string) {
 		window.clearInterval(this.animatedFiles);
 		const fileTrees = await Promise.all(
@@ -406,55 +453,6 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 			}
 		}, 16);
 	}
-
-	requestDirs = async (paths: string[], dropEntries: FSEntry[]) => {
-		if (paths.length === 0 && dropEntries.length === 0) return;
-		await LoadDirWorkQueue.push(this.processDirRequest, {
-			tree: this.state.fileTree,
-			paths,
-			dropEntries,
-		});
-	};
-
-	processDirRequest = async ({ tree, paths, dropEntries }: LoadDirWorkItem) => {
-		let files;
-		let fileTreeDrop = tree;
-		if (paths.length > 0) {
-			files = this.props.api.postType(
-				'/repo/tree',
-				{
-					repo: this.state.repoPrefix,
-					hash: this.state.ref,
-					paths: paths.map((p) => p.slice(this.state.repoPrefix.length + 2) + '/'),
-					recursive: false,
-				},
-				{},
-				'arrayBuffer'
-			);
-		}
-		if (dropEntries.length > 0) {
-			dropEntries.forEach((fsEntry) => {
-				fsEntry.entries = {};
-				fsEntry.fetched = false;
-				fsEntry.building = false;
-			});
-			fileTreeDrop.count = 0;
-			utils.traverseTree(fileTreeDrop, () => fileTreeDrop.count++);
-		}
-		if (paths.length > 0) {
-			fileTreeDrop = utils.parseFileList_(
-				await files,
-				true,
-				this.state.repoPrefix + '/',
-				fileTreeDrop
-			);
-			paths.forEach((p) => {
-				const entry = getFSEntryForURL(fileTreeDrop.tree, p);
-				if (entry) entry.fsEntry.fetched = true;
-			});
-		}
-		this.setState({ fileTreeUpdated: this.state.fileTreeUpdated + 1 });
-	};
 
 	setCommitFilter = (commitFilter: any) => {
 		this.setState({ commitFilter });
@@ -727,23 +725,8 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		}
 	}
 
-	goToFSEntryTextAtLine = (fsEntry: FSEntry, line: number) =>
-		this.setState({ goToTarget: { fsEntry, line } });
-	goToFSEntry = (fsEntry: FSEntry) => this.setState({ goToTarget: { fsEntry } });
-
 	setLinks = (links: TreeLink[]) => this.setState({ links });
 	addLinks = (links: TreeLink[]) => this.setLinks(this.state.links.concat(links));
-
-	async updateUserRepos(userInfo: UserInfo) {
-		if (!userInfo) return this.setState({ repos: [] });
-		const repos = await this.props.api.post('/repo/list');
-		this.setState({ repos });
-		if (this.state.repoPrefix === '' && repos.length > 0) {
-			this.setRepo(repos[0].name, userInfo.name);
-		} else {
-			this.setState({ processing: false });
-		}
-	}
 
 	shouldComponentUpdate(nextProps: MainAppProps, nextState: MainAppState) {
 		if (nextProps.userInfo !== this.props.userInfo) this.updateUserRepos(nextProps.userInfo);
@@ -993,8 +976,6 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 						commitData={this.state.commitData}
 						frameRequestTime={this.state.frameRequestTime}
 						api={this.props.api}
-						apiPrefix={this.props.apiPrefix}
-						repoPrefix={this.state.repoPrefix}
 						navigationTarget={this.state.navigationTarget}
 						searchLinesRequest={this.state.searchLinesRequest}
 						searchResults={this.state.searchResults}
