@@ -16,7 +16,7 @@ import { FileTree, SearchResult, ActiveCommitData, TreeLink } from '../MainApp';
 import { CommitData } from '../lib/parse_commits';
 import utils from '../lib/utils';
 import Geometry from '../lib/Geometry';
-import { getFullPath } from '../lib/filesystem';
+import { getFullPath, FSEntry } from '../lib/filesystem';
 import Colors from '../lib/Colors';
 
 export interface TreeViewProps extends RouteComponentProps {
@@ -37,8 +37,7 @@ export interface TreeViewProps extends RouteComponentProps {
 	frameRequestTime: number;
 	setNavigationTarget(target: string): void;
 	searchQuery: string;
-	requestDirs(paths: string[]): void;
-	requestDitchDirs(fsEntries: any[]): void;
+	requestDirs(paths: string[], dropEntries: FSEntry[]): Promise<void>;
 }
 
 // Makes these prototypes available as "native" jsx-string elements

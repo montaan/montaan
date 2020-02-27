@@ -209,6 +209,7 @@ export default {
 
 	makeGeometry: function(fileCount) {
 		var geo = new THREE.BufferGeometry();
+		geo.maxFileCount = fileCount;
 		var verts = new Float32Array(fileCount * 3 * 6 * this.quadCount);
 		var colorVerts = new Float32Array(fileCount * 3 * 6 * this.quadCount);
 		geo.setAttribute('position', new THREE.BufferAttribute(verts, 3));
@@ -222,6 +223,17 @@ export default {
 		// 	normalVerts[i+2] = -1;
 		// };
 
+		return geo;
+	},
+
+	resizeGeometry: function(geo, fileCount) {
+		geo.maxFileCount = fileCount;
+		var verts = new Float32Array(fileCount * 3 * 6 * this.quadCount);
+		verts.set(geo.getAttribute('position').array);
+		var colorVerts = new Float32Array(fileCount * 3 * 6 * this.quadCount);
+		colorVerts.set(geo.getAttribute('color').array);
+		geo.setAttribute('position', new THREE.BufferAttribute(verts, 3));
+		geo.setAttribute('color', new THREE.BufferAttribute(colorVerts, 3));
 		return geo;
 	},
 

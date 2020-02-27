@@ -40,12 +40,22 @@ export default class ImageFileView extends THREE.Mesh {
 
 		this.geometry = new THREE.PlaneBufferGeometry(1, 1);
 		this.material = emptyMaterial;
-		this.scale.multiplyScalar(fsEntry.scale * 0.5);
+		this.scale.multiplyScalar(fsEntry.scale * 0.7);
 		this.position.set(
-			fsEntry.x + fsEntry.scale * 0.25,
-			fsEntry.y + fsEntry.scale * 0.5,
+			fsEntry.x + fsEntry.scale * 0.5,
+			fsEntry.y + fsEntry.scale * 0.65,
 			fsEntry.z
 		);
+	}
+
+	dispose() {
+		if (this.material && this.material.map) {
+			this.material.map.dispose();
+		}
+		if (this.geometry) {
+			this.geometry.dispose();
+		}
+		this.loadListeners.splice(0);
 	}
 
 	loaded() {

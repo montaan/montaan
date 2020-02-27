@@ -561,59 +561,90 @@ class Tabletree {
 		this.changed = true;
 	}
 
-	async createFileTreeModel(fileCount, fileTree) {
-		const { font, camera } = this;
-		const self = this;
-		var geo = Geometry.makeGeometry(fileCount + 1);
-
-		var fileIndex = 0;
-
-		fileTree.fsIndex = [fileTree];
-
-		if (fileTree.scale === undefined) {
-			fileTree.x = 0;
-			fileTree.y = 0;
-			fileTree.z = 0;
-			fileTree.scale = 1;
+	async updateFileTreeGeometry(fileCount, fileTree, fsIndex, geo, textGeometry, vertexIndices) {
+		if (geo.maxFileCount < fileCount + 1) {
+			console.log('Geometry resize!', 2 * fileCount + 2);
+			Geometry.resizeGeometry(geo, 2 * (fileCount + 1));
 		}
 
-		var labels = new THREE.Object3D();
-		var thumbnails = new THREE.Object3D();
-		await Layout.createFileTreeQuads(
+		const fileIndex = geo.fileIndex;
+		// console.log('fileIndex', geo.fileIndex, fileTree, fsIndex);
+
+		const labels = new THREE.Object3D();
+		const thumbnails = new THREE.Object3D();
+		geo.fileIndex = await Layout.createFileTreeQuads(
 			this.yield,
 			fileTree,
 			fileIndex,
-			geo.attributes.position.array,
-			geo.attributes.color.array,
+			geo.getAttribute('position').array,
+			geo.getAttribute('color').array,
 			labels,
 			thumbnails,
-			fileTree.fsIndex
+			fsIndex,
+			vertexIndices
 		);
 
-		var textGeo = await createText({ text: '', font: font, noBounds: true }, this.yield);
-		var vertCount = 0;
+		geo.getAttribute('position').needsUpdate = true;
+		geo.getAttribute('color').needsUpdate = true;
+
+		let vertCount = textGeometry.vertCount;
 		labels.traverse(function(c) {
 			if (c.geometry) {
 				vertCount += c.geometry.attributes.position.array.length;
 			}
 		});
-		var parr = new Float32Array(vertCount);
-		var uarr = new Float32Array(vertCount / 2);
-		var j = 0;
+		const positionArray = new Float32Array(vertCount);
+		positionArray.set(textGeometry.attributes.position.array);
+		const uvArray = new Float32Array(vertCount / 2);
+		uvArray.set(textGeometry.attributes.uv.array);
+		let j = textGeometry.vertCount;
 		labels.traverse(function(c) {
 			if (c.geometry) {
-				parr.set(c.geometry.attributes.position.array, j);
-				uarr.set(c.geometry.attributes.uv.array, j / 2);
+				positionArray.set(c.geometry.attributes.position.array, j);
+				uvArray.set(c.geometry.attributes.uv.array, j / 2);
 				j += c.geometry.attributes.position.array.length;
 			}
 		});
+		textGeometry.vertCount = vertCount;
 
-		textGeo.setAttribute('position', new THREE.BufferAttribute(parr, 4));
-		textGeo.setAttribute('uv', new THREE.BufferAttribute(uarr, 2));
+		textGeometry.setAttribute('position', new THREE.BufferAttribute(positionArray, 4));
+		textGeometry.setAttribute('uv', new THREE.BufferAttribute(uvArray, 2));
+		textGeometry.getAttribute('position').needsUpdate = true;
+		textGeometry.getAttribute('uv').needsUpdate = true;
+	}
 
-		var textMesh = new THREE.Mesh(textGeo, this.textMaterial);
+	async createFileTreeModel(fileCount, fileTree) {
+		const font = this.font;
+		const geo = Geometry.makeGeometry(2 * (fileCount + 1));
+		geo.fileIndex = 0;
 
-		var mesh = new THREE.Mesh(
+		fileTree.fsIndex = [fileTree];
+		fileTree.vertexIndex = 0;
+		fileTree.textVertexIndex = 0;
+		const vertexIndices = {
+			textVertexIndex: 0,
+			vertexIndex: 0,
+		};
+		fileTree.x = 0;
+		fileTree.y = 0;
+		fileTree.z = 0;
+		fileTree.scale = 1;
+
+		const textGeometry = await createText({ text: '', font: font, noBounds: true }, this.yield);
+		textGeometry.vertCount = 0;
+
+		await this.updateFileTreeGeometry(
+			fileCount,
+			fileTree,
+			fileTree.fsIndex,
+			geo,
+			textGeometry,
+			vertexIndices
+		);
+
+		const textMesh = new THREE.Mesh(textGeometry, this.textMaterial);
+
+		const mesh = new THREE.Mesh(
 			geo,
 			new THREE.MeshBasicMaterial({
 				color: 0xffffff,
@@ -628,25 +659,32 @@ class Tabletree {
 
 		mesh.add(visibleFiles);
 		mesh.add(textMesh);
-		mesh.add(thumbnails);
+		mesh.visibleFiles = visibleFiles;
+		mesh.textGeometry = textGeometry;
+		mesh.fileCount = fileCount + 1;
 
-		mesh.ontick = function(t, dt) {
+		mesh.ontick = this.determineVisibility(mesh);
+
+		return mesh;
+	}
+
+	determineVisibility(mesh) {
+		const { visibleFiles, textGeometry } = mesh;
+		const camera = this.camera;
+		return (t, dt) => {
 			// Dispose loaded files that are outside the current view
-			for (var i = 0; i < visibleFiles.children.length; i++) {
-				var c = visibleFiles.children[i];
-				var fsEntry = c.fsEntry;
+			for (let i = 0; i < visibleFiles.children.length; i++) {
+				const c = visibleFiles.children[i];
+				const fsEntry = c.fsEntry;
 				if (
-					!Geometry.quadInsideFrustum(fsEntry.index, this, camera) ||
+					!Geometry.quadInsideFrustum(fsEntry.index, mesh, camera) ||
 					(fsEntry.scale * 50) / Math.max(camera.fov, camera.targetFOV) < 0.2
 				) {
-					if (!c.geometry.layout && c.material && c.material.map) {
-						c.material.map.dispose();
+					if (fsEntry.contentObject) {
+						fsEntry.contentObject.dispose();
+						fsEntry.contentObject = undefined;
 					}
-					if (c.geometry) {
-						c.geometry.dispose();
-					}
-					var fullPath = getFullPath(fsEntry);
-					fsEntry.contentObject = undefined;
+					const fullPath = getFullPath(fsEntry);
 					visibleFiles.visibleSet[fullPath] = false;
 					visibleFiles.remove(c);
 					i--;
@@ -654,60 +692,90 @@ class Tabletree {
 			}
 			var zoomedInPath = '';
 			var navigationTarget = '';
-			var smallestCovering = this.fileTree;
+			var smallestCovering = mesh.fileTree;
 
-			// Breadth-first traversal of this.fileTree
+			// Breadth-first traversal of mesh.fileTree
 			// - determines fsEntry visibility
 			// - finds the covering fsEntry
 			// - finds the currently zoomed-in path and breadcrumb path
-			var stack = [this.fileTree];
+			const stack = [mesh.fileTree];
+			const entriesToFetch = [];
+			const entriesToDispose = [];
 			while (stack.length > 0) {
-				var obj = stack.pop();
-				for (var name in obj.entries) {
-					var o = obj.entries[name];
-					var idx = o.index;
-					if (!Geometry.quadInsideFrustum(idx, this, camera)) {
+				const tree = stack.pop();
+				for (let name in tree.entries) {
+					const fsEntry = tree.entries[name];
+					const idx = fsEntry.index;
+					if (!Geometry.quadInsideFrustum(idx, mesh, camera)) {
+						// if (
+						// 	fsEntry.parent.parent &&
+						// 	fsEntry.parent.parent.parent &&
+						// 	fsEntry.parent.parent.parent.parent &&
+						// 	fsEntry.fetched &&
+						// 	fsEntry.entries &&
+						// 	Object.keys(fsEntry.entries).length > 0
+						// ) {
+						// 	entriesToDispose.push(fsEntry);
+						// }
 						continue;
 					}
-					if ((o.scale * 50) / Math.max(camera.fov, camera.targetFOV) > 0.3) {
-						if (Geometry.quadCoversFrustum(idx, this, camera)) {
-							zoomedInPath += '/' + o.name;
-							navigationTarget += '/' + o.name;
-							smallestCovering = o;
-						} else if (
-							(o.scale * 50) / Math.max(camera.fov, camera.targetFOV) > 0.9 &&
-							Geometry.quadAtFrustumCenter(idx, this, camera)
-						) {
-							navigationTarget += '/' + o.name;
+					if (!fsEntry.fetched && fsEntry.entries) {
+						if ((fsEntry.scale * 50) / Math.max(camera.fov, camera.targetFOV) > 0.003) {
+							fsEntry.fetched = true;
+							if (fsEntry.parent.parent && fsEntry.parent.parent.parent) {
+								entriesToFetch.push(fsEntry);
+							}
 						}
-						if (o.entries) {
-							stack.push(o);
+					}
+					if ((fsEntry.scale * 50) / Math.max(camera.fov, camera.targetFOV) > 0.3) {
+						if (Geometry.quadCoversFrustum(idx, mesh, camera)) {
+							zoomedInPath += '/' + fsEntry.name;
+							navigationTarget += '/' + fsEntry.name;
+							smallestCovering = fsEntry;
+						} else if (
+							(fsEntry.scale * 50) / Math.max(camera.fov, camera.targetFOV) > 0.9 &&
+							Geometry.quadAtFrustumCenter(idx, mesh, camera)
+						) {
+							navigationTarget += '/' + fsEntry.name;
+						}
+						if (fsEntry.entries) {
+							stack.push(fsEntry);
 						} else {
-							let fullPath = getFullPath(o);
+							let fullPath = getFullPath(fsEntry);
 							if (
 								visibleFiles.children.length < 30 &&
 								!visibleFiles.visibleSet[fullPath]
 							) {
-								self.addFileView(visibleFiles, fullPath, o);
+								this.addFileView(visibleFiles, fullPath, fsEntry);
 							}
 						}
 					}
 				}
 			}
-			self.zoomedInPath = zoomedInPath;
-			self.breadcrumbPath = navigationTarget;
-			self.setNavigationTarget(navigationTarget);
-			this.geometry.setDrawRange(
-				smallestCovering.vertexIndex,
-				smallestCovering.lastVertexIndex - smallestCovering.vertexIndex
-			);
-			textGeo.setDrawRange(
-				smallestCovering.textVertexIndex,
-				smallestCovering.lastTextVertexIndex - smallestCovering.textVertexIndex
-			);
+			this.zoomedInPath = zoomedInPath;
+			this.breadcrumbPath = navigationTarget;
+			this.setNavigationTarget(navigationTarget);
+			if (entriesToFetch.length > 0) {
+				console.log('fetch: ' + entriesToFetch.map((e) => getFullPath(e)).join(', '));
+			}
+			if (entriesToDispose.length > 0) {
+				console.log('dispose: ' + entriesToDispose.map((e) => getFullPath(e)).join(', '));
+			}
+			if (entriesToFetch.length > 0 || entriesToDispose.length > 0) {
+				this.requestDirs(
+					entriesToFetch.map((e) => getFullPath(e)),
+					entriesToDispose
+				);
+			}
+			// mesh.geometry.setDrawRange(
+			// 	smallestCovering.vertexIndex,
+			// 	smallestCovering.lastVertexIndex - smallestCovering.vertexIndex
+			// );
+			// textGeometry.setDrawRange(
+			// 	smallestCovering.textVertexIndex,
+			// 	smallestCovering.lastTextVertexIndex - smallestCovering.textVertexIndex
+			// );
 		};
-
-		return mesh;
 	}
 
 	yield = () => {
@@ -750,13 +818,31 @@ class Tabletree {
 	}
 
 	async addFile(tree) {
+		if (this.addingFile) {
+			console.log('This is bad.');
+			debugger;
+			return;
+		}
+		this.addingFile = true;
 		await this.yield();
-		const model = await this.createFileTreeModel(Object.keys(tree.parent.entries).length, {
-			...tree.parent,
-			noGeo: true,
-		});
-		tree.model = model;
-		(tree.parent.model || this.model).add(model);
+		this.model.fileCount += Object.keys(tree.entries).length;
+		// console.log('fileCount', this.model.fileCount, this.model.geometry.fileIndex);
+
+		await this.updateFileTreeGeometry(
+			this.model.fileCount,
+			{
+				...tree,
+				noGeo: true,
+			},
+			this.fileTree.fsIndex,
+			this.model.geometry,
+			this.model.textGeometry,
+			{
+				vertexIndex: this.fileTree.lastVertexIndex,
+				textVertexIndex: this.fileTree.lastTextVertexIndex,
+			}
+		);
+		this.addingFile = false;
 	}
 
 	async updateTree(fileTree) {
@@ -771,8 +857,14 @@ class Tabletree {
 			fileTree,
 			(tree, path) => {
 				if (tree.index === 0 && tree.parent && !tree.parent.building) {
+					console.log(
+						'building tree',
+						getFullPath(tree.parent),
+						'due to',
+						getFullPath(tree)
+					);
 					tree.parent.building = true;
-					promises.push(tree);
+					promises.push(tree.parent);
 				}
 			},
 			''
@@ -783,9 +875,22 @@ class Tabletree {
 		this.changed = true;
 	}
 
+	treeFuckers = [];
+
+	async fuckTrees() {
+		if (this.fuckingTrees) return;
+		this.fuckingTrees = true;
+		while (this.treeFuckers.length > 0) {
+			const treeFucker = this.treeFuckers.splice(0).pop();
+			await this.updateTree(treeFucker);
+		}
+		this.fuckingTrees = false;
+	}
+
 	async showFileTree(fileTree) {
 		if (fileTree.tree === this.fileTree) {
-			await this.updateTree(fileTree.tree);
+			this.treeFuckers.push(fileTree.tree);
+			this.fuckTrees();
 			return;
 		}
 		if (this.model) {
@@ -798,9 +903,11 @@ class Tabletree {
 			this.model = null;
 		}
 		this.fileTree = fileTree.tree;
+		this.fileCount = fileTree.count;
 		this.model = await this.createFileTreeModel(fileTree.count, fileTree.tree);
 		this.model.position.set(-0.5, -0.5, 0.0);
 		this.modelPivot.add(this.model);
+		if (this.navUrl) this.goToURL(this.navUrl);
 		this.changed = true;
 	}
 
@@ -1327,6 +1434,7 @@ class Tabletree {
 	}
 
 	goToURL(url) {
+		this.navUrl = url;
 		if (!this.fileTree) return;
 		const result = getFSEntryForURL(this.fileTree, url);
 		if (!result) return;

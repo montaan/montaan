@@ -5,8 +5,7 @@ import tabletree from './main.js';
 import { TreeLink } from '../MainApp';
 
 interface MainViewProps extends RouteComponentProps {
-	requestDirs(paths: string[]): void;
-	requestDitchDirs(fsEntries: any[]): void;
+	requestDirs(paths: string[], dropEntries: any[]): Promise<void>;
 	api: any;
 	apiPrefix: string;
 	repoPrefix: string;
@@ -31,7 +30,6 @@ interface MainViewProps extends RouteComponentProps {
 class MainView extends React.Component<MainViewProps, {}> {
 	constructor(props: MainViewProps) {
 		tabletree.requestDirs = props.requestDirs;
-		tabletree.requestDitchDirs = props.requestDitchDirs;
 		tabletree.setNavigationTarget = props.setNavigationTarget;
 		tabletree.init(props.api, props.apiPrefix, props.repoPrefix);
 		tabletree.history = props.history;

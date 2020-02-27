@@ -20,6 +20,7 @@ export interface FSEntry {
 	title: string;
 	entries: null | { [filename: string]: FSEntry };
 	fetched?: boolean | number;
+	building?: boolean;
 
 	action?: string;
 	filesystem?: IFilesystem;

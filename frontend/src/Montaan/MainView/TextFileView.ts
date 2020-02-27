@@ -68,6 +68,13 @@ export default class TextFileView extends THREE.Mesh {
 		this.loadListeners = [];
 	}
 
+	dispose() {
+		if (this.geometry) {
+			this.geometry.dispose();
+		}
+		this.loadListeners.splice(0);
+	}
+
 	goToCoords(coords: number[]) {
 		if (this.fsEntry.textHeight !== undefined) return this.__goToCoords(coords);
 		else

@@ -254,10 +254,10 @@ export default {
 			obj.z = 0;
 			obj.scale = 0;
 			if (obj.entries === null) {
-				if (obj.name.startsWith('.')) dotFiles.push(obj);
+				if (obj.name.startsWith('.') && false) dotFiles.push(obj);
 				else files.push(obj);
 			} else {
-				if (obj.name.startsWith('.')) dotDirs.push(obj);
+				if (obj.name.startsWith('.') && false) dotDirs.push(obj);
 				else dirs.push(obj);
 			}
 		}

@@ -15,7 +15,7 @@ import RepoSelector, { RepoInfo } from '../RepoSelector';
 import utils from '../lib/utils';
 import { parseCommits, CommitData, RawCommitData } from '../lib/parse_commits';
 import { authorCmp, Commit, CommitFile } from '../lib/parse-diff';
-import { getPathEntry, getFullPath } from '../lib/filesystem';
+import { getPathEntry, getFullPath, getFSEntryForURL } from '../lib/filesystem';
 
 import styles from './MainApp.module.scss';
 import TreeView from '../TreeView';
@@ -243,12 +243,14 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 			return;
 		}
 		console.time('load files');
+		const prefixes = this.getURLPrefixes(this.props.location.pathname, repoPrefix) || [''];
+		console.log(prefixes);
 		const files = await this.props.api.postType(
 			'/repo/tree',
 			{
 				repo: repoPrefix,
 				hash: ref,
-				paths: [''],
+				paths: prefixes,
 				recursive: false,
 			},
 			{},
@@ -397,33 +399,61 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		}, 16);
 	}
 
-	requestDirs = async (paths: string[]) => {
-		const files = await this.props.api.postType(
-			'/repo/tree',
-			{
-				repo: this.state.repoPrefix,
-				hash: this.state.ref,
-				paths: paths.map((p) => p.slice(this.state.repoPrefix.length + 2) + '/'),
-				recursive: false,
-			},
-			{},
-			'arrayBuffer'
-		);
-		const fileTree = utils.parseFileList_(
-			files,
-			true,
-			this.state.repoPrefix + '/',
-			this.state.fileTree
-		);
-		this.setState({ fileTree });
-	};
+	loadQueue: any[] = [];
 
-	requestDitchDirs = async (fsEntries: FSEntry[]) => {
-		fsEntries.forEach((fsEntry) => (fsEntry.entries = {}));
-		var count = 0;
-		utils.traverseTree(this.state.fileTree, () => count++);
-		const fileTree = { ...this.state.fileTree, count };
-		this.setState({ fileTree });
+	processingLoadQueue: boolean = false;
+
+	async processLoadQueue() {
+		if (this.processingLoadQueue) return;
+		this.processingLoadQueue = true;
+		while (this.loadQueue.length > 0) {
+			await this.loadQueue.shift()();
+		}
+		this.processingLoadQueue = false;
+	}
+
+	requestDirs = async (paths: string[], dropEntries: FSEntry[]) => {
+		if (paths.length === 0 && dropEntries.length === 0) return;
+		this.loadQueue.push(async () => {
+			let files;
+			let fileTreeDrop = this.state.fileTree;
+			if (paths.length > 0) {
+				files = this.props.api.postType(
+					'/repo/tree',
+					{
+						repo: this.state.repoPrefix,
+						hash: this.state.ref,
+						paths: paths.map((p) => p.slice(this.state.repoPrefix.length + 2) + '/'),
+						recursive: false,
+					},
+					{},
+					'arrayBuffer'
+				);
+			}
+			if (dropEntries.length > 0) {
+				dropEntries.forEach((fsEntry) => {
+					fsEntry.entries = {};
+					fsEntry.fetched = false;
+					fsEntry.building = false;
+				});
+				fileTreeDrop.count = 0;
+				utils.traverseTree(fileTreeDrop, () => fileTreeDrop.count++);
+			}
+			if (paths.length > 0) {
+				fileTreeDrop = utils.parseFileList_(
+					await files,
+					true,
+					this.state.repoPrefix + '/',
+					fileTreeDrop
+				);
+				paths.forEach((p) => {
+					const entry = getFSEntryForURL(fileTreeDrop.tree, p);
+					if (entry) entry.fsEntry.fetched = true;
+				});
+			}
+			this.setState({ fileTree: fileTreeDrop });
+		});
+		await this.processLoadQueue();
 	};
 
 	setCommitFilter = (commitFilter: any) => {
@@ -724,15 +754,41 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 			}
 		}
 		if (nextProps.location !== this.props.location) {
-			this.setState({
-				navUrl:
-					nextProps.location.pathname +
-					nextProps.location.search +
-					nextProps.location.hash,
-			});
+			this.assertPathLoaded(nextProps.location.pathname, nextState.repoPrefix).then(() =>
+				this.setState({
+					navUrl:
+						nextProps.location.pathname +
+						nextProps.location.search +
+						nextProps.location.hash,
+				})
+			);
 		}
 
 		return true;
+	}
+
+	async assertPathLoaded(url: string, repoPrefix: string) {
+		if (this.state.fileTree.count <= 1) return;
+		const prefixes = this.getURLPrefixes(url, repoPrefix).filter((p) => {
+			const entry = getPathEntry(this.state.fileTree.tree, repoPrefix + '/' + p);
+			return !entry || (entry.entries && !entry.fetched);
+		});
+		await this.requestDirs(prefixes, []);
+	}
+
+	getURLPrefixes(url: string, repoPrefix: string) {
+		const { prefixes } = url
+			.replace('/' + repoPrefix, '')
+			.split('/')
+			.reduce(
+				(a, s) => {
+					a.prefix = (a.prefix + '/' + s).replace(/^\/+/, '');
+					a.prefixes.push(a.prefix);
+					return a;
+				},
+				{ prefix: '', prefixes: [] as string[] }
+			);
+		return prefixes;
 	}
 
 	createRepo = async (name: string, url?: string) => {
@@ -926,7 +982,6 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 						links={this.state.links}
 						setNavigationTarget={this.setNavigationTarget}
 						requestDirs={this.requestDirs}
-						requestDitchDirs={this.requestDitchDirs}
 					/>
 				) : (
 					<MainView
@@ -950,7 +1005,6 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 						links={this.state.links}
 						setNavigationTarget={this.setNavigationTarget}
 						requestDirs={this.requestDirs}
-						requestDitchDirs={this.requestDitchDirs}
 					/>
 				)}
 			</div>
