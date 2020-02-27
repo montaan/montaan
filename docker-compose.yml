@@ -4,7 +4,7 @@ services:
     db:
         image: postgres
         volumes:
-            - ./database/pgdata:/var/lib/postgresql/data
+            - pgdata:/var/lib/postgresql/data
         restart: always
         environment:
             POSTGRES_USER: montaan
@@ -27,6 +27,7 @@ services:
         restart: always
         ports:
             - 8080:8080
-# volumes:
-#     pgdata:
-#         driver: local
+
+volumes:
+    pgdata:
+        driver: local
