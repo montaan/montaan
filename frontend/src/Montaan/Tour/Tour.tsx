@@ -89,7 +89,7 @@ const Tour = ({ tourMarkdown, history, repoPrefix, name }: TourProps) => {
 	}, [history, position, tourSections]);
 
 	return (
-		<div className={styles.Tour} data-filename={'frontend/' + __filename.replace(/\\/g, '/')} >
+		<div className={styles.Tour} data-filename={'frontend/' + __filename.replace(/\\/g, '/')}>
 			<div className={styles.TourControls}>
 				<Button variant="secondary" onClick={goToStart} disabled={position === 0}>
 					Restart
@@ -110,6 +110,7 @@ const Tour = ({ tourMarkdown, history, repoPrefix, name }: TourProps) => {
 			<ol className={styles.TOC + ' ' + (tocOpen ? styles.open : styles.closed)}>
 				{tourSections.map((s, i) => (
 					<li
+						key={i}
 						onClick={() => setPosition(i)}
 						className={position === i ? styles.current : ''}
 					>

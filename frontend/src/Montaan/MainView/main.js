@@ -553,7 +553,7 @@ class Tabletree {
 		const res =
 			fsEntry.contentObject && (await fsEntry.contentObject.goToSearch(search, model));
 		if (!res) {
-			fsEntry.targetSearch = { search };
+			fsEntry.targetLine = { search };
 			return this.goToFSEntry(fsEntry, model);
 		}
 		const { targetPoint, targetFOV } = res;
@@ -1424,7 +1424,7 @@ class Tabletree {
 		const result = getFSEntryForURL(this.fileTree, url);
 		if (!result) return;
 		const { fsEntry, point, search } = result;
-		if (point && !isNaN(point[0])) this.goToFSEntryCoords(fsEntry, point);
+		if (point) this.goToFSEntryCoords(fsEntry, point);
 		else if (search) this.goToFSEntryAtSearch(fsEntry, search);
 		else this.goToFSEntry(fsEntry);
 	}

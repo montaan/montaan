@@ -114,7 +114,6 @@ export default class TextFileView extends THREE.Mesh {
 
 	__goToSearch(search: string) {
 		const fsEntry = this.fsEntry;
-		console.log('gotosearch', search, fsEntry.textHeight);
 		if (!fsEntry.textHeight) return false;
 		const text = this.geometry.layout._opt.text;
 		let line = 1;
