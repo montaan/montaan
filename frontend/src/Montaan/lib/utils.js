@@ -83,7 +83,13 @@ var utils = {
 				branch.entries = {};
 			}
 			if (typeof branch.entries[segment] !== 'object') {
-				branch.entries[segment] = { name: segment, title: segment, entries: {}, index: 0, size: 0 };
+				branch.entries[segment] = {
+					name: segment,
+					title: segment,
+					entries: {},
+					index: undefined,
+					size: 0,
+				};
 				addCount++;
 			}
 			branch = branch.entries[segment];
@@ -97,7 +103,7 @@ var utils = {
 				name: segments[i],
 				title: segments[i],
 				entries: dir ? {} : null,
-				index: 0,
+				index: undefined,
 				parent: branch,
 			};
 			addCount++;
@@ -128,7 +134,12 @@ var utils = {
 	},
 
 	convertXMLToTree: function(node, uid) {
-		var obj = { name: uid.value++, title: node.tagName || 'document', index: 0, entries: {} };
+		var obj = {
+			name: uid.value++,
+			title: node.tagName || 'document',
+			index: undefined,
+			entries: {},
+		};
 		var files = [];
 		if (node.attributes) {
 			for (let i = 0; i < node.attributes.length; i++) {
@@ -136,7 +147,7 @@ var utils = {
 				files.push({
 					name: uid.value++,
 					title: attr.name + '=' + attr.value,
-					index: 0,
+					index: undefined,
 					entries: null,
 				});
 			}
@@ -152,7 +163,7 @@ var utils = {
 					files.push({
 						name: uid.value++,
 						title: c.textContent,
-						index: 0,
+						index: undefined,
 						entries: null,
 					});
 				}
@@ -171,7 +182,7 @@ var utils = {
 			return {
 				name: uid.value++,
 				title: node.textContent,
-				index: 0,
+				index: undefined,
 				entries: null,
 				href: node.href,
 			};
@@ -182,7 +193,7 @@ var utils = {
 			if (titleEl) {
 				title = titleEl.textContent;
 			}
-			var obj = { name: uid.value++, title: title, index: 0, entries: {} };
+			var obj = { name: uid.value++, title: title, index: undefined, entries: {} };
 			var file;
 			var files = [];
 			for (let i = 0, l = node.childNodes.length; i < l; i++) {
@@ -238,7 +249,7 @@ var utils = {
 				let uid = { value: 0 };
 				let tree = this.convertBookmarksToTree(xml, uid);
 				return {
-					tree: { name: -1, title: '', index: 0, entries: { Bookmarks: tree } },
+					tree: { name: -1, title: '', index: undefined, entries: { Bookmarks: tree } },
 					count: uid.value + 1,
 				};
 			} else {
@@ -247,7 +258,7 @@ var utils = {
 				window.xml = xml;
 				let tree = this.convertXMLToTree(xml, uid);
 				return {
-					tree: { name: -1, title: '', index: 0, entries: { XML: tree } },
+					tree: { name: -1, title: '', index: undefined, entries: { XML: tree } },
 					count: uid.value + 1,
 				};
 			}
@@ -283,7 +294,7 @@ var utils = {
 		var gitStyle = /^\d{6} (blob|tree) [a-f0-9]{40}\t[^\u0000]+\u0000/.test(fileString);
 		var fileTree, fileCount;
 		if (targetTree === null) {
-			fileTree = { name: '', title: '', entries: {}, index: 0 };
+			fileTree = { name: '', title: '', entries: {}, index: undefined };
 			fileCount = 0;
 		} else {
 			fileTree = targetTree.tree;
@@ -304,7 +315,8 @@ var utils = {
 					first = false;
 				} else {
 					name = prefix + fileString.substring(startIndex + skip, i);
-					if (gitStyle && fileString.charCodeAt(startIndex+7) === 116 /* t */) name += '/';
+					if (gitStyle && fileString.charCodeAt(startIndex + 7) === 116 /* t */)
+						name += '/';
 					// console.log(name);
 				}
 				startIndex = i + 1;
@@ -320,7 +332,7 @@ var utils = {
 		// eslint-disable-next-line
 		var fileTree, fileCount;
 		if (targetTree === null) {
-			fileTree = { name: '', title: '', entries: {}, index: 0 };
+			fileTree = { name: '', title: '', entries: {}, index: undefined };
 			fileCount = 0;
 		} else {
 			fileTree = targetTree.tree;
@@ -332,27 +344,33 @@ var utils = {
 		var first = includePrefix ? false : true;
 		const u8 = new Uint8Array(buffer);
 		// console.log('prefix:', prefix);
-		let mode,type,hash,length;
+		let mode, type, hash, length;
 		const td = new TextDecoder();
 		for (let i = 0; i < u8.length; i++) {
 			if (u8[i] === sep) {
 				if (first) {
-					const tabIndex = u8.indexOf(9, startIndex+48);
+					const tabIndex = u8.indexOf(9, startIndex + 48);
 					const segs = td.decode(u8.slice(tabIndex + 1, i)).split('/');
-					[mode, type, hash, length] = td.decode(u8.slice(startIndex, tabIndex)).split(/\s+/);
+					[mode, type, hash, length] = td
+						.decode(u8.slice(startIndex, tabIndex))
+						.split(/\s+/);
 					name = segs[segs.length - 2] + '/';
 					skip = i - name.length + 1;
 					name = prefix;
 					first = false;
 				} else {
-					const tabIndex = u8.indexOf(9, startIndex+48);
+					const tabIndex = u8.indexOf(9, startIndex + 48);
 					// console.log(td.decode(u8.slice(startIndex, i)));
 					const fn = td.decode(u8.slice(tabIndex + 1 + skip, i));
-					[mode, type, hash, length] = td.decode(u8.slice(startIndex, tabIndex)).split(/\s+/);					name = prefix + fn;
-					if (u8[startIndex+7] === 116 /* t */ || u8[startIndex+7] === 99 /* c */) name += '/';
+					[mode, type, hash, length] = td
+						.decode(u8.slice(startIndex, tabIndex))
+						.split(/\s+/);
+					name = prefix + fn;
+					if (u8[startIndex + 7] === 116 /* t */ || u8[startIndex + 7] === 99 /* c */)
+						name += '/';
 				}
 				startIndex = i + 1;
-				fileCount += utils.addFileTreeEntry(name, fileTree, mode,type,hash,length);
+				fileCount += utils.addFileTreeEntry(name, fileTree, mode, type, hash, length);
 			}
 		}
 		// console.log("Parsed files", fileCount);

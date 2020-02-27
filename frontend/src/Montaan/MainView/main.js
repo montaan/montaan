@@ -15,6 +15,7 @@ import fontSDF from './assets/fnt/Inconsolata-Regular.png';
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter';
 import * as THREE from 'three';
 import loadFont from 'load-bmfont';
+import WorkQueue from '../lib/WorkQueue';
 
 function save(blob, filename) {
 	const link = document.createElement('a');
@@ -67,6 +68,7 @@ THREE.Object3D.prototype.tick = function(t, dt) {
 
 class Tabletree {
 	constructor() {
+		this.treeUpdateQueue = new WorkQueue();
 		this.animating = false;
 		this.currentFrame = 0;
 		this.pageZoom = 1;
@@ -563,12 +565,11 @@ class Tabletree {
 
 	async updateFileTreeGeometry(fileCount, fileTree, fsIndex, geo, textGeometry, vertexIndices) {
 		if (geo.maxFileCount < fileCount + 1) {
-			console.log('Geometry resize!', 2 * fileCount + 2);
+			console.log('Geometry resize!', 2 * (fileCount + 1));
 			Geometry.resizeGeometry(geo, 2 * (fileCount + 1));
 		}
 
 		const fileIndex = geo.fileIndex;
-		// console.log('fileIndex', geo.fileIndex, fileTree, fsIndex);
 
 		const labels = new THREE.Object3D();
 		const thumbnails = new THREE.Object3D();
@@ -576,16 +577,15 @@ class Tabletree {
 			this.yield,
 			fileTree,
 			fileIndex,
-			geo.getAttribute('position').array,
-			geo.getAttribute('color').array,
+			geo.attributes.position.array,
+			geo.attributes.color.array,
 			labels,
 			thumbnails,
 			fsIndex,
 			vertexIndices
 		);
-
-		geo.getAttribute('position').needsUpdate = true;
-		geo.getAttribute('color').needsUpdate = true;
+		geo.attributes.position.needsUpdate = true;
+		geo.attributes.color.needsUpdate = true;
 
 		let vertCount = textGeometry.vertCount;
 		labels.traverse(function(c) {
@@ -767,14 +767,8 @@ class Tabletree {
 					entriesToDispose
 				);
 			}
-			// mesh.geometry.setDrawRange(
-			// 	smallestCovering.vertexIndex,
-			// 	smallestCovering.lastVertexIndex - smallestCovering.vertexIndex
-			// );
-			// textGeometry.setDrawRange(
-			// 	smallestCovering.textVertexIndex,
-			// 	smallestCovering.lastTextVertexIndex - smallestCovering.textVertexIndex
-			// );
+			mesh.geometry.setDrawRange(0, this.fileTree.lastVertexIndex);
+			textGeometry.setDrawRange(0, this.fileTree.lastTextVertexIndex);
 		};
 	}
 
@@ -826,37 +820,39 @@ class Tabletree {
 		this.addingFile = true;
 		await this.yield();
 		this.model.fileCount += Object.keys(tree.entries).length;
-		// console.log('fileCount', this.model.fileCount, this.model.geometry.fileIndex);
+		const vertexIndices = {
+			vertexIndex: this.fileTree.lastVertexIndex,
+			textVertexIndex: this.fileTree.lastTextVertexIndex,
+		};
 
 		await this.updateFileTreeGeometry(
 			this.model.fileCount,
-			{
-				...tree,
-				noGeo: true,
-			},
+			tree,
 			this.fileTree.fsIndex,
 			this.model.geometry,
 			this.model.textGeometry,
-			{
-				vertexIndex: this.fileTree.lastVertexIndex,
-				textVertexIndex: this.fileTree.lastTextVertexIndex,
-			}
+			vertexIndices
 		);
+		const lastIndex = tree.lastIndex;
+		while (tree) {
+			tree.lastVertexIndex = vertexIndices.vertexIndex;
+			tree.lastTextVertexIndex = vertexIndices.textVertexIndex;
+			tree.lastIndex = lastIndex;
+			tree = tree.parent;
+		}
 		this.addingFile = false;
 	}
 
-	async updateTree(fileTree) {
+	updateTree = async (fileTree) => {
 		/*
 			Traverse tree to find subtrees that are not in a model.
-			If the parent model has enough allocation to host a subtree, write the
-			subtree to the model.
-			If there's no space left in the model, create a new model for the subtree.
+			Append the subtree to this.model geometry.
 		*/
 		const promises = [];
 		utils.traverseFSEntry(
 			fileTree,
 			(tree, path) => {
-				if (tree.index === 0 && tree.parent && !tree.parent.building) {
+				if (tree.index === undefined && !tree.parent.building) {
 					console.log(
 						'building tree',
 						getFullPath(tree.parent),
@@ -872,26 +868,16 @@ class Tabletree {
 		for (let i = 0; i < promises.length; i++) {
 			await this.addFile(promises[i]);
 		}
+		console.log(fileTree);
 		this.changed = true;
-	}
-
-	treeFuckers = [];
-
-	async fuckTrees() {
-		if (this.fuckingTrees) return;
-		this.fuckingTrees = true;
-		while (this.treeFuckers.length > 0) {
-			const treeFucker = this.treeFuckers.splice(0).pop();
-			await this.updateTree(treeFucker);
-		}
-		this.fuckingTrees = false;
-	}
+	};
 
 	async showFileTree(fileTree) {
 		if (fileTree.tree === this.fileTree) {
-			this.treeFuckers.push(fileTree.tree);
-			this.fuckTrees();
+			this.treeUpdateQueue.push(this.updateTree, fileTree.tree);
 			return;
+		} else {
+			this.treeUpdateQueue.clear();
 		}
 		if (this.model) {
 			this.model.parent.remove(this.model);
