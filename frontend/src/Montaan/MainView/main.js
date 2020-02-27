@@ -565,7 +565,7 @@ class Tabletree {
 
 	async updateFileTreeGeometry(fileCount, fileTree, fsIndex, geo, textGeometry, vertexIndices) {
 		if (geo.maxFileCount < fileCount + 1) {
-			console.log('Geometry resize!', 2 * (fileCount + 1));
+			// console.log('Geometry resize!', 2 * (fileCount + 1));
 			Geometry.resizeGeometry(geo, 2 * (fileCount + 1));
 		}
 
@@ -853,12 +853,12 @@ class Tabletree {
 			fileTree,
 			(tree, path) => {
 				if (tree.index === undefined && !tree.parent.building) {
-					console.log(
-						'building tree',
-						getFullPath(tree.parent),
-						'due to',
-						getFullPath(tree)
-					);
+					// console.log(
+					// 	'building tree',
+					// 	getFullPath(tree.parent),
+					// 	'due to',
+					// 	getFullPath(tree)
+					// );
 					tree.parent.building = true;
 					promises.push(tree.parent);
 				}
@@ -868,7 +868,6 @@ class Tabletree {
 		for (let i = 0; i < promises.length; i++) {
 			await this.addFile(promises[i]);
 		}
-		console.log(fileTree);
 		this.changed = true;
 	};
 

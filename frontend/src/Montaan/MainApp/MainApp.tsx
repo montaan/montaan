@@ -778,11 +778,11 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 
 	getURLPrefixes(url: string, repoPrefix: string) {
 		const { prefixes } = url
-			.replace('/' + repoPrefix, '')
+			.replace('/' + repoPrefix, '.')
 			.split('/')
 			.reduce(
 				(a, s) => {
-					a.prefix = (a.prefix + '/' + s).replace(/^\/+/, '');
+					a.prefix += s + '/';
 					a.prefixes.push(a.prefix);
 					return a;
 				},
