@@ -1,6 +1,6 @@
 // src/Montaan/Repo/Repo.tsx
 
-import React, { useState, useCallback } from 'react';
+import React, { useCallback } from 'react';
 import { withRouter, RouteComponentProps } from 'react-router-dom';
 
 import styles from './Repo.module.scss';

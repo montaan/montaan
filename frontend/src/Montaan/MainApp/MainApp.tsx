@@ -15,14 +15,7 @@ import RepoSelector, { RepoInfo } from '../RepoSelector';
 import utils from '../lib/utils';
 import { parseCommits, CommitData, RawCommitData } from '../lib/parse_commits';
 import { authorCmp, Commit, CommitFile } from '../lib/parse-diff';
-import {
-	getPathEntry,
-	getFullPath,
-	getFSEntryForURL,
-	mount,
-	getFilesystemForPath,
-	readDir,
-} from '../lib/filesystem';
+import { getPathEntry, getFullPath, mount, readDir } from '../lib/filesystem';
 
 import styles from './MainApp.module.scss';
 import TreeView from '../TreeView';
@@ -32,7 +25,6 @@ import { FSEntry, createFSTree } from '../lib/filesystem';
 import Introduction from '../Introduction';
 import * as THREE from 'three';
 import WorkQueue from '../lib/WorkQueue';
-import { readdir } from 'fs';
 
 export interface MainAppProps extends RouteComponentProps {
 	match: any;
@@ -269,8 +261,6 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 				fsEntry.fetched = false;
 				fsEntry.building = false;
 			});
-			fileTreeDrop.count = 0;
-			utils.traverseTree(fileTreeDrop, () => fileTreeDrop.count++);
 		}
 		if (paths.length > 0) {
 			await files;
@@ -279,6 +269,9 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 				if (entry) entry.fetched = true;
 			});
 		}
+		fileTreeDrop.count = 0;
+		utils.traverseTree(fileTreeDrop, () => fileTreeDrop.count++);
+		// console.log(fileTreeDrop);
 		this.setState({ fileTreeUpdated: this.state.fileTreeUpdated + 1 });
 	};
 
@@ -733,7 +726,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		if (nextProps.match && nextProps.match !== this.props.match) {
 			var repoPrefix = nextProps.match.params.user + '/' + nextProps.match.params.name;
 			if (repoPrefix !== this.state.repoPrefix) {
-				this.setRepo(nextProps.match.params.name, nextProps.match.params.user);
+				// this.setRepo(nextProps.match.params.name, nextProps.match.params.user);
 			}
 		}
 		if (nextProps.location !== this.props.location) {

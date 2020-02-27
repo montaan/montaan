@@ -261,7 +261,7 @@ class App extends React.Component<AppProps, AppState> {
 								component={() => <UserActivation api={this.state.api} />}
 							/>
 							<Route
-								path="/:user/:name"
+								path="/:user/:name?"
 								component={() => (
 									<Montaan
 										api={this.state.api}

@@ -858,7 +858,9 @@ class Tabletree {
 					// 	'building tree',
 					// 	getFullPath(tree.parent),
 					// 	'due to',
-					// 	getFullPath(tree)
+					// 	getFullPath(tree),
+					// 	tree.parent.scale,
+					// 	tree.scale
 					// );
 					tree.parent.building = true;
 					promises.push(tree.parent);

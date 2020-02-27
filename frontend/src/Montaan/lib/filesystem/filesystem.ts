@@ -1,6 +1,5 @@
 import QFrameAPI from '../../../lib/api';
 import utils from '../utils';
-import Repo from '../../Repo';
 
 export interface FSEntry {
 	scale: number;
@@ -94,23 +93,18 @@ class Filesystem implements IFilesystem {
 
 	async readDir(path: string): Promise<FSEntry | null> {
 		throw new NotImplementedError("Filesystem doesn't support reads");
-		return null;
 	}
-	async readFile(path: string) {
+	async readFile(path: string): Promise<ArrayBuffer> {
 		throw new NotImplementedError("Filesystem doesn't support reads");
-		return new ArrayBuffer(0);
 	}
-	async writeFile(path: string, contents: ArrayBuffer) {
+	async writeFile(path: string, contents: ArrayBuffer): Promise<boolean> {
 		throw new NotImplementedError("Filesystem doesn't support writes");
-		return true;
 	}
-	async rm(path: string) {
+	async rm(path: string): Promise<boolean> {
 		throw new NotImplementedError("Filesystem doesn't support writes");
-		return true;
 	}
-	async rmdir(path: string) {
+	async rmdir(path: string): Promise<boolean> {
 		throw new NotImplementedError("Filesystem doesn't support writes");
-		return true;
 	}
 }
 
@@ -130,24 +124,20 @@ class MontaanUserReposFilesystem extends Filesystem {
 		return tree;
 	}
 
-	async readFile(path: string) {
+	async readFile(path: string): Promise<ArrayBuffer> {
 		throw new NotImplementedError("montaanUserRepos doesn't support readFile");
-		return new ArrayBuffer(0);
 	}
 
-	async writeFile(path: string, contents: ArrayBuffer) {
+	async writeFile(path: string, contents: ArrayBuffer): Promise<boolean> {
 		throw new NotImplementedError("montaanUserRepos doesn't support writes");
-		return true;
 	}
 
-	async rm(path: string) {
+	async rm(path: string): Promise<boolean> {
 		throw new NotImplementedError("montaanUserRepos doesn't support writes");
-		return true;
 	}
 
-	async rmdir(path: string) {
+	async rmdir(path: string): Promise<boolean> {
 		throw new NotImplementedError("montaanUserRepos doesn't support writes");
-		return true;
 	}
 }
 
@@ -163,15 +153,18 @@ class MontaanGitFileSystem extends Filesystem {
 	}
 
 	async readDir(path: string): Promise<FSEntry> {
-		if (path === '') path = '.';
+		let reqPath = path;
+		if (reqPath === '') reqPath = '.';
+		if (reqPath[0] === '/') reqPath = '.' + reqPath;
+		reqPath += '/';
 		const pathBuf: ArrayBuffer = await this.api.postType(
 			'/repo/tree',
-			{ repo: this.repo, paths: [path], hash: this.ref, recursive: false },
+			{ repo: this.repo, paths: [reqPath], hash: this.ref, recursive: false },
 			{},
 			'arrayBuffer'
 		);
 		const tree = utils.parseFileList_(pathBuf, true, '');
-		return tree.tree;
+		return getPathEntry(tree.tree, path) || tree.tree;
 	}
 
 	async readFile(path: string) {
@@ -183,19 +176,16 @@ class MontaanGitFileSystem extends Filesystem {
 		);
 	}
 
-	async writeFile(path: string, contents: ArrayBuffer) {
+	async writeFile(path: string, contents: ArrayBuffer): Promise<boolean> {
 		throw new NotImplementedError("montaanGit doesn't support writes");
-		return true;
 	}
 
-	async rm(path: string) {
+	async rm(path: string): Promise<boolean> {
 		throw new NotImplementedError("montaanGit doesn't support writes");
-		return true;
 	}
 
-	async rmdir(path: string) {
+	async rmdir(path: string): Promise<boolean> {
 		throw new NotImplementedError("montaanGit doesn't support writes");
-		return true;
 	}
 }
 
@@ -299,7 +289,7 @@ type ExtendedFSEntry = { fsEntry: FSEntry; point?: number[]; search?: string };
 export function getFSEntryForURL(namespace: FSEntry, url: string): ExtendedFSEntry | null {
 	const [treePath, coords] = url.split('#');
 	const point =
-		(coords && /^[\.\d]+(,[\.\d]+)*$/.test(coords) && coords.split(',').map(parseFloat)) ||
+		(coords && /^[.\d]+(,[.\d]+)*$/.test(coords) && coords.split(',').map(parseFloat)) ||
 		undefined;
 	const search =
 		(coords && /^find:/.test(coords) && decodeURIComponent(coords.slice(5))) || undefined;
@@ -316,19 +306,24 @@ export async function readDir(tree: FSEntry, path: string): Promise<void> {
 		const { filesystem, relativePath } = fs;
 		if (filesystem.filesystem) {
 			const dir = await filesystem.filesystem.readDir(relativePath);
-			if (!dir || !filesystem.entries || !dir.entries) return;
+			const targetDir = getPathEntry(filesystem, relativePath);
+			// if (targetDir && targetDir.name === 'backend') debugger;
+			if (!dir || !targetDir || !targetDir.entries || !dir.entries) return;
 			for (let i in dir.entries) {
-				if (!filesystem.entries[i]) {
-					filesystem.entries[i] = dir.entries[i];
+				if (!targetDir.entries[i]) {
+					targetDir.entries[i] = dir.entries[i];
+					dir.entries[i].parent = targetDir;
 				}
 			}
 			const deletions = [];
-			for (let i in filesystem.entries) {
+			for (let i in targetDir.entries) {
 				if (!dir.entries[i]) {
 					deletions.push(i);
 				}
 			}
-			for (let i = 0; i < deletions.length; i++) delete filesystem.entries[deletions[i]];
+			for (let i = 0; i < deletions.length; i++) {
+				delete targetDir.entries[deletions[i]];
+			}
 		}
 	}
 }
