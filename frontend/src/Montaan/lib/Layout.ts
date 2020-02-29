@@ -1,23 +1,82 @@
-import createText from './third_party/three-bmfont-text-modified';
-import Colors from './Colors.ts';
+import createText, { SDFTextGeometry } from './third_party/three-bmfont-text-modified';
+import SDFShader from '../lib/third_party/three-bmfont-text-modified/shaders/msdf';
+import Colors from './Colors';
 import Geometry from './Geometry';
+import * as THREE from 'three';
+import { FSEntry } from './filesystem';
 
-const THREE = require('three');
+export interface ISDFTextGeometry extends THREE.BufferGeometry {
+	layout: {
+		width: number;
+		height: number;
+		_opt: { text: string };
+	};
+}
+
+const emptyMaterial = new THREE.RawShaderMaterial();
+const emptyGeometry = (new SDFTextGeometry() as unknown) as ISDFTextGeometry;
+
+export class SDFTextMesh extends THREE.Mesh {
+	material: THREE.RawShaderMaterial = emptyMaterial;
+	geometry: ISDFTextGeometry = emptyGeometry;
+}
 
 export default {
 	thumbnailGeo: new THREE.PlaneBufferGeometry(1, 1, 1, 1),
-	font: null,
+	font: null as any | null,
+	fontTexture: null as THREE.Texture | null,
+	textMaterial: emptyMaterial,
+
+	makeTextMaterial(
+		palette?: THREE.Vector3[],
+		fontTexture?: THREE.Texture
+	): THREE.RawShaderMaterial {
+		if (!fontTexture && !this.fontTexture) throw new Error('Layout.fontTexture not set');
+		if (!palette) palette = [];
+		if (!fontTexture && this.fontTexture) fontTexture = this.fontTexture;
+		if (palette.length < 8) {
+			palette = palette.slice();
+			while (palette.length < 8) {
+				palette.push(
+					palette[palette.length - 1] ||
+						new THREE.Vector3(
+							Colors.textColor.r,
+							Colors.textColor.g,
+							Colors.textColor.b
+						)
+				);
+			}
+		}
+		return new THREE.RawShaderMaterial(
+			SDFShader({
+				map: fontTexture,
+				side: THREE.DoubleSide,
+				transparent: true,
+				color: 0xffffff,
+				palette: palette,
+				polygonOffset: true,
+				polygonOffsetFactor: -0.5,
+				polygonOffsetUnits: 0.5,
+				depthTest: false,
+				depthWrite: false,
+			})
+		);
+	},
+
+	createText: async function(opts: any, yieldFn: () => Promise<void>) {
+		return (createText({ font: this.font, ...opts }, yieldFn) as unknown) as ISDFTextGeometry;
+	},
 
 	createFileTreeQuads: async function(
-		yieldFn,
-		fileTree,
-		fileIndex,
-		verts,
-		colorVerts,
-		parentText,
-		thumbnails,
-		index,
-		vertexIndices
+		yieldFn: () => Promise<void>,
+		fileTree: FSEntry,
+		fileIndex: number,
+		verts: Float32Array,
+		colorVerts: Float32Array,
+		parentText: THREE.Object3D,
+		thumbnails: THREE.Object3D,
+		index: FSEntry[],
+		vertexIndices: { vertexIndex: number; textVertexIndex: number }
 	) {
 		var dirs = [];
 		var files = [];
@@ -60,7 +119,7 @@ export default {
 
 		var maxX = 0,
 			maxY = 0;
-		var filesBox = fileTree;
+		var filesBox = { x: fileTree.x, y: fileTree.y, z: fileTree.z, scale: fileTree.scale };
 		outer: for (let x = 0; x < dirSquareSide; x++) {
 			for (let y = 0; y < dirSquareSide / dirScale; y++) {
 				const off = x * Math.ceil(dirSquareSide / dirScale) + y;
@@ -77,14 +136,15 @@ export default {
 							const xOff = 1.0 * x * (1 / dirSquareSide);
 							const subX = xOff + 0.0 / dirSquareSide;
 							const subY = yOff + 0.0 / dirSquareSide;
-							fileTree.filesBox = filesBox = {};
-							filesBox.x = fileTree.x + fileTree.scale * subX * dirScale;
-							filesBox.y =
-								fileTree.y +
-								fileTree.scale * subY * dirScale +
-								(1 - dirScale) * fileTree.scale;
-							filesBox.scale = 2 * fileTree.scale * (0.8 / dirSquareSide) * dirScale;
-							filesBox.z = fileTree.z;
+							fileTree.filesBox = filesBox = {
+								x: fileTree.x + fileTree.scale * subX * dirScale,
+								y:
+									fileTree.y +
+									fileTree.scale * subY * dirScale +
+									(1 - dirScale) * fileTree.scale,
+								scale: 2 * fileTree.scale * (0.8 / dirSquareSide) * dirScale,
+								z: fileTree.z,
+							};
 						} else if (dirs.length !== dirSquareSide * dirSquareSide - 1) {
 							y = x === dirSquareSide - 1 ? y + 2 : 2;
 							x = dirSquareSide - 1;
@@ -96,27 +156,29 @@ export default {
 							const xOff = 0.9 * x * (1 / dirSquareSide);
 							const subX = xOff + 0.1 / dirSquareSide;
 							const subY = yOff + 0.125 / dirSquareSide;
-							fileTree.filesBox = filesBox = {};
-							filesBox.x = fileTree.x + fileTree.scale * subX * dirScale;
-							filesBox.y =
-								fileTree.y +
-								fileTree.scale * subY * dirScale +
-								(1 - dirScale) * fileTree.scale;
-							filesBox.scale = 2 * fileTree.scale * (0.9 / dirSquareSide) * dirScale;
-							filesBox.z = fileTree.z;
+							fileTree.filesBox = filesBox = {
+								x: fileTree.x + fileTree.scale * subX * dirScale,
+								y:
+									fileTree.y +
+									fileTree.scale * subY * dirScale +
+									(1 - dirScale) * fileTree.scale,
+								scale: 2 * fileTree.scale * (0.9 / dirSquareSide) * dirScale,
+								z: fileTree.z,
+							};
 						} else {
 							const yOff = 1 - (0.5 * y + 1) * (1 / dirSquareSide);
 							const xOff = 0.9 * x * (1 / dirSquareSide);
 							const subX = xOff + 0.1 / dirSquareSide;
 							const subY = yOff + 0.125 / dirSquareSide;
-							fileTree.filesBox = filesBox = {};
-							filesBox.x = fileTree.x + fileTree.scale * subX * dirScale;
-							filesBox.y =
-								fileTree.y +
-								fileTree.scale * subY * dirScale +
-								(1 - dirScale) * fileTree.scale;
-							filesBox.scale = fileTree.scale * (0.8 / dirSquareSide) * dirScale;
-							filesBox.z = fileTree.z;
+							fileTree.filesBox = filesBox = {
+								x: fileTree.x + fileTree.scale * subX * dirScale,
+								y:
+									fileTree.y +
+									fileTree.scale * subY * dirScale +
+									(1 - dirScale) * fileTree.scale,
+								scale: fileTree.scale * (0.8 / dirSquareSide) * dirScale,
+								z: fileTree.z,
+							};
 						}
 					}
 					break outer;
@@ -163,7 +225,7 @@ export default {
 					fileIndex,
 					verts,
 					colorVerts,
-					dir.text,
+					dir.text as THREE.Object3D,
 					thumbnails,
 					index,
 					vertexIndices
@@ -228,7 +290,13 @@ export default {
 		return fileIndex;
 	},
 
-	createTextForEntry: async function(obj, parentText, textVertexIndex, yieldFn, xScale = 1) {
+	createTextForEntry: async function(
+		obj: FSEntry,
+		parentText: THREE.Object3D,
+		textVertexIndex: number,
+		yieldFn: () => Promise<void>,
+		xScale: number = 1
+	) {
 		var title = obj.title;
 		if (obj.entries == null) {
 			if (title.indexOf('\n') === -1 && title.length > 16) {
@@ -237,11 +305,11 @@ export default {
 			}
 		}
 
-		var textGeometry = await createText(
+		var textGeometry = ((await createText(
 			{ text: title, font: this.font, noBounds: true },
 			yieldFn
-		);
-		var text = new THREE.Object3D();
+		)) as unknown) as ISDFTextGeometry;
+		var text = new SDFTextMesh();
 		text.geometry = textGeometry;
 
 		obj.textVertexIndex = textVertexIndex;
@@ -258,7 +326,7 @@ export default {
 		text.position.z = obj.z;
 		text.scale.multiplyScalar(xScale * obj.scale * 0.00436 * scale);
 		text.scale.y *= -1;
-		var arr = textGeometry.attributes.position.array;
+		var arr = textGeometry.attributes.position.array as Float32Array;
 		for (var j = 0; j < arr.length; j += 4) {
 			arr[j] = arr[j] * text.scale.x + text.position.x;
 			arr[j + 1] = arr[j + 1] * text.scale.y + text.position.y;
@@ -267,7 +335,6 @@ export default {
 		text.position.set(0, 0, 0);
 		text.scale.set(1, 1, 1);
 		var o = new THREE.Object3D();
-		if (parentText.children.length === 0) o.isFirst = true;
 		o.add(text);
 		parentText.add(o);
 		obj.text = o;

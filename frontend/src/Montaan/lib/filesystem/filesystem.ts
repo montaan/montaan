@@ -2,6 +2,13 @@ import QFrameAPI from '../../../lib/api';
 import utils from '../utils';
 
 export interface FSEntry {
+	textVertexIndex: number;
+	vertexIndex: number;
+	filesBox: {};
+	color?: number[];
+	lastIndex: number;
+	lastVertexIndex: number;
+	lastTextVertexIndex: number;
 	scale: number;
 
 	x: number;
@@ -219,6 +226,13 @@ export function createFSTree(name: string, url: string, fsType?: string, api?: Q
 		textHeight: 0,
 		targetLine: undefined,
 		lineCount: 0,
+
+		filesBox: {},
+		lastIndex: -1,
+		lastVertexIndex: -1,
+		lastTextVertexIndex: -1,
+		textVertexIndex: -1,
+		vertexIndex: -1,
 	};
 }
 

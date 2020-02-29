@@ -11,7 +11,6 @@ export default class ImageFileView extends THREE.Mesh {
 	api: QFrameAPI;
 	yield: any;
 	path: string;
-	fontTexture: THREE.Texture;
 	geometry: BufferGeometry;
 	material: THREE.MeshBasicMaterial;
 	requestFrame: any;
@@ -24,8 +23,7 @@ export default class ImageFileView extends THREE.Mesh {
 		fullPath: string,
 		api: QFrameAPI,
 		yieldFn: any,
-		requestFrame: any,
-		fontTexture: THREE.Texture
+		requestFrame: any
 	) {
 		super();
 		this.visible = false;
@@ -34,7 +32,6 @@ export default class ImageFileView extends THREE.Mesh {
 		this.api = api;
 		this.yield = yieldFn;
 		this.path = fullPath;
-		this.fontTexture = fontTexture;
 		this.requestFrame = requestFrame;
 		this.loadListeners = [];
 

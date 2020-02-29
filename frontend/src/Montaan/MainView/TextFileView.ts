@@ -3,10 +3,7 @@ import * as THREE from 'three';
 import { FSEntry } from '../lib/filesystem';
 import QFrameAPI from '../../lib/api';
 
-import createText, { SDFTextGeometry } from '../lib/third_party/three-bmfont-text-modified';
-import SDFShader from '../lib/third_party/three-bmfont-text-modified/shaders/msdf';
-import Layout from '../lib/Layout';
-import Colors from '../lib/Colors';
+import Layout, { SDFTextMesh } from '../lib/Layout';
 
 type PrettyPrintResult = {
 	language: string;
@@ -21,27 +18,13 @@ type NodeStyle = {
 	text: string;
 };
 
-interface ISDFTextGeometry extends THREE.BufferGeometry {
-	layout: {
-		width: number;
-		height: number;
-		_opt: { text: string };
-	};
-}
-
-const emptyMaterial = new THREE.RawShaderMaterial();
-const emptyGeometry = (new SDFTextGeometry() as unknown) as ISDFTextGeometry;
-
-export default class TextFileView extends THREE.Mesh {
+export default class TextFileView extends SDFTextMesh {
 	MAX_SIZE = 1e5;
 	fsEntry: FSEntry;
 	model: THREE.Mesh;
 	api: QFrameAPI;
 	yield: any;
 	path: string;
-	fontTexture: THREE.Texture;
-	material: THREE.RawShaderMaterial;
-	geometry: ISDFTextGeometry;
 	requestFrame: any;
 	fullyVisible: boolean = false;
 	loadListeners: (() => void)[];
@@ -52,8 +35,7 @@ export default class TextFileView extends THREE.Mesh {
 		fullPath: string,
 		api: QFrameAPI,
 		yieldFn: any,
-		requestFrame: any,
-		fontTexture: THREE.Texture
+		requestFrame: any
 	) {
 		super();
 		this.visible = false;
@@ -62,10 +44,7 @@ export default class TextFileView extends THREE.Mesh {
 		this.api = api;
 		this.yield = yieldFn;
 		this.path = fullPath;
-		this.fontTexture = fontTexture;
-		this.material = emptyMaterial;
 		this.requestFrame = requestFrame;
-		this.geometry = emptyGeometry;
 		this.loadListeners = [];
 	}
 
@@ -225,14 +204,13 @@ export default class TextFileView extends THREE.Mesh {
 		prettyPrintWorker.prettyPrint(contents, fsEntry.name, async (result: PrettyPrintResult) => {
 			if (!this.parent) return;
 			await this.yield();
-			this.geometry = ((await createText(
+			this.geometry = await Layout.createText(
 				{
-					font: Layout.font,
 					text: contents,
 					mode: 'pre',
 				},
 				this.yield
-			)) as unknown) as ISDFTextGeometry;
+			);
 			if (result.language) {
 				const { nodeStyles, palette, lineCount } = await this.parsePrettyPrintResult(
 					result
@@ -253,13 +231,13 @@ export default class TextFileView extends THREE.Mesh {
 					}
 					if (off % 12004 === 12003) await this.yield();
 				}
-				this.material = this.makeTextMaterial(palette);
+				this.material = Layout.makeTextMaterial(palette);
 				fsEntry.lineCount = lineCount;
 			} else {
 				let lineCount = 0;
 				for (let i = 0; i < contents.length; i++)
 					if (contents.charCodeAt(i) === 10) lineCount++;
-				this.material = this.makeTextMaterial();
+				this.material = Layout.makeTextMaterial();
 				fsEntry.lineCount = lineCount;
 			}
 			this.visible = true;
@@ -414,39 +392,5 @@ export default class TextFileView extends THREE.Mesh {
 		await this.collectNodeStyles(doc, nodeStyles, palette, paletteIndex);
 		document.body.removeChild(doc);
 		return { nodeStyles, palette, lineCount };
-	}
-
-	makeTextMaterial(
-		palette: THREE.Vector3[] | null = null,
-		fontTexture: THREE.Texture = this.fontTexture
-	): THREE.RawShaderMaterial {
-		if (palette === null) palette = [];
-		if (palette.length < 8) {
-			palette = palette.slice();
-			while (palette.length < 8) {
-				palette.push(
-					palette[palette.length - 1] ||
-						new THREE.Vector3(
-							Colors.textColor.r,
-							Colors.textColor.g,
-							Colors.textColor.b
-						)
-				);
-			}
-		}
-		return new THREE.RawShaderMaterial(
-			SDFShader({
-				map: fontTexture,
-				side: THREE.DoubleSide,
-				transparent: true,
-				color: 0xffffff,
-				palette: palette,
-				polygonOffset: true,
-				polygonOffsetFactor: -0.5,
-				polygonOffsetUnits: 0.5,
-				depthTest: false,
-				depthWrite: false,
-			})
-		);
 	}
 }

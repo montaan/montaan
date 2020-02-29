@@ -1,7 +1,5 @@
 import { getPathEntry, getFullPath, getFSEntryForURL } from '../lib/filesystem';
-import Colors from '../lib/Colors.ts';
-import createText from '../lib/third_party/three-bmfont-text-modified';
-import SDFShader from '../lib/third_party/three-bmfont-text-modified/shaders/msdf';
+import Colors from '../lib/Colors';
 import Layout from '../lib/Layout';
 import utils from '../lib/utils';
 import Geometry from '../lib/Geometry';
@@ -125,8 +123,12 @@ class Tabletree {
 
 	async start(font, fontTexture) {
 		this.setupScene(); // Renderer, scene and camera setup.
-		this.setupTextModel(font, fontTexture); // Text model for files
-		this.setupSearchHighlighting(); // Search highlighting
+		Layout.font = font;
+		Layout.fontTexture = fontTexture;
+		Layout.textMaterial = Layout.makeTextMaterial();
+
+		this.setupSearchLines(); // Search landmark and connection lines
+		this.setupSearchHighlighting(); // Search highlighting lines
 		this.setupEventListeners(); // UI event listeners
 		if (this._fileTree) await this.setFileTree(this._fileTree); // Show possibly pre-loaded file tree.
 		if (this.commitData) this.setCommitData(this.commitData); // Set pre-loaded commit data.
@@ -137,47 +139,7 @@ class Tabletree {
 		this.tick(); // Main render loop
 	}
 
-	setCommitLog = (txt) => (this._commitLog = txt);
-	setCommitChanges = (txt) => (this._commitChanges = txt);
-
-	setFileTree(fileTree) {
-		if (this.renderer) {
-			return this.showFileTree(fileTree);
-		} else {
-			return new Promise((resolve, reject) => {
-				const tick = () => {
-					if (this.renderer) this.showFileTree(fileTree).then(resolve);
-					else setTimeout(tick, 10);
-				};
-				tick();
-			});
-		}
-	}
-
-	onResize() {
-		this.camera.aspect = window.innerWidth / window.innerHeight;
-		this.camera.updateProjectionMatrix();
-		if (/Mac OS X/.test(navigator.userAgent)) {
-			if (window.screen.width !== 1280 && window.devicePixelRatio >= 2) {
-				this.resAdjust = 1280 / window.screen.width;
-			}
-		}
-		this.renderer.setPixelRatio(window.devicePixelRatio);
-		if (!/Chrome/.test(navigator.userAgent)) {
-			this.renderer.setSize(
-				window.innerWidth * this.pageZoom * this.resAdjust,
-				window.innerHeight * this.pageZoom * this.resAdjust
-			);
-		} else {
-			this.renderer.setSize(
-				window.innerWidth * this.resAdjust,
-				window.innerHeight * this.resAdjust
-			);
-		}
-		this.renderer.domElement.style.width = window.innerWidth + 'px';
-		this.renderer.domElement.style.height = window.innerHeight + 'px';
-		this.changed = true;
-	}
+	// Setup scene ////////////////////////////////////////////////////////////////////////////////
 
 	setupScene() {
 		var renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
@@ -219,6 +181,53 @@ class Tabletree {
 
 		window.onresize = this.onResize.bind(this);
 		this.onResize();
+	}
+
+	// Set search results ////////////////////////////////////////////////////////////////////////////////
+
+	setSearchResults(searchResults) {
+		console.log(searchResults);
+		this.searchResults = searchResults || [];
+		this.highlightResults(searchResults || []);
+		this.updateSearchLines();
+	}
+
+	// Highlighting lines ////////////////////////////////////////////////////////////////////////////////
+
+	setupSearchHighlighting() {
+		this.highlightedResults = [];
+		this.highlightLater = [];
+		this.searchHighlights = new THREE.Mesh(
+			new THREE.Geometry(),
+			new THREE.MeshBasicMaterial({
+				side: THREE.DoubleSide,
+				color: 0xff0000,
+				opacity: 0.33,
+				transparent: true,
+				depthTest: false,
+				depthWrite: false,
+			})
+		);
+		this.searchHighlights.frustumCulled = false;
+		this.searchHighlights.index = 1;
+		for (let i = 0; i < 40000; i++) {
+			this.searchHighlights.geometry.vertices.push(new THREE.Vector3());
+		}
+		for (let i = 0; i < 10000; i++) {
+			let off = i * 4;
+			this.searchHighlights.geometry.faces.push(
+				new THREE.Face3(off, off + 1, off + 2),
+				new THREE.Face3(off, off + 2, off + 3)
+			);
+		}
+		this.searchHighlights.ontick = () => {
+			this.searchHighlights.visible = this.searchHighlights.index > 0;
+			if (this.highlightLater.length > 0) {
+				const later = this.highlightLater.splice(0);
+				for (let i = 0; i < later.length; i++)
+					this.addHighlightedLine(later[i][0], later[i][1]);
+			}
+		};
 	}
 
 	setGoToHighlight(fsEntry, line) {
@@ -303,6 +312,70 @@ class Tabletree {
 		this.highlightedResults = results;
 		ca.needsUpdate = true;
 		this.changed = true;
+	}
+
+	// Search result connection lines ////////////////////////////////////////////////////////////////////////////////
+
+	setupSearchLines() {
+		var screenPlane = new THREE.Mesh(
+			new THREE.PlaneBufferGeometry(2000, 2000),
+			new THREE.MeshBasicMaterial({ color: 0xff00ff })
+		);
+		screenPlane.visible = false;
+		screenPlane.position.z = 0.75;
+		this.scene.add(screenPlane);
+
+		this.screenPlane = screenPlane;
+
+		var searchLine = new THREE.LineSegments(
+			new THREE.BufferGeometry(),
+			new THREE.LineBasicMaterial({
+				color: 0xff0000,
+				opacity: 1,
+				transparent: true,
+				depthTest: false,
+				depthWrite: false,
+				// linewidth: 2 * (window.devicePixelRatio || 1)
+			})
+		);
+		this.searchLine = searchLine;
+		searchLine.frustumCulled = false;
+		searchLine.geometry.setAttribute(
+			'position',
+			new THREE.BufferAttribute(new Float32Array(40000 * 3), 3)
+		);
+
+		searchLine.ontick = () => {
+			searchLine.visible = this.searchResults && this.searchResults.length > 0;
+		};
+
+		this.scene.add(this.searchLine);
+		this.scene.add(this.searchHighlights);
+
+		this.lineGeo = new THREE.BufferGeometry();
+		this.lineGeo.setAttribute(
+			'position',
+			new THREE.BufferAttribute(new Float32Array(40000 * 3), 3)
+		);
+		this.lineGeo.setAttribute(
+			'color',
+			new THREE.BufferAttribute(new Float32Array(40000 * 3), 3)
+		);
+		this.lineModel = new THREE.LineSegments(
+			this.lineGeo,
+			new THREE.LineBasicMaterial({
+				color: new THREE.Color(1.0, 1.0, 1.0),
+				opacity: 1,
+				transparent: true,
+				depthWrite: false,
+				vertexColors: true,
+			})
+		);
+		this.lineModel.frustumCulled = false;
+		this.lineModel.ontick = () => {
+			this.lineModel.visible = this.links.length > 0;
+		};
+		this.scene.add(this.lineModel);
 	}
 
 	addScreenLine(geo, fsEntry, bbox, index, line, lineCount) {
@@ -410,155 +483,107 @@ class Tabletree {
 		this.changed = true;
 	}
 
-	setupSearchHighlighting() {
-		this.highlightedResults = [];
-		this.highlightLater = [];
-		this.searchHighlights = new THREE.Mesh(
-			new THREE.Geometry(),
-			new THREE.MeshBasicMaterial({
-				side: THREE.DoubleSide,
-				color: 0xff0000,
-				opacity: 0.33,
-				transparent: true,
-				depthTest: false,
-				depthWrite: false,
-			})
-		);
-		this.searchHighlights.frustumCulled = false;
-		this.searchHighlights.index = 1;
-		for (let i = 0; i < 40000; i++) {
-			this.searchHighlights.geometry.vertices.push(new THREE.Vector3());
+	// File tree updates ////////////////////////////////////////////////////////////////////////////////
+
+	setFileTree(fileTree) {
+		if (this.renderer) {
+			return this.showFileTree(fileTree);
+		} else {
+			return new Promise((resolve, reject) => {
+				const tick = () => {
+					if (this.renderer) this.showFileTree(fileTree).then(resolve);
+					else setTimeout(tick, 10);
+				};
+				tick();
+			});
 		}
-		for (let i = 0; i < 10000; i++) {
-			let off = i * 4;
-			this.searchHighlights.geometry.faces.push(
-				new THREE.Face3(off, off + 1, off + 2),
-				new THREE.Face3(off, off + 2, off + 3)
-			);
-		}
-		this.searchHighlights.ontick = () => {
-			this.searchHighlights.visible = this.searchHighlights.index > 0;
-			if (this.highlightLater.length > 0) {
-				const later = this.highlightLater.splice(0);
-				for (let i = 0; i < later.length; i++)
-					this.addHighlightedLine(later[i][0], later[i][1]);
-			}
-		};
-
-		var screenPlane = new THREE.Mesh(
-			new THREE.PlaneBufferGeometry(2000, 2000),
-			new THREE.MeshBasicMaterial({ color: 0xff00ff })
-		);
-		screenPlane.visible = false;
-		screenPlane.position.z = 0.75;
-		this.scene.add(screenPlane);
-
-		this.screenPlane = screenPlane;
-
-		var searchLine = new THREE.LineSegments(
-			new THREE.BufferGeometry(),
-			new THREE.LineBasicMaterial({
-				color: 0xff0000,
-				opacity: 1,
-				transparent: true,
-				depthTest: false,
-				depthWrite: false,
-				// linewidth: 2 * (window.devicePixelRatio || 1)
-			})
-		);
-		this.searchLine = searchLine;
-		searchLine.frustumCulled = false;
-		searchLine.geometry.setAttribute(
-			'position',
-			new THREE.BufferAttribute(new Float32Array(40000 * 3), 3)
-		);
-
-		searchLine.ontick = () => {
-			searchLine.visible = this.searchResults && this.searchResults.length > 0;
-		};
-
-		this.scene.add(this.searchLine);
-		this.scene.add(this.searchHighlights);
-
-		this.lineGeo = new THREE.BufferGeometry();
-		this.lineGeo.setAttribute(
-			'position',
-			new THREE.BufferAttribute(new Float32Array(40000 * 3), 3)
-		);
-		this.lineGeo.setAttribute(
-			'color',
-			new THREE.BufferAttribute(new Float32Array(40000 * 3), 3)
-		);
-		this.lineModel = new THREE.LineSegments(
-			this.lineGeo,
-			new THREE.LineBasicMaterial({
-				color: new THREE.Color(1.0, 1.0, 1.0),
-				opacity: 1,
-				transparent: true,
-				depthWrite: false,
-				vertexColors: true,
-			})
-		);
-		this.lineModel.frustumCulled = false;
-		this.lineModel.ontick = () => {
-			this.lineModel.visible = this.links.length > 0;
-		};
-		this.scene.add(this.lineModel);
 	}
 
-	setSearchResults(searchResults) {
-		console.log(searchResults);
-		this.searchResults = searchResults || [];
-		this.highlightResults(searchResults || []);
-		this.updateSearchLines();
+	async showFileTree(fileTree) {
+		if (fileTree.tree === this.fileTree) {
+			this.treeUpdateQueue.push(this.updateTree, fileTree.tree);
+			return;
+		} else {
+			this.treeUpdateQueue.clear();
+		}
+		if (this.model) {
+			this.model.parent.remove(this.model);
+			this.model.traverse(function(m) {
+				if (m.geometry) {
+					m.geometry.dispose();
+				}
+			});
+			this.model = null;
+		}
+		this.fileTree = fileTree.tree;
+		this.fileCount = fileTree.count;
+		this.model = await this.createFileTreeModel(fileTree.count, fileTree.tree);
+		this.model.position.set(-0.5, -0.5, 0.0);
+		this.modelPivot.add(this.model);
+		if (this.navUrl) this.goToURL(this.navUrl);
+		this.changed = true;
 	}
 
-	goToFSEntry = (fsEntry, model = this.model) => {
-		if (!fsEntry) return;
-		const { scene, camera } = this;
-		scene.updateMatrixWorld();
-		var fsPoint = new THREE.Vector3(
-			fsEntry.x + fsEntry.scale * (fsEntry.entries ? 0.5 : 0.25),
-			fsEntry.y + fsEntry.scale * (fsEntry.entries ? 0.815 : 0.5),
-			fsEntry.z
+	updateTree = async (fileTree) => {
+		/*
+			Traverse tree to find subtrees that are not in a model.
+			Append the subtree to this.model geometry.
+		*/
+		const promises = [];
+		utils.traverseFSEntry(
+			fileTree,
+			(tree, path) => {
+				if (tree.index === undefined && tree.parent && !tree.parent.building) {
+					// console.log(
+					// 	'building tree',
+					// 	getFullPath(tree.parent),
+					// 	'due to',
+					// 	getFullPath(tree),
+					// 	tree.parent.scale,
+					// 	tree.scale
+					// );
+					tree.parent.building = true;
+					promises.push(tree.parent);
+				}
+			},
+			''
 		);
-		fsPoint.applyMatrix4(model.matrixWorld);
-		camera.targetPosition.copy(fsPoint);
-		camera.targetFOV = fsEntry.scale * (fsEntry.entries ? 23 : 50);
-		fsEntry.fov = camera.targetFOV;
+		for (let i = 0; i < promises.length; i++) {
+			await this.addFile(promises[i]);
+		}
 		this.changed = true;
 	};
 
-	async goToFSEntryCoords(fsEntry, coords, model = this.model) {
-		const { scene, camera } = this;
-		scene.updateMatrixWorld();
-		const res =
-			fsEntry.contentObject && (await fsEntry.contentObject.goToCoords(coords, model));
-		if (!res) {
-			fsEntry.targetLine = { line: coords };
-			return this.goToFSEntry(fsEntry, model);
+	async addFile(tree) {
+		if (this.addingFile) {
+			console.log('This is bad.');
+			debugger;
+			return;
 		}
-		const { targetPoint, targetFOV } = res;
-		camera.targetPosition.copy(targetPoint);
-		camera.targetFOV = targetFOV;
-		fsEntry.textFOV = camera.targetFOV;
-		this.changed = true;
-	}
+		this.addingFile = true;
+		await this.yield();
+		this.model.fileCount += Object.keys(tree.entries).length;
+		const vertexIndices = {
+			vertexIndex: this.fileTree.lastVertexIndex,
+			textVertexIndex: this.fileTree.lastTextVertexIndex,
+		};
 
-	async goToFSEntryAtSearch(fsEntry, search, model = this.model) {
-		const { scene, camera } = this;
-		scene.updateMatrixWorld();
-		const res =
-			fsEntry.contentObject && (await fsEntry.contentObject.goToSearch(search, model));
-		if (!res) {
-			fsEntry.targetLine = { search };
-			return this.goToFSEntry(fsEntry, model);
+		await this.updateFileTreeGeometry(
+			this.model.fileCount,
+			tree,
+			this.fileTree.fsIndex,
+			this.model.geometry,
+			this.model.textGeometry,
+			vertexIndices
+		);
+		const lastIndex = tree.lastIndex;
+		while (tree) {
+			tree.lastVertexIndex = vertexIndices.vertexIndex;
+			tree.lastTextVertexIndex = vertexIndices.textVertexIndex;
+			tree.lastIndex = lastIndex;
+			tree = tree.parent;
 		}
-		const { targetPoint, targetFOV } = res;
-		camera.targetPosition.copy(targetPoint);
-		camera.targetFOV = targetFOV;
-		fsEntry.textFOV = camera.targetFOV;
-		this.changed = true;
+		this.addingFile = false;
 	}
 
 	async updateFileTreeGeometry(fileCount, fileTree, fsIndex, geo, textGeometry, vertexIndices) {
@@ -612,7 +637,6 @@ class Tabletree {
 	}
 
 	async createFileTreeModel(fileCount, fileTree) {
-		const font = this.font;
 		const geo = Geometry.makeGeometry(2 * (fileCount + 1));
 		geo.fileIndex = 0;
 
@@ -628,7 +652,7 @@ class Tabletree {
 		fileTree.z = 0;
 		fileTree.scale = 1;
 
-		const textGeometry = await createText({ text: '', font: font, noBounds: true }, this.yield);
+		const textGeometry = await Layout.createText({ text: '', noBounds: true }, this.yield);
 		textGeometry.vertCount = 0;
 
 		await this.updateFileTreeGeometry(
@@ -640,7 +664,7 @@ class Tabletree {
 			vertexIndices
 		);
 
-		const textMesh = new THREE.Mesh(textGeometry, this.textMaterial);
+		const textMesh = new THREE.Mesh(textGeometry, Layout.textMaterial);
 
 		const mesh = new THREE.Mesh(
 			geo,
@@ -773,20 +797,6 @@ class Tabletree {
 		};
 	}
 
-	yield = () => {
-		if (this.frameStart > 0 && performance.now() - this.frameStart > 5) {
-			return new Promise((resolve, reject) => {
-				const resolver = () => {
-					this.changed = true;
-					if (performance.now() - this.frameStart > 5) this.frameFibers.push(resolver);
-					else resolve();
-				};
-				this.frameFibers.push(resolver);
-			});
-		}
-		this.changed = true;
-	};
-
 	addFileView(visibleFiles, fullPath, fsEntry) {
 		const view = Colors.imageRE.test(fullPath) ? ImageFileView : TextFileView;
 		fsEntry.contentObject = new view(
@@ -795,8 +805,7 @@ class Tabletree {
 			fullPath,
 			this.api,
 			this.yield,
-			this.requestFrame,
-			this.fontTexture
+			this.requestFrame
 		);
 		fsEntry.contentObject.loadListeners.push(() => {
 			if (fsEntry.targetLine) {
@@ -812,132 +821,7 @@ class Tabletree {
 		visibleFiles.add(fsEntry.contentObject);
 	}
 
-	async addFile(tree) {
-		if (this.addingFile) {
-			console.log('This is bad.');
-			debugger;
-			return;
-		}
-		this.addingFile = true;
-		await this.yield();
-		this.model.fileCount += Object.keys(tree.entries).length;
-		const vertexIndices = {
-			vertexIndex: this.fileTree.lastVertexIndex,
-			textVertexIndex: this.fileTree.lastTextVertexIndex,
-		};
-
-		await this.updateFileTreeGeometry(
-			this.model.fileCount,
-			tree,
-			this.fileTree.fsIndex,
-			this.model.geometry,
-			this.model.textGeometry,
-			vertexIndices
-		);
-		const lastIndex = tree.lastIndex;
-		while (tree) {
-			tree.lastVertexIndex = vertexIndices.vertexIndex;
-			tree.lastTextVertexIndex = vertexIndices.textVertexIndex;
-			tree.lastIndex = lastIndex;
-			tree = tree.parent;
-		}
-		this.addingFile = false;
-	}
-
-	updateTree = async (fileTree) => {
-		/*
-			Traverse tree to find subtrees that are not in a model.
-			Append the subtree to this.model geometry.
-		*/
-		const promises = [];
-		utils.traverseFSEntry(
-			fileTree,
-			(tree, path) => {
-				if (tree.index === undefined && tree.parent && !tree.parent.building) {
-					// console.log(
-					// 	'building tree',
-					// 	getFullPath(tree.parent),
-					// 	'due to',
-					// 	getFullPath(tree),
-					// 	tree.parent.scale,
-					// 	tree.scale
-					// );
-					tree.parent.building = true;
-					promises.push(tree.parent);
-				}
-			},
-			''
-		);
-		for (let i = 0; i < promises.length; i++) {
-			await this.addFile(promises[i]);
-		}
-		this.changed = true;
-	};
-
-	async showFileTree(fileTree) {
-		if (fileTree.tree === this.fileTree) {
-			this.treeUpdateQueue.push(this.updateTree, fileTree.tree);
-			return;
-		} else {
-			this.treeUpdateQueue.clear();
-		}
-		if (this.model) {
-			this.model.parent.remove(this.model);
-			this.model.traverse(function(m) {
-				if (m.geometry) {
-					m.geometry.dispose();
-				}
-			});
-			this.model = null;
-		}
-		this.fileTree = fileTree.tree;
-		this.fileCount = fileTree.count;
-		this.model = await this.createFileTreeModel(fileTree.count, fileTree.tree);
-		this.model.position.set(-0.5, -0.5, 0.0);
-		this.modelPivot.add(this.model);
-		if (this.navUrl) this.goToURL(this.navUrl);
-		this.changed = true;
-	}
-
-	makeTextMaterial(palette = null, fontTexture = this.fontTexture) {
-		if (!palette || palette.length < 8) {
-			palette = [].concat(palette || []);
-			while (palette.length < 8) {
-				palette.push(palette[palette.length - 1] || Colors.textColor);
-			}
-		}
-		return new THREE.RawShaderMaterial(
-			SDFShader({
-				map: fontTexture,
-				side: THREE.DoubleSide,
-				transparent: true,
-				color: 0xffffff,
-				palette: palette,
-				polygonOffset: true,
-				polygonOffsetFactor: -0.5,
-				polygonOffsetUnits: 0.5,
-				depthTest: false,
-				depthWrite: false,
-			})
-		);
-	}
-
-	setupTextModel(font, fontTexture) {
-		this.font = font;
-		this.fontTexture = fontTexture;
-
-		Layout.font = font;
-
-		this.textMaterial = this.makeTextMaterial();
-	}
-
-	countChars(s, charCode) {
-		var j = 0;
-		for (var i = 0; i < s.length; i++) {
-			if (s.charCodeAt(i) === charCode) j++;
-		}
-		return j;
-	}
+	// Linkage lines ////////////////////////////////////////////////////////////////////////////////
 
 	updateLineBetweenElements(geo, index, color, bboxA, bboxB) {
 		this.screenPlane.visible = true;
@@ -1320,83 +1204,57 @@ class Tabletree {
 		}
 	}
 
-	zoomCamera(zf, cx, cy) {
-		const camera = this.camera;
-		if (zf < 1 || camera.fov < 120) {
-			camera.position.x += cx - cx * zf;
-			camera.position.y -= cy - cy * zf;
-			camera.fov *= zf;
-			if (camera.fov > 120) camera.fov = 120;
-			camera.targetFOV = camera.fov;
-			camera.targetPosition.copy(camera.position);
-			camera.updateProjectionMatrix();
-			this.changed = true;
-		}
-	}
+	// FSEntry Navigation ////////////////////////////////////////////////////////////////////////////////
 
-	getEntryAtMouse(ev) {
-		var models = [this.model];
-		if (this.processModel) models.push(this.processModel);
-		if (this.authorModel) models.push(this.authorModel);
-		return Geometry.findFSEntry(
-			{ clientX: ev.clientX, clientY: ev.clientY, target: this.renderer.domElement },
-			this.camera,
-			models,
-			this.highlighted
+	goToFSEntry = (fsEntry, model = this.model) => {
+		if (!fsEntry) return;
+		const { scene, camera } = this;
+		scene.updateMatrixWorld();
+		var fsPoint = new THREE.Vector3(
+			fsEntry.x + fsEntry.scale * (fsEntry.entries ? 0.5 : 0.25),
+			fsEntry.y + fsEntry.scale * (fsEntry.entries ? 0.815 : 0.5),
+			fsEntry.z
 		);
-	}
+		fsPoint.applyMatrix4(model.matrixWorld);
+		camera.targetPosition.copy(fsPoint);
+		camera.targetFOV = fsEntry.scale * (fsEntry.entries ? 23 : 50);
+		fsEntry.fov = camera.targetFOV;
+		this.changed = true;
+	};
 
-	getTextPosition(fsEntry, intersection) {
-		const fv = new THREE.Vector3(fsEntry.textXZero, fsEntry.textYZero, fsEntry.z);
-		const pv = new THREE.Vector3().copy(intersection.point);
-		const inv = new THREE.Matrix4().getInverse(intersection.object.matrixWorld);
-		pv.applyMatrix4(inv);
-		const uv = new THREE.Vector3().subVectors(pv, fv);
-		uv.divideScalar(fsEntry.scale * fsEntry.textScale);
-		uv.y /= 38;
-		uv.x /= 19;
-
-		const line = Math.floor(-uv.y);
-		const col = Math.floor(uv.x + 1);
-		return { line, col };
-	}
-
-	handleTextClick(ev, fsEntry, intersection) {
-		const { line, col } = this.getTextPosition(fsEntry, intersection);
-		const text = fsEntry.contentObject.geometry.layout._opt.text;
-		const lineStr = text.split('\n')[line - 1];
-		const urlRE = /https?:\/\/[a-z0-9.%$#@&?/_-]+/gi;
-		var hit = null;
-		while ((hit = urlRE.exec(lineStr))) {
-			const startIndex = hit.index;
-			const endIndex = hit.index + hit[0].length - 1;
-			if (col >= startIndex && col <= endIndex) {
-				if (this.onElectron) {
-					// Open link in a floating iframe added to the tree.
-					// On render, update the matrix of the iframe's 3D transform.
-					// This can only be done on Electron as X-Frame-Options: DENY
-					// disables cross-origin iframes.
-					var iframe = document.createElement('iframe');
-					iframe.src = hit[0];
-					iframe.style.border = '10px solid white';
-					iframe.style.backgroundColor = 'white';
-					iframe.style.position = 'absolute';
-					iframe.style.right = '10px';
-					iframe.style.top = 96 + 'px';
-					iframe.style.zIndex = '2';
-					iframe.style.width = '600px';
-					iframe.style.height = 'calc(100vh - 106px)';
-					this.renderer.domElement.parentNode.appendChild(iframe);
-					return true;
-				} else {
-					// Open link in a new window.
-					window.open(hit[0]);
-					return true;
-				}
-			}
+	async goToFSEntryCoords(fsEntry, coords, model = this.model) {
+		const { scene, camera } = this;
+		scene.updateMatrixWorld();
+		const res =
+			fsEntry.contentObject && (await fsEntry.contentObject.goToCoords(coords, model));
+		if (!res) {
+			fsEntry.targetLine = { line: coords };
+			return this.goToFSEntry(fsEntry, model);
 		}
-		return false;
+		const { targetPoint, targetFOV } = res;
+		camera.targetPosition.copy(targetPoint);
+		camera.targetFOV = targetFOV;
+		fsEntry.textFOV = camera.targetFOV;
+		this.changed = true;
 	}
+
+	async goToFSEntryAtSearch(fsEntry, search, model = this.model) {
+		const { scene, camera } = this;
+		scene.updateMatrixWorld();
+		const res =
+			fsEntry.contentObject && (await fsEntry.contentObject.goToSearch(search, model));
+		if (!res) {
+			fsEntry.targetLine = { search };
+			return this.goToFSEntry(fsEntry, model);
+		}
+		const { targetPoint, targetFOV } = res;
+		camera.targetPosition.copy(targetPoint);
+		camera.targetFOV = targetFOV;
+		fsEntry.textFOV = camera.targetFOV;
+		this.changed = true;
+	}
+
+	// URL Handling ////////////////////////////////////////////////////////////////////////////////
 
 	registerElementForURL(el, url) {
 		this.urlIndex[url] = this.urlIndex[url] || [];
@@ -1437,50 +1295,7 @@ class Tabletree {
 		return getFullPath(fsEntry) + locationStr;
 	}
 
-	zoomToEntry(ev) {
-		const intersection = this.getEntryAtMouse(ev);
-		if (intersection) {
-			var fsEntry = intersection.fsEntry;
-			// var ca = intersection.object.geometry.attributes.color;
-			// var vs = intersection.object.geometry.attributes.position;
-			// var tvs = intersection.object.children[1].geometry.attributes.position;
-			if (this.highlighted && this.highlighted.highlight) {
-				var obj = this.highlighted.highlight;
-				obj.parent.remove(obj);
-			}
-			if (this.highlighted !== fsEntry) {
-				this.highlighted = fsEntry;
-				const url = this.getURLForFSEntry(fsEntry);
-				this.history.push(url);
-			} else {
-				if (this.highlighted.entries === null) {
-					var fovDiff = (this.highlighted.scale * 50) / this.camera.fov;
-					if (fovDiff > 1 || !fsEntry.lineCount) {
-						if (
-							!fsEntry.lineCount ||
-							!this.handleTextClick(ev, this.highlighted, intersection)
-						) {
-							const url = this.getURLForFSEntry(this.highlighted);
-							this.history.push(url);
-						}
-					} else {
-						const url = this.getURLForFSEntry(this.highlighted, [0]);
-						this.history.push(url);
-					}
-				} else {
-					const url = this.getURLForFSEntry(this.highlighted);
-					this.history.push(url);
-				}
-			}
-			this.changed = true;
-		}
-	}
-
-	fsEntryCmp(a, b) {
-		if (!!a.entries === !!b.entries) return a.title < b.title ? -1 : a.title > b.title ? 1 : 0;
-		else if (a.entries) return -1;
-		else return 1;
-	}
+	// UI Methods ////////////////////////////////////////////////////////////////////////////////
 
 	setupEventListeners() {
 		const { renderer, camera, modelPivot } = this;
@@ -1825,6 +1640,132 @@ class Tabletree {
 		};
 	}
 
+	// Used to navigate between entries
+	fsEntryCmp(a, b) {
+		if (!!a.entries === !!b.entries) return a.title < b.title ? -1 : a.title > b.title ? 1 : 0;
+		else if (a.entries) return -1;
+		else return 1;
+	}
+
+	zoomCamera(zf, cx, cy) {
+		const camera = this.camera;
+		if (zf < 1 || camera.fov < 120) {
+			camera.position.x += cx - cx * zf;
+			camera.position.y -= cy - cy * zf;
+			camera.fov *= zf;
+			if (camera.fov > 120) camera.fov = 120;
+			camera.targetFOV = camera.fov;
+			camera.targetPosition.copy(camera.position);
+			camera.updateProjectionMatrix();
+			this.changed = true;
+		}
+	}
+
+	zoomToEntry(ev) {
+		const intersection = this.getEntryAtMouse(ev);
+		if (intersection) {
+			var fsEntry = intersection.fsEntry;
+			// var ca = intersection.object.geometry.attributes.color;
+			// var vs = intersection.object.geometry.attributes.position;
+			// var tvs = intersection.object.children[1].geometry.attributes.position;
+			if (this.highlighted && this.highlighted.highlight) {
+				var obj = this.highlighted.highlight;
+				obj.parent.remove(obj);
+			}
+			if (this.highlighted !== fsEntry) {
+				this.highlighted = fsEntry;
+				const url = this.getURLForFSEntry(fsEntry);
+				this.history.push(url);
+			} else {
+				if (this.highlighted.entries === null) {
+					var fovDiff = (this.highlighted.scale * 50) / this.camera.fov;
+					if (fovDiff > 1 || !fsEntry.lineCount) {
+						if (
+							!fsEntry.lineCount ||
+							!this.handleTextClick(ev, this.highlighted, intersection)
+						) {
+							const url = this.getURLForFSEntry(this.highlighted);
+							this.history.push(url);
+						}
+					} else {
+						const url = this.getURLForFSEntry(this.highlighted, [0]);
+						this.history.push(url);
+					}
+				} else {
+					const url = this.getURLForFSEntry(this.highlighted);
+					this.history.push(url);
+				}
+			}
+			this.changed = true;
+		}
+	}
+
+	getEntryAtMouse(ev) {
+		var models = [this.model];
+		if (this.processModel) models.push(this.processModel);
+		if (this.authorModel) models.push(this.authorModel);
+		return Geometry.findFSEntry(
+			{ clientX: ev.clientX, clientY: ev.clientY, target: this.renderer.domElement },
+			this.camera,
+			models,
+			this.highlighted
+		);
+	}
+
+	getTextPosition(fsEntry, intersection) {
+		const fv = new THREE.Vector3(fsEntry.textXZero, fsEntry.textYZero, fsEntry.z);
+		const pv = new THREE.Vector3().copy(intersection.point);
+		const inv = new THREE.Matrix4().getInverse(intersection.object.matrixWorld);
+		pv.applyMatrix4(inv);
+		const uv = new THREE.Vector3().subVectors(pv, fv);
+		uv.divideScalar(fsEntry.scale * fsEntry.textScale);
+		uv.y /= 38;
+		uv.x /= 19;
+
+		const line = Math.floor(-uv.y);
+		const col = Math.floor(uv.x + 1);
+		return { line, col };
+	}
+
+	handleTextClick(ev, fsEntry, intersection) {
+		const { line, col } = this.getTextPosition(fsEntry, intersection);
+		const text = fsEntry.contentObject.geometry.layout._opt.text;
+		const lineStr = text.split('\n')[line - 1];
+		const urlRE = /https?:\/\/[a-z0-9.%$#@&?/_-]+/gi;
+		var hit = null;
+		while ((hit = urlRE.exec(lineStr))) {
+			const startIndex = hit.index;
+			const endIndex = hit.index + hit[0].length - 1;
+			if (col >= startIndex && col <= endIndex) {
+				if (this.onElectron) {
+					// Open link in a floating iframe added to the tree.
+					// On render, update the matrix of the iframe's 3D transform.
+					// This can only be done on Electron as X-Frame-Options: DENY
+					// disables cross-origin iframes.
+					var iframe = document.createElement('iframe');
+					iframe.src = hit[0];
+					iframe.style.border = '10px solid white';
+					iframe.style.backgroundColor = 'white';
+					iframe.style.position = 'absolute';
+					iframe.style.right = '10px';
+					iframe.style.top = 96 + 'px';
+					iframe.style.zIndex = '2';
+					iframe.style.width = '600px';
+					iframe.style.height = 'calc(100vh - 106px)';
+					this.renderer.domElement.parentNode.appendChild(iframe);
+					return true;
+				} else {
+					// Open link in a new window.
+					window.open(hit[0]);
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	// Rendering ////////////////////////////////////////////////////////////////////////////////
+
 	render() {
 		const { scene, camera, renderer } = this;
 		scene.updateMatrixWorld(true);
@@ -1885,6 +1826,31 @@ class Tabletree {
 		this.frameLoopPaused = !this.frameRequested;
 	};
 
+	onResize() {
+		this.camera.aspect = window.innerWidth / window.innerHeight;
+		this.camera.updateProjectionMatrix();
+		if (/Mac OS X/.test(navigator.userAgent)) {
+			if (window.screen.width !== 1280 && window.devicePixelRatio >= 2) {
+				this.resAdjust = 1280 / window.screen.width;
+			}
+		}
+		this.renderer.setPixelRatio(window.devicePixelRatio);
+		if (!/Chrome/.test(navigator.userAgent)) {
+			this.renderer.setSize(
+				window.innerWidth * this.pageZoom * this.resAdjust,
+				window.innerHeight * this.pageZoom * this.resAdjust
+			);
+		} else {
+			this.renderer.setSize(
+				window.innerWidth * this.resAdjust,
+				window.innerHeight * this.resAdjust
+			);
+		}
+		this.renderer.domElement.style.width = window.innerWidth + 'px';
+		this.renderer.domElement.style.height = window.innerHeight + 'px';
+		this.changed = true;
+	}
+
 	get changed() {
 		return this._changed;
 	}
@@ -1900,6 +1866,20 @@ class Tabletree {
 			this.frameRequested = true;
 			window.requestAnimationFrame(this.tick);
 		}
+	};
+
+	yield = () => {
+		if (this.frameStart > 0 && performance.now() - this.frameStart > 5) {
+			return new Promise((resolve, reject) => {
+				const resolver = () => {
+					this.changed = true;
+					if (performance.now() - this.frameStart > 5) this.frameFibers.push(resolver);
+					else resolve();
+				};
+				this.frameFibers.push(resolver);
+			});
+		}
+		this.changed = true;
 	};
 }
 

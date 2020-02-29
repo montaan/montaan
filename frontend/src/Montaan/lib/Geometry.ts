@@ -1,36 +1,45 @@
-import utils from './utils.js';
+import utils from './utils';
+import { FSEntry } from './filesystem';
+
 import * as THREE from 'three';
+
+export interface IBufferGeometryWithFileCount extends THREE.BufferGeometry {
+	maxFileCount: number;
+}
 
 export default {
 	quadCount: 2,
 
 	vertsPerFile: 6 * 2,
 
-	findFSEntry: function(ev, camera, models, highlighted) {
-		var intersections = utils.findIntersectionsUnderEvent(
-			ev,
-			camera,
-			models instanceof Array ? models : [models]
-		);
+	findFSEntry: function(
+		ev: any,
+		camera: THREE.Camera,
+		models: THREE.Mesh[],
+		highlighted: FSEntry
+	) {
+		var intersections = utils.findIntersectionsUnderEvent(ev, camera, models);
 
 		if (intersections.length > 0) {
-			var faceIndex = intersections[0].faceIndex;
-			var fsEntry =
-				intersections[0].object.fileTree.fsIndex[
-					Math.floor(faceIndex / (2 * this.quadCount))
-				];
+			const intersection = intersections.find((o) => o.faceIndex !== undefined);
+			if (intersection === undefined) return undefined;
+			const faceIndex = intersection.faceIndex || 0;
+			var fsEntry = (intersection.object as any).fileTree.fsIndex[
+				Math.floor(faceIndex / (2 * this.quadCount))
+			];
 			while (fsEntry && fsEntry.scale * camera.projectionMatrix.elements[0] < 0.2) {
 				if (fsEntry.parent === highlighted) {
 					break;
 				}
 				fsEntry = fsEntry.parent;
 			}
-			intersections[0].fsEntry = fsEntry;
-			return intersections[0];
+			const anyIntersection: any = intersection;
+			anyIntersection.fsEntry = fsEntry;
+			return anyIntersection;
 		}
 	},
 
-	matrixInsideFrustum: function(m, modelViewMatrix, camera) {
+	matrixInsideFrustum: function(m: THREE.Matrix4, modelViewMatrix: any, camera: any) {
 		const n = this.mTmp4.copy(m);
 		this.projectMatrixToFrustum(n, modelViewMatrix, camera);
 		const a = this.qTmp1.set(0, 0, 0).applyMatrix4(n);
@@ -48,15 +57,15 @@ export default {
 		return maxX > -1 && minX < 1 && maxY > -1 && minY < 1;
 	},
 
-	matrixCoversFrustum: function(m, camera) {
+	matrixCoversFrustum: function(m: any, camera: any) {
 		return false;
 	},
 
-	matrixAtFrustumCenter: function(m, camera) {
+	matrixAtFrustumCenter: function(m: any, camera: any) {
 		return false;
 	},
 
-	matrixIsBigOnScreen: function(m, camera) {
+	matrixIsBigOnScreen: function(m: any, camera: any) {
 		return false;
 	},
 
@@ -69,7 +78,7 @@ export default {
 	qTmp7: new THREE.Vector3(),
 	qTmp8: new THREE.Vector3(),
 	mTmp4: new THREE.Matrix4(),
-	quadInsideFrustum: function(quadIndex, model, camera) {
+	quadInsideFrustum: function(quadIndex: number, model: THREE.Mesh, camera: THREE.Camera) {
 		var vertexOff = quadIndex * 6 * this.quadCount;
 		var a = this.qTmp1;
 		var b = this.qTmp2;
@@ -86,7 +95,7 @@ export default {
 		return maxX > -1 && minX < 1 && maxY > -1 && minY < 1;
 	},
 
-	quadAtFrustumCenter: function(quadIndex, model, camera) {
+	quadAtFrustumCenter: function(quadIndex: number, model: THREE.Mesh, camera: THREE.Camera) {
 		var vertexOff = quadIndex * 6 * this.quadCount;
 		var a = this.qTmp1;
 		var b = this.qTmp2;
@@ -103,16 +112,16 @@ export default {
 		return maxX > 0 && minX < 0 && maxY > 0 && minY < 0;
 	},
 
-	quadCoversFrustum: function(quadIndex, model, camera) {
-		// var vertexOff = quadIndex * 6 * this.quadCount;
+	quadCoversFrustum: function(quadIndex: number, model: THREE.Mesh, camera: THREE.Camera) {
+		var vertexOff = quadIndex * 6 * this.quadCount;
 		var a = this.qTmp1;
 		var b = this.qTmp2;
 		var c = this.qTmp3;
 		var d = this.qTmp4;
-		// this.projectVertexToFrustum(a, vertexOff, model, camera);
-		// this.projectVertexToFrustum(b, vertexOff+1, model, camera);
-		// this.projectVertexToFrustum(c, vertexOff+2, model, camera);
-		// this.projectVertexToFrustum(d, vertexOff+5, model, camera);
+		this.projectVertexToFrustum(a, vertexOff, model, camera);
+		this.projectVertexToFrustum(b, vertexOff + 1, model, camera);
+		this.projectVertexToFrustum(c, vertexOff + 2, model, camera);
+		this.projectVertexToFrustum(d, vertexOff + 5, model, camera);
 		if (
 			(a.x < 1 && a.x > -1 && a.y < 1 && a.y > -1) ||
 			(b.x < 1 && b.x > -1 && b.y < 1 && b.y > -1) ||
@@ -136,7 +145,7 @@ export default {
 		);
 	},
 
-	lineIntersectsFrustum: function(a, b) {
+	lineIntersectsFrustum: function(a: { y: number; x: number }, b: { y: number; x: number }) {
 		if (
 			(a.y < -1 && b.y < -1) ||
 			(a.y > 1 && b.y > 1) ||
@@ -153,7 +162,16 @@ export default {
 		);
 	},
 
-	lineIntersect: function(x1, y1, x2, y2, x3, y3, x4, y4) {
+	lineIntersect: function(
+		x1: number,
+		y1: number,
+		x2: number,
+		y2: number,
+		x3: number,
+		y3: number,
+		x4: number,
+		y4: number
+	) {
 		var mua, mub, x, y;
 		var denom, numera, numerb;
 		var EPS = 1e-6;
@@ -185,30 +203,39 @@ export default {
 		return { x: x, y: y };
 	},
 
-	projectMatrixToFrustum: function(m, modelViewMatrix, camera) {
+	projectMatrixToFrustum: function(
+		m: THREE.Matrix4,
+		modelViewMatrix: THREE.Matrix4,
+		camera: THREE.Camera
+	) {
 		m.multiply(modelViewMatrix);
 		m.multiply(camera.projectionMatrix);
 		return m;
 	},
 
-	projectVertexToFrustum: function(u, vertexIndex, model, camera) {
+	projectVertexToFrustum: function(
+		u: THREE.Vector3,
+		vertexIndex: number,
+		model: THREE.Mesh,
+		camera: THREE.Camera
+	) {
 		var off = vertexIndex * 3;
-		var v = model.geometry.attributes.position.array;
+		var v = (model.geometry as any).attributes.position.array;
 		u.set(v[off + 0], v[off + 1], v[off + 2]);
 		u.applyMatrix4(model.modelViewMatrix);
 		u.applyMatrix4(camera.projectionMatrix);
 	},
 
 	vertexInsideFrustumTmp: new THREE.Vector3(),
-	vertexInsideFrustum: function(vertexIndex, model, camera) {
+	vertexInsideFrustum: function(vertexIndex: any, model: any, camera: any) {
 		var u = this.vertexInsideFrustumTmp;
 		this.projectVertexToFrustum(u, vertexIndex, model, camera);
 		// window.debug.textContent = ([u.x, u.y, u.z]).join(", ");
 		return u.x < 1 && u.x > -1 && u.y < 1 && u.y > -1 && u.z < 1 && u.z > -1;
 	},
 
-	makeGeometry: function(fileCount) {
-		var geo = new THREE.BufferGeometry();
+	makeGeometry: function(fileCount: number) {
+		var geo = new THREE.BufferGeometry() as IBufferGeometryWithFileCount;
 		geo.maxFileCount = fileCount;
 
 		var verts = new Float32Array(fileCount * 3 * 6 * this.quadCount);
@@ -220,7 +247,7 @@ export default {
 		return geo;
 	},
 
-	resizeGeometry: function(geo, fileCount) {
+	resizeGeometry: function(geo: IBufferGeometryWithFileCount, fileCount: number) {
 		geo.maxFileCount = fileCount;
 
 		var verts = new Float32Array(fileCount * 3 * 6 * this.quadCount);
@@ -235,7 +262,7 @@ export default {
 		return geo;
 	},
 
-	setColor: function(verts, index, color) {
+	setColor: function(verts: Float32Array, index: number, color: string | any[]) {
 		var i = index * 18 * this.quadCount; //(index * 2 + 1) * 18;
 		var dx = color[0],
 			dy = color[1],
@@ -296,7 +323,15 @@ export default {
 		}
 	},
 
-	makeQuad: function(verts, index, x, y, w, h, z) {
+	makeQuad: function(
+		verts: Float32Array,
+		index: number,
+		x: number,
+		y: number,
+		w: number,
+		h: number,
+		z: number
+	) {
 		var i = index * 18 * this.quadCount;
 
 		verts[i++] = x;
