@@ -222,21 +222,12 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 			mount(tree, user, `/${user}`, 'montaanUserRepos', this.props.api);
 		}
 
-		const repos = await this.props.api.get('/repo/list');
+		await this.requestDirs([`/${user}`], []);
+		if (!tree.entries[user]) return;
+		const repoEntries = tree.entries[user].entries;
+		if (!repoEntries) return;
+		const repos = Object.keys(repoEntries).map((name) => repoEntries[name].data);
 
-		const reposEntry = tree.entries[user];
-		repos.forEach((repo: any) => {
-			if (!reposEntry.entries) return;
-			if (!reposEntry.entries[repo.name]) {
-				mount(
-					this.state.fileTree.tree,
-					`${repo.owner}/${repo.name}/HEAD`,
-					`/${user}/${repo.name}`,
-					'montaanGit',
-					this.props.api
-				);
-			}
-		});
 		await this.requestDirs(
 			repos.map((repo: any) => `/${user}/${repo.name}`),
 			[]

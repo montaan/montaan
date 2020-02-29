@@ -2,6 +2,7 @@ import QFrameAPI from '../../../lib/api';
 import utils from '../utils';
 
 export interface FSEntry {
+	data: any;
 	textVertexIndex: number;
 	vertexIndex: number;
 	filesBox: {};
@@ -125,8 +126,15 @@ class MontaanUserReposFilesystem extends Filesystem {
 
 	async readDir(path: string): Promise<FSEntry | null> {
 		const tree = createFSTree('', '');
-		(await this.api.get('/repo/list')).forEach((r: { name: string }) => {
-			mount(tree, `${this.name}/${r.name}/HEAD`, `/${r.name}`, 'montaanGit', this.api);
+		(await this.api.get('/repo/list')).forEach((repo: { name: string }) => {
+			const fsEntry = mount(
+				tree,
+				`${this.name}/${repo.name}/HEAD`,
+				`/${repo.name}`,
+				'montaanGit',
+				this.api
+			);
+			fsEntry.data = repo;
 		});
 		return tree;
 	}
@@ -233,6 +241,8 @@ export function createFSTree(name: string, url: string, fsType?: string, api?: Q
 		lastTextVertexIndex: -1,
 		textVertexIndex: -1,
 		vertexIndex: -1,
+
+		data: undefined,
 	};
 }
 
@@ -253,7 +263,7 @@ export function mount(
 	const fs = createFSTree(name, url, fsType, api);
 	fs.parent = fsEntry;
 	fsEntry.entries[name] = fs;
-	return fileTree;
+	return fs;
 }
 
 export function getPathEntry(fileTree: FSEntry, path: string): FSEntry | null {
