@@ -102,6 +102,7 @@ interface MainAppState {
 	ref: string;
 	searchHover?: any;
 	treeLoaded: boolean;
+	fileTreeUpdated: number;
 }`}</code>
 			</pre>
 

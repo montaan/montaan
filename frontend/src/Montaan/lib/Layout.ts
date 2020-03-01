@@ -101,11 +101,6 @@ export default {
 			fileTree.index = fileIndex;
 			fileIndex++;
 		}
-		if (!vertexIndices) {
-			vertexIndices = { textVertexIndex: 0, vertexIndex: 0 };
-			fileTree.textVertexIndex = 0;
-			fileTree.vertexIndex = 0;
-		}
 
 		const dirScale = files.length === 0 ? 1 : 1;
 		const filesScale = dirs.length === 0 ? 0.5 : 0.5;

@@ -276,7 +276,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 			LoadDirWorkQueue.push(this.processDirRequest, {
 				tree: this.state.fileTree,
 				paths: paths.slice(i, i + n),
-				dropEntries: i === 0 ? [] : [],
+				dropEntries: i === 0 ? dropEntries : [],
 			});
 		}
 	};

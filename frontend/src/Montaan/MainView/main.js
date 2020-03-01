@@ -80,6 +80,9 @@ class Tabletree {
 		this.textMinScale = 1000;
 		this.textMaxScale = 0;
 
+		this.deletionsCount = 0;
+		this.deletionsIndex = new Map();
+
 		this.history = undefined;
 
 		this.changed = true;
@@ -591,6 +594,21 @@ class Tabletree {
 		if (geo.maxFileCount < fileCount + 1) {
 			// console.log('Geometry resize!', 2 * (fileCount + 1));
 			Geometry.resizeGeometry(geo, 2 * (fileCount + 1));
+		} else if (this.deletionsCount > 1000) {
+			this.deletionsCount = 0;
+			this.deletionsIndex.clear();
+			geo.fileIndex = 0;
+
+			fileTree = this.fileTree;
+
+			fsIndex = fileTree.fsIndex = [fileTree];
+			fileTree.index = undefined;
+			fileTree.vertexIndex = 0;
+			fileTree.textVertexIndex = 0;
+			vertexIndices.textVertexIndex = 0;
+			vertexIndices.vertexIndex = 0;
+
+			textGeometry.vertCount = 0;
 		}
 
 		const fileIndex = geo.fileIndex;
@@ -618,9 +636,11 @@ class Tabletree {
 			}
 		});
 		const positionArray = new Float32Array(vertCount);
-		positionArray.set(textGeometry.attributes.position.array);
 		const uvArray = new Float32Array(vertCount / 2);
-		uvArray.set(textGeometry.attributes.uv.array);
+		if (textGeometry.vertCount > 0) {
+			positionArray.set(textGeometry.attributes.position.array);
+			uvArray.set(textGeometry.attributes.uv.array);
+		}
 		let j = textGeometry.vertCount;
 		labels.traverse(function(c) {
 			if (c.geometry) {
@@ -695,6 +715,7 @@ class Tabletree {
 		const { visibleFiles, textGeometry } = mesh;
 		const camera = this.camera;
 		return (t, dt) => {
+			window.debug.textContent = mesh.fileTree.lastIndex + ' / ' + mesh.geometry.maxFileCount;
 			// Dispose loaded files that are outside the current view
 			for (let i = 0; i < visibleFiles.children.length; i++) {
 				const c = visibleFiles.children[i];
@@ -797,6 +818,23 @@ class Tabletree {
 						[entriesToFetch[i].distanceFromCenter, 0, 1]
 					);
 				}
+				var deleteCount = 0;
+
+				entriesToDispose.forEach((e) => {
+					if (this.deletionsIndex.has(e)) return;
+					this.deletionsIndex.set(e, 1);
+					deleteCount++;
+					utils.traverseFSEntry(
+						e,
+						(c) => {
+							if (this.deletionsIndex.has(c)) return;
+							this.deletionsIndex.set(c, 1);
+							deleteCount++;
+						},
+						''
+					);
+				});
+				this.deletionsCount += deleteCount;
 				this.requestDirs(
 					entriesToFetch.sort(this.cmpFSEntryDistanceFromCenter).map(getFullPath),
 					entriesToDispose
