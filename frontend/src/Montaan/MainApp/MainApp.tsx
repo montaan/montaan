@@ -172,8 +172,8 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		dependencies: [],
 		dependencySrcIndex: new Map<TreeLinkKey, TreeLink[]>(),
 		dependencyDstIndex: new Map<TreeLinkKey, TreeLink[]>(),
-		processingCommits: true,
-		processing: true,
+		processingCommits: false,
+		processing: false,
 		repoError: '',
 		treeLoaded: false,
 		fileTreeUpdated: 0,
@@ -202,13 +202,15 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		this.repoTimeout = 0;
 		this.commitIndex = 0;
 		this.animatedFiles = 0;
+		if (this.props.userInfo) {
+			const tree = this.state.fileTree.tree;
+			const user = this.props.userInfo.name;
+			mount(tree, user, `/${user}`, 'montaanUserRepos', this.props.api);
+		}
 	}
 
 	componentDidMount() {
 		if (this.props.userInfo) this.updateUserRepos(this.props.userInfo);
-		// if (props.match && props.match.params.user) {
-		// 	this.setRepo(props.match.params.name, props.match.params.user);
-		// }
 	}
 
 	async updateUserRepos(userInfo: UserInfo) {
@@ -267,12 +269,16 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 	};
 
 	requestDirs = async (paths: string[], dropEntries: FSEntry[]) => {
+		LoadDirWorkQueue.clear();
 		if (paths.length === 0 && dropEntries.length === 0) return;
-		await LoadDirWorkQueue.push(this.processDirRequest, {
-			tree: this.state.fileTree,
-			paths,
-			dropEntries,
-		});
+		const n = 5;
+		for (let i = 0; i < paths.length; i += n) {
+			LoadDirWorkQueue.push(this.processDirRequest, {
+				tree: this.state.fileTree,
+				paths: paths.slice(i, i + n),
+				dropEntries: i === 0 ? [] : [],
+			});
+		}
 	};
 
 	parseFiles(text: string, repoPrefix: string, changedFiles: CommitFile[] = []) {

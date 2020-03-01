@@ -18,13 +18,13 @@ export default {
 		models: THREE.Mesh[],
 		highlighted: FSEntry
 	) {
-		var intersections = utils.findIntersectionsUnderEvent(ev, camera, models);
+		const intersections = utils.findIntersectionsUnderEvent(ev, camera, models);
 
 		if (intersections.length > 0) {
 			const intersection = intersections.find((o) => o.faceIndex !== undefined);
 			if (intersection === undefined) return undefined;
 			const faceIndex = intersection.faceIndex || 0;
-			var fsEntry = (intersection.object as any).fileTree.fsIndex[
+			let fsEntry = (intersection.object as any).fileTree.fsIndex[
 				Math.floor(faceIndex / (2 * this.quadCount))
 			];
 			while (fsEntry && fsEntry.scale * camera.projectionMatrix.elements[0] < 0.2) {
@@ -79,45 +79,64 @@ export default {
 	qTmp8: new THREE.Vector3(),
 	mTmp4: new THREE.Matrix4(),
 	quadInsideFrustum: function(quadIndex: number, model: THREE.Mesh, camera: THREE.Camera) {
-		var vertexOff = quadIndex * 6 * this.quadCount;
-		var a = this.qTmp1;
-		var b = this.qTmp2;
-		var c = this.qTmp3;
-		var d = this.qTmp4;
+		const vertexOff = quadIndex * 6 * this.quadCount;
+		const a = this.qTmp1;
+		const b = this.qTmp2;
+		const c = this.qTmp3;
+		const d = this.qTmp4;
 		this.projectVertexToFrustum(a, vertexOff, model, camera);
 		this.projectVertexToFrustum(b, vertexOff + 1, model, camera);
 		this.projectVertexToFrustum(c, vertexOff + 2, model, camera);
 		this.projectVertexToFrustum(d, vertexOff + 5, model, camera);
-		var minX = Math.min(a.x, b.x, c.x, d.x);
-		var maxX = Math.max(a.x, b.x, c.x, d.x);
-		var minY = Math.min(a.y, b.y, c.y, d.y);
-		var maxY = Math.max(a.y, b.y, c.y, d.y);
+		const minX = Math.min(a.x, b.x, c.x, d.x);
+		const maxX = Math.max(a.x, b.x, c.x, d.x);
+		const minY = Math.min(a.y, b.y, c.y, d.y);
+		const maxY = Math.max(a.y, b.y, c.y, d.y);
 		return maxX > -1 && minX < 1 && maxY > -1 && minY < 1;
 	},
 
 	quadAtFrustumCenter: function(quadIndex: number, model: THREE.Mesh, camera: THREE.Camera) {
-		var vertexOff = quadIndex * 6 * this.quadCount;
-		var a = this.qTmp1;
-		var b = this.qTmp2;
-		var c = this.qTmp3;
-		var d = this.qTmp4;
+		const vertexOff = quadIndex * 6 * this.quadCount;
+		const a = this.qTmp1;
+		const b = this.qTmp2;
+		const c = this.qTmp3;
+		const d = this.qTmp4;
 		this.projectVertexToFrustum(a, vertexOff, model, camera);
 		this.projectVertexToFrustum(b, vertexOff + 1, model, camera);
 		this.projectVertexToFrustum(c, vertexOff + 2, model, camera);
 		this.projectVertexToFrustum(d, vertexOff + 5, model, camera);
-		var minX = Math.min(a.x, b.x, c.x, d.x);
-		var maxX = Math.max(a.x, b.x, c.x, d.x);
-		var minY = Math.min(a.y, b.y, c.y, d.y);
-		var maxY = Math.max(a.y, b.y, c.y, d.y);
+		const minX = Math.min(a.x, b.x, c.x, d.x);
+		const maxX = Math.max(a.x, b.x, c.x, d.x);
+		const minY = Math.min(a.y, b.y, c.y, d.y);
+		const maxY = Math.max(a.y, b.y, c.y, d.y);
 		return maxX > 0 && minX < 0 && maxY > 0 && minY < 0;
 	},
 
+	quadDistanceToFrustumCenter: function(
+		quadIndex: number,
+		model: THREE.Mesh,
+		camera: THREE.Camera
+	) {
+		const vertexOff = quadIndex * 6 * this.quadCount;
+		const a = this.qTmp1;
+		const b = this.qTmp2;
+		const c = this.qTmp3;
+		const d = this.qTmp4;
+		this.projectVertexToFrustum(a, vertexOff, model, camera);
+		this.projectVertexToFrustum(b, vertexOff + 1, model, camera);
+		this.projectVertexToFrustum(c, vertexOff + 2, model, camera);
+		this.projectVertexToFrustum(d, vertexOff + 5, model, camera);
+		const avgX = (a.x + b.x + c.x + d.x) / 4;
+		const avgY = (a.y + b.y + c.y + d.y) / 4;
+		return Math.sqrt(avgX * avgX + avgY * avgY);
+	},
+
 	quadCoversFrustum: function(quadIndex: number, model: THREE.Mesh, camera: THREE.Camera) {
-		var vertexOff = quadIndex * 6 * this.quadCount;
-		var a = this.qTmp1;
-		var b = this.qTmp2;
-		var c = this.qTmp3;
-		var d = this.qTmp4;
+		const vertexOff = quadIndex * 6 * this.quadCount;
+		const a = this.qTmp1;
+		const b = this.qTmp2;
+		const c = this.qTmp3;
+		const d = this.qTmp4;
 		this.projectVertexToFrustum(a, vertexOff, model, camera);
 		this.projectVertexToFrustum(b, vertexOff + 1, model, camera);
 		this.projectVertexToFrustum(c, vertexOff + 2, model, camera);
@@ -130,10 +149,10 @@ export default {
 		) {
 			return false;
 		}
-		var minX = Math.min(a.x, b.x, c.x, d.x);
-		var maxX = Math.max(a.x, b.x, c.x, d.x);
-		var minY = Math.min(a.y, b.y, c.y, d.y);
-		var maxY = Math.max(a.y, b.y, c.y, d.y);
+		const minX = Math.min(a.x, b.x, c.x, d.x);
+		const maxX = Math.max(a.x, b.x, c.x, d.x);
+		const minY = Math.min(a.y, b.y, c.y, d.y);
+		const maxY = Math.max(a.y, b.y, c.y, d.y);
 		if (!(maxX > 1 && minX < -1 && maxY > 1 && minY < -1)) {
 			return false;
 		}
@@ -172,19 +191,17 @@ export default {
 		x4: number,
 		y4: number
 	) {
-		var mua, mub, x, y;
-		var denom, numera, numerb;
-		var EPS = 1e-6;
+		const EPS = 1e-6;
 
-		denom = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1);
-		numera = (x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3);
-		numerb = (x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3);
+		const denom = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1);
+		const numera = (x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3);
+		const numerb = (x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3);
 
 		/* Are the line coincident? */
 		if (Math.abs(numera) < EPS && Math.abs(numerb) < EPS && Math.abs(denom) < EPS) {
-			x = (x1 + x2) / 2;
-			y = (y1 + y2) / 2;
-			return { x: x, y: y };
+			const x = (x1 + x2) / 2;
+			const y = (y1 + y2) / 2;
+			return { x, y };
 		}
 
 		/* Are the line parallel */
@@ -193,14 +210,14 @@ export default {
 		}
 
 		/* Is the intersection along the the segments */
-		mua = numera / denom;
-		mub = numerb / denom;
+		const mua = numera / denom;
+		const mub = numerb / denom;
 		if (mua < 0 || mua > 1 || mub < 0 || mub > 1) {
 			return false;
 		}
-		x = x1 + mua * (x2 - x1);
-		y = y1 + mua * (y2 - y1);
-		return { x: x, y: y };
+		const x = x1 + mua * (x2 - x1);
+		const y = y1 + mua * (y2 - y1);
+		return { x, y };
 	},
 
 	projectMatrixToFrustum: function(
@@ -219,8 +236,8 @@ export default {
 		model: THREE.Mesh,
 		camera: THREE.Camera
 	) {
-		var off = vertexIndex * 3;
-		var v = (model.geometry as any).attributes.position.array;
+		const off = vertexIndex * 3;
+		const v = (model.geometry as any).attributes.position.array;
 		u.set(v[off + 0], v[off + 1], v[off + 2]);
 		u.applyMatrix4(model.modelViewMatrix);
 		u.applyMatrix4(camera.projectionMatrix);
@@ -228,18 +245,18 @@ export default {
 
 	vertexInsideFrustumTmp: new THREE.Vector3(),
 	vertexInsideFrustum: function(vertexIndex: any, model: any, camera: any) {
-		var u = this.vertexInsideFrustumTmp;
+		const u = this.vertexInsideFrustumTmp;
 		this.projectVertexToFrustum(u, vertexIndex, model, camera);
 		// window.debug.textContent = ([u.x, u.y, u.z]).join(", ");
 		return u.x < 1 && u.x > -1 && u.y < 1 && u.y > -1 && u.z < 1 && u.z > -1;
 	},
 
 	makeGeometry: function(fileCount: number) {
-		var geo = new THREE.BufferGeometry() as IBufferGeometryWithFileCount;
+		const geo = new THREE.BufferGeometry() as IBufferGeometryWithFileCount;
 		geo.maxFileCount = fileCount;
 
-		var verts = new Float32Array(fileCount * 3 * 6 * this.quadCount);
-		var colorVerts = new Float32Array(fileCount * 3 * 6 * this.quadCount);
+		const verts = new Float32Array(fileCount * 3 * 6 * this.quadCount);
+		const colorVerts = new Float32Array(fileCount * 3 * 6 * this.quadCount);
 
 		geo.setAttribute('position', new THREE.BufferAttribute(verts, 3));
 		geo.setAttribute('color', new THREE.BufferAttribute(colorVerts, 3));
@@ -250,8 +267,8 @@ export default {
 	resizeGeometry: function(geo: IBufferGeometryWithFileCount, fileCount: number) {
 		geo.maxFileCount = fileCount;
 
-		var verts = new Float32Array(fileCount * 3 * 6 * this.quadCount);
-		var colorVerts = new Float32Array(fileCount * 3 * 6 * this.quadCount);
+		const verts = new Float32Array(fileCount * 3 * 6 * this.quadCount);
+		const colorVerts = new Float32Array(fileCount * 3 * 6 * this.quadCount);
 
 		verts.set(geo.getAttribute('position').array);
 		colorVerts.set(geo.getAttribute('color').array);
@@ -262,23 +279,14 @@ export default {
 		return geo;
 	},
 
-	setColor: function(verts: Float32Array, index: number, color: string | any[]) {
-		var i = index * 18 * this.quadCount; //(index * 2 + 1) * 18;
-		var dx = color[0],
+	setColor: function(verts: Float32Array, index: number, color: number[]) {
+		let i = index * 18 * this.quadCount;
+		const dx = color[0],
 			dy = color[1],
 			dz = color[2];
-		var f = 1; //((2 + (depth+3) % 8) / 16);
-		dx *= f;
-		dy *= f;
-		dz *= f;
-		var x = dx,
-			y = dy,
-			z = dz;
-		if (color.length === 3) {
-			x = 1 - (1 - dx) * 0.85;
-			y = 1 - (1 - dy) * 0.85;
-			z = 1 - (1 - dz) * 0.85;
-		}
+		const x = 1 - (1 - dx) * 0.85;
+		const y = 1 - (1 - dy) * 0.85;
+		const z = 1 - (1 - dz) * 0.85;
 
 		verts[i++] = dx;
 		verts[i++] = dy;
@@ -300,7 +308,7 @@ export default {
 		verts[i++] = y;
 		verts[i++] = z;
 
-		for (var j = 1; j < this.quadCount; j++) {
+		for (let j = 1; j < this.quadCount; j++) {
 			verts[i++] = dx * 0.5;
 			verts[i++] = dy * 0.5;
 			verts[i++] = dz * 0.5;
@@ -332,7 +340,7 @@ export default {
 		h: number,
 		z: number
 	) {
-		var i = index * 18 * this.quadCount;
+		let i = index * 18 * this.quadCount;
 
 		verts[i++] = x;
 		verts[i++] = y;

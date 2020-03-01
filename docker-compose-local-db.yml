@@ -1,0 +1,29 @@
+version: '3.7'
+
+services:
+    db:
+        image: postgres
+        volumes:
+            - ./database/pgdata:/var/lib/postgresql/data:cached
+        restart: always
+        environment:
+            POSTGRES_USER: montaan
+            POSTGRES_PASSWORD: montaan
+
+    backend:
+        build: ./backend
+        working_dir: /montaan/backend
+        command: yarn watch
+        ports:
+            - 8008:8008
+        restart: always
+        depends_on:
+            - db
+        volumes:
+            - ./:/montaan:cached
+
+    adminer:
+        image: adminer
+        restart: always
+        ports:
+            - 8080:8080

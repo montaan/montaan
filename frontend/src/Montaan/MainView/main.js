@@ -1,4 +1,4 @@
-import { getPathEntry, getFullPath, getFSEntryForURL } from '../lib/filesystem';
+import { getPathEntry, getFullPath, getFSEntryForURL, createFSTree } from '../lib/filesystem';
 import Colors from '../lib/Colors';
 import Layout from '../lib/Layout';
 import utils from '../lib/utils';
@@ -228,6 +228,8 @@ class Tabletree {
 					this.addHighlightedLine(later[i][0], later[i][1]);
 			}
 		};
+
+		this.scene.add(this.searchHighlights);
 	}
 
 	setGoToHighlight(fsEntry, line) {
@@ -350,7 +352,6 @@ class Tabletree {
 		};
 
 		this.scene.add(this.searchLine);
-		this.scene.add(this.searchHighlights);
 
 		this.lineGeo = new THREE.BufferGeometry();
 		this.lineGeo.setAttribute(
@@ -445,17 +446,17 @@ class Tabletree {
 	}
 
 	updateSearchLines() {
-		var needUpdate = false;
+		var needsUpdate = false;
 		if (this.searchResults !== this.previousSearchResults) {
 			this.clearSearchLine();
 			this.previousSearchResults = this.searchResults;
-			needUpdate = true;
+			needsUpdate = true;
 			this.changed = true;
 			this.searchLis = [].slice.call(document.body.querySelectorAll('#searchResults > li'));
 		}
 		const lis = this.searchLis;
 		var verts = this.searchLine.geometry.getAttribute('position').array;
-		if (needUpdate && lis.length <= verts.length / 3 / 4) {
+		if (needsUpdate && lis.length <= verts.length / 3 / 4) {
 			for (var i = 0, l = lis.length; i < l; i++) {
 				var li = lis[i];
 				this.addScreenLine(
@@ -710,6 +711,11 @@ class Tabletree {
 					visibleFiles.visibleSet[fullPath] = false;
 					visibleFiles.remove(c);
 					i--;
+					Geometry.setColor(mesh.geometry.attributes.color.array, fsEntry.index, [
+						0,
+						0,
+						1,
+					]);
 				}
 			}
 			var zoomedInPath = '';
@@ -729,28 +735,25 @@ class Tabletree {
 					const fsEntry = tree.entries[name];
 					const idx = fsEntry.index;
 					if (!Geometry.quadInsideFrustum(idx, mesh, camera)) {
-						// if (
-						// 	fsEntry.parent.parent &&
-						// 	fsEntry.parent.parent.parent &&
-						// 	fsEntry.parent.parent.parent.parent &&
-						// 	fsEntry.fetched &&
-						// 	fsEntry.entries &&
-						// 	Object.keys(fsEntry.entries).length > 0
-						// ) {
-						// 	entriesToDispose.push(fsEntry);
-						// }
+						if (fsEntry.entries) {
+							entriesToDispose.push(fsEntry);
+						}
+						Geometry.setColor(mesh.geometry.attributes.color.array, fsEntry.index, [
+							1,
+							0,
+							1,
+						]);
 						continue;
 					}
 					if (
 						fsEntry.entries &&
 						fsEntry.fetched &&
-						(fsEntry.scale * 50) / Math.max(camera.fov, camera.targetFOV) > 0.03
+						(fsEntry.scale * 50) / Math.max(camera.fov, camera.targetFOV) > 0.06
 					) {
 						stack.push(fsEntry);
 					}
 					if (!fsEntry.fetched && fsEntry.entries) {
-						if ((fsEntry.scale * 50) / Math.max(camera.fov, camera.targetFOV) > 0.03) {
-							fsEntry.fetched = true;
+						if ((fsEntry.scale * 50) / Math.max(camera.fov, camera.targetFOV) > 0.06) {
 							entriesToFetch.push(fsEntry);
 						}
 					}
@@ -777,24 +780,38 @@ class Tabletree {
 					}
 				}
 			}
+			mesh.geometry.attributes.color.needsUpdate = true;
 			this.zoomedInPath = zoomedInPath;
 			this.breadcrumbPath = navigationTarget;
 			this.setNavigationTarget(navigationTarget);
-			if (entriesToFetch.length > 0) {
-				console.log('fetch: ' + entriesToFetch.map((e) => getFullPath(e)).join(', '));
-			}
-			if (entriesToDispose.length > 0) {
-				console.log('dispose: ' + entriesToDispose.map((e) => getFullPath(e)).join(', '));
-			}
 			if (entriesToFetch.length > 0 || entriesToDispose.length > 0) {
+				for (let i = 0; i < entriesToFetch.length; i++) {
+					entriesToFetch[i].distanceFromCenter = Geometry.quadDistanceToFrustumCenter(
+						entriesToFetch[i].index,
+						mesh,
+						camera
+					);
+					Geometry.setColor(
+						mesh.geometry.attributes.color.array,
+						entriesToFetch[i].index,
+						[entriesToFetch[i].distanceFromCenter, 0, 1]
+					);
+				}
 				this.requestDirs(
-					entriesToFetch.map((e) => getFullPath(e)),
+					entriesToFetch.sort(this.cmpFSEntryDistanceFromCenter).map(getFullPath),
 					entriesToDispose
 				);
 			}
 			mesh.geometry.setDrawRange(0, this.fileTree.lastVertexIndex);
 			textGeometry.setDrawRange(0, this.fileTree.lastTextVertexIndex);
 		};
+	}
+
+	cmpFSEntryDistanceFromCenter(a, b) {
+		return (
+			(b.scale - a.scale) / (b.scale + a.scale) +
+			0.1 * (a.distanceFromCenter - b.distanceFromCenter)
+		);
 	}
 
 	addFileView(visibleFiles, fullPath, fsEntry) {
