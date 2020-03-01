@@ -732,11 +732,11 @@ class Tabletree {
 					visibleFiles.visibleSet[fullPath] = false;
 					visibleFiles.remove(c);
 					i--;
-					Geometry.setColor(mesh.geometry.attributes.color.array, fsEntry.index, [
-						0,
-						0,
-						1,
-					]);
+					// Geometry.setColor(mesh.geometry.attributes.color.array, fsEntry.index, [
+					// 	0,
+					// 	0,
+					// 	1,
+					// ]);
 				}
 			}
 			var zoomedInPath = '';
@@ -759,11 +759,11 @@ class Tabletree {
 						if (fsEntry.entries) {
 							entriesToDispose.push(fsEntry);
 						}
-						Geometry.setColor(mesh.geometry.attributes.color.array, fsEntry.index, [
-							1,
-							0,
-							1,
-						]);
+						// Geometry.setColor(mesh.geometry.attributes.color.array, fsEntry.index, [
+						// 	1,
+						// 	0,
+						// 	1,
+						// ]);
 						continue;
 					}
 					if (
@@ -801,7 +801,7 @@ class Tabletree {
 					}
 				}
 			}
-			mesh.geometry.attributes.color.needsUpdate = true;
+			// mesh.geometry.attributes.color.needsUpdate = true;
 			this.zoomedInPath = zoomedInPath;
 			this.breadcrumbPath = navigationTarget;
 			this.setNavigationTarget(navigationTarget);
@@ -812,11 +812,11 @@ class Tabletree {
 						mesh,
 						camera
 					);
-					Geometry.setColor(
-						mesh.geometry.attributes.color.array,
-						entriesToFetch[i].index,
-						[entriesToFetch[i].distanceFromCenter, 0, 1]
-					);
+					// Geometry.setColor(
+					// 	mesh.geometry.attributes.color.array,
+					// 	entriesToFetch[i].index,
+					// 	[entriesToFetch[i].distanceFromCenter, 0, 1]
+					// );
 				}
 				var deleteCount = 0;
 
