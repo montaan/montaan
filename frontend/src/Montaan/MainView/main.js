@@ -634,22 +634,22 @@ class Tabletree {
 		geo.attributes.position.needsUpdate = true;
 		geo.attributes.color.needsUpdate = true;
 
-		let vertCount = textGeometry.vertCount;
+		let textVertCount = textGeometry.vertCount;
 		labels.traverse(function(c) {
 			if (c.geometry) {
-				vertCount += c.geometry.attributes.position.array.length;
+				textVertCount += c.geometry.attributes.position.array.length;
 			}
 		});
-		if (vertCount > textGeometry.attributes.position.array.length) {
-			const positionArray = new Float32Array(vertCount * 2);
-			const uvArray = new Float32Array(vertCount);
+		if (textVertCount > textGeometry.attributes.position.array.length) {
+			const positionArray = new Float32Array(textVertCount * 2);
+			const uvArray = new Float32Array(textVertCount);
 			positionArray.set(textGeometry.attributes.position.array);
 			uvArray.set(textGeometry.attributes.uv.array);
 			textGeometry.setAttribute('position', new THREE.BufferAttribute(positionArray, 4));
 			textGeometry.setAttribute('uv', new THREE.BufferAttribute(uvArray, 2));
 		}
-		const positionArray = textGeometry.attributes.position.array;
-		const uvArray = textGeometry.attributes.uv.array;
+		const positionArray = textGeometry.getAttribute('position').array;
+		const uvArray = textGeometry.getAttribute('uv').array;
 		let j = textGeometry.vertCount;
 		labels.traverse(function(c) {
 			if (c.geometry) {
@@ -660,9 +660,9 @@ class Tabletree {
 				j += labelPositionArray.length;
 			}
 		});
-		textGeometry.vertCount = vertCount;
-		textGeometry.attributes.position.needsUpdate = true;
-		textGeometry.attributes.uv.needsUpdate = true;
+		textGeometry.vertCount = textVertCount;
+		textGeometry.getAttribute('position').needsUpdate = true;
+		textGeometry.getAttribute('uv').needsUpdate = true;
 		this.rebuildingTree = false;
 	}
 

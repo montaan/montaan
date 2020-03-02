@@ -182,42 +182,39 @@ export default {
 				const xOff = 0.9 * x * (1 / dirSquareSide);
 				const dir = dirs[off];
 				if (excludeIndex.has(dir)) continue;
-				if (!meshIndex.has(dir) || meshIndex.get(dir) === -1) {
-					const subX = xOff + 0.1 / dirSquareSide;
-					const subY = yOff + 0.125 / dirSquareSide;
-					dir.x = fileTree.x + fileTree.scale * subX * dirScale;
-					dir.y =
-						fileTree.y +
-						fileTree.scale * subY * dirScale +
-						(1 - dirScale) * fileTree.scale;
-					dir.scale = fileTree.scale * (0.8 / dirSquareSide) * dirScale;
-					dir.z = fileTree.z + dir.scale * 0.2;
-					dir.index = fileIndex;
-					fileIndex++;
-					dir.vertexIndex = vertexIndices.vertexIndex;
-					dir.textVertexIndex = vertexIndices.textVertexIndex;
-					dir.parent = fileTree;
-					index[dir.index] = dir;
-					meshIndex.set(dir, dir.index);
-					var dirColor = dir.color || Colors.getDirectoryColor(dir);
-					Geometry.setColor(colorVerts, dir.index, dirColor);
-					vertexIndices.vertexIndex = Geometry.makeQuad(
-						verts,
-						dir.index,
-						dir.x,
-						dir.y + 0.5 * dir.scale,
-						dir.scale,
-						dir.scale * 0.5,
-						dir.z
-					);
-					vertexIndices.textVertexIndex = await this.createTextForEntry(
-						dir,
-						parentText,
-						vertexIndices.textVertexIndex,
-						yieldFn,
-						0.65
-					);
-				}
+				if (meshIndex.has(dir) && meshIndex.get(dir) !== -1) continue;
+				const subX = xOff + 0.1 / dirSquareSide;
+				const subY = yOff + 0.125 / dirSquareSide;
+				dir.x = fileTree.x + fileTree.scale * subX * dirScale;
+				dir.y =
+					fileTree.y + fileTree.scale * subY * dirScale + (1 - dirScale) * fileTree.scale;
+				dir.scale = fileTree.scale * (0.8 / dirSquareSide) * dirScale;
+				dir.z = fileTree.z + dir.scale * 0.2;
+				dir.index = fileIndex;
+				fileIndex++;
+				dir.vertexIndex = vertexIndices.vertexIndex;
+				dir.textVertexIndex = vertexIndices.textVertexIndex;
+				dir.parent = fileTree;
+				index[dir.index] = dir;
+				meshIndex.set(dir, dir.index);
+				var dirColor = dir.color || Colors.getDirectoryColor(dir);
+				Geometry.setColor(colorVerts, dir.index, dirColor);
+				vertexIndices.vertexIndex = Geometry.makeQuad(
+					verts,
+					dir.index,
+					dir.x,
+					dir.y + 0.5 * dir.scale,
+					dir.scale,
+					dir.scale * 0.5,
+					dir.z
+				);
+				vertexIndices.textVertexIndex = await this.createTextForEntry(
+					dir,
+					parentText,
+					vertexIndices.textVertexIndex,
+					yieldFn,
+					0.65
+				);
 				fileIndex = await this.createFileTreeQuads(
 					yieldFn,
 					dir,
