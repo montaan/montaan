@@ -95,6 +95,26 @@ export default {
 		return maxX > -1 && minX < 1 && maxY > -1 && minY < 1;
 	},
 
+	fsEntryInsideFrustum: function(fsEntry: FSEntry, model: THREE.Mesh, camera: THREE.Camera) {
+		const a = this.qTmp1;
+		const b = this.qTmp2;
+		const c = this.qTmp3;
+		const d = this.qTmp4;
+		a.set(fsEntry.x, fsEntry.y, fsEntry.z);
+		b.set(fsEntry.x + fsEntry.scale, fsEntry.y, fsEntry.z);
+		c.set(fsEntry.x + fsEntry.scale, fsEntry.y + fsEntry.scale, fsEntry.z);
+		d.set(fsEntry.x, fsEntry.y + fsEntry.scale, fsEntry.z);
+		this.projectVector3ToFrustum(a, model, camera);
+		this.projectVector3ToFrustum(b, model, camera);
+		this.projectVector3ToFrustum(c, model, camera);
+		this.projectVector3ToFrustum(d, model, camera);
+		const minX = Math.min(a.x, b.x, c.x, d.x);
+		const maxX = Math.max(a.x, b.x, c.x, d.x);
+		const minY = Math.min(a.y, b.y, c.y, d.y);
+		const maxY = Math.max(a.y, b.y, c.y, d.y);
+		return maxX > -1 && minX < 1 && maxY > -1 && minY < 1;
+	},
+
 	quadAtFrustumCenter: function(quadIndex: number, model: THREE.Mesh, camera: THREE.Camera) {
 		const vertexOff = quadIndex * 6 * this.quadCount;
 		const a = this.qTmp1;
@@ -239,6 +259,11 @@ export default {
 		const off = vertexIndex * 3;
 		const v = (model.geometry as any).attributes.position.array;
 		u.set(v[off + 0], v[off + 1], v[off + 2]);
+		u.applyMatrix4(model.modelViewMatrix);
+		u.applyMatrix4(camera.projectionMatrix);
+	},
+
+	projectVector3ToFrustum: function(u: THREE.Vector3, model: THREE.Mesh, camera: THREE.Camera) {
 		u.applyMatrix4(model.modelViewMatrix);
 		u.applyMatrix4(camera.projectionMatrix);
 	},

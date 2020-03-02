@@ -76,18 +76,16 @@ export default {
 		parentText: THREE.Object3D,
 		thumbnails: THREE.Object3D,
 		index: FSEntry[],
-		vertexIndices: { vertexIndex: number; textVertexIndex: number }
-	) {
+		meshIndex: Map<FSEntry, number>,
+		vertexIndices: { vertexIndex: number; textVertexIndex: number },
+		excludeIndex: Map<FSEntry, number>
+	): Promise<number> {
 		var dirs = [];
 		var files = [];
 		var dotDirs = [];
 		var dotFiles = [];
 		for (let i in fileTree.entries) {
 			const obj = fileTree.entries[i];
-			obj.x = 0;
-			obj.y = 0;
-			obj.z = 0;
-			obj.scale = 0;
 			if (obj.entries === null) {
 				if (obj.name.startsWith('.') && false) dotFiles.push(obj);
 				else files.push(obj);
@@ -183,37 +181,43 @@ export default {
 				const yOff = 1 - (0.5 * y + 1) * (1 / dirSquareSide);
 				const xOff = 0.9 * x * (1 / dirSquareSide);
 				const dir = dirs[off];
-				const subX = xOff + 0.1 / dirSquareSide;
-				const subY = yOff + 0.125 / dirSquareSide;
-				dir.x = fileTree.x + fileTree.scale * subX * dirScale;
-				dir.y =
-					fileTree.y + fileTree.scale * subY * dirScale + (1 - dirScale) * fileTree.scale;
-				dir.scale = fileTree.scale * (0.8 / dirSquareSide) * dirScale;
-				dir.z = fileTree.z + dir.scale * 0.2;
-				dir.index = fileIndex;
-				fileIndex++;
-				dir.vertexIndex = vertexIndices.vertexIndex;
-				dir.textVertexIndex = vertexIndices.textVertexIndex;
-				dir.parent = fileTree;
-				index[dir.index] = dir;
-				var dirColor = dir.color || Colors.getDirectoryColor(dir);
-				Geometry.setColor(colorVerts, dir.index, dirColor);
-				vertexIndices.vertexIndex = Geometry.makeQuad(
-					verts,
-					dir.index,
-					dir.x,
-					dir.y + 0.5 * dir.scale,
-					dir.scale,
-					dir.scale * 0.5,
-					dir.z
-				);
-				vertexIndices.textVertexIndex = await this.createTextForEntry(
-					dir,
-					parentText,
-					vertexIndices.textVertexIndex,
-					yieldFn,
-					0.65
-				);
+				if (excludeIndex.has(dir)) continue;
+				if (!meshIndex.has(dir) || meshIndex.get(dir) === -1) {
+					const subX = xOff + 0.1 / dirSquareSide;
+					const subY = yOff + 0.125 / dirSquareSide;
+					dir.x = fileTree.x + fileTree.scale * subX * dirScale;
+					dir.y =
+						fileTree.y +
+						fileTree.scale * subY * dirScale +
+						(1 - dirScale) * fileTree.scale;
+					dir.scale = fileTree.scale * (0.8 / dirSquareSide) * dirScale;
+					dir.z = fileTree.z + dir.scale * 0.2;
+					dir.index = fileIndex;
+					fileIndex++;
+					dir.vertexIndex = vertexIndices.vertexIndex;
+					dir.textVertexIndex = vertexIndices.textVertexIndex;
+					dir.parent = fileTree;
+					index[dir.index] = dir;
+					meshIndex.set(dir, dir.index);
+					var dirColor = dir.color || Colors.getDirectoryColor(dir);
+					Geometry.setColor(colorVerts, dir.index, dirColor);
+					vertexIndices.vertexIndex = Geometry.makeQuad(
+						verts,
+						dir.index,
+						dir.x,
+						dir.y + 0.5 * dir.scale,
+						dir.scale,
+						dir.scale * 0.5,
+						dir.z
+					);
+					vertexIndices.textVertexIndex = await this.createTextForEntry(
+						dir,
+						parentText,
+						vertexIndices.textVertexIndex,
+						yieldFn,
+						0.65
+					);
+				}
 				fileIndex = await this.createFileTreeQuads(
 					yieldFn,
 					dir,
@@ -223,7 +227,9 @@ export default {
 					dir.text as THREE.Object3D,
 					thumbnails,
 					index,
-					vertexIndices
+					meshIndex,
+					vertexIndices,
+					excludeIndex
 				);
 			}
 		}
@@ -244,6 +250,7 @@ export default {
 				const subY = yOff + 0.05 / fileSquareSide;
 
 				const file = files[off];
+				if (meshIndex.has(file) && meshIndex.get(file) !== -1) continue;
 				const fileColor = file.color || Colors.getFileColor(file);
 				file.x = filesBox.x + filesBox.scale * subX * filesScale;
 				file.y =
@@ -257,6 +264,7 @@ export default {
 				file.lastIndex = fileIndex;
 				file.parent = fileTree;
 				index[file.index] = file;
+				meshIndex.set(file, file.index);
 				Geometry.setColor(colorVerts, file.index, fileColor);
 				vertexIndices.vertexIndex = Geometry.makeQuad(
 					verts,

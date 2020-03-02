@@ -82,6 +82,7 @@ class Tabletree {
 
 		this.deletionsCount = 0;
 		this.deletionsIndex = new Map();
+		this.meshIndex = new Map();
 
 		this.history = undefined;
 
@@ -102,7 +103,6 @@ class Tabletree {
 
 		this.initDone = false;
 		this.requestDirs = undefined;
-		this.requestDitchDirs = undefined;
 		this.setNavigationTarget = undefined;
 	}
 
@@ -558,7 +558,7 @@ class Tabletree {
 		this.changed = true;
 	};
 
-	async addFile(tree) {
+	addFile = async (tree) => {
 		if (this.addingFile) {
 			console.log('This is bad.');
 			debugger;
@@ -566,7 +566,7 @@ class Tabletree {
 		}
 		this.addingFile = true;
 		await this.yield();
-		this.model.fileCount += Object.keys(tree.entries).length;
+		utils.traverseFSEntry(tree, () => this.model.fileCount++, '');
 		const vertexIndices = {
 			vertexIndex: this.fileTree.lastVertexIndex,
 			textVertexIndex: this.fileTree.lastTextVertexIndex,
@@ -580,26 +580,29 @@ class Tabletree {
 			this.model.textGeometry,
 			vertexIndices
 		);
-		const lastIndex = tree.lastIndex;
+		this.model.fileCount = this.meshIndex.size;
 		while (tree) {
 			tree.lastVertexIndex = vertexIndices.vertexIndex;
 			tree.lastTextVertexIndex = vertexIndices.textVertexIndex;
-			tree.lastIndex = lastIndex;
 			tree = tree.parent;
 		}
+		this.changed = true;
 		this.addingFile = false;
-	}
+	};
 
 	async updateFileTreeGeometry(fileCount, fileTree, fsIndex, geo, textGeometry, vertexIndices) {
+		let deletionsIndex = new Map();
 		if (geo.maxFileCount < fileCount + 1) {
-			// console.log('Geometry resize!', 2 * (fileCount + 1));
 			Geometry.resizeGeometry(geo, 2 * (fileCount + 1));
-		} else if (this.deletionsCount > 1000) {
-			this.deletionsCount = 0;
-			this.deletionsIndex.clear();
+		} else if (this.deletionsIndex.size > 100) {
+			this.rebuildingTree = true;
+
+			deletionsIndex = this.deletionsIndex;
+			this.deletionsIndex = new Map();
 			geo.fileIndex = 0;
 
 			fileTree = this.fileTree;
+			this.meshIndex.clear();
 
 			fsIndex = fileTree.fsIndex = [fileTree];
 			fileTree.index = undefined;
@@ -624,7 +627,9 @@ class Tabletree {
 			labels,
 			thumbnails,
 			fsIndex,
-			vertexIndices
+			this.meshIndex,
+			vertexIndices,
+			deletionsIndex
 		);
 		geo.attributes.position.needsUpdate = true;
 		geo.attributes.color.needsUpdate = true;
@@ -635,26 +640,30 @@ class Tabletree {
 				vertCount += c.geometry.attributes.position.array.length;
 			}
 		});
-		const positionArray = new Float32Array(vertCount);
-		const uvArray = new Float32Array(vertCount / 2);
-		if (textGeometry.vertCount > 0) {
+		if (vertCount > textGeometry.attributes.position.array.length) {
+			const positionArray = new Float32Array(vertCount * 2);
+			const uvArray = new Float32Array(vertCount);
 			positionArray.set(textGeometry.attributes.position.array);
 			uvArray.set(textGeometry.attributes.uv.array);
+			textGeometry.setAttribute('position', new THREE.BufferAttribute(positionArray, 4));
+			textGeometry.setAttribute('uv', new THREE.BufferAttribute(uvArray, 2));
 		}
+		const positionArray = textGeometry.attributes.position.array;
+		const uvArray = textGeometry.attributes.uv.array;
 		let j = textGeometry.vertCount;
 		labels.traverse(function(c) {
 			if (c.geometry) {
-				positionArray.set(c.geometry.attributes.position.array, j);
-				uvArray.set(c.geometry.attributes.uv.array, j / 2);
-				j += c.geometry.attributes.position.array.length;
+				const attributes = c.geometry.attributes;
+				const labelPositionArray = attributes.position.array;
+				positionArray.set(labelPositionArray, j);
+				uvArray.set(attributes.uv.array, j / 2);
+				j += labelPositionArray.length;
 			}
 		});
 		textGeometry.vertCount = vertCount;
-
-		textGeometry.setAttribute('position', new THREE.BufferAttribute(positionArray, 4));
-		textGeometry.setAttribute('uv', new THREE.BufferAttribute(uvArray, 2));
-		textGeometry.getAttribute('position').needsUpdate = true;
-		textGeometry.getAttribute('uv').needsUpdate = true;
+		textGeometry.attributes.position.needsUpdate = true;
+		textGeometry.attributes.uv.needsUpdate = true;
+		this.rebuildingTree = false;
 	}
 
 	async createFileTreeModel(fileCount, fileTree) {
@@ -686,6 +695,7 @@ class Tabletree {
 		);
 
 		const textMesh = new THREE.Mesh(textGeometry, Layout.textMaterial);
+		textMesh.frustumCulled = false;
 
 		const mesh = new THREE.Mesh(
 			geo,
@@ -715,14 +725,20 @@ class Tabletree {
 		const { visibleFiles, textGeometry } = mesh;
 		const camera = this.camera;
 		return (t, dt) => {
-			window.debug.textContent = mesh.fileTree.lastIndex + ' / ' + mesh.geometry.maxFileCount;
+			window.debug.textContent =
+				this.meshIndex.size +
+				' / ' +
+				mesh.geometry.maxFileCount +
+				' - ' +
+				this.deletionsIndex.size;
+			const camFovScale = 50 / Math.max(camera.fov, camera.targetFOV);
 			// Dispose loaded files that are outside the current view
 			for (let i = 0; i < visibleFiles.children.length; i++) {
 				const c = visibleFiles.children[i];
 				const fsEntry = c.fsEntry;
 				if (
 					!Geometry.quadInsideFrustum(fsEntry.index, mesh, camera) ||
-					(fsEntry.scale * 50) / Math.max(camera.fov, camera.targetFOV) < 0.2
+					fsEntry.scale * camFovScale < 0.2
 				) {
 					if (fsEntry.contentObject) {
 						fsEntry.contentObject.dispose();
@@ -732,22 +748,18 @@ class Tabletree {
 					visibleFiles.visibleSet[fullPath] = false;
 					visibleFiles.remove(c);
 					i--;
-					// Geometry.setColor(mesh.geometry.attributes.color.array, fsEntry.index, [
-					// 	0,
-					// 	0,
-					// 	1,
-					// ]);
 				}
 			}
 			var zoomedInPath = '';
 			var navigationTarget = '';
-			var smallestCovering = mesh.fileTree;
+			var smallestCovering = this.fileTree;
 
 			// Breadth-first traversal of mesh.fileTree
 			// - determines fsEntry visibility
 			// - finds the covering fsEntry
 			// - finds the currently zoomed-in path and breadcrumb path
-			const stack = [mesh.fileTree];
+			const stack = [this.fileTree];
+			const entriesToKeep = [];
 			const entriesToFetch = [];
 			const entriesToDispose = [];
 			while (stack.length > 0) {
@@ -755,91 +767,84 @@ class Tabletree {
 				for (let name in tree.entries) {
 					const fsEntry = tree.entries[name];
 					const idx = fsEntry.index;
-					if (!Geometry.quadInsideFrustum(idx, mesh, camera)) {
-						if (fsEntry.entries) {
-							entriesToDispose.push(fsEntry);
-						}
-						// Geometry.setColor(mesh.geometry.attributes.color.array, fsEntry.index, [
-						// 	1,
-						// 	0,
-						// 	1,
-						// ]);
+					const entryScale = fsEntry.scale * camFovScale;
+					const isSmallDirectory = fsEntry.entries && entryScale < 0.005;
+					const isSmallFile = !fsEntry.entries && entryScale < 0.3;
+					// Skip entries that are outside frustum or too small.
+					if (
+						!Geometry.fsEntryInsideFrustum(fsEntry, mesh, camera) ||
+						isSmallDirectory ||
+						isSmallFile
+					) {
+						if (fsEntry.entries) entriesToDispose.push(fsEntry); // Dispose directories that are outside frustum or too small.
 						continue;
 					}
-					if (
-						fsEntry.entries &&
-						fsEntry.fetched &&
-						(fsEntry.scale * 50) / Math.max(camera.fov, camera.targetFOV) > 0.06
-					) {
-						stack.push(fsEntry);
-					}
-					if (!fsEntry.fetched && fsEntry.entries) {
-						if ((fsEntry.scale * 50) / Math.max(camera.fov, camera.targetFOV) > 0.06) {
-							entriesToFetch.push(fsEntry);
+					// Directory
+					if (fsEntry.entries) {
+						entriesToKeep.push(fsEntry); // It's visible, so let's keep it in the mesh
+						// Descend into directories larger than this.
+						if (entryScale > 0.01) {
+							// Fetch directories that haven't been fetched yet.
+							if (!fsEntry.fetched) entriesToFetch.push(fsEntry);
+							else stack.push(fsEntry); // Descend into already-fetched directories.
+						}
+					} else {
+						// File that's large on screen, let's add a file view if needed.
+						let fullPath = getFullPath(fsEntry);
+						if (
+							visibleFiles.children.length < 30 &&
+							!visibleFiles.visibleSet[fullPath]
+						) {
+							this.addFileView(visibleFiles, fullPath, fsEntry);
 						}
 					}
-					if ((fsEntry.scale * 50) / Math.max(camera.fov, camera.targetFOV) > 0.3) {
+					if (entryScale > 0.9) {
 						if (Geometry.quadCoversFrustum(idx, mesh, camera)) {
 							zoomedInPath += '/' + fsEntry.name;
 							navigationTarget += '/' + fsEntry.name;
 							smallestCovering = fsEntry;
-						} else if (
-							(fsEntry.scale * 50) / Math.max(camera.fov, camera.targetFOV) > 0.9 &&
-							Geometry.quadAtFrustumCenter(idx, mesh, camera)
-						) {
+						} else if (Geometry.quadAtFrustumCenter(idx, mesh, camera)) {
 							navigationTarget += '/' + fsEntry.name;
-						}
-						if (!fsEntry.entries) {
-							let fullPath = getFullPath(fsEntry);
-							if (
-								visibleFiles.children.length < 30 &&
-								!visibleFiles.visibleSet[fullPath]
-							) {
-								this.addFileView(visibleFiles, fullPath, fsEntry);
-							}
 						}
 					}
 				}
 			}
-			// mesh.geometry.attributes.color.needsUpdate = true;
 			this.zoomedInPath = zoomedInPath;
 			this.breadcrumbPath = navigationTarget;
 			this.setNavigationTarget(navigationTarget);
-			if (entriesToFetch.length > 0 || entriesToDispose.length > 0) {
-				for (let i = 0; i < entriesToFetch.length; i++) {
-					entriesToFetch[i].distanceFromCenter = Geometry.quadDistanceToFrustumCenter(
-						entriesToFetch[i].index,
-						mesh,
-						camera
-					);
-					// Geometry.setColor(
-					// 	mesh.geometry.attributes.color.array,
-					// 	entriesToFetch[i].index,
-					// 	[entriesToFetch[i].distanceFromCenter, 0, 1]
-					// );
-				}
-				var deleteCount = 0;
-
-				entriesToDispose.forEach((e) => {
-					if (this.deletionsIndex.has(e)) return;
-					this.deletionsIndex.set(e, 1);
-					deleteCount++;
-					utils.traverseFSEntry(
-						e,
-						(c) => {
-							if (this.deletionsIndex.has(c)) return;
-							this.deletionsIndex.set(c, 1);
-							deleteCount++;
-						},
-						''
-					);
-				});
-				this.deletionsCount += deleteCount;
-				this.requestDirs(
-					entriesToFetch.sort(this.cmpFSEntryDistanceFromCenter).map(getFullPath),
-					entriesToDispose
+			for (let i = 0; i < entriesToFetch.length; i++) {
+				entriesToFetch[i].distanceFromCenter = Geometry.quadDistanceToFrustumCenter(
+					entriesToFetch[i].index,
+					mesh,
+					camera
 				);
 			}
+			if (!this.rebuildingTree) {
+				entriesToDispose.forEach((e) => this.deletionsIndex.set(e, 1));
+			}
+			entriesToKeep.forEach((e) => this.deletionsIndex.delete(e));
+			entriesToKeep.forEach((e) => {
+				if (!this.meshIndex.has(e)) {
+					this.meshIndex.set(e, -1);
+					this.treeUpdateQueue.push(async (e) => {
+						if (!this.meshIndex.has(e) || this.meshIndex.get(e) === -1) {
+							this.rebuildingTree = true;
+							await this.addFile(e.parent);
+						}
+					}, e);
+				}
+			});
+			this.entriesToKeep = entriesToKeep;
+			this.treeUpdateQueue.push(async (dirs) => {
+				await this.yield();
+				await this.requestDirs(
+					dirs
+						.filter((e) => !e.fetched)
+						.sort(this.cmpFSEntryDistanceFromCenter)
+						.map(getFullPath),
+					[]
+				);
+			}, entriesToFetch);
 			mesh.geometry.setDrawRange(0, this.fileTree.lastVertexIndex);
 			textGeometry.setDrawRange(0, this.fileTree.lastTextVertexIndex);
 		};
