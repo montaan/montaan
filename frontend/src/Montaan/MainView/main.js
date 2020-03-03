@@ -812,13 +812,10 @@ class Tabletree {
 			this.zoomedInPath = zoomedInPath;
 			this.breadcrumbPath = navigationTarget;
 			this.setNavigationTarget(navigationTarget);
-			for (let i = 0; i < entriesToFetch.length; i++) {
-				entriesToFetch[i].distanceFromCenter = Geometry.quadDistanceToFrustumCenter(
-					entriesToFetch[i].index,
-					mesh,
-					camera
-				);
-			}
+			entriesToFetch.forEach((e) => {
+				const d = Geometry.quadDistanceToFrustumCenter(e.index, mesh, camera);
+				e.distanceFromCenter = d;
+			});
 			if (!this.rebuildingTree) {
 				entriesToDispose.forEach((e) => this.deletionsIndex.set(e, 1));
 			}
@@ -835,16 +832,18 @@ class Tabletree {
 				}
 			});
 			this.entriesToKeep = entriesToKeep;
-			this.treeUpdateQueue.push(async (dirs) => {
-				await this.yield();
-				await this.requestDirs(
-					dirs
-						.filter((e) => !e.fetched)
-						.sort(this.cmpFSEntryDistanceFromCenter)
-						.map(getFullPath),
-					[]
-				);
-			}, entriesToFetch);
+			if (entriesToFetch.length > 0) {
+				this.treeUpdateQueue.push(async (dirs) => {
+					await this.yield();
+					await this.requestDirs(
+						dirs
+							.filter((e) => !e.fetched)
+							.sort(this.cmpFSEntryDistanceFromCenter)
+							.map(getFullPath),
+						[]
+					);
+				}, entriesToFetch);
+			}
 			mesh.geometry.setDrawRange(0, this.fileTree.lastVertexIndex);
 			textGeometry.setDrawRange(0, this.fileTree.lastTextVertexIndex);
 		};
