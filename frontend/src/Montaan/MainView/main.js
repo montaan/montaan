@@ -1,4 +1,4 @@
-import { getPathEntry, getFullPath, getFSEntryForURL, createFSTree } from '../lib/filesystem';
+import { getPathEntry, getFullPath, getFSEntryForURL } from '../lib/filesystem';
 import Colors from '../lib/Colors';
 import Layout from '../lib/Layout';
 import utils from '../lib/utils';
@@ -528,6 +528,57 @@ class Tabletree {
 		this.changed = true;
 	}
 
+	getCameraDistanceToModel() {
+		const intersections = utils.findIntersectionsUnderEvent(
+			{
+				clientX: window.innerWidth / 2,
+				clientY: window.innerHeight / 2,
+				target: this.renderer.domElement,
+			},
+			this.camera,
+			[this.model]
+		);
+		if (intersections[0]) return intersections[0].distance;
+		else return this.camera.position.distanceTo(this.model.position);
+	}
+
+	reparentTree = async (fileTree, newRoot) => {
+		const d = this.getCameraDistanceToModel();
+		{
+			const { x, y, z, scale } = newRoot;
+			newRoot.x = 0;
+			newRoot.y = 0;
+			newRoot.z = 0;
+			newRoot.scale = 1;
+			fileTree.x -= x;
+			fileTree.y -= y;
+			fileTree.z -= z;
+			fileTree.scale /= scale;
+		}
+
+		await this.updateFileTreeGeometry(
+			this.meshIndex.size,
+			fileTree,
+			fileTree.fsIndex,
+			this.model.geometry,
+			this.model.textGeometry,
+			fileTree.vertexIndices,
+			true
+		);
+
+		{
+			const { x, y, z, scale } = newRoot;
+			this.camera.position.x -= x;
+			this.camera.position.y -= y;
+			this.camera.position.z -= z;
+			this.camera.position.z += -d + d / scale; // Move camera to model surface, then back off by scaled distance.
+			this.camera.targetPosition.copy(this.camera.position);
+			this.camera.near /= scale;
+			this.camera.far /= scale;
+		}
+		this.changed = true;
+	};
+
 	updateTree = async (fileTree) => {
 		/*
 			Traverse tree to find subtrees that are not in a model.
@@ -590,11 +641,18 @@ class Tabletree {
 		this.addingFile = false;
 	};
 
-	async updateFileTreeGeometry(fileCount, fileTree, fsIndex, geo, textGeometry, vertexIndices) {
+	async updateFileTreeGeometry(
+		fileCount,
+		fileTree,
+		fsIndex,
+		geo,
+		textGeometry,
+		vertexIndices,
+		rebuild = false
+	) {
 		let deletionsIndex = new Map();
-		if (geo.maxFileCount < fileCount + 1) {
-			Geometry.resizeGeometry(geo, 2 * (fileCount + 1));
-		} else if (this.deletionsIndex.size > 100) {
+		if (geo.maxFileCount < fileCount + 1) Geometry.resizeGeometry(geo, 2 * (fileCount + 1));
+		if (rebuild || this.deletionsIndex.size > 100) {
 			this.rebuildingTree = true;
 
 			deletionsIndex = this.deletionsIndex;
@@ -731,7 +789,7 @@ class Tabletree {
 				mesh.geometry.maxFileCount +
 				' - ' +
 				this.deletionsIndex.size;
-			const camFovScale = 50 / Math.max(camera.fov, camera.targetFOV);
+			const camFovScale = 100 * mesh.modelViewMatrix.elements[0];
 			// Dispose loaded files that are outside the current view
 			for (let i = 0; i < visibleFiles.children.length; i++) {
 				const c = visibleFiles.children[i];
@@ -1272,12 +1330,12 @@ class Tabletree {
 		var fsPoint = new THREE.Vector3(
 			fsEntry.x + fsEntry.scale * (fsEntry.entries ? 0.5 : 0.25),
 			fsEntry.y + fsEntry.scale * (fsEntry.entries ? 0.815 : 0.5),
-			fsEntry.z
+			fsEntry.z + fsEntry.scale
 		);
 		fsPoint.applyMatrix4(model.matrixWorld);
 		camera.targetPosition.copy(fsPoint);
-		// camera.targetFOV = fsEntry.scale * (fsEntry.entries ? 23 : 50);
-		// fsEntry.fov = camera.targetFOV;
+		camera.near = fsEntry.scale * 0.2;
+		camera.far = fsEntry.scale * 100;
 		this.changed = true;
 	};
 
@@ -1290,10 +1348,10 @@ class Tabletree {
 			fsEntry.targetLine = { line: coords };
 			return this.goToFSEntry(fsEntry, model);
 		}
-		const { targetPoint, targetFOV } = res;
+		const { targetPoint, near, far } = res;
 		camera.targetPosition.copy(targetPoint);
-		// camera.targetFOV = targetFOV;
-		// fsEntry.textFOV = camera.targetFOV;
+		camera.near = near;
+		camera.far = far;
 		this.changed = true;
 	}
 
@@ -1306,10 +1364,10 @@ class Tabletree {
 			fsEntry.targetLine = { search };
 			return this.goToFSEntry(fsEntry, model);
 		}
-		const { targetPoint, targetFOV } = res;
+		const { targetPoint, near, far } = res;
 		camera.targetPosition.copy(targetPoint);
-		// camera.targetFOV = targetFOV;
-		// fsEntry.textFOV = camera.targetFOV;
+		camera.near = near;
+		camera.far = far;
 		this.changed = true;
 	}
 
@@ -1397,7 +1455,7 @@ class Tabletree {
 				ev.preventDefault();
 				if (ev.touches.length === 1) {
 					if (!inGesture) {
-						window.onmousemove(ev.touches[0], 0.0000525);
+						window.onmousemove(ev.touches[0]);
 					}
 				} else if (ev.touches.length === 2) {
 					var dx = ev.touches[0].clientX - ev.touches[1].clientX;
@@ -1408,8 +1466,9 @@ class Tabletree {
 						clientX: ev.touches[1].clientX + dx / 2,
 						clientY: ev.touches[1].clientY + dy / 2,
 					};
-					var cx = (pinchMid.clientX - window.innerWidth / 2) * 0.0000575 * camera.fov;
-					var cy = (pinchMid.clientY - window.innerHeight / 2) * 0.0000575 * camera.fov;
+					var cx = (pinchMid.clientX - window.innerWidth / 2) / window.innerWidth;
+					var cy = (pinchMid.clientY - window.innerHeight / 2) / window.innerHeight;
+					console.log('pinch', zoom, cx, cy);
 					self.zoomCamera(zoom, cx, cy);
 					window.onmousemove(pinchMid);
 				}
@@ -1453,7 +1512,6 @@ class Tabletree {
 
 		window.onkeydown = function(ev) {
 			if (!ev.target || ev.target.tagName !== 'INPUT') {
-				var factor = 0.0001;
 				var dx = 0,
 					dy = 0,
 					dz = 0;
@@ -1519,6 +1577,7 @@ class Tabletree {
 						});
 						if (intersection) {
 							const fsEntry = intersection.fsEntry;
+							// FIXME Use distance to model instead of fov
 							const fovDiff = (fsEntry.scale * 50) / self.camera.fov;
 							if (self.highlighted === fsEntry) {
 								if (fsEntry.textScale) self.goToFSEntryCoords(fsEntry, [0]);
@@ -1545,9 +1604,14 @@ class Tabletree {
 
 					default: // do nothing
 				}
-				camera.targetPosition.x -= factor * dx * camera.fov;
-				camera.targetPosition.y += factor * dy * camera.fov;
-				// camera.targetFOV *= Math.pow(1.01, dz);
+				const d = self.getCameraDistanceToModel();
+				const factor = d / window.innerWidth;
+				camera.targetPosition.x -= factor * dx;
+				camera.targetPosition.y += factor * dy;
+				const zf = Math.pow(2, dz / 50);
+				camera.targetPosition.z += -d + d * zf;
+				camera.near *= zf;
+				camera.far *= zf;
 				self.changed = true;
 			}
 		};
@@ -1561,11 +1625,8 @@ class Tabletree {
 			startY = previousY = ev.clientY;
 		};
 
-		window.onmousemove = function(ev, factor) {
+		window.onmousemove = function(ev) {
 			if (down) {
-				if (!factor) {
-					factor = 0.0001;
-				}
 				self.changed = true;
 				if (ev.preventDefault) ev.preventDefault();
 				var dx = ev.clientX - previousX;
@@ -1579,10 +1640,11 @@ class Tabletree {
 					modelPivot.rotation.z += dx * 0.01;
 					modelPivot.rotation.x += dy * 0.01;
 				} else {
-					camera.position.x -= factor * dx * camera.fov;
-					camera.position.y += factor * dy * camera.fov;
+					const d = self.getCameraDistanceToModel();
+					const factor = d / window.innerWidth;
+					camera.position.x -= factor * dx;
+					camera.position.y += factor * dy;
 					camera.targetPosition.copy(camera.position);
-					camera.targetFOV = camera.fov;
 				}
 			}
 		};
@@ -1597,10 +1659,8 @@ class Tabletree {
 
 			if (ev.ctrlKey) {
 				// zoom on wheel
-				var cx =
-					((ev.clientX - window.innerWidth / 2) / window.innerWidth / 34) * camera.fov;
-				var cy =
-					((ev.clientY - window.innerHeight / 2) / window.innerHeight / 34) * camera.fov;
+				var cx = (ev.clientX - window.innerWidth / 2) / window.innerWidth;
+				var cy = (ev.clientY - window.innerHeight / 2) / window.innerHeight;
 				var d = ev.deltaY !== undefined ? ev.deltaY * 3 : ev.wheelDelta;
 				if (Date.now() - lastScroll > 500) {
 					prevD = d;
@@ -1621,7 +1681,8 @@ class Tabletree {
 				}, 1000);
 
 				// pan on wheel
-				const factor = 0.0000575;
+				const d = self.getCameraDistanceToModel();
+				const factor = d / window.innerWidth;
 				const adx = Math.abs(ev.deltaX);
 				const ady = Math.abs(ev.deltaY);
 				var xMove = false,
@@ -1631,10 +1692,9 @@ class Tabletree {
 					yMove = false;
 				}
 				wheelFreePan = wheelFreePan || (adx > 5 && ady > 5);
-				if (wheelFreePan || xMove) camera.position.x += factor * ev.deltaX * camera.fov;
-				if (wheelFreePan || yMove) camera.position.y -= factor * ev.deltaY * camera.fov;
+				if (wheelFreePan || xMove) camera.position.x += factor * ev.deltaX;
+				if (wheelFreePan || yMove) camera.position.y -= factor * ev.deltaY;
 				camera.targetPosition.copy(camera.position);
-				camera.targetFOV = camera.fov;
 				self.changed = true;
 			}
 		};
@@ -1646,8 +1706,8 @@ class Tabletree {
 		});
 		window.addEventListener('gesturechange', function(ev) {
 			ev.preventDefault();
-			var cx = ((ev.clientX - window.innerWidth / 2) / window.innerWidth / 34) * camera.fov;
-			var cy = ((ev.clientY - window.innerHeight / 2) / window.innerHeight / 34) * camera.fov;
+			var cx = (ev.clientX - window.innerWidth / 2) / window.innerWidth;
+			var cy = (ev.clientY - window.innerHeight / 2) / window.innerHeight;
 			var d = ev.scale / gestureStartScale;
 			gestureStartScale = ev.scale;
 			self.zoomCamera(1 / d, cx, cy);
@@ -1668,35 +1728,6 @@ class Tabletree {
 				self.zoomToEntry(ev);
 			}
 		};
-
-		document.getElementById('playCommits').onclick = function(ev) {
-			self.commitsPlaying = !self.commitsPlaying;
-			self.changed = true;
-		};
-
-		document.getElementById('commitSlider').oninput = function(ev) {
-			var v = parseInt(this.value);
-			if (self.activeCommits[v]) {
-				self.showCommit(self.activeCommits[v].sha);
-				self.changed = true;
-			}
-		};
-		document.getElementById('previousCommit').onclick = function(ev) {
-			var slider = document.getElementById('commitSlider');
-			var v = parseInt(slider.value) - 1;
-			if (self.activeCommits[v]) {
-				slider.value = v;
-				slider.oninput();
-			}
-		};
-		document.getElementById('nextCommit').onclick = function(ev) {
-			var slider = document.getElementById('commitSlider');
-			var v = parseInt(slider.value) + 1;
-			if (self.activeCommits[v]) {
-				slider.value = v;
-				slider.oninput();
-			}
-		};
 	}
 
 	// Used to navigate between entries
@@ -1708,16 +1739,15 @@ class Tabletree {
 
 	zoomCamera(zf, cx, cy) {
 		const camera = this.camera;
-		if (zf < 1 || camera.fov < 120) {
-			camera.position.x += cx - cx * zf;
-			camera.position.y -= cy - cy * zf;
-			// camera.fov *= zf;
-			// if (camera.fov > 120) camera.fov = 120;
-			// camera.targetFOV = camera.fov;
-			camera.targetPosition.copy(camera.position);
-			camera.updateProjectionMatrix();
-			this.changed = true;
-		}
+		const d = this.getCameraDistanceToModel();
+		camera.position.x += cx * d - cx * d * zf;
+		camera.position.y -= cy * d - cy * d * zf;
+		camera.position.z += -d + d * zf;
+		camera.near *= zf;
+		camera.far *= zf;
+		camera.targetPosition.copy(camera.position);
+		camera.updateProjectionMatrix();
+		this.changed = true;
 	}
 
 	zoomToEntry(ev) {
@@ -1854,17 +1884,23 @@ class Tabletree {
 		if (
 			camera.targetPosition.x !== camera.position.x ||
 			camera.targetPosition.y !== camera.position.y ||
+			camera.targetPosition.z !== camera.position.z ||
 			camera.fov !== camera.targetFOV
 		) {
 			camera.position.x +=
 				(camera.targetPosition.x - camera.position.x) * (1 - Math.pow(0.85, dt / 16));
 			camera.position.y +=
 				(camera.targetPosition.y - camera.position.y) * (1 - Math.pow(0.85, dt / 16));
-			if (Math.abs(camera.position.x - camera.targetPosition.x) < camera.fov * 0.00001) {
+			camera.position.z +=
+				(camera.targetPosition.z - camera.position.z) * (1 - Math.pow(0.85, dt / 16));
+			if (Math.abs(camera.position.x - camera.targetPosition.x) < Number.EPSILON) {
 				camera.position.x = camera.targetPosition.x;
 			}
-			if (Math.abs(camera.position.y - camera.targetPosition.y) < camera.fov * 0.00001) {
+			if (Math.abs(camera.position.y - camera.targetPosition.y) < Number.EPSILON) {
 				camera.position.y = camera.targetPosition.y;
+			}
+			if (Math.abs(camera.position.z - camera.targetPosition.z) < Number.EPSILON) {
+				camera.position.z = camera.targetPosition.z;
 			}
 			camera.fov += (camera.targetFOV - camera.fov) * (1 - Math.pow(0.85, dt / 16));
 			if (Math.abs(camera.fov - camera.targetFOV) < camera.targetFOV / 1000) {

@@ -27,7 +27,14 @@ export default {
 			let fsEntry = (intersection.object as any).fileTree.fsIndex[
 				Math.floor(faceIndex / (2 * this.quadCount))
 			];
-			while (fsEntry && fsEntry.scale * camera.projectionMatrix.elements[0] < 0.2) {
+
+			while (
+				fsEntry &&
+				fsEntry.scale *
+					intersection.object.modelViewMatrix.elements[0] *
+					camera.projectionMatrix.elements[0] <
+					0.2
+			) {
 				if (fsEntry.parent === highlighted) {
 					break;
 				}
