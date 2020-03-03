@@ -522,62 +522,11 @@ class Tabletree {
 		this.fileTree = fileTree.tree;
 		this.fileCount = fileTree.count;
 		this.model = await this.createFileTreeModel(fileTree.count, fileTree.tree);
-		this.model.position.set(-0.5, -0.5, 0.0);
+		this.model.position.set(0, 0, 0);
 		this.modelPivot.add(this.model);
 		if (this.navUrl) this.goToURL(this.navUrl);
 		this.changed = true;
 	}
-
-	getCameraDistanceToModel() {
-		const intersections = utils.findIntersectionsUnderEvent(
-			{
-				clientX: window.innerWidth / 2,
-				clientY: window.innerHeight / 2,
-				target: this.renderer.domElement,
-			},
-			this.camera,
-			[this.model]
-		);
-		if (intersections[0]) return intersections[0].distance;
-		else return this.camera.position.distanceTo(this.model.position);
-	}
-
-	reparentTree = async (fileTree, newRoot) => {
-		const d = this.getCameraDistanceToModel();
-		{
-			const { x, y, z, scale } = newRoot;
-			newRoot.x = 0;
-			newRoot.y = 0;
-			newRoot.z = 0;
-			newRoot.scale = 1;
-			fileTree.x -= x;
-			fileTree.y -= y;
-			fileTree.z -= z;
-			fileTree.scale /= scale;
-		}
-
-		await this.updateFileTreeGeometry(
-			this.meshIndex.size,
-			fileTree,
-			fileTree.fsIndex,
-			this.model.geometry,
-			this.model.textGeometry,
-			fileTree.vertexIndices,
-			true
-		);
-
-		{
-			const { x, y, z, scale } = newRoot;
-			this.camera.position.x -= x;
-			this.camera.position.y -= y;
-			this.camera.position.z -= z;
-			this.camera.position.z += -d + d / scale; // Move camera to model surface, then back off by scaled distance.
-			this.camera.targetPosition.copy(this.camera.position);
-			this.camera.near /= scale;
-			this.camera.far /= scale;
-		}
-		this.changed = true;
-	};
 
 	updateTree = async (fileTree) => {
 		/*
@@ -641,6 +590,54 @@ class Tabletree {
 		this.addingFile = false;
 	};
 
+	reparentTree = async (fileTree, newRoot) => {
+		let { x, y, z, scale } = newRoot;
+		let fx = fileTree.x,
+			fy = fileTree.y,
+			fz = fileTree.z,
+			fs = fileTree.scale;
+		x = (x - fileTree.x) / fileTree.scale;
+		y = (y - fileTree.y) / fileTree.scale;
+		z = (z - fileTree.z) / fileTree.scale;
+		scale /= fileTree.scale;
+		fileTree.x = -x / scale;
+		fileTree.y = -y / scale;
+		fileTree.z = -z / scale;
+		fileTree.scale = 1 / scale;
+
+		const vertexIndices = {
+			vertexIndex: this.fileTree.lastVertexIndex,
+			textVertexIndex: this.fileTree.lastTextVertexIndex,
+		};
+		const size = this.meshIndex.size;
+		await this.updateFileTreeGeometry(
+			size,
+			fileTree,
+			fileTree.fsIndex,
+			this.model.geometry,
+			this.model.textGeometry,
+			vertexIndices,
+			true
+		);
+
+		x -= newRoot.x;
+		y -= newRoot.y;
+		z -= newRoot.z;
+		scale /= newRoot.scale;
+		this.camera.position.x = ((this.camera.position.x - fx) / fs) * fileTree.scale + fileTree.x;
+		this.camera.position.y = ((this.camera.position.y - fy) / fs) * fileTree.scale + fileTree.y;
+		this.camera.position.z = ((this.camera.position.z - fz) / fs) * fileTree.scale + fileTree.z;
+		this.camera.targetPosition.x =
+			((this.camera.targetPosition.x - fx) / fs) * fileTree.scale + fileTree.x;
+		this.camera.targetPosition.y =
+			((this.camera.targetPosition.y - fy) / fs) * fileTree.scale + fileTree.y;
+		this.camera.targetPosition.z =
+			((this.camera.targetPosition.z - fz) / fs) * fileTree.scale + fileTree.z;
+		this.camera.near = (this.camera.near / fs) * fileTree.scale;
+		this.camera.far = (this.camera.far / fs) * fileTree.scale;
+		this.changed = true;
+	};
+
 	async updateFileTreeGeometry(
 		fileCount,
 		fileTree,
@@ -680,8 +677,8 @@ class Tabletree {
 			this.yield,
 			fileTree,
 			fileIndex,
-			geo.attributes.position.array,
-			geo.attributes.color.array,
+			geo.getAttribute('position').array,
+			geo.getAttribute('color').array,
 			labels,
 			thumbnails,
 			fsIndex,
@@ -689,8 +686,8 @@ class Tabletree {
 			vertexIndices,
 			deletionsIndex
 		);
-		geo.attributes.position.needsUpdate = true;
-		geo.attributes.color.needsUpdate = true;
+		geo.getAttribute('position').needsUpdate = true;
+		geo.getAttribute('color').needsUpdate = true;
 
 		let textVertCount = textGeometry.vertCount;
 		labels.traverse(function(c) {
@@ -698,11 +695,11 @@ class Tabletree {
 				textVertCount += c.geometry.attributes.position.array.length;
 			}
 		});
-		if (textVertCount > textGeometry.attributes.position.array.length) {
+		if (textVertCount > textGeometry.getAttribute('position').array.length) {
 			const positionArray = new Float32Array(textVertCount * 2);
 			const uvArray = new Float32Array(textVertCount);
-			positionArray.set(textGeometry.attributes.position.array);
-			uvArray.set(textGeometry.attributes.uv.array);
+			positionArray.set(textGeometry.getAttribute('position').array);
+			uvArray.set(textGeometry.getAttribute('uv').array);
 			textGeometry.setAttribute('position', new THREE.BufferAttribute(positionArray, 4));
 			textGeometry.setAttribute('uv', new THREE.BufferAttribute(uvArray, 2));
 		}
@@ -901,6 +898,18 @@ class Tabletree {
 						[]
 					);
 				}, entriesToFetch);
+			}
+			if (
+				!this.reparenting &&
+				smallestCovering &&
+				(smallestCovering.scale < 0.1 || smallestCovering.scale > 10)
+			) {
+				this.reparenting = true;
+				this.treeUpdateQueue.push(async (e) => {
+					console.log("REPARENTING! WOOHOO!! WE ARE DOING GOD'S OWN WORK!");
+					await this.reparentTree(this.fileTree, e);
+					this.reparenting = false;
+				}, smallestCovering);
 			}
 			mesh.geometry.setDrawRange(0, this.fileTree.lastVertexIndex);
 			textGeometry.setDrawRange(0, this.fileTree.lastTextVertexIndex);
@@ -1735,6 +1744,20 @@ class Tabletree {
 		if (!!a.entries === !!b.entries) return a.title < b.title ? -1 : a.title > b.title ? 1 : 0;
 		else if (a.entries) return -1;
 		else return 1;
+	}
+
+	getCameraDistanceToModel() {
+		const intersections = utils.findIntersectionsUnderEvent(
+			{
+				clientX: window.innerWidth / 2,
+				clientY: window.innerHeight / 2,
+				target: this.renderer.domElement,
+			},
+			this.camera,
+			[this.model]
+		);
+		if (intersections[0]) return intersections[0].distance;
+		else return this.camera.position.distanceTo(this.model.position);
 	}
 
 	zoomCamera(zf, cx, cy) {
