@@ -1276,8 +1276,8 @@ class Tabletree {
 		);
 		fsPoint.applyMatrix4(model.matrixWorld);
 		camera.targetPosition.copy(fsPoint);
-		camera.targetFOV = fsEntry.scale * (fsEntry.entries ? 23 : 50);
-		fsEntry.fov = camera.targetFOV;
+		// camera.targetFOV = fsEntry.scale * (fsEntry.entries ? 23 : 50);
+		// fsEntry.fov = camera.targetFOV;
 		this.changed = true;
 	};
 
@@ -1292,8 +1292,8 @@ class Tabletree {
 		}
 		const { targetPoint, targetFOV } = res;
 		camera.targetPosition.copy(targetPoint);
-		camera.targetFOV = targetFOV;
-		fsEntry.textFOV = camera.targetFOV;
+		// camera.targetFOV = targetFOV;
+		// fsEntry.textFOV = camera.targetFOV;
 		this.changed = true;
 	}
 
@@ -1308,8 +1308,8 @@ class Tabletree {
 		}
 		const { targetPoint, targetFOV } = res;
 		camera.targetPosition.copy(targetPoint);
-		camera.targetFOV = targetFOV;
-		fsEntry.textFOV = camera.targetFOV;
+		// camera.targetFOV = targetFOV;
+		// fsEntry.textFOV = camera.targetFOV;
 		this.changed = true;
 	}
 
@@ -1547,7 +1547,7 @@ class Tabletree {
 				}
 				camera.targetPosition.x -= factor * dx * camera.fov;
 				camera.targetPosition.y += factor * dy * camera.fov;
-				camera.targetFOV *= Math.pow(1.01, dz);
+				// camera.targetFOV *= Math.pow(1.01, dz);
 				self.changed = true;
 			}
 		};
@@ -1711,9 +1711,9 @@ class Tabletree {
 		if (zf < 1 || camera.fov < 120) {
 			camera.position.x += cx - cx * zf;
 			camera.position.y -= cy - cy * zf;
-			camera.fov *= zf;
-			if (camera.fov > 120) camera.fov = 120;
-			camera.targetFOV = camera.fov;
+			// camera.fov *= zf;
+			// if (camera.fov > 120) camera.fov = 120;
+			// camera.targetFOV = camera.fov;
 			camera.targetPosition.copy(camera.position);
 			camera.updateProjectionMatrix();
 			this.changed = true;
