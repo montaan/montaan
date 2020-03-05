@@ -18,7 +18,7 @@ type NodeStyle = {
 	text: string;
 };
 
-export default class TextFileView extends SDFTextMesh {
+export default class TextFileView extends THREE.Object3D {
 	MAX_SIZE = 1e5;
 	fsEntry: FSEntry;
 	model: THREE.Mesh;
@@ -28,6 +28,14 @@ export default class TextFileView extends SDFTextMesh {
 	requestFrame: any;
 	fullyVisible: boolean = false;
 	loadListeners: (() => void)[];
+	textMesh?: SDFTextMesh;
+	textScale: number = 0;
+	textX: number = 0;
+	textYZero: number = 0;
+	textY: number = 0;
+	textHeight: number = 0;
+	textWidth: number = 0;
+	lineCount: number = 0;
 
 	constructor(
 		fsEntry: FSEntry,
@@ -49,14 +57,16 @@ export default class TextFileView extends SDFTextMesh {
 	}
 
 	dispose() {
-		if (this.geometry) {
-			this.geometry.dispose();
+		if (this.textMesh) {
+			this.textMesh.geometry.dispose();
+			this.remove(this.textMesh);
+			this.textMesh = undefined;
 		}
 		this.loadListeners.splice(0);
 	}
 
 	goToCoords(coords: number[]) {
-		if (this.fsEntry.textHeight !== undefined) return this.__goToCoords(coords);
+		if (this.textHeight > 0) return this.__goToCoords(coords);
 		else
 			return new Promise((resolve, reject) => {
 				this.loadListeners.push(() => resolve(this.__goToCoords(coords)));
@@ -64,7 +74,7 @@ export default class TextFileView extends SDFTextMesh {
 	}
 
 	goToSearch(search: string) {
-		if (this.fsEntry.textHeight !== undefined) return this.__goToSearch(search);
+		if (this.textHeight > 0) return this.__goToSearch(search);
 		else
 			return new Promise((resolve, reject) => {
 				this.loadListeners.push(() => resolve(this.__goToSearch(search)));
@@ -73,28 +83,23 @@ export default class TextFileView extends SDFTextMesh {
 
 	__goToCoords(coords: number[]) {
 		const fsEntry = this.fsEntry;
-		if (!fsEntry.textHeight) return false;
+		if (this.textHeight <= 0) return false;
 		const model = this.model;
 		const line = coords[0];
-		// if (line > 0) this.setGoToHighlight(fsEntry, line);
 		const textYOff =
 			line === 0
-				? (fsEntry.scale * fsEntry.textScale * window.innerHeight) /
+				? (fsEntry.scale * this.textScale * window.innerHeight) /
 				  ((window.pageZoom || 100) / 100)
-				: ((line + 0.5) / fsEntry.lineCount) * fsEntry.textHeight;
-		let textX = fsEntry.textXZero;
-		textX += (fsEntry.scale * fsEntry.textScale * window.innerWidth) / 1.33;
-		const targetPoint = new THREE.Vector3(textX, fsEntry.textYZero - textYOff, fsEntry.z);
+				: ((line + 0.5) / this.lineCount) * this.textHeight;
+		let textX = (this.textScale * window.innerWidth) / 1.33;
+		const targetPoint = new THREE.Vector3(textX, this.textYZero - textYOff, fsEntry.z);
 		targetPoint.applyMatrix4(model.matrixWorld);
-		const targetFOV =
-			(fsEntry.scale * fsEntry.textScale * 2000 * 50) / ((window.pageZoom || 100) / 100);
-		return { targetPoint, targetFOV };
+		return { targetPoint };
 	}
 
 	__goToSearch(search: string) {
-		const fsEntry = this.fsEntry;
-		if (!fsEntry.textHeight) return false;
-		const text = this.geometry.layout._opt.text;
+		if (this.textHeight <= 0 || !this.textMesh) return false;
+		const text = this.textMesh.geometry.layout._opt.text;
 		let line = 1;
 		let index = 0;
 		if (search.startsWith('/')) {
@@ -113,51 +118,39 @@ export default class TextFileView extends SDFTextMesh {
 
 	ontick(t: number, dt: number): void {}
 
-	async load(src: string) {
-		let responseBuffer;
-		try {
-			responseBuffer = await (await fetch(src)).arrayBuffer();
-		} catch (e) {
-			console.error(e);
-			return;
+	static hex: string[] = (() => {
+		const hex = [];
+		for (let i = 0; i < 256; i++) hex[i] = (i < 16 ? ' 0' : ' ') + i.toString(16);
+		return hex;
+	})();
+
+	static pad: string[] = [
+		'         ',
+		'        ',
+		'       ',
+		'      ',
+		'     ',
+		'    ',
+		'   ',
+		'  ',
+		' ',
+		'',
+	];
+
+	static hexdump(u8: Uint8Array): string {
+		if (u8.byteLength > 1e4) return '';
+		const pad = TextFileView.pad;
+		const hex = TextFileView.hex;
+		let accumulator = ['HEXDUMP'];
+		for (let i = 0; i < u8.length; i++) {
+			if (i % 64 === 0) accumulator.push(`\n${pad[Math.log10(i) | 0]}${i} `);
+			accumulator.push(hex[u8[i]]);
 		}
-		if (responseBuffer.byteLength > this.MAX_SIZE || !this.parent) return;
+		return accumulator.join('');
+	}
 
-		const u8 = new Uint8Array(responseBuffer);
-		const isBinary = u8.slice(0, 4096).some((x) => x < 9);
-		var responseText = '';
-		if (isBinary) {
-			if (responseBuffer.byteLength > 1e4) return;
-			const hex = [];
-			for (let i = 0; i < 256; i++) hex[i] = (i < 16 ? ' 0' : ' ') + i.toString(16);
-			const pad = [
-				'         ',
-				'        ',
-				'       ',
-				'      ',
-				'     ',
-				'    ',
-				'   ',
-				'  ',
-				' ',
-				'',
-			];
-			let accumulator = ['HEXDUMP'];
-			for (let i = 0; i < u8.length; i++) {
-				if (i % 64 === 0) accumulator.push(`\n${pad[Math.log10(i) | 0]}${i} `);
-				accumulator.push(hex[u8[i]]);
-			}
-			responseText += accumulator.join('');
-		} else {
-			responseText = new TextDecoder().decode(responseBuffer);
-		}
-
-		await this.yield();
-
-		let contents = responseText.replace(/\r/g, '');
-		if (contents.length === 0) return;
-
-		const wordWrapWidth = /\.(md|txt)$/i.test(this.fsEntry.name) ? 120 : undefined;
+	static wordWrap(contents: string, filename: string): string {
+		const wordWrapWidth = /\.(md|txt)$/i.test(filename) ? 120 : undefined;
 		if (wordWrapWidth) {
 			contents = contents
 				.split('\n')
@@ -198,24 +191,50 @@ export default class TextFileView extends SDFTextMesh {
 				})
 				.join('\n');
 		}
+		return contents;
+	}
+
+	async load(src: string) {
+		let responseBuffer;
+		try {
+			responseBuffer = await (await fetch(src)).arrayBuffer();
+		} catch (e) {
+			console.error(e);
+			return;
+		}
+		if (responseBuffer.byteLength > this.MAX_SIZE || !this.parent) return;
+
+		const u8 = new Uint8Array(responseBuffer);
+		const isBinary = u8.slice(0, 4096).some((x) => x < 9);
+		const contents = isBinary
+			? TextFileView.hexdump(u8)
+			: TextFileView.wordWrap(
+					new TextDecoder().decode(responseBuffer).replace(/\r/g, ''),
+					this.fsEntry.name
+			  );
+
+		if (contents.length === 0) return;
+
+		await this.yield();
 
 		const fsEntry = this.fsEntry;
 
 		prettyPrintWorker.prettyPrint(contents, fsEntry.name, async (result: PrettyPrintResult) => {
 			if (!this.parent) return;
 			await this.yield();
-			this.geometry = await Layout.createText(
+			const geometry = await Layout.createText(
 				{
 					text: contents,
 					mode: 'pre',
 				},
 				this.yield
 			);
+			let material: THREE.RawShaderMaterial;
 			if (result.language) {
 				const { nodeStyles, palette, lineCount } = await this.parsePrettyPrintResult(
 					result
 				);
-				const verts = this.geometry.attributes.position.array as Float32Array;
+				const verts = geometry.getAttribute('position').array as Float32Array;
 				for (let i = 0, off = 3; i < nodeStyles.length; i++) {
 					const t = nodeStyles[i];
 					for (let j = 0; j < t.text.length; j++) {
@@ -231,55 +250,60 @@ export default class TextFileView extends SDFTextMesh {
 					}
 					if (off % 12004 === 12003) await this.yield();
 				}
-				this.material = Layout.makeTextMaterial(palette);
-				fsEntry.lineCount = lineCount;
+				material = Layout.makeTextMaterial(palette);
+				this.lineCount = lineCount;
 			} else {
 				let lineCount = 0;
 				for (let i = 0; i < contents.length; i++)
 					if (contents.charCodeAt(i) === 10) lineCount++;
-				this.material = Layout.makeTextMaterial();
-				fsEntry.lineCount = lineCount;
+				material = Layout.makeTextMaterial();
+				this.lineCount = lineCount;
 			}
+
+			this.textMesh = new SDFTextMesh();
+			this.textMesh.geometry = geometry;
+			this.textMesh.material = material;
+			this.add(this.textMesh);
+
 			this.visible = true;
-			this.material.uniforms.opacity.value = 0;
+			material.uniforms.opacity.value = 0;
 			this.ontick = function(t, dt) {
 				if (this.fullyVisible) return;
-				this.material.uniforms.opacity.value += dt / 1000 / 0.5;
-				if (this.material.uniforms.opacity.value > 1) {
-					this.material.uniforms.opacity.value = 1;
+				material.uniforms.opacity.value += dt / 1000 / 0.5;
+				if (material.uniforms.opacity.value > 1) {
+					material.uniforms.opacity.value = 1;
 					this.fullyVisible = true;
 				}
 				this.requestFrame();
 			};
 
 			var textScale = Math.min(
-				1 / (this.geometry.layout.width + 60),
-				1 / ((this.geometry.layout.height + 30) / 0.75)
+				1 / (geometry.layout.width + 60),
+				1 / ((geometry.layout.height + 30) / 0.75)
 			);
-			var scale = fsEntry.scale * textScale;
 			var vAspect = Math.min(
 				1,
-				(this.geometry.layout.height + 30) / 0.75 / ((this.geometry.layout.width + 60) / 1)
+				(geometry.layout.height + 30) / 0.75 / ((geometry.layout.width + 60) / 1)
 			);
-			this.material.depthTest = false;
-			this.scale.multiplyScalar(scale);
-			this.scale.y *= -1;
+			material.depthTest = false;
+
 			this.position.set(fsEntry.x, fsEntry.y, fsEntry.z);
+			this.scale.set(fsEntry.scale, fsEntry.scale, fsEntry.scale);
+
+			this.textMesh.scale.multiplyScalar(textScale);
+			this.textMesh.scale.y *= -1;
 			this.fsEntry = fsEntry;
-			this.position.x += fsEntry.scale * textScale * 30;
-			this.position.y -= fsEntry.scale * textScale * 7.5;
-			this.position.y += fsEntry.scale * 0.25;
+			this.textMesh.position.x += textScale * 30;
+			this.textMesh.position.y -= textScale * 7.5;
+			this.textMesh.position.y += 0.25 + 0.75 * (1 - vAspect);
 
-			fsEntry.textScale = textScale;
-			fsEntry.textXZero = this.position.x;
-			fsEntry.textX =
-				this.position.x +
-				scale * Math.min(40 * 30 + 60, this.geometry.layout.width + 60) * 0.5;
-			fsEntry.textYZero = this.position.y + fsEntry.scale * 0.75;
-			fsEntry.textY = this.position.y + fsEntry.scale * 0.75 - scale * 900;
-			fsEntry.textHeight = scale * this.geometry.layout.height;
+			this.textScale = textScale;
+			this.textX = Math.min(40 * 30 + 60, geometry.layout.width + 60) * 0.5;
+			this.textYZero = 0.75;
+			this.textY = 0.75 - textScale * 7.5;
+			this.textWidth = geometry.layout.width;
+			this.textHeight = geometry.layout.height;
 
-			this.position.y += fsEntry.scale * 0.75 * (1 - vAspect);
 			this.loaded();
 			this.requestFrame();
 		});

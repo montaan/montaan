@@ -7,6 +7,20 @@ export interface IBufferGeometryWithFileCount extends THREE.BufferGeometry {
 	maxFileCount: number;
 }
 
+export type BBox = {
+	minX: number;
+	minY: number;
+	maxX: number;
+	maxY: number;
+	width: number;
+	height: number;
+	onScreen: boolean;
+	a: THREE.Vector3;
+	b: THREE.Vector3;
+	c: THREE.Vector3;
+	d: THREE.Vector3;
+};
+
 export default {
 	quadCount: 2,
 
@@ -85,7 +99,8 @@ export default {
 	qTmp7: new THREE.Vector3(),
 	qTmp8: new THREE.Vector3(),
 	mTmp4: new THREE.Matrix4(),
-	quadInsideFrustum: function(quadIndex: number, model: THREE.Mesh, camera: THREE.Camera) {
+
+	getQuadBBox: function(quadIndex: number, model: THREE.Mesh, camera: THREE.Camera): BBox {
 		const vertexOff = quadIndex * 6 * this.quadCount;
 		const a = this.qTmp1;
 		const b = this.qTmp2;
@@ -99,18 +114,34 @@ export default {
 		const maxX = Math.max(a.x, b.x, c.x, d.x);
 		const minY = Math.min(a.y, b.y, c.y, d.y);
 		const maxY = Math.max(a.y, b.y, c.y, d.y);
-		return maxX > -1 && minX < 1 && maxY > -1 && minY < 1;
+		return {
+			minX,
+			minY,
+			maxX,
+			maxY,
+			width: maxX - minX,
+			height: maxY - minY,
+			onScreen: maxX > -1 && minX < 1 && maxY > -1 && minY < 1,
+			a,
+			b,
+			c,
+			d,
+		};
 	},
 
-	fsEntryInsideFrustum: function(fsEntry: FSEntry, model: THREE.Mesh, camera: THREE.Camera) {
+	getFSEntryBBox: function(fsEntry: FSEntry, model: THREE.Mesh, camera: THREE.Camera): BBox {
 		const a = this.qTmp1;
 		const b = this.qTmp2;
 		const c = this.qTmp3;
 		const d = this.qTmp4;
-		a.set(fsEntry.x, fsEntry.y, fsEntry.z);
-		b.set(fsEntry.x + fsEntry.scale, fsEntry.y, fsEntry.z);
-		c.set(fsEntry.x + fsEntry.scale, fsEntry.y + fsEntry.scale, fsEntry.z);
-		d.set(fsEntry.x, fsEntry.y + fsEntry.scale, fsEntry.z);
+		const xOff = 0;
+		const yOff = fsEntry.scale * (fsEntry.entries ? 0.5 : 0);
+		const xScale = fsEntry.scale * (fsEntry.entries ? 1 : 1);
+		const yScale = fsEntry.scale * (fsEntry.entries ? 0.5 : 1);
+		a.set(fsEntry.x + xOff, fsEntry.y + yOff, fsEntry.z);
+		b.set(fsEntry.x + xOff + xScale, fsEntry.y + yOff, fsEntry.z);
+		c.set(fsEntry.x + xOff + xScale, fsEntry.y + yOff + yScale, fsEntry.z);
+		d.set(fsEntry.x + xOff, fsEntry.y + yOff + yScale, fsEntry.z);
 		this.projectVector3ToFrustum(a, model, camera);
 		this.projectVector3ToFrustum(b, model, camera);
 		this.projectVector3ToFrustum(c, model, camera);
@@ -119,19 +150,23 @@ export default {
 		const maxX = Math.max(a.x, b.x, c.x, d.x);
 		const minY = Math.min(a.y, b.y, c.y, d.y);
 		const maxY = Math.max(a.y, b.y, c.y, d.y);
-		return maxX > -1 && minX < 1 && maxY > -1 && minY < 1;
+		return {
+			minX,
+			minY,
+			maxX,
+			maxY,
+			width: maxX - minX,
+			height: maxY - minY,
+			onScreen: maxX > -1 && minX < 1 && maxY > -1 && minY < 1,
+			a,
+			b,
+			c,
+			d,
+		};
 	},
 
-	quadAtFrustumCenter: function(quadIndex: number, model: THREE.Mesh, camera: THREE.Camera) {
-		const vertexOff = quadIndex * 6 * this.quadCount;
-		const a = this.qTmp1;
-		const b = this.qTmp2;
-		const c = this.qTmp3;
-		const d = this.qTmp4;
-		this.projectVertexToFrustum(a, vertexOff, model, camera);
-		this.projectVertexToFrustum(b, vertexOff + 1, model, camera);
-		this.projectVertexToFrustum(c, vertexOff + 2, model, camera);
-		this.projectVertexToFrustum(d, vertexOff + 5, model, camera);
+	bboxAtFrustumCenter: function(bbox: BBox, model: THREE.Mesh, camera: THREE.Camera) {
+		const { a, b, c, d } = bbox;
 		const minX = Math.min(a.x, b.x, c.x, d.x);
 		const maxX = Math.max(a.x, b.x, c.x, d.x);
 		const minY = Math.min(a.y, b.y, c.y, d.y);
@@ -139,56 +174,47 @@ export default {
 		return maxX > 0 && minX < 0 && maxY > 0 && minY < 0;
 	},
 
-	quadDistanceToFrustumCenter: function(
-		quadIndex: number,
-		model: THREE.Mesh,
-		camera: THREE.Camera
-	) {
-		const vertexOff = quadIndex * 6 * this.quadCount;
-		const a = this.qTmp1;
-		const b = this.qTmp2;
-		const c = this.qTmp3;
-		const d = this.qTmp4;
-		this.projectVertexToFrustum(a, vertexOff, model, camera);
-		this.projectVertexToFrustum(b, vertexOff + 1, model, camera);
-		this.projectVertexToFrustum(c, vertexOff + 2, model, camera);
-		this.projectVertexToFrustum(d, vertexOff + 5, model, camera);
+	bboxDistanceToFrustumCenter: function(bbox: BBox, model: THREE.Mesh, camera: THREE.Camera) {
+		const { a, b, c, d } = bbox;
 		const avgX = (a.x + b.x + c.x + d.x) / 4;
 		const avgY = (a.y + b.y + c.y + d.y) / 4;
 		return Math.sqrt(avgX * avgX + avgY * avgY);
 	},
 
-	quadCoversFrustum: function(quadIndex: number, model: THREE.Mesh, camera: THREE.Camera) {
-		const vertexOff = quadIndex * 6 * this.quadCount;
-		const a = this.qTmp1;
-		const b = this.qTmp2;
-		const c = this.qTmp3;
-		const d = this.qTmp4;
-		this.projectVertexToFrustum(a, vertexOff, model, camera);
-		this.projectVertexToFrustum(b, vertexOff + 1, model, camera);
-		this.projectVertexToFrustum(c, vertexOff + 2, model, camera);
-		this.projectVertexToFrustum(d, vertexOff + 5, model, camera);
-		if (
-			(a.x < 1 && a.x > -1 && a.y < 1 && a.y > -1) ||
-			(b.x < 1 && b.x > -1 && b.y < 1 && b.y > -1) ||
-			(c.x < 1 && c.x > -1 && c.y < 1 && c.y > -1) ||
-			(d.x < 1 && d.x > -1 && d.y < 1 && d.y > -1)
-		) {
-			return false;
-		}
+	bboxInsideFrustum: function(bbox: BBox, model: THREE.Mesh, camera: THREE.Camera) {
+		const { a, b, c, d } = bbox;
 		const minX = Math.min(a.x, b.x, c.x, d.x);
 		const maxX = Math.max(a.x, b.x, c.x, d.x);
 		const minY = Math.min(a.y, b.y, c.y, d.y);
 		const maxY = Math.max(a.y, b.y, c.y, d.y);
-		if (!(maxX > 1 && minX < -1 && maxY > 1 && minY < -1)) {
-			return false;
-		}
-		return !(
-			this.lineIntersectsFrustum(a, b) ||
-			this.lineIntersectsFrustum(b, d) ||
-			this.lineIntersectsFrustum(c, d) ||
-			this.lineIntersectsFrustum(c, a)
+		return maxX > -1 && minX < 1 && maxY > -1 && minY < 1;
+	},
+
+	bboxCoversFrustum: function(bbox: BBox, model: THREE.Mesh, camera: THREE.Camera) {
+		const { a, b, c, d, minX, maxX, minY, maxY } = bbox;
+		// Bounding box covers frustum
+		if (!(maxX > 1 && minX < -1 && maxY > 1 && minY < -1)) return false;
+		// All the four corners of the frustum are inside the quad a, b, c, d.
+		const points = [a, b, c, d];
+		return (
+			this.pointInsidePolygon(-1, -1, points) &&
+			this.pointInsidePolygon(1, -1, points) &&
+			this.pointInsidePolygon(-1, 1, points) &&
+			this.pointInsidePolygon(1, 1, points)
 		);
+	},
+
+	pointInsidePolygon: function(x: number, y: number, points: { y: number; x: number }[]) {
+		let count = 0;
+		for (let i = 1; i < points.length; i++) {
+			const a = points[i - 1];
+			const b = points[i];
+			count += this.lineIntersect(x, y, 1e9, x, a.x, a.y, b.x, b.y) ? 1 : 0;
+		}
+		const a = points[points.length - 1];
+		const b = points[0];
+		count += this.lineIntersect(x, y, 1e9, x, a.x, a.y, b.x, b.y) ? 1 : 0;
+		return count % 2 === 1;
 	},
 
 	lineIntersectsFrustum: function(a: { y: number; x: number }, b: { y: number; x: number }) {
@@ -271,7 +297,8 @@ export default {
 	},
 
 	projectVector3ToFrustum: function(u: THREE.Vector3, model: THREE.Mesh, camera: THREE.Camera) {
-		u.applyMatrix4(model.modelViewMatrix);
+		u.applyMatrix4(model.matrixWorld);
+		u.applyMatrix4(camera.matrixWorldInverse);
 		u.applyMatrix4(camera.projectionMatrix);
 	},
 

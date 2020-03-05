@@ -1,3 +1,4 @@
+/* eslint-disable */
 // src/Montaan/TreeView/TreeView.tsx
 
 import { withRouter, RouteComponentProps } from 'react-router-dom';

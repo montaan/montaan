@@ -1,6 +1,5 @@
 import createLayout from '../layout-bmfont-text-modified';
 var inherits = require('inherits');
-var buffer = require('../three-buffer-vertex-data-modified');
 var THREE = require('three');
 
 var vertices = require('./lib/vertices');
@@ -61,17 +60,17 @@ SDFTextGeometry.prototype.update = async function(opt, yieldFn) {
 	var uvs = vertices.uvs(glyphs, texWidth, texHeight, flipY);
 
 	// update vertex data
-	buffer.attr(this, 'position', positions, 4);
-	buffer.attr(this, 'uv', uvs, 2);
+	this.setAttribute('position', new THREE.BufferAttribute(positions, 4));
+	this.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
 
 	// update multipage data
-	if (!opt.multipage && 'page' in this.attributes) {
+	if (!opt.multipage && this.getAttribute('page')) {
 		// disable multipage rendering
 		this.removeAttribute('page');
 	} else if (opt.multipage) {
 		var pages = vertices.pages(glyphs);
 		// enable multipage rendering
-		buffer.attr(this, 'page', pages, 1);
+		this.setAttribute('page', new THREE.BufferAttribute(pages, 1));
 	}
 
 	if (!opt.noBounds) await this.computeBounds(yieldFn);
@@ -107,14 +106,7 @@ SDFTextGeometry.prototype.computeBounds = async function(yieldFn) {
 		}
 	};
 
-	var positions = this.attributes.position.array;
-	if (!positions || positions.length < 3) {
-		this.boundingSphere.radius = 0;
-		this.boundingSphere.center.set(0, 0, 0);
-		this.boundingBox.makeEmpty();
-		return;
-	}
-
+	var positions = this.getAttribute('position').array;
 	await bounds(positions);
 
 	var width = box.max[0] - box.min[0];
@@ -137,14 +129,13 @@ SDFTextGeometry.prototype.computeBoundingSphere = function() {
 		this.boundingSphere = new THREE.Sphere();
 	}
 
-	var positions = this.attributes.position.array;
-	var itemSize = this.attributes.position.itemSize;
-	if (!positions || !itemSize || positions.length < 2) {
+	var positions = this.getAttribute('position');
+	if (!positions) {
 		this.boundingSphere.radius = 0;
 		this.boundingSphere.center.set(0, 0, 0);
 		return;
 	}
-	utils.computeSphere(positions, this.boundingSphere);
+	utils.computeSphere(positions.array, this.boundingSphere);
 	if (isNaN(this.boundingSphere.radius)) {
 		console.error(
 			'THREE.BufferGeometry.computeBoundingSphere(): ' +
@@ -160,8 +151,8 @@ SDFTextGeometry.prototype.computeBoundingBox = function() {
 	}
 
 	var bbox = this.boundingBox;
-	var positions = this.attributes.position.array;
-	var itemSize = this.attributes.position.itemSize;
+	var positions = this.getAttribute('position').array;
+	var itemSize = this.getAttribute('position').itemSize;
 	if (!positions || !itemSize || positions.length < 2) {
 		bbox.makeEmpty();
 		return;

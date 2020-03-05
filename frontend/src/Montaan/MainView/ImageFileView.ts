@@ -5,14 +5,17 @@ import { BufferGeometry } from 'three';
 
 const emptyMaterial = new THREE.MeshBasicMaterial();
 
+interface ImageMesh extends THREE.Mesh {
+	material: THREE.MeshBasicMaterial;
+}
+
 export default class ImageFileView extends THREE.Mesh {
 	fsEntry: FSEntry;
 	model: THREE.Mesh;
 	api: QFrameAPI;
 	yield: any;
 	path: string;
-	geometry: BufferGeometry;
-	material: THREE.MeshBasicMaterial;
+	mesh: ImageMesh;
 	requestFrame: any;
 	fullyVisible: boolean = false;
 	loadListeners: (() => void)[];
@@ -35,19 +38,20 @@ export default class ImageFileView extends THREE.Mesh {
 		this.requestFrame = requestFrame;
 		this.loadListeners = [];
 
-		this.geometry = new THREE.PlaneBufferGeometry(1, 1);
-		this.material = emptyMaterial;
-		this.scale.multiplyScalar(fsEntry.scale * 0.7);
-		this.position.set(
-			fsEntry.x + fsEntry.scale * 0.5,
-			fsEntry.y + fsEntry.scale * 0.65,
-			fsEntry.z
-		);
+		const geometry = new THREE.PlaneBufferGeometry(1, 1);
+		const material = emptyMaterial;
+		const image = new THREE.Mesh(geometry, material) as ImageMesh;
+		this.mesh = image;
+		this.add(this.mesh);
+		this.mesh.scale.multiplyScalar(0.7);
+		this.mesh.position.set(0.5, 0.65, 0);
+		this.scale.multiplyScalar(fsEntry.scale);
+		this.position.copy((fsEntry as unknown) as THREE.Vector3);
 	}
 
 	dispose() {
-		if (this.material && this.material.map) {
-			this.material.map.dispose();
+		if (this.mesh.material && this.mesh.material.map) {
+			this.mesh.material.map.dispose();
 		}
 		if (this.geometry) {
 			this.geometry.dispose();
@@ -71,8 +75,8 @@ export default class ImageFileView extends THREE.Mesh {
 		var img = new Image();
 		img.crossOrigin = 'anonymous';
 		img.src = src;
-		const obj = this;
-		img.onload = function() {
+		const obj = this.mesh;
+		img.onload = () => {
 			if (obj.parent) {
 				var maxD = Math.max(img.width, img.height);
 				obj.scale.x *= img.width / maxD;
@@ -84,9 +88,9 @@ export default class ImageFileView extends THREE.Mesh {
 					depthWrite: false,
 				});
 				if (obj.material.map) obj.material.map.needsUpdate = true;
-				obj.visible = true;
-				obj.loaded();
-				obj.requestFrame();
+				this.visible = true;
+				this.loaded();
+				this.requestFrame();
 			}
 		};
 	}
