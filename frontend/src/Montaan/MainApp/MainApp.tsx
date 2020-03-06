@@ -837,8 +837,8 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 
 	render() {
 		const titlePrefix = /Chrome/.test(navigator.userAgent) ? '' : '🏔 ';
-		const title = this.state.repoPrefix
-			? titlePrefix + this.state.repoPrefix.split('/')[1] + ' - Montaan'
+		const title = this.state.navigationTarget
+			? titlePrefix + this.state.navigationTarget + ' - Montaan'
 			: 'Montaan 🏔';
 		return (
 			<div

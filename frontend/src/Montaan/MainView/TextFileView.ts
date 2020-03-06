@@ -4,6 +4,8 @@ import { FSEntry } from '../lib/filesystem';
 import QFrameAPI from '../../lib/api';
 
 import Layout, { SDFTextMesh } from '../lib/Layout';
+import { Intersection } from 'three';
+import { BBox } from '../lib/Geometry';
 
 type PrettyPrintResult = {
 	language: string;
@@ -110,6 +112,10 @@ export default class TextFileView extends THREE.Object3D {
 		} else index = text.indexOf(search);
 		for (let i = 0; i < index; i++) if (text.charCodeAt(i) === 10) line++;
 		return this.goToCoords([line]);
+	}
+
+	onclick(ev: MouseEvent, intersection: Intersection, bbox: BBox) {
+		return false;
 	}
 
 	loaded() {

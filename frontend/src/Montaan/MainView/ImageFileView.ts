@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { FSEntry } from '../lib/filesystem';
 import QFrameAPI from '../../lib/api';
-import { BufferGeometry } from 'three';
+import { BufferGeometry, Intersection } from 'three';
+import { BBox } from '../lib/Geometry';
 
 const emptyMaterial = new THREE.MeshBasicMaterial();
 
@@ -57,6 +58,10 @@ export default class ImageFileView extends THREE.Mesh {
 			this.geometry.dispose();
 		}
 		this.loadListeners.splice(0);
+	}
+
+	onclick(ev: MouseEvent, intersection: Intersection, bbox: BBox) {
+		return false;
 	}
 
 	loaded() {

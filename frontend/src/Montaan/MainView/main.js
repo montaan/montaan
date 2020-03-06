@@ -1792,50 +1792,25 @@ class Tabletree {
 		const intersection = this.getEntryAtMouse(ev);
 		if (!intersection) debugger;
 		if (intersection) {
-			var fsEntry = intersection.fsEntry;
-			// var ca = intersection.object.geometry.attributes.color;
-			// var vs = intersection.object.geometry.attributes.position;
-			// var tvs = intersection.object.children[1].geometry.attributes.position;
-			if (this.highlighted && this.highlighted.highlight) {
-				var obj = this.highlighted.highlight;
-				obj.parent.remove(obj);
-			}
-			if (this.highlighted !== fsEntry) {
-				this.highlighted = fsEntry;
-				const url = this.getURLForFSEntry(fsEntry);
-				this.history.push(url);
-			} else {
-				if (this.highlighted.entries === null) {
-					var fovDiff = (this.highlighted.scale * 50) / this.camera.fov;
-					if (fovDiff > 1 || !fsEntry.lineCount) {
-						if (
-							!fsEntry.lineCount ||
-							!this.handleTextClick(ev, this.highlighted, intersection)
-						) {
-							const url = this.getURLForFSEntry(this.highlighted);
-							this.history.push(url);
-						}
-					} else {
-						const url = this.getURLForFSEntry(this.highlighted, [0]);
-						this.history.push(url);
-					}
-				} else {
-					const url = this.getURLForFSEntry(this.highlighted);
-					this.history.push(url);
-				}
-			}
+			const fsEntry = intersection.fsEntry;
+			const coords =
+				fsEntry.contentObject &&
+				fsEntry.contentObject.onclick(
+					ev,
+					intersection,
+					Geometry.getFSEntryBBox(fsEntry, this.model, this.camera)
+				);
+			this.history.push(this.getURLForFSEntry(fsEntry, coords));
+			this.highlighted = fsEntry;
 			this.changed = true;
 		}
 	}
 
 	getEntryAtMouse(ev) {
-		var models = [this.model];
-		if (this.processModel) models.push(this.processModel);
-		if (this.authorModel) models.push(this.authorModel);
 		return Geometry.findFSEntry(
 			{ clientX: ev.clientX, clientY: ev.clientY, target: this.renderer.domElement },
 			this.camera,
-			models,
+			[this.model],
 			this.highlighted
 		);
 	}

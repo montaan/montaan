@@ -32,7 +32,7 @@
 
 # FIX
 
-    [] Fix click navigation
+    [x] Fix click navigation
         (use px coords everywhere)
     [] Navigate to line in text view
     [] Navigate to URL on page load
@@ -49,6 +49,7 @@
         [] Move commits to MontaanGit
         [] Move repo mgmt to MontaanUserRepos
         [] Move widget loading to FSOverlays
+    [x] Fix page <title>
 
 # KEY FEATURES
 

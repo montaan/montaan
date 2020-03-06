@@ -42,12 +42,11 @@ export default {
 				Math.floor(faceIndex / (2 * this.quadCount))
 			];
 
+			const winScale = window.innerWidth / 2;
+
 			while (
 				fsEntry &&
-				fsEntry.scale *
-					intersection.object.modelViewMatrix.elements[0] *
-					camera.projectionMatrix.elements[0] <
-					0.2
+				this.getFSEntryBBox(fsEntry, intersection.object as THREE.Mesh, camera).width < 0.2
 			) {
 				if (fsEntry.parent === highlighted) {
 					break;
