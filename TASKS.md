@@ -17,27 +17,41 @@
     [] Editing content in-line
     [] Fast filesystem browsing
 
+# Target machine
+
+    32-core laptop with 16-wide SIMD and 3 x 2080Ti as GPU
+    - Path tracing with 2 spp at 4k
+    - Wasm + Workers + SIMD crucial for perf
+        Current: max/JS = 360x ST, 60x MT.
+        Future: max/JS = 4000x ST, 130x MT.
+        With WASM: 2-10x MT
+    - Stable WebGPU
+    - Foldable tablet phones mainstream
+    - Looking Glass type 3D TVs mainstream
+    - XR landed as consumer tech
+
+# FIX
+
+    [] Fix click navigation
+        (use px coords everywhere)
+    [] Navigate to line in text view
+    [] Navigate to URL on page load
+    [] Navigate to yet-unloaded-URL
+        [] Hierarchical drill-down
+        [] Request beam
+    [] Move tree rebuilding off main thread
+    [] main.js is too large
+        [] Convert to TS
+        [] Move tree rendering to lib
+        [] Move links rendering to lib
+        [] Move highlight rendering to lib
+    [] MainApp is too large
+        [] Move commits to MontaanGit
+        [] Move repo mgmt to MontaanUserRepos
+        [] Move widget loading to FSOverlays
+
 # KEY FEATURES
 
-    [] Dynamic tree loading
-        [x] One directory at a time
-            [x] API to load single dirs
-            [x] If directory is larger than X, fetch its contents and graft onto file tree
-            [x] If directory is smaller than X, remove it from the file tree
-        [] Cheap tree updates
-            [] Edit tree geometry instead of regenerating the whole thing
-            [] Individual models per dir / subtree
-        [] Hide and show tree parts
-            [x] Based on size
-            [] Based on frustum
-        [x] Lots of directories at a time
-            [x] Batch fetch directories smaller than X
-    [x] View re-parenting prototype
-        [x] Move camera instead of changing FOV
-        [x] Change transformation matrices  when containing object changes
-    [] Dynamic commit loading
-        [] 10k commits at a time
-        [] Calendar data from server
     [] Thumbnail mip pyramid server
         [] Copy from Muryu?
     [] Custom layouts
@@ -46,6 +60,7 @@
         [] Load file positions from .layout
     [] Workflow to export file / dir models from Blender
         [x] Instanced rendering demo
+        [] Individual models per dir / subtree
         [] Load demo models from GLB
         [] Add instancing & model loading to main app
         [] Load models based on directory scene file (e.g. add trees and other props)
@@ -54,23 +69,26 @@
         - For easy instanced rendering of complex scenes
         - For high visual quality
         - Target machine is 3x 2080 Ti
+    [] Dynamic commit loading
+        [] 10k commits at a time
+        [] Calendar data from server
 
 # Make a pleasant place
 
     [] Party
-    [x] Theme music for tasks / parts of project
-        [x] Per-dir playlist URL
     [] Artwork
 
 # Plugins
 
     [] Some sort of plugin system to enable parallel development
-    [] TreeProvider
-    [] FileInlineProvider
-    [] FileViewProvider
-    [] LinkageProvider
-    [] HistoryProvider
-    [] MetadataProvider
+        [x] Filesystem mounts
+        [] Overlay filesystems to add metadata & selections & UI state
+    [x] TreeProvider - filesystem mounts
+    [x] FileInlineProvider - file views
+    [] FileViewProvider - PopupFileView
+    [] LinkageProvider - overlay fs?
+    [] HistoryProvider - overlay fs?
+    [] MetadataProvider - overlay fs?
     Somehow:
       - Detect when you're viewing a git repo with node_modules, pull in commits and tree history and depcruise.
       - Register FileViewProvider for filename pattern
@@ -82,19 +100,24 @@
 
 # Frontend data model
 
-    [] Use URIs to refer to objects
-        [] commit:sha
-        [] author:authorString
-    [] When drawing a link, find all objects with the URI
+    [] Use paths to refer to objects
+        [x] files
+            [] /repo/branch/tree/path
+        [] commits
+        [] authors
+    [] Path-based links
+        [] Objects have links to other paths
+            [] Register paths in central registry
+        [] When drawing a link, find all objects with the path and link them
 
 # UX tweaks
 
-    [] Zoom text doc left side to screen left side (instead of middle of screen)
     [] Snap scroll to document boundaries
     [] Line numbers for text view
     [] Kb navigation of search results
-    [] Better dashboard view
+    [x] Better dashboard view
         [] Recent activity (commits, issues)
+    [] Navigate to coords in image
 
 # Performance
 
@@ -114,8 +137,6 @@
 
 # Layout
 
-    [] Layout text files as vertical [] (think of the minimap, source files are tall and narrow)
-    [] Split folders into [subdirs | files]
     [] Navigation tags (little models next to long lists like e.g. Android contacts)
         [] Commit date tags (show "2019-09-01" next to first commit on that date)
             [] Commit dates in UTC
@@ -123,7 +144,6 @@
 
 # Font
 
-    [] MSDF for sharp corners
     [] Full Unicode support
 
 # Search
@@ -179,7 +199,6 @@
 # Visuals
 
     [] Fade out text before hiding it
-    [x] Output a 3D model for rendering with a path tracer
     [] Sparkling precious particle diamonds like on Precious Nature map
     [] Design that makes you feel awesome
 
@@ -196,6 +215,32 @@
     [x] [Directories | Files] layout
         [x] 1:1 wide rectangle
         [x] N:M split based on count
+    [x] Dynamic tree loading
+        [x] One directory at a time
+            [x] API to load single dirs
+            [x] If directory is larger than X, fetch its contents and graft onto file tree
+            [x] If directory is smaller than X, remove it from the file tree
+        [x] Cheap tree updates
+            [x] Edit tree geometry instead of regenerating the whole thing
+        [x] Hide and show tree parts
+            [x] Based on size
+            [x] Based on frustum
+        [x] Lots of directories at a time
+            [x] Batch fetch directories smaller than X
+    [x] View re-parenting prototype
+        [x] Move camera instead of changing FOV
+        [x] Change transformation matrices  when containing object changes
+    [x] View re-parenting
+
+# Make a pleasant place
+
+    [x] Mockup target visuals
+    [x] Theme music for tasks / parts of project
+        [x] Per-dir playlist URL
+
+# Font
+
+    [x] MSDF for sharp corners
 
 # Visuals
 
@@ -291,6 +336,7 @@
     [x] Kb navigation in dir contents
     [x] Hide search results without erasing search term
     [x] All my repos
+    [x] Zoom text doc left side to screen left side (instead of middle of screen)
 
 ## Data model
 
@@ -312,3 +358,8 @@
 
     [x] Pipeline text model creation to avoid frame stutter (probably coming from shader compile / geometry creation)
     [z] Handle a million commits somehow
+
+# Layout
+
+    [x] Layout text files as vertical [] (think of the minimap, source files are tall and narrow)
+    [x] Split folders into [subdirs | files]
