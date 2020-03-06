@@ -25,5 +25,16 @@
 	"bugs": {
 		"url": "https://github.com/kig/tabletree/issues"
 	},
-	"homepage": "https://github.com/kig/tabletree#readme"
+	"homepage": "https://github.com/kig/tabletree#readme",
+	"dependencies": {
+		"@types/node": "^13.7.7"
+	},
+	"devDependencies": {
+		"@types/fs-extra": "^8.1.0",
+		"@types/glob": "^7.1.1",
+		"@types/readline-sync": "^1.4.3",
+		"fs-extra": "^8.1.0",
+		"glob": "^7.1.6",
+		"readline-sync": "^1.4.10"
+	}
 }
