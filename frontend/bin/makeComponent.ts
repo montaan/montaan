@@ -1,6 +1,6 @@
 #!yarn ts-node
 
-import fs from 'fs-extra';
+import fs from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
 import readline from 'readline-sync';
@@ -8,28 +8,18 @@ import glob from 'glob';
 
 const rl = readline;
 
-const USAGE = `USAGE: makeComponent COMPONENT_NAME [TARGET_DIR]
+export function copyFolderSync(from: string, to: string): void {
+	fs.mkdirSync(to);
+	fs.readdirSync(from).forEach((element) => {
+		if (fs.lstatSync(path.join(from, element)).isFile()) {
+			fs.copyFileSync(path.join(from, element), path.join(to, element));
+		} else {
+			copyFolderSync(path.join(from, element), path.join(to, element));
+		}
+	});
+}
 
-Creates pre-populated component directories based on templates/component
-
-Examples:
-
-Create component MyComponent in src/Montaan/
-
-    makeComponent MyComponent
-    OR
-    makeComponent MyComponent Montaan
-
-Create component Footer in src/containers/
-
-    makeComponent Footer containers
-
-Create component Home in src/screens/
-
-    makeComponent Home screens
-`;
-
-interface ComponentSketch {
+export interface TemplateParameters {
 	whatIsIt: string;
 	whyIsIt: string;
 	usedBy: string;
@@ -40,26 +30,68 @@ interface ComponentSketch {
 	author: string;
 }
 
-const name = process.argv[2];
-const target = process.argv[3] || 'Montaan';
+if (!module.parent) {
+	const USAGE = `USAGE: makeComponent [-t TEMPLATE] COMPONENT_NAME [TARGET_DIR]
 
-if (!name) {
-	console.error(USAGE);
-	process.exit(1);
+	Creates pre-populated component directories based on templates/component or templates/TEMPLATE
+	
+	Examples:
+	
+	Create component MyComponent in src/Montaan/
+	
+		makeComponent MyComponent
+		OR
+		makeComponent MyComponent Montaan
+	
+	Create component Footer in src/containers/
+	
+		makeComponent Footer containers
+	
+	Create component Home in src/screens/
+	
+		makeComponent Home screens
+	`;
+
+	const args = process.argv.slice(2);
+	const template = args[0] === '-t' ? args.splice(0, 2)[1] : 'component';
+	const name = args.shift();
+	const target = args.shift() || 'Montaan';
+
+	if (!name) {
+		console.error(USAGE);
+		process.exit(1);
+	}
+
+	const targetPath = path.join('src', target, name);
+	if (fs.existsSync(targetPath)) {
+		console.error(`Error: ${targetPath} already exists`);
+		process.exit(2);
+	}
+
+	copyFolderSync(path.join('templates', template), targetPath);
+
+	const authorString = getGitAuthor();
+	const templateParams = readTemplateParameters(target, name, authorString);
+	const files = glob.sync(path.join(targetPath, '**/*.*'));
+	files.forEach((file) => applyTemplate(file, templateParams));
 }
 
-const targetPath = path.join('src', target, name);
-if (fs.existsSync(targetPath)) {
-	console.error(`Error: ${targetPath} already exists`);
-	process.exit(2);
+export function getGitAuthor() {
+	const author = execSync('git config --get user.name')
+		.toString()
+		.replace(/\s+$/, '');
+	const email = execSync('git config --get user.email')
+		.toString()
+		.replace(/\s+$/, '');
+	const authorString = `${author} <${email}>`;
+	return authorString;
 }
 
-const author = execSync('git config --get user.name');
-const email = execSync('git config --get user.email');
-
-const authorString = `${author} <${email}>`;
-
-function sketchComponent(target: string, name: string, authorString: string): ComponentSketch {
+export function readTemplateParameters(
+	target: string,
+	name: string,
+	authorString: string
+): TemplateParameters {
 	console.log(`Creating ${target}/${name} with author ${authorString}`);
 	console.log(``);
 	console.log('Documentation time! Fill in the blanks, hitting enter after each blank.');
@@ -107,8 +139,8 @@ function sketchComponent(target: string, name: string, authorString: string): Co
 	};
 }
 
-function applySketch(file: string, sketch: ComponentSketch) {
-	const { whatIsIt, whyIsIt, usedBy, props, propsUse, target, name, author } = sketch;
+export function applyTemplate(file: string, template: TemplateParameters) {
+	const { whatIsIt, whyIsIt, usedBy, props, propsUse, target, name, author } = template;
 	let s = fs.readFileSync(file).toString();
 	const keys = [
 		['PROPS_USE', propsUse],
@@ -127,12 +159,3 @@ function applySketch(file: string, sketch: ComponentSketch) {
 		fs.renameSync(file, file.replace(/(\/[^/]*)NAME([^/]*)$/, `$1${name}$2`));
 	}
 }
-
-const sketch = sketchComponent(target, name, authorString);
-
-fs.mkdirpSync(path.join('src', target));
-fs.copyFileSync(path.join('templates', 'component'), targetPath);
-
-const files = glob.sync(path.join(targetPath, '**/*.*'));
-console.log(files);
-files.forEach((file) => applySketch(file, sketch));
