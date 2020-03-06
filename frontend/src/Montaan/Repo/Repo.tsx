@@ -4,8 +4,8 @@ import React, { useCallback } from 'react';
 import { withRouter, RouteComponentProps } from 'react-router-dom';
 
 import styles from './Repo.module.scss';
-import { RepoInfo } from '../RepoSelector';
 import Form from 'react-bootstrap/Form';
+import { RepoInfo } from '../lib/filesystem/MontaanUserReposFilesystem';
 
 export interface RepoProps extends RouteComponentProps {
 	repo: RepoInfo;

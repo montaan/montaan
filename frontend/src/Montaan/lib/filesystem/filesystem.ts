@@ -1,42 +1,39 @@
 import QFrameAPI from '../../../lib/api';
-import utils from '../utils';
 
 export interface FSEntry {
-	data: any;
-	textVertexIndex: number;
-	vertexIndex: number;
-	filesBox: {};
-	color?: number[];
-	lastIndex: number;
-	lastVertexIndex: number;
-	lastTextVertexIndex: number;
-	scale: number;
+	name: string;
+	title: string;
+	entries: null | { [filename: string]: FSEntry };
+	parent?: FSEntry;
+	filesystem?: IFilesystem;
+
+	fetched?: boolean | number;
+	building?: boolean;
 
 	x: number;
 	y: number;
 	z: number;
+	scale: number;
 
-	textScale: number;
-	textXZero: number;
-	textX: number;
-	textYZero: number;
-	textY: number;
-	textHeight: number;
+	filesBox: {};
+	color?: number[];
+
+	data: any;
+
+	contentObject?: any;
+
+	index?: number;
+	vertexIndex: number;
+	textVertexIndex: number;
+
+	lastIndex: number;
+	lastVertexIndex: number;
+	lastTextVertexIndex: number;
+
 	targetLine: any;
 	lineCount: number;
 
-	name: string;
-	title: string;
-	entries: null | { [filename: string]: FSEntry };
-	fetched?: boolean | number;
-	building?: boolean;
-
 	action?: string;
-	filesystem?: IFilesystem;
-	parent?: FSEntry;
-	contentObject?: any;
-	index?: number;
-	text?: THREE.Object3D;
 }
 
 export class NotImplementedError extends Error {}
@@ -90,12 +87,12 @@ export class Namespace implements IFilesystem {
 	}
 }
 
-class Filesystem implements IFilesystem {
-	url: string;
+export class Filesystem implements IFilesystem {
+	url: URL;
 	api: QFrameAPI;
 
 	constructor(url: string, api: QFrameAPI) {
-		this.url = url;
+		this.url = new URL(url);
 		this.api = api;
 	}
 
@@ -116,122 +113,34 @@ class Filesystem implements IFilesystem {
 	}
 }
 
-class MontaanUserReposFilesystem extends Filesystem {
-	name: string;
+export const RegisteredFileSystems: Map<string, Constructor<Filesystem>> = new Map();
 
-	constructor(url: string, api: QFrameAPI) {
-		super(url, api);
-		this.name = url;
-	}
-
-	async readDir(path: string): Promise<FSEntry | null> {
-		const tree = createFSTree('', '');
-		(await this.api.get('/repo/list')).forEach((repo: { name: string }) => {
-			const fsEntry = mount(
-				tree,
-				`${this.name}/${repo.name}/HEAD`,
-				`/${repo.name}`,
-				'montaanGit',
-				this.api
-			);
-			fsEntry.data = repo;
-		});
-		return tree;
-	}
-
-	async readFile(path: string): Promise<ArrayBuffer> {
-		throw new NotImplementedError("montaanUserRepos doesn't support readFile");
-	}
-
-	async writeFile(path: string, contents: ArrayBuffer): Promise<boolean> {
-		throw new NotImplementedError("montaanUserRepos doesn't support writes");
-	}
-
-	async rm(path: string): Promise<boolean> {
-		throw new NotImplementedError("montaanUserRepos doesn't support writes");
-	}
-
-	async rmdir(path: string): Promise<boolean> {
-		throw new NotImplementedError("montaanUserRepos doesn't support writes");
-	}
+export function registerFileSystem(fsType: string, filesystem: Constructor<Filesystem>) {
+	RegisteredFileSystems.set(fsType, filesystem);
 }
 
-class MontaanGitFileSystem extends Filesystem {
-	repo: string;
-	ref: string;
-
-	constructor(url: string, api: QFrameAPI) {
-		super(url, api);
-		const urlSegments = url.split('/');
-		this.repo = urlSegments.slice(0, -1).join('/');
-		this.ref = urlSegments[urlSegments.length - 1];
-	}
-
-	async readDir(path: string): Promise<FSEntry> {
-		let reqPath = path;
-		if (reqPath === '') reqPath = '.';
-		if (reqPath[0] === '/') reqPath = '.' + reqPath;
-		reqPath += '/';
-		const pathBuf: ArrayBuffer = await this.api.postType(
-			'/repo/tree',
-			{ repo: this.repo, paths: [reqPath], hash: this.ref, recursive: false },
-			{},
-			'arrayBuffer'
-		);
-		const tree = utils.parseFileList_(pathBuf, true, '');
-		return getPathEntry(tree.tree, path) || tree.tree;
-	}
-
-	async readFile(path: string) {
-		return this.api.postType(
-			'/repo/checkout',
-			{ repo: this.repo, path: path, head: this.ref },
-			{},
-			'arrayBuffer'
-		);
-	}
-
-	async writeFile(path: string, contents: ArrayBuffer): Promise<boolean> {
-		throw new NotImplementedError("montaanGit doesn't support writes");
-	}
-
-	async rm(path: string): Promise<boolean> {
-		throw new NotImplementedError("montaanGit doesn't support writes");
-	}
-
-	async rmdir(path: string): Promise<boolean> {
-		throw new NotImplementedError("montaanGit doesn't support writes");
-	}
+export function unregisterFileSystem(fsType: string) {
+	RegisteredFileSystems.delete(fsType);
 }
-
-const RegisteredFileSystems: { [fsType: string]: Constructor<Filesystem> } = {
-	montaanGit: MontaanGitFileSystem,
-	montaanUserRepos: MontaanUserReposFilesystem,
-};
 
 export function getFSType(url: string) {
-	return 'montaanGit';
+	return url.split(':')[0];
 }
 
 export function createFSTree(name: string, url: string, fsType?: string, api?: QFrameAPI): FSEntry {
+	const fs = fsType && RegisteredFileSystems.get(fsType);
 	return {
 		name,
 		title: name,
 		entries: {},
 		fetched: false,
-		filesystem: fsType ? new RegisteredFileSystems[fsType](url, api) : undefined,
+		filesystem: fs ? new fs(url, api) : undefined,
 		scale: 0,
 
 		x: 0,
 		y: 0,
 		z: 0,
 
-		textScale: 0,
-		textXZero: 0,
-		textX: 0,
-		textYZero: 0,
-		textY: 0,
-		textHeight: 0,
 		targetLine: undefined,
 		lineCount: 0,
 
@@ -246,14 +155,8 @@ export function createFSTree(name: string, url: string, fsType?: string, api?: Q
 	};
 }
 
-export function mount(
-	fileTree: FSEntry,
-	url: string,
-	mountPoint: string,
-	fsType: string,
-	api: QFrameAPI
-) {
-	if (!fsType) fsType = getFSType(url);
+export function mount(fileTree: FSEntry, url: string, mountPoint: string, api: QFrameAPI) {
+	const fsType = getFSType(url);
 	const cleanedMountPoint = mountPoint.replace(/\/+$/, '');
 	const mountPointSegments = cleanedMountPoint.split('/');
 	const fsEntry = getPathEntry(fileTree, mountPointSegments.slice(0, -1).join('/'));

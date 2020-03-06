@@ -16,29 +16,12 @@ import FormGroupTextInput from '../../lib/FormGroupTextInput';
 
 import styles from './RepoSelector.module.scss';
 import Repo from '../Repo';
+import { RepoInfo } from '../lib/filesystem/MontaanUserReposFilesystem';
 
 const schema = yup.object({
 	name: yup.string().nullable(),
 	url: yup.string().nullable(),
 });
-
-export class RepoInfo {
-	static mock: RepoInfo = new RepoInfo('my-repo', [['master', 1234]], 'url', 'bob', false);
-
-	name: string;
-	branches: any[];
-	url: string;
-	owner: string;
-	processing: boolean;
-
-	constructor(name: string, branches: any[], url: string, owner: string, processing: boolean) {
-		this.name = name;
-		this.branches = branches;
-		this.url = url;
-		this.owner = owner;
-		this.processing = processing;
-	}
-}
 
 interface RepoSelectorProps extends RouteComponentProps {
 	repos: RepoInfo[];

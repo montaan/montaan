@@ -32,8 +32,7 @@
 
 # FIX
 
-    [x] Fix click navigation
-        (use px coords everywhere)
+    [] Issue where rebuild doesn't rebuild things
     [] Navigate to line in text view
     [] Navigate to URL on page load
     [] Navigate to yet-unloaded-URL
@@ -49,7 +48,7 @@
         [] Move commits to MontaanGit
         [] Move repo mgmt to MontaanUserRepos
         [] Move widget loading to FSOverlays
-    [x] Fix page <title>
+    [x] Issue where clicking doesn't work
 
 # KEY FEATURES
 
@@ -364,3 +363,9 @@
 
     [x] Layout text files as vertical [] (think of the minimap, source files are tall and narrow)
     [x] Split folders into [subdirs | files]
+
+# FIX
+
+    [x] Fix click navigation
+        (use px coords everywhere)
+    [x] Fix page <title>

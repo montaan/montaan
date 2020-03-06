@@ -10,12 +10,12 @@ import CommitInfo from '../CommitInfo';
 import Search from '../Search';
 import TourSelector from '../TourSelector';
 import Breadcrumb from '../Breadcrumb';
-import RepoSelector, { RepoInfo } from '../RepoSelector';
+import RepoSelector from '../RepoSelector';
 
 import utils from '../lib/utils';
 import { parseCommits, CommitData, RawCommitData } from '../lib/parse_commits';
 import { authorCmp, Commit, CommitFile } from '../lib/parse-diff';
-import { getPathEntry, getFullPath, mount, readDir } from '../lib/filesystem';
+import { getPathEntry, getFullPath, mount, readDir, registerFileSystem } from '../lib/filesystem';
 
 import styles from './MainApp.module.scss';
 import TreeView from '../TreeView';
@@ -25,6 +25,12 @@ import { FSEntry, createFSTree } from '../lib/filesystem';
 import Introduction from '../Introduction';
 import * as THREE from 'three';
 import WorkQueue from '../lib/WorkQueue';
+
+import MontaanGitFilesystem from '../lib/filesystem/MontaanGitFilesystem';
+import MontaanUserReposFilesystem, { RepoInfo } from '../lib/filesystem/MontaanUserReposFilesystem';
+
+registerFileSystem('montaanGit', MontaanGitFilesystem);
+registerFileSystem('montaanUserRepos', MontaanUserReposFilesystem);
 
 export interface MainAppProps extends RouteComponentProps {
 	match: any;
@@ -205,7 +211,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		if (this.props.userInfo) {
 			const tree = this.state.fileTree.tree;
 			const user = this.props.userInfo.name;
-			mount(tree, user, `/${user}`, 'montaanUserRepos', this.props.api);
+			mount(tree, `montaanUserRepos:///${user}`, `/${user}`, this.props.api);
 		}
 	}
 
@@ -221,7 +227,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		const user = this.props.userInfo.name;
 
 		if (!tree.entries[user]) {
-			mount(tree, user, `/${user}`, 'montaanUserRepos', this.props.api);
+			mount(tree, `montaanUserRepos:///${user}`, `/${user}`, this.props.api);
 		}
 
 		await this.requestDirs([`/${user}`], []);
@@ -229,17 +235,37 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		const repoEntries = tree.entries[user].entries;
 		if (!repoEntries) return;
 		const repos = Object.keys(repoEntries).map((name) => repoEntries[name].data);
-
-		await this.requestDirs(
-			repos.map((repo: any) => `/${user}/${repo.name}`),
-			[]
-		);
+		await this.assertPathLoaded(this.props.location.pathname);
 
 		this.setState({
+			navUrl:
+				this.props.location.pathname +
+				this.props.location.search +
+				this.props.location.hash,
 			repos,
 			processing: false,
 			fileTreeUpdated: this.state.fileTreeUpdated + 1,
 		});
+	}
+
+	async assertPathLoaded(path: string) {
+		const prefixes = this.getPathPrefixes(path).filter((p) => {
+			const entry = getPathEntry(this.state.fileTree.tree, p);
+			return !entry || (entry.entries && !entry.fetched);
+		});
+		await this.requestDirs(prefixes, []);
+	}
+
+	getPathPrefixes(path: string) {
+		const { prefixes } = path.split('/').reduce(
+			(a, s) => {
+				a.prefix += s + '/';
+				a.prefixes.push(a.prefix);
+				return a;
+			},
+			{ prefix: '', prefixes: [] as string[] }
+		);
+		return prefixes;
 	}
 
 	processDirRequest = async ({ tree, paths, dropEntries }: LoadDirWorkItem) => {
@@ -305,100 +331,6 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		}
 		return fileTree;
 	}
-
-	setRepo = async (repoPath: string, userName = this.props.userInfo.name, ref = 'HEAD') => {
-		// LoadDirWorkQueue.clear();
-		clearTimeout(this.repoTimeout);
-		// clearInterval(this.animatedFiles);
-		// clearInterval(this.randomLinksInterval);
-		this.commitIndex = 0;
-		const repoPrefix = userName + '/' + repoPath;
-		const repoInfo = await this.props.api.get('/repo/view/' + repoPrefix);
-		if (repoInfo.status) {
-			this.setState({ repoError: repoInfo });
-			return;
-		}
-		this.setState({ ...this.emptyState, processing: true, repoPrefix, ref });
-		if (repoInfo[0] && repoInfo[0].processing) {
-			this.repoTimeout = window.setTimeout(() => this.setRepo(repoPath, userName), 1000);
-			return;
-		}
-		console.time('load files');
-		const prefixes = this.getURLPrefixes(this.props.location.pathname, repoPrefix) || [''];
-		// console.log(prefixes);
-		const files = await this.props.api.postType(
-			'/repo/tree',
-			{
-				repo: repoPrefix,
-				hash: ref,
-				paths: prefixes,
-				recursive: false,
-			},
-			{},
-			'arrayBuffer'
-		);
-		console.timeEnd('load files');
-		console.time('parse files');
-		const fileTree = this.parseFiles(files, repoPrefix);
-		prefixes.forEach((p) => {
-			const entry = getPathEntry(fileTree.tree, '/' + repoPrefix + '/' + p);
-			if (entry) entry.fetched = true;
-		});
-		console.timeEnd('parse files');
-		const commitsOpen = this.state.activeCommitData !== null;
-		this.setState({ ...this.emptyState, processing: false, repoPrefix, fileTree });
-		console.time('load commitObj');
-		const commitObj = (await this.props.api.getType(
-			'/repo/fs/' + repoPrefix + '/log.json',
-			{},
-			'json'
-		)) as RawCommitData;
-		console.timeEnd('load commitObj');
-		console.time('parse commitObj');
-		const commitData = parseCommits(commitObj);
-		console.timeEnd('parse commitObj');
-		this.setState({ processingCommits: false, commitData });
-		if (commitsOpen) this.setActiveCommits(commitData.commits);
-		this.setState({
-			navUrl:
-				this.props.location.pathname +
-				this.props.location.search +
-				this.props.location.hash,
-		});
-		try {
-			const deps = (await this.props.api.getType(
-				'/repo/fs/' + repoPrefix + '/deps.json',
-				{},
-				'json'
-			)) as { modules: { source: string; dependencies: { resolved: string }[] }[] };
-			const links: TreeLink[] = [];
-			deps.modules.forEach(({ source, dependencies }, i) => {
-				const src = '/' + repoPrefix + '/' + source;
-				const color = new THREE.Color().setHSL((i / 7) % 1, 0.5, 0.6);
-				dependencies.forEach(({ resolved }) => {
-					const dst = '/' + repoPrefix + '/' + resolved;
-					links.push({ src, dst, color });
-				});
-			});
-			const srcIndex = new Map<TreeLinkKey, TreeLink[]>();
-			const dstIndex = new Map<TreeLinkKey, TreeLink[]>();
-			links.forEach((link) => {
-				const { src, dst } = link;
-				if (!srcIndex.has(src)) srcIndex.set(src, []);
-				srcIndex.get(src)?.push(link);
-				if (!dstIndex.has(dst)) dstIndex.set(dst, []);
-				dstIndex.get(dst)?.push(link);
-			});
-			this.setState({
-				dependencies: links,
-				dependencySrcIndex: srcIndex,
-				dependencyDstIndex: dstIndex,
-			});
-		} catch (err) {
-			/* No deps */
-		}
-		// this.animateFileTreeHistory(commitData.commits, repoPrefix);
-	};
 
 	showAllDependencies = () => {
 		this.setLinks(this.state.dependencies);
@@ -720,14 +652,8 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 
 	shouldComponentUpdate(nextProps: MainAppProps, nextState: MainAppState) {
 		if (nextProps.userInfo !== this.props.userInfo) this.updateUserRepos(nextProps.userInfo);
-		if (nextProps.match && nextProps.match !== this.props.match) {
-			var repoPrefix = nextProps.match.params.user + '/' + nextProps.match.params.name;
-			if (repoPrefix !== this.state.repoPrefix) {
-				// this.setRepo(nextProps.match.params.name, nextProps.match.params.user);
-			}
-		}
 		if (nextProps.location !== this.props.location) {
-			this.assertPathLoaded(nextProps.location.pathname, nextState.repoPrefix).then(() =>
+			this.assertPathLoaded(nextProps.location.pathname).then(() =>
 				this.setState({
 					navUrl:
 						nextProps.location.pathname +
@@ -738,30 +664,6 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		}
 
 		return true;
-	}
-
-	async assertPathLoaded(url: string, repoPrefix: string) {
-		if (this.state.fileTree.count <= 1) return;
-		const prefixes = this.getURLPrefixes(url, repoPrefix).filter((p) => {
-			const entry = getPathEntry(this.state.fileTree.tree, repoPrefix + '/' + p);
-			return !entry || (entry.entries && !entry.fetched);
-		});
-		await this.requestDirs(prefixes, []);
-	}
-
-	getURLPrefixes(url: string, repoPrefix: string) {
-		const { prefixes } = url
-			.replace('/' + repoPrefix, '.')
-			.split('/')
-			.reduce(
-				(a, s) => {
-					a.prefix += s + '/';
-					a.prefixes.push(a.prefix);
-					return a;
-				},
-				{ prefix: '', prefixes: [] as string[] }
-			);
-		return prefixes;
 	}
 
 	createRepo = async (name: string, url?: string) => {

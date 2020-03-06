@@ -157,13 +157,13 @@ class Tabletree {
 		window.GLTFExporter = GLTFExporter;
 
 		var camera = new THREE.PerspectiveCamera(
-			45,
+			15,
 			window.innerWidth / window.innerHeight,
 			0.5,
-			5
+			15
 		);
 
-		camera.position.z = 2;
+		camera.position.z = 6;
 		camera.targetPosition = new THREE.Vector3().copy(camera.position);
 		camera.targetFOV = camera.fov;
 
@@ -514,9 +514,13 @@ class Tabletree {
 		this.fileCount = fileTree.count;
 		this.model = await this.createFileTreeModel(fileTree.count, fileTree.tree);
 		this.model.position.set(0, 0, 0);
-		this.camera.position.set(0.5, 0.75, 0.8);
-		this.camera.targetPosition.set(0.5, 0.75, 0.8);
+		this.camera.position.set(0.5, 0.75, 3);
+		this.camera.targetPosition.copy(this.camera.position);
+		this.camera.near = 0.5;
+		this.camera.far = 50;
+		this.camera.updateProjectionMatrix();
 		this.scene.add(this.model);
+		this.scene.updateWorldMatrix(true, true);
 		if (this.navUrl) this.goToURL(this.navUrl);
 		this.changed = true;
 	}
@@ -547,6 +551,7 @@ class Tabletree {
 		);
 		for (let i = 0; i < promises.length; i++) {
 			await this.addFile(promises[i]);
+			promises[i].building = false;
 		}
 		this.changed = true;
 	};
@@ -593,6 +598,7 @@ class Tabletree {
 		y = (y - fileTree.y) / fileTree.scale;
 		z = (z - fileTree.z) / fileTree.scale;
 		scale /= fileTree.scale;
+
 		fileTree.x = -x / scale;
 		fileTree.y = -y / scale;
 		fileTree.z = -z / scale;
@@ -635,7 +641,7 @@ class Tabletree {
 		this.camera.near = (this.camera.near / fs) * fileTree.scale;
 		this.camera.far = (this.camera.far / fs) * fileTree.scale;
 		this.camera.updateProjectionMatrix();
-		this.camera.updateWorldMatrix(true, true);
+		this.scene.updateWorldMatrix(true, true);
 		this.changed = true;
 	};
 
@@ -689,6 +695,7 @@ class Tabletree {
 		);
 		geo.getAttribute('position').needsUpdate = true;
 		geo.getAttribute('color').needsUpdate = true;
+		geo.computeBoundingSphere();
 
 		let textVertCount = textGeometry.vertCount;
 		labels.traverse(function(c) {
@@ -781,6 +788,7 @@ class Tabletree {
 		const { visibleFiles, textGeometry } = mesh;
 		const camera = this.camera;
 		return (t, dt) => {
+			if (this.reparenting || this.rebuildingTree) return;
 			window.debug.textContent =
 				this.meshIndex.size +
 				' / ' +
@@ -1357,9 +1365,9 @@ class Tabletree {
 		const { scene, camera } = this;
 		scene.updateMatrixWorld();
 		var fsPoint = new THREE.Vector3(
-			fsEntry.x + fsEntry.scale * (fsEntry.entries ? 0.5 : 0.25),
-			fsEntry.y + fsEntry.scale * (fsEntry.entries ? 0.815 : 0.5),
-			fsEntry.z + fsEntry.scale
+			fsEntry.x + fsEntry.scale * (fsEntry.entries ? 0.5 : 0.5),
+			fsEntry.y + fsEntry.scale * (fsEntry.entries ? 0.75 : 0.5),
+			fsEntry.z + fsEntry.scale * (fsEntry.entries ? 3 : 5)
 		);
 		fsPoint.applyMatrix4(model.matrixWorld);
 		camera.targetPosition.copy(fsPoint);
@@ -1429,7 +1437,10 @@ class Tabletree {
 		this.navUrl = url;
 		if (!this.fileTree) return;
 		const result = getFSEntryForURL(this.fileTree, url);
-		if (!result) return;
+		if (!result || result.fsEntry.index === undefined) {
+			setTimeout(() => this.goToURL(url), 100);
+			return;
+		}
 		const { fsEntry, point, search } = result;
 		if (point) this.goToFSEntryCoords(fsEntry, point);
 		else if (search) this.goToFSEntryAtSearch(fsEntry, search);
@@ -1784,7 +1795,7 @@ class Tabletree {
 		camera.far *= zf;
 		camera.targetPosition.copy(camera.position);
 		camera.updateProjectionMatrix();
-		camera.updateWorldMatrix(true, true);
+		this.scene.updateWorldMatrix(true, true);
 		this.changed = true;
 	}
 
@@ -1978,11 +1989,11 @@ class Tabletree {
 	};
 
 	yield = () => {
-		if (this.frameStart > 0 && performance.now() - this.frameStart > 5) {
+		if (this.frameStart > 0 && performance.now() - this.frameStart > 12) {
 			return new Promise((resolve, reject) => {
 				const resolver = () => {
 					this.changed = true;
-					if (performance.now() - this.frameStart > 5) this.frameFibers.push(resolver);
+					if (performance.now() - this.frameStart > 12) this.frameFibers.push(resolver);
 					else resolve();
 				};
 				this.frameFibers.push(resolver);

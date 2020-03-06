@@ -181,7 +181,7 @@ export default {
 				const yOff = 1 - (0.5 * y + 1) * (1 / dirSquareSide);
 				const xOff = 0.9 * x * (1 / dirSquareSide);
 				const dir = dirs[off];
-				if (excludeIndex.has(dir)) continue;
+				if (excludeIndex.has(dir) && !dir.building) continue;
 				if (meshIndex.has(dir) && meshIndex.get(dir) !== -1) continue;
 				const subX = xOff + 0.1 / dirSquareSide;
 				const subY = yOff + 0.125 / dirSquareSide;
@@ -221,7 +221,7 @@ export default {
 					fileIndex,
 					verts,
 					colorVerts,
-					dir.text as THREE.Object3D,
+					parentText,
 					thumbnails,
 					index,
 					meshIndex,
@@ -337,7 +337,6 @@ export default {
 		var o = new THREE.Object3D();
 		o.add(text);
 		parentText.add(o);
-		obj.text = o;
 
 		return obj.lastTextVertexIndex;
 	},

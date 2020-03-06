@@ -2,9 +2,9 @@ import * as React from 'react';
 import { BrowserRouter as Router } from 'react-router-dom';
 import { storiesOf } from '@storybook/react';
 import 'bootstrap/dist/css/bootstrap.css';
-import { RepoInfo } from '../RepoSelector';
 
 import Repo from './';
+import { RepoInfo } from '../lib/filesystem/MontaanUserReposFilesystem';
 
 storiesOf('Montaan/Repo', module).add('Repo', () => (
 	<div>
