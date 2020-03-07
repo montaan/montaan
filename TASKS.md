@@ -35,6 +35,7 @@
     [] Issue where rebuild doesn't rebuild things
     [] Issue where reparenting screws up everything (appeared after using yield in Layout createFileTreeQuads)
     [] Issue where things don't show up
+    [] Issue where pinch zoom fucks everything up
     [] Fuck it, just move tree rebuild into a worker
     [] Navigate to line in text view
     [] main.js is too large
