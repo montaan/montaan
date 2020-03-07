@@ -68,6 +68,8 @@ export default function createMSDFShader(opt) {
 			'#ifdef GL_OES_standard_derivatives',
 			'#extension GL_OES_standard_derivatives : enable',
 			'#endif',
+			'#define AA_SIZE ' +
+				(4.0 / window.devicePixelRatio).toString().replace(/^(\d+)$/, '$1.0'),
 			'precision ' + precision + ' float;',
 			'uniform float opacity;',
 			'uniform sampler2D map;',
@@ -80,40 +82,30 @@ export default function createMSDFShader(opt) {
 			'}',
 
 			'float aastep(vec4 sample) {',
-			(negate ? 'sample = 1.0 - sample;' : ''),
-			'  float sigDist = median(sample.r, sample.g, sample.b) - 0.5 + bold * 0.125;',
-			'  float value = clamp(sigDist/fwidth(sigDist) + 0.5, 0.0, 1.0);',
-			'  return value;',
-			'  #ifdef GL_OES_standard_derivatives',
-			'    float afwidth = length(vec2(dFdx(value), dFdy(value))) * 0.70710678118654757;',
-			'  #else',
-			'    float afwidth = (1.0 / 32.0) * (1.4142135623730951 / (2.0 * gl_FragCoord.w));',
-			'  #endif',
-			'  return smoothstep(0.5 - afwidth, 0.5 + afwidth, value);',
+			negate ? 'sample = 1.0 - sample;' : '',
+			'  float sigDist = median(sample.r, sample.g, sample.b) - 0.5;',
+			'  return clamp(sigDist/fwidth(sigDist) + 0.5 + bold * 0.125, 0.0, 1.0);',
 			'}',
 
 			'void main() {',
-			'    vec4 texColor = texture2D(map, vUv, -100.0);',
-			'    float valpha = 0.25*aastep(texColor);',
+			'    vec4 texColor = texture2D(map, vUv);',
+			'    float valpha = (1.0 / (AA_SIZE*AA_SIZE)) * aastep(texColor);',
 
 			'  #ifdef GL_OES_standard_derivatives',
+			'    for (float x = 0.0; x < AA_SIZE; x++) for (float y = 0.0; y < AA_SIZE; y++) {',
+			'      texColor = texture2D(map, vUv+vec2(x,y)*(1.0/AA_SIZE)*vec2(dFdx(vUv.x), dFdy(vUv.y)), -100.0);',
+			'      valpha += (1.0 / (AA_SIZE*AA_SIZE)) * aastep(texColor);',
+			'    }',
 
-			'    texColor = texture2D(map, vUv+0.5*vec2(dFdx(vUv.x), dFdy(vUv.y)), -100.0);',
-			'    valpha += 0.25*aastep(texColor);',
-			'    texColor = texture2D(map, vUv+0.5*vec2(dFdx(vUv.x), 0.0), -100.0);',
-			'    valpha += 0.25*aastep(texColor);',
-			'    texColor = texture2D(map, vUv+0.5*vec2(0.0, dFdy(vUv.y)), -100.0);',
-			'    valpha += 0.25*aastep(texColor);',
-
-			'    float maxD = max(dFdx(vUv.x), dFdy(vUv.y));',
-			//'    valpha *= smoothstep(0.07, 0.01, maxD);', // Fade out small text (= when UV derivative gets big)
+			// '    float maxD = max(dFdx(vUv.x), dFdy(vUv.y));',
+			// '    valpha *= smoothstep(0.07, 0.01, maxD);', // Fade out small text (= when UV derivative gets big)
 
 			'  #else',
-			'    valpha *= 4.0;',
+			'    valpha *= AA_SIZE*AA_SIZE;',
 			'  #endif',
 
 			'    gl_FragColor = vec4(pColor, opacity * valpha);',
-			alphaTest === 0 ? '' : '  if (gl_FragColor.a < ' + alphaTest + ') discard;',
+			// alphaTest === 0 ? '' : '  if (gl_FragColor.a < ' + alphaTest + ') discard;',
 			'}',
 		].join('\n'),
 		...opt,
