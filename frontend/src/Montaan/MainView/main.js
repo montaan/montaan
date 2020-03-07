@@ -1797,6 +1797,10 @@ class Tabletree {
 	}
 
 	zoomToEntry(ev) {
+		if (this.treeUpdateInProgress) {
+			setTimeout(() => this.zoomToEntry(ev), 10);
+			return;
+		}
 		const intersection = this.getEntryAtMouse(ev);
 		if (!intersection) debugger;
 		if (intersection) {

@@ -279,7 +279,6 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 	}
 
 	processDirRequest = async ({ tree, paths, dropEntries }: LoadDirWorkItem) => {
-		console.log(paths);
 		let files;
 		let fileTreeDrop = tree;
 		if (paths.length > 0) {
