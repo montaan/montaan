@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { FSEntry } from '../lib/filesystem';
 import QFrameAPI from '../../lib/api';
-import { BufferGeometry, Intersection } from 'three';
+import { Intersection } from 'three';
 import { BBox } from '../lib/Geometry';
 
 const emptyMaterial = new THREE.MeshBasicMaterial();

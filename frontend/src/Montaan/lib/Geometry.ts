@@ -42,8 +42,6 @@ export default {
 				Math.floor(faceIndex / (2 * this.quadCount))
 			];
 
-			const winScale = window.innerWidth / 2;
-
 			while (
 				fsEntry &&
 				this.getFSEntryBBox(fsEntry, intersection.object as THREE.Mesh, camera).width < 0.2

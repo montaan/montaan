@@ -134,7 +134,6 @@ class Tabletree {
 		this.setupSearchHighlighting(); // Search highlighting lines
 		this.setupEventListeners(); // UI event listeners
 		if (this._fileTree) await this.setFileTree(this._fileTree); // Show possibly pre-loaded file tree.
-		if (this.commitData) this.setCommitData(this.commitData); // Set pre-loaded commit data.
 
 		this.lastFrameTime = performance.now();
 		this.previousFrameTime = performance.now();
@@ -498,34 +497,39 @@ class Tabletree {
 		if (fileTree.tree === this.fileTree) {
 			this.treeUpdateQueue.push(this.updateTree, fileTree.tree);
 			return;
-		} else {
-			this.treeUpdateQueue.clear();
 		}
-		if (this.model) {
-			this.model.parent.remove(this.model);
-			this.model.traverse(function(m) {
-				if (m.geometry) {
-					m.geometry.dispose();
-				}
-			});
-			this.model = null;
-		}
-		this.fileTree = fileTree.tree;
-		this.fileCount = fileTree.count;
-		this.model = await this.createFileTreeModel(fileTree.count, fileTree.tree);
-		this.model.position.set(0, 0, 0);
-		this.camera.position.set(0.5, 0.75, 3);
-		this.camera.targetPosition.copy(this.camera.position);
-		this.camera.near = 0.5;
-		this.camera.far = 50;
-		this.camera.updateProjectionMatrix();
-		this.scene.add(this.model);
-		this.scene.updateWorldMatrix(true, true);
-		if (this.navUrl) this.goToURL(this.navUrl);
-		this.changed = true;
+		this.treeUpdateQueue.clear();
+		await this.treeUpdateQueue.push(async () => {
+			this.treeUpdateInProgress = true;
+			if (this.model) {
+				this.model.parent.remove(this.model);
+				this.model.traverse(function(m) {
+					if (m.geometry) {
+						m.geometry.dispose();
+					}
+				});
+				this.model = null;
+			}
+			this.fileTree = fileTree.tree;
+			this.fileCount = fileTree.count;
+			this.model = await this.createFileTreeModel(fileTree.count, fileTree.tree);
+			this.model.position.set(0, 0, 0);
+			this.camera.position.set(0.5, 0.75, 3);
+			this.camera.targetPosition.copy(this.camera.position);
+			this.camera.near = 0.5;
+			this.camera.far = 50;
+			this.camera.updateProjectionMatrix();
+			this.scene.add(this.model);
+			this.scene.updateWorldMatrix(true, true);
+			if (this.navUrl) this.goToURL(this.navUrl);
+			this.changed = true;
+			this.treeUpdateInProgress = false;
+		}, null);
 	}
 
 	updateTree = async (fileTree) => {
+		const oldTreeUpdateInProgress = this.treeUpdateInProgress;
+		this.treeUpdateInProgress = true;
 		/*
 			Traverse tree to find subtrees that are not in a model.
 			Append the subtree to this.model geometry.
@@ -554,9 +558,11 @@ class Tabletree {
 			promises[i].building = false;
 		}
 		this.changed = true;
+		this.treeUpdateInProgress = oldTreeUpdateInProgress;
 	};
 
 	addFile = async (tree) => {
+		// console.log(tree);
 		if (this.addingFile) {
 			console.log('This is bad.');
 			debugger;
@@ -788,7 +794,7 @@ class Tabletree {
 		const { visibleFiles, textGeometry } = mesh;
 		const camera = this.camera;
 		return (t, dt) => {
-			if (this.reparenting || this.rebuildingTree) return;
+			if (this.treeUpdateInProgress) return;
 			window.debug.textContent =
 				this.meshIndex.size +
 				' / ' +
@@ -897,8 +903,9 @@ class Tabletree {
 					this.meshIndex.set(e, -1);
 					this.treeUpdateQueue.push(async (e) => {
 						if (!this.meshIndex.has(e) || this.meshIndex.get(e) === -1) {
-							this.rebuildingTree = true;
+							this.treeUpdateInProgress = true;
 							await this.addFile(e.parent);
+							this.treeUpdateInProgress = false;
 						}
 					}, e);
 				} else {
@@ -923,22 +930,12 @@ class Tabletree {
 				smallestCovering &&
 				(smallestCovering.scale < 0.1 || smallestCovering.scale > 10)
 			) {
-				// if (smallestCovering.name === '') debugger;
-				this.reparenting = true;
-				// console.log('pre', camera.matrixWorld.elements);
 				this.treeUpdateQueue.push(async (e) => {
-					console.log('reparenting to', e, getFullPath(e));
-					// if (e.name === '') debugger;
+					this.treeUpdateInProgress = true;
 					await this.reparentTree(this.fileTree, e);
-					// console.log('post', camera.matrixWorld.elements);
-					this.reparenting = false;
-					this.reparented = true;
+					this.treeUpdateInProgress = false;
 				}, smallestCovering);
 			}
-			if (this.reparented) {
-				// console.log('post-reparent', camera.matrixWorld.elements);
-			}
-			this.reparented = false;
 			mesh.geometry.setDrawRange(0, this.fileTree.lastVertexIndex);
 			textGeometry.setDrawRange(0, this.fileTree.lastTextVertexIndex);
 		};
@@ -1989,11 +1986,11 @@ class Tabletree {
 	};
 
 	yield = () => {
-		if (this.frameStart > 0 && performance.now() - this.frameStart > 12) {
+		if (this.frameStart > 0 && performance.now() - this.frameStart > 10) {
 			return new Promise((resolve, reject) => {
 				const resolver = () => {
 					this.changed = true;
-					if (performance.now() - this.frameStart > 12) this.frameFibers.push(resolver);
+					if (performance.now() - this.frameStart > 10) this.frameFibers.push(resolver);
 					else resolve();
 				};
 				this.frameFibers.push(resolver);

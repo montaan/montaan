@@ -13,7 +13,7 @@ import Breadcrumb from '../Breadcrumb';
 import RepoSelector from '../RepoSelector';
 
 import utils from '../lib/utils';
-import { parseCommits, CommitData, RawCommitData } from '../lib/parse_commits';
+import { CommitData } from '../lib/parse_commits';
 import { authorCmp, Commit, CommitFile } from '../lib/parse-diff';
 import { getPathEntry, getFullPath, mount, readDir, registerFileSystem } from '../lib/filesystem';
 
@@ -23,7 +23,6 @@ import { QFrameAPI } from '../../lib/api';
 import Player from '../Player';
 import { FSEntry, createFSTree } from '../lib/filesystem';
 import Introduction from '../Introduction';
-import * as THREE from 'three';
 import WorkQueue from '../lib/WorkQueue';
 
 import MontaanGitFilesystem from '../lib/filesystem/MontaanGitFilesystem';
@@ -189,6 +188,8 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 	commitIndex: number;
 
 	animatedFiles: number;
+	lockRequests: boolean = false;
+	requestKey: number = 0;
 
 	constructor(props: MainAppProps) {
 		super(props);
@@ -253,7 +254,12 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 			const entry = getPathEntry(this.state.fileTree.tree, p);
 			return !entry || (entry.entries && !entry.fetched);
 		});
-		await this.requestDirs(prefixes, []);
+		this.lockRequests = true;
+		this.requestKey++;
+		for (let i = 0; i < prefixes.length; i++) {
+			await this.requestDirs([prefixes[i]], [], this.requestKey);
+		}
+		this.lockRequests = false;
 	}
 
 	getPathPrefixes(path: string) {
@@ -294,17 +300,22 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		this.setState({ fileTreeUpdated: this.state.fileTreeUpdated + 1 });
 	};
 
-	requestDirs = async (paths: string[], dropEntries: FSEntry[]) => {
+	requestDirs = async (paths: string[], dropEntries: FSEntry[], key?: number) => {
+		if (this.lockRequests && this.requestKey !== key) return;
 		LoadDirWorkQueue.clear();
 		if (paths.length === 0 && dropEntries.length === 0) return;
-		const n = 5;
+		const promises = [];
+		const n = 8;
 		for (let i = 0; i < paths.length; i += n) {
-			LoadDirWorkQueue.push(this.processDirRequest, {
-				tree: this.state.fileTree,
-				paths: paths.slice(i, i + n),
-				dropEntries: i === 0 ? dropEntries : [],
-			});
+			promises.push(
+				LoadDirWorkQueue.push(this.processDirRequest, {
+					tree: this.state.fileTree,
+					paths: paths.slice(i, i + n),
+					dropEntries: i === 0 ? dropEntries : [],
+				})
+			);
 		}
+		await Promise.all(promises);
 	};
 
 	parseFiles(text: string, repoPrefix: string, changedFiles: CommitFile[] = []) {

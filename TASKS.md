@@ -33,12 +33,10 @@
 # FIX
 
     [] Issue where rebuild doesn't rebuild things
+    [] Issue where reparenting screws up everything (appeared after using yield in Layout createFileTreeQuads)
+    [] Issue where things don't show up
+    [] Fuck it, just move tree rebuild into a worker
     [] Navigate to line in text view
-    [] Navigate to URL on page load
-    [] Navigate to yet-unloaded-URL
-        [] Hierarchical drill-down
-        [] Request beam
-    [] Move tree rebuilding off main thread
     [] main.js is too large
         [] Convert to TS
         [] Move tree rendering to lib
@@ -49,6 +47,13 @@
         [] Move repo mgmt to MontaanUserRepos
         [] Move widget loading to FSOverlays
     [x] Issue where clicking doesn't work
+    [x] Issue with jank during reparenting
+        - Make createFileTreeQuads yield...
+    [x] Navigate to URL on page load
+    [x] Navigate to yet-unloaded-URL
+        [x] Hierarchical drill-down
+        [x] Request beam
+    [x] Move tree rebuilding off main thread
 
 # KEY FEATURES
 

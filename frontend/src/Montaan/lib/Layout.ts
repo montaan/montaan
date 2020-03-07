@@ -80,6 +80,7 @@ export default {
 		vertexIndices: { vertexIndex: number; textVertexIndex: number },
 		excludeIndex: Map<FSEntry, number>
 	): Promise<number> {
+		await yieldFn();
 		var dirs = [];
 		var files = [];
 		var dotDirs = [];
