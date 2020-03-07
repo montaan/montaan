@@ -155,6 +155,7 @@ const HitType = {
 
 type LoadDirWorkItem = { tree: FileTree; paths: string[]; dropEntries: FSEntry[] };
 const LoadDirWorkQueue = new WorkQueue<LoadDirWorkItem>();
+let LoadDirWorkQueueLocked = false;
 
 class MainApp extends React.Component<MainAppProps, MainAppState> {
 	emptyState = {
@@ -254,12 +255,15 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 			const entry = getPathEntry(this.state.fileTree.tree, p);
 			return !entry || (entry.entries && !entry.fetched);
 		});
-		this.lockRequests = true;
-		this.requestKey++;
+		LoadDirWorkQueueLocked = true;
 		for (let i = 0; i < prefixes.length; i++) {
-			await this.requestDirs([prefixes[i]], [], this.requestKey);
+			await this.processDirRequest({
+				tree: this.state.fileTree,
+				paths: [prefixes[i]],
+				dropEntries: [],
+			});
 		}
-		this.lockRequests = false;
+		LoadDirWorkQueueLocked = false;
 	}
 
 	getPathPrefixes(path: string) {
@@ -275,6 +279,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 	}
 
 	processDirRequest = async ({ tree, paths, dropEntries }: LoadDirWorkItem) => {
+		console.log(paths);
 		let files;
 		let fileTreeDrop = tree;
 		if (paths.length > 0) {
@@ -300,22 +305,18 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		this.setState({ fileTreeUpdated: this.state.fileTreeUpdated + 1 });
 	};
 
-	requestDirs = async (paths: string[], dropEntries: FSEntry[], key?: number) => {
-		if (this.lockRequests && this.requestKey !== key) return;
+	requestDirs = async (paths: string[], dropEntries: FSEntry[]) => {
+		if (LoadDirWorkQueueLocked) return;
 		LoadDirWorkQueue.clear();
 		if (paths.length === 0 && dropEntries.length === 0) return;
-		const promises = [];
-		const n = 8;
+		const n = 5;
 		for (let i = 0; i < paths.length; i += n) {
-			promises.push(
-				LoadDirWorkQueue.push(this.processDirRequest, {
-					tree: this.state.fileTree,
-					paths: paths.slice(i, i + n),
-					dropEntries: i === 0 ? dropEntries : [],
-				})
-			);
+			LoadDirWorkQueue.push(this.processDirRequest, {
+				tree: this.state.fileTree,
+				paths: paths.slice(i, i + n),
+				dropEntries: i === 0 ? dropEntries : [],
+			});
 		}
-		await Promise.all(promises);
 	};
 
 	parseFiles(text: string, repoPrefix: string, changedFiles: CommitFile[] = []) {
