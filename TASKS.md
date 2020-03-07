@@ -149,7 +149,16 @@
 
 # Font
 
-    [] Full Unicode support
+    [] Target is "HTML layouts in 3D"
+        [] Full Unicode support
+        [] Multiple fonts
+        [] Font variants
+        [] Generate MSDF fonts on the fly using Canvas
+        [] HTML font rendering parity
+        [] Render arbitrary HTML (Uh, how about just using CSS 3D transforms to do "iframes")
+        [] Render images
+        [] Render videos
+        [] Text wrapped on 3D shapes (e.g. ring of text, text stamped on mesh)
 
 # Search
 
@@ -203,6 +212,7 @@
 
 # Visuals
 
+    [] Sub-pixel AA & hinting for fonts https://github.com/astiopin/webgl_fonts/issues/7
     [] Fade out text before hiding it
     [] Sparkling precious particle diamonds like on Precious Nature map
     [] Design that makes you feel awesome

@@ -1640,7 +1640,7 @@ class Tabletree {
 
 					default: // do nothing
 				}
-				const d = self.getCameraDistanceToModel();
+				const d = self.getCameraDistanceToModel() * (camera.fov / 30);
 				const factor = d / window.innerWidth;
 				camera.targetPosition.x -= factor * dx;
 				camera.targetPosition.y += factor * dy;
@@ -1672,8 +1672,8 @@ class Tabletree {
 				if (Math.abs(ev.clientX - startX) > 10 || Math.abs(ev.clientY - startY) > 10) {
 					clickDisabled = true;
 				}
-				const d = self.getCameraDistanceToModel();
-				const factor = d / window.innerWidth;
+				const d = self.getCameraDistanceToModel() * (camera.fov / 57);
+				const factor = d / window.innerHeight;
 				camera.position.x -= factor * dx;
 				camera.position.y += factor * dy;
 				camera.targetPosition.copy(camera.position);
@@ -1703,7 +1703,7 @@ class Tabletree {
 					d = 0;
 				}
 				prevD = d;
-				self.zoomCamera(Math.pow(1.003, d), cx, cy);
+				self.zoomCamera(Math.pow(1.006, d), cx, cy);
 				lastScroll = Date.now();
 			} else {
 				clearTimeout(wheelSnapTimer);
@@ -1712,8 +1712,8 @@ class Tabletree {
 				}, 1000);
 
 				// pan on wheel
-				const d = self.getCameraDistanceToModel();
-				const factor = d / window.innerWidth;
+				const d = self.getCameraDistanceToModel() * (camera.fov / 57);
+				const factor = (1.5 * d) / window.innerHeight;
 				const adx = Math.abs(ev.deltaX);
 				const ady = Math.abs(ev.deltaY);
 				var xMove = false,
@@ -1739,7 +1739,7 @@ class Tabletree {
 			ev.preventDefault();
 			var cx = (ev.clientX - window.innerWidth / 2) / window.innerWidth;
 			var cy = (ev.clientY - window.innerHeight / 2) / window.innerHeight;
-			var d = ev.scale / gestureStartScale;
+			var d = Math.pow(ev.scale / gestureStartScale, 4);
 			gestureStartScale = ev.scale;
 			self.zoomCamera(1 / d, cx, cy);
 		});
@@ -1784,9 +1784,11 @@ class Tabletree {
 
 	zoomCamera(zf, cx, cy) {
 		const camera = this.camera;
+		cx = (cx * window.innerWidth) / window.innerHeight;
 		const d = this.getCameraDistanceToModel();
-		camera.position.x += cx * d - cx * d * zf;
-		camera.position.y -= cy * d - cy * d * zf;
+		const dc = (d * camera.fov) / 57;
+		camera.position.x += cx * dc - cx * dc * zf;
+		camera.position.y -= cy * dc - cy * dc * zf;
 		camera.position.z += -d + d * zf;
 		camera.near *= zf;
 		camera.far *= zf;
