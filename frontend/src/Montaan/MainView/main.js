@@ -838,7 +838,7 @@ class Tabletree {
 					const fsEntry = tree.entries[name];
 					const bbox = Geometry.getFSEntryBBox(fsEntry, mesh, camera);
 					const pxWidth = bbox.width * window.innerWidth * 0.5;
-					const isSmallDirectory = fsEntry.entries && pxWidth < 5;
+					const isSmallDirectory = fsEntry.entries && pxWidth < 3;
 					const isSmallFile = !fsEntry.entries && pxWidth < 150;
 
 					// Skip entries that are outside frustum or too small.
@@ -857,7 +857,7 @@ class Tabletree {
 					if (fsEntry.entries) {
 						entriesToKeep.push(fsEntry); // It's visible, so let's keep it in the mesh
 						// Descend into directories larger than this.
-						if (pxWidth > 15) {
+						if (pxWidth > 30) {
 							// Fetch directories that haven't been fetched yet.
 							if (!fsEntry.fetched) {
 								fsEntry.distanceFromCenter = Geometry.bboxDistanceToFrustumCenter(
