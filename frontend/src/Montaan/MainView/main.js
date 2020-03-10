@@ -1739,7 +1739,7 @@ class Tabletree {
 			ev.preventDefault();
 			var cx = (ev.clientX - window.innerWidth / 2) / window.innerWidth;
 			var cy = (ev.clientY - window.innerHeight / 2) / window.innerHeight;
-			var d = Math.pow(ev.scale / gestureStartScale, 4);
+			var d = ev.scale / gestureStartScale;
 			gestureStartScale = ev.scale;
 			self.zoomCamera(1 / d, cx, cy);
 		});
