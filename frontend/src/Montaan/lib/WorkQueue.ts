@@ -23,6 +23,27 @@ export default class WorkQueue<T> {
 		return this.processQueue();
 	}
 
+	pushMergeEnd(exec: WorkFunction<T>, args: WorkArgs<T>): Promise<void> {
+		if (this.queue.length > 0) {
+			const last = this.queue[this.queue.length - 1];
+			if (last && last.exec === exec) {
+				last.args = args;
+				return this.processQueue();
+			}
+		}
+		return this.push(exec, args);
+	}
+
+	pushMerge(exec: WorkFunction<T>, args: WorkArgs<T>): Promise<void> {
+		for (let i = 0; i < this.queue.length; i++) {
+			if (this.queue[i].exec === exec) {
+				this.queue[i].args = args;
+				return this.processQueue();
+			}
+		}
+		return this.push(exec, args);
+	}
+
 	clear() {
 		this.queue.splice(0);
 	}

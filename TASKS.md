@@ -26,35 +26,25 @@
         Future: max/JS = 4000x ST, 130x MT.
         With WASM: 2-10x MT
     - Stable WebGPU
+    - Compile to SPIR-V to WebGPU & Wasm+SIMD+MT
     - Foldable tablet phones mainstream
     - Looking Glass type 3D TVs mainstream
     - XR landed as consumer tech
 
 # FIX
 
-    [] Issue where rebuild doesn't rebuild things
-    [] Issue where reparenting screws up everything (appeared after using yield in Layout createFileTreeQuads)
-    [] Issue where things don't show up
-    [] Issue where pinch zoom fucks everything up
-    [] Fuck it, just move tree rebuild into a worker
     [] Navigate to line in text view
     [] main.js is too large
         [] Convert to TS
+        [x] Move tree build to lib
         [] Move tree rendering to lib
         [] Move links rendering to lib
         [] Move highlight rendering to lib
     [] MainApp is too large
         [] Move commits to MontaanGit
-        [] Move repo mgmt to MontaanUserRepos
+        [] Move repo management to MontaanUserRepos
         [] Move widget loading to FSOverlays
-    [x] Issue where clicking doesn't work
-    [x] Issue with jank during reparenting
-        - Make createFileTreeQuads yield...
-    [x] Navigate to URL on page load
-    [x] Navigate to yet-unloaded-URL
-        [x] Hierarchical drill-down
-        [x] Request beam
-    [x] Move tree rebuilding off main thread
+    [] Move tree rebuild into a worker
 
 # KEY FEATURES
 
@@ -385,3 +375,15 @@
     [x] Fix click navigation
         (use px coords everywhere)
     [x] Fix page <title>
+    [x] Issue where clicking doesn't work
+    [x] Issue with jank during reparenting
+        - Make createFileTreeQuads yield...
+    [x] Navigate to URL on page load
+    [x] Navigate to yet-unloaded-URL
+        [x] Hierarchical drill-down
+        [x] Request beam
+    [x] Move tree rebuilding off main thread
+    [x] Issue where rebuild doesn't rebuild things
+    [x] Issue where reparenting screws up everything (appeared after using yield in Layout createFileTreeQuads)
+    [x] Issue where things don't show up
+    [x] Issue where pinch zoom fucks everything up

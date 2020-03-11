@@ -30,6 +30,7 @@ export default {
 		ev: any,
 		camera: THREE.Camera,
 		models: THREE.Mesh[],
+		fsIndex: FSEntry[],
 		highlighted: FSEntry
 	) {
 		const intersections = utils.findIntersectionsUnderEvent(ev, camera, models);
@@ -38,9 +39,8 @@ export default {
 			const intersection = intersections.find((o) => o.faceIndex !== undefined);
 			if (intersection === undefined) return undefined;
 			const faceIndex = intersection.faceIndex || 0;
-			let fsEntry = (intersection.object as any).fileTree.fsIndex[
-				Math.floor(faceIndex / (2 * this.quadCount))
-			];
+			let fsEntry: FSEntry | undefined =
+				fsIndex[Math.floor(faceIndex / (2 * this.quadCount))];
 
 			while (
 				fsEntry &&
@@ -134,7 +134,7 @@ export default {
 		const xOff = 0;
 		const yOff = fsEntry.scale * (fsEntry.entries ? 0.5 : 0);
 		const xScale = fsEntry.scale * (fsEntry.entries ? 1 : 1);
-		const yScale = fsEntry.scale * (fsEntry.entries ? 0.5 : 1);
+		const yScale = fsEntry.scale * (fsEntry.entries ? 0.7 : 1);
 		a.set(fsEntry.x + xOff, fsEntry.y + yOff, fsEntry.z);
 		b.set(fsEntry.x + xOff + xScale, fsEntry.y + yOff, fsEntry.z);
 		c.set(fsEntry.x + xOff + xScale, fsEntry.y + yOff + yScale, fsEntry.z);

@@ -78,8 +78,11 @@ export default {
 		index: FSEntry[],
 		meshIndex: Map<FSEntry, number>,
 		vertexIndices: { vertexIndex: number; textVertexIndex: number },
-		excludeIndex: Map<FSEntry, number>
+		visibleEntries: Map<FSEntry, number>
 	): Promise<number> {
+		if (!visibleEntries.has(fileTree)) {
+			return fileIndex;
+		}
 		await yieldFn();
 		var dirs = [];
 		var files = [];
@@ -182,10 +185,10 @@ export default {
 				const yOff = 1 - (0.5 * y + 1) * (1 / dirSquareSide);
 				const xOff = 0.9 * x * (1 / dirSquareSide);
 				const dir = dirs[off];
-				if (excludeIndex.has(dir) && !dir.building) continue;
 				if (meshIndex.has(dir) && meshIndex.get(dir) !== -1) continue;
 				const subX = xOff + 0.1 / dirSquareSide;
 				const subY = yOff + 0.125 / dirSquareSide;
+				dir.building = true;
 				dir.x = fileTree.x + fileTree.scale * subX * dirScale;
 				dir.y =
 					fileTree.y + fileTree.scale * subY * dirScale + (1 - dirScale) * fileTree.scale;
@@ -227,7 +230,7 @@ export default {
 					index,
 					meshIndex,
 					vertexIndices,
-					excludeIndex
+					visibleEntries
 				);
 			}
 		}
