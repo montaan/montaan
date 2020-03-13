@@ -6,6 +6,7 @@ import QFrameAPI from '../../lib/api';
 import Layout, { SDFTextMesh } from '../lib/Layout';
 import { Intersection } from 'three';
 import { BBox } from '../lib/Geometry';
+import NavTarget from './NavTarget';
 
 type PrettyPrintResult = {
 	language: string;
@@ -84,18 +85,12 @@ export default class TextFileView extends THREE.Object3D {
 	}
 
 	__goToCoords(coords: number[]) {
-		const fsEntry = this.fsEntry;
-		if (this.textHeight <= 0) return false;
-		const model = this.model;
+		if (this.textHeight <= 0 || !this.textMesh) return false;
 		const line = coords[0];
-		const textYOff =
-			line === 0
-				? (fsEntry.scale * this.textScale * window.innerHeight) /
-				  ((window.pageZoom || 100) / 100)
-				: ((line + 0.5) / this.lineCount) * this.textHeight;
-		let textX = (this.textScale * window.innerWidth) / 1.33;
-		const targetPoint = new THREE.Vector3(textX, this.textYZero - textYOff, fsEntry.z);
-		targetPoint.applyMatrix4(model.matrixWorld);
+		const textYOff = -(this.lineCount - (line + 0.5)) * 44;
+		let textX = 18 * 80;
+		const targetPoint = new THREE.Vector3(textX, textYOff, 12000);
+		targetPoint.applyMatrix4(this.textMesh.matrixWorld);
 		return { targetPoint };
 	}
 
@@ -114,12 +109,20 @@ export default class TextFileView extends THREE.Object3D {
 		return this.goToCoords([line]);
 	}
 
-	onclick(ev: MouseEvent, intersection: Intersection, bbox: BBox) {
-		return false;
-	}
-
 	loaded() {
 		this.loadListeners.splice(0).forEach((f) => f());
+	}
+
+	onclick(ev: MouseEvent, intersection: Intersection, bbox: BBox, navTarget: NavTarget) {
+		if (bbox.width > 0.2) {
+			if (navTarget.fsEntry === this.fsEntry) {
+				if (navTarget.coords.length > 0 || navTarget.search.length > 0) {
+					return false;
+				}
+			}
+			return [0];
+		}
+		return false;
 	}
 
 	ontick(t: number, dt: number): void {}
@@ -143,7 +146,7 @@ export default class TextFileView extends THREE.Object3D {
 		'',
 	];
 
-	static hexdump(u8: Uint8Array): string {
+	static hexDump(u8: Uint8Array): string {
 		if (u8.byteLength > 1e4) return '';
 		const pad = TextFileView.pad;
 		const hex = TextFileView.hex;
@@ -213,7 +216,7 @@ export default class TextFileView extends THREE.Object3D {
 		const u8 = new Uint8Array(responseBuffer);
 		const isBinary = u8.slice(0, 4096).some((x) => x < 9);
 		const contents = isBinary
-			? TextFileView.hexdump(u8)
+			? TextFileView.hexDump(u8)
 			: TextFileView.wordWrap(
 					new TextDecoder().decode(responseBuffer).replace(/\r/g, ''),
 					this.fsEntry.name

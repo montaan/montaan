@@ -15,6 +15,7 @@ import * as THREE from 'three';
 import loadFont from 'load-bmfont';
 import WorkQueue from '../lib/WorkQueue';
 import ModelBuilder from './ModelBuilder';
+import NavTarget from './NavTarget';
 
 function save(blob, filename) {
 	const link = document.createElement('a');
@@ -1399,10 +1400,9 @@ class Tabletree {
 			fsEntry.targetLine = { line: coords };
 			return this.goToFSEntry(fsEntry, model);
 		}
-		const { targetPoint, near, far } = res;
+		const { targetPoint } = res;
+		console.log(camera.targetPosition, targetPoint);
 		camera.targetPosition.copy(targetPoint);
-		camera.near = near;
-		camera.far = far;
 		this.changed = true;
 	}
 
@@ -1456,6 +1456,7 @@ class Tabletree {
 			return;
 		}
 		const { fsEntry, point, search } = result;
+		this.navTarget = new NavTarget(fsEntry, point, search);
 		if (point) this.goToFSEntryCoords(fsEntry, point);
 		else if (search) this.goToFSEntryAtSearch(fsEntry, search);
 		else this.goToFSEntry(fsEntry);
@@ -1825,7 +1826,8 @@ class Tabletree {
 				fsEntry.contentObject.onclick(
 					ev,
 					intersection,
-					Geometry.getFSEntryBBox(fsEntry, this.model, this.camera)
+					Geometry.getFSEntryBBox(fsEntry, this.model, this.camera),
+					this.navTarget
 				);
 			this.history.push(this.getURLForFSEntry(fsEntry, coords));
 			this.highlighted = fsEntry;
