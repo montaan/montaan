@@ -39,6 +39,7 @@ export default class TextFileView extends THREE.Object3D {
 	textHeight: number = 0;
 	textWidth: number = 0;
 	lineCount: number = 0;
+	canHighlight: boolean = true;
 
 	constructor(
 		fsEntry: FSEntry,
@@ -107,6 +108,15 @@ export default class TextFileView extends THREE.Object3D {
 		} else index = text.indexOf(search);
 		for (let i = 0; i < index; i++) if (text.charCodeAt(i) === 10) line++;
 		return this.goToCoords([line]);
+	}
+
+	getHighlightRegion(coords: number[]) {
+		return {
+			c0: new THREE.Vector3(),
+			c1: new THREE.Vector3(),
+			c2: new THREE.Vector3(),
+			c3: new THREE.Vector3(),
+		};
 	}
 
 	loaded() {

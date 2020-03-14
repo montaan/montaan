@@ -20,6 +20,7 @@ export default class ImageFileView extends THREE.Mesh {
 	requestFrame: any;
 	fullyVisible: boolean = false;
 	loadListeners: (() => void)[];
+	canHighlight: boolean = false;
 
 	constructor(
 		fsEntry: FSEntry,
@@ -74,6 +75,15 @@ export default class ImageFileView extends THREE.Mesh {
 
 	goToSearch(search: string) {
 		return false;
+	}
+
+	getHighlightRegion(coords: number[]) {
+		return {
+			c0: new THREE.Vector3(),
+			c1: new THREE.Vector3(),
+			c2: new THREE.Vector3(),
+			c3: new THREE.Vector3(),
+		};
 	}
 
 	load(src: string) {

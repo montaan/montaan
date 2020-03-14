@@ -105,7 +105,7 @@ export default function createMSDFShader(opt) {
 			'  #endif',
 
 			'    gl_FragColor = vec4(pColor, opacity * valpha);',
-			// alphaTest === 0 ? '' : '  if (gl_FragColor.a < ' + alphaTest + ') discard;',
+			alphaTest === 0 ? '' : '  if (gl_FragColor.a < ' + alphaTest + ') discard;',
 			'}',
 		].join('\n'),
 		...opt,

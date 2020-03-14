@@ -6,6 +6,7 @@ export interface FSEntry {
 	entries: null | { [filename: string]: FSEntry };
 	parent?: FSEntry;
 	filesystem?: IFilesystem;
+	size: number;
 
 	fetched?: boolean | number;
 	building?: boolean;
@@ -135,6 +136,7 @@ export function createFSTree(name: string, url: string, fsType?: string, api?: Q
 		entries: {},
 		fetched: false,
 		filesystem: fs ? new fs(url, api) : undefined,
+		size: 0,
 		scale: 0,
 
 		x: 0,

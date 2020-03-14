@@ -43,6 +43,8 @@ export type TreeLinkKey = Element | FSEntry | string;
 export interface TreeLink {
 	src: TreeLinkKey;
 	dst: TreeLinkKey;
+	srcPoint?: number[];
+	dstPoint?: number[];
 	color: { r: number; g: number; b: number };
 }
 

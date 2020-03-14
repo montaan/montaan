@@ -1,7 +1,7 @@
 import React from 'react';
 import { withRouter, RouteComponentProps } from 'react-router-dom';
 import './MainView.scss';
-import tabletree from './main.js';
+import tabletree from './main';
 import { TreeLink } from '../MainApp';
 
 interface MainViewProps extends RouteComponentProps {

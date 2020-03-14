@@ -1,6 +1,6 @@
-import { getPathEntry, getFullPath, getFSEntryForURL } from '../lib/filesystem';
+import { getPathEntry, getFullPath, getFSEntryForURL, FSEntry } from '../lib/filesystem';
 import Colors from '../lib/Colors';
-import Layout from '../lib/Layout';
+import Layout, { ISDFTextGeometry } from '../lib/Layout';
 import utils from '../lib/utils';
 import Geometry from '../lib/Geometry';
 
@@ -16,8 +16,10 @@ import loadFont from 'load-bmfont';
 import WorkQueue from '../lib/WorkQueue';
 import ModelBuilder from './ModelBuilder';
 import NavTarget from './NavTarget';
+import { FileTree, SearchResult, TreeLink } from '../MainApp';
+import QFrameAPI from '../../lib/api';
 
-function save(blob, filename) {
+function save(blob: Blob, filename: string) {
 	const link = document.createElement('a');
 	link.href = URL.createObjectURL(blob);
 	link.download = filename;
@@ -26,15 +28,15 @@ function save(blob, filename) {
 	// URL.revokeObjectURL( url ); breaks Firefox...
 }
 
-function saveString(text, filename) {
+function saveString(text: string, filename: string) {
 	save(new Blob([text], { type: 'text/plain' }), filename);
 }
 
-function saveArrayBuffer(buffer, filename) {
+function saveArrayBuffer(buffer: ArrayBuffer, filename: string) {
 	save(new Blob([buffer], { type: 'application/octet-stream' }), filename);
 }
 
-function exportGLTF(input) {
+function exportGLTF(input: THREE.Object3D) {
 	var gltfExporter = new GLTFExporter();
 
 	var options = {
@@ -55,18 +57,86 @@ function exportGLTF(input) {
 		options
 	);
 }
-global.exportGLTF = exportGLTF;
 
-global.THREE = THREE;
-
-THREE.Object3D.prototype.tick = function(t, dt) {
+(THREE.Object3D as any).prototype.tick = function(t: any, dt: any) {
 	if (this.ontick) this.ontick(t, dt);
 	for (var i = 0; i < this.children.length; i++) {
 		this.children[i].tick(t, dt);
 	}
 };
 
+class NavCamera extends THREE.PerspectiveCamera {
+	targetPosition: THREE.Vector3 = new THREE.Vector3();
+	targetFOV: number = 60;
+}
+
+class VisibleFiles extends THREE.Object3D {
+	visibleSet: { [index: string]: THREE.Object3D } = {};
+}
+
+type Fiber = () => void;
+
 class Tabletree {
+	treeUpdateQueue: WorkQueue<FileTree> = new WorkQueue();
+	animating: boolean = false;
+	commitsPlaying: boolean = false;
+	currentFrame: number = 0;
+	pageZoom: number = 1;
+	resAdjust: number = 1;
+	textMinScale: number = 1;
+	textMaxScale: number = 1000;
+	deletionsCount: number = 0;
+	meshIndex: Map<FSEntry, number> = new Map();
+	visibleEntries: Map<FSEntry, number> = new Map();
+	history: any;
+	model: THREE.Mesh = new THREE.Mesh();
+	lineModel: THREE.LineSegments = new THREE.LineSegments();
+	lineGeo: THREE.BufferGeometry = new THREE.BufferGeometry();
+	links: TreeLink[] = [];
+	fsIndex: FSEntry[] = [];
+	searchResults: SearchResult[] = [];
+	previousSearchResults: SearchResult[] = [];
+	frameFibers: Fiber[] = [];
+	frameStart: number = -1;
+	initDone: boolean = false;
+	requestDirs: any;
+	setNavigationTarget: any;
+	api: QFrameAPI = QFrameAPI.mock;
+	_fileTree?: FileTree;
+	lastFrameTime: number = 0;
+	previousFrameTime: number = 0;
+	renderer: THREE.WebGLRenderer = new THREE.WebGLRenderer();
+	scene: THREE.Scene = new THREE.Scene();
+	camera: NavCamera = new NavCamera();
+	visibleFiles: VisibleFiles = new VisibleFiles();
+	highlightedResults: SearchResult[] = [];
+	highlightLater: [FSEntry, number][] = [];
+	searchHighlights: THREE.Mesh = new THREE.Mesh();
+	screenPlane: THREE.Mesh = new THREE.Mesh();
+	searchLine: THREE.LineSegments = new THREE.LineSegments();
+	searchLis: HTMLElement[] = [];
+	fileTree: any;
+	viewRoot: any;
+	navUrl: any;
+	treeBuildInProgress: any;
+	tree: any;
+	fileCount: any;
+	fileIndex: number | undefined;
+	textGeometry: ISDFTextGeometry | undefined;
+	viewRootUpdated: boolean | undefined;
+	zoomedInPath: string | undefined;
+	breadcrumbPath: string | undefined;
+	smallestCovering: any;
+	linksUpdatedOn: any;
+	urlIndex: any;
+	navTarget: NavTarget | undefined;
+	highlighted: any;
+	onElectron: any;
+	frameLoopPaused: boolean | undefined;
+	frameRequested: boolean | undefined;
+	_changed: any;
+	searchHighlightsIndex: number = 1;
+
 	constructor() {
 		this.treeUpdateQueue = new WorkQueue();
 		this.animating = false;
@@ -78,65 +148,36 @@ class Tabletree {
 				this.resAdjust = 1280 / window.screen.width;
 			}
 		}
-
-		this.textMinScale = 1000;
-		this.textMaxScale = 0;
-
-		this.deletionsCount = 0;
-		this.meshIndex = new Map();
-		this.visibleEntries = new Map();
-
-		this.history = undefined;
-
+		this.setupScene(); // Renderer, scene and camera setup.
+		this.setupSearchLines(); // Search landmark and connection lines
+		this.setupSearchHighlighting(); // Search highlighting lines
+		this.setupEventListeners(); // UI event listeners
 		this.changed = true;
-		this.model = null;
-		this.authorModel = null;
-		this.processModel = null;
-		this.lineModel = null;
-		this.lineGeo = null;
-		this.links = [];
-
-		this.fsIndex = [];
-
-		this.commitsPlaying = false;
-		this.searchResults = [];
-		this.previousSearchResults = [];
-
-		this.frameFibers = [];
-		this.frameStart = -1;
-
-		this.initDone = false;
-		this.requestDirs = undefined;
-		this.setNavigationTarget = undefined;
 	}
 
-	init(api) {
-		if (this.api) {
+	init(api: QFrameAPI) {
+		if (this.api !== QFrameAPI.mock) {
 			console.error('ALREADY INITIALIZED');
 			return;
 		}
 		this.api = api;
-		var fontTex, fontDesc;
+		var fontTex: THREE.Texture, fontDesc: any;
 		new THREE.TextureLoader().load(fontSDF, (tex) => {
 			fontTex = tex;
 			if (fontDesc && fontTex) this.start(fontDesc, fontTex);
 		});
-		loadFont(fontDescription, (err, font) => {
+		loadFont(fontDescription, (err: any, font: any) => {
 			if (err) throw err;
 			fontDesc = font;
 			if (fontDesc && fontTex) this.start(fontDesc, fontTex);
 		});
 	}
 
-	async start(font, fontTexture) {
-		this.setupScene(); // Renderer, scene and camera setup.
+	async start(font: any, fontTexture: THREE.Texture | null) {
 		Layout.font = font;
 		Layout.fontTexture = fontTexture;
 		Layout.textMaterial = Layout.makeTextMaterial();
 
-		this.setupSearchLines(); // Search landmark and connection lines
-		this.setupSearchHighlighting(); // Search highlighting lines
-		this.setupEventListeners(); // UI event listeners
 		if (this._fileTree) await this.setFileTree(this._fileTree); // Show possibly pre-loaded file tree.
 
 		this.lastFrameTime = performance.now();
@@ -156,15 +197,11 @@ class Tabletree {
 		document.body.appendChild(renderer.domElement);
 
 		var scene = new THREE.Scene();
-		window.scene3 = scene;
-		window.GLTFExporter = GLTFExporter;
+		(window as any).scene3 = scene;
+		(window as any).GLTFExporter = GLTFExporter;
+		(window as any).exportGLTF = exportGLTF;
 
-		var camera = new THREE.PerspectiveCamera(
-			15,
-			window.innerWidth / window.innerHeight,
-			0.5,
-			15
-		);
+		const camera = new NavCamera(15, window.innerWidth / window.innerHeight, 0.5, 15);
 
 		camera.position.z = 6;
 		camera.targetPosition = new THREE.Vector3().copy(camera.position);
@@ -176,8 +213,7 @@ class Tabletree {
 		this.scene = scene;
 		this.camera = camera;
 
-		this.visibleFiles = new THREE.Object3D();
-		this.visibleFiles.visibleSet = {};
+		this.visibleFiles = new VisibleFiles();
 
 		window.onresize = this.onResize.bind(this);
 		this.onResize();
@@ -185,8 +221,7 @@ class Tabletree {
 
 	// Set search results ////////////////////////////////////////////////////////////////////////////////
 
-	setSearchResults(searchResults) {
-		console.log(searchResults);
+	setSearchResults(searchResults: SearchResult[]) {
 		this.searchResults = searchResults || [];
 		this.highlightResults(searchResults || []);
 		this.updateSearchLines();
@@ -209,19 +244,19 @@ class Tabletree {
 			})
 		);
 		this.searchHighlights.frustumCulled = false;
-		this.searchHighlights.index = 1;
+		this.searchHighlightsIndex = 1;
 		for (let i = 0; i < 40000; i++) {
-			this.searchHighlights.geometry.vertices.push(new THREE.Vector3());
+			(this.searchHighlights.geometry as THREE.Geometry).vertices.push(new THREE.Vector3());
 		}
 		for (let i = 0; i < 10000; i++) {
 			let off = i * 4;
-			this.searchHighlights.geometry.faces.push(
+			(this.searchHighlights.geometry as THREE.Geometry).faces.push(
 				new THREE.Face3(off, off + 1, off + 2),
 				new THREE.Face3(off, off + 2, off + 3)
 			);
 		}
-		this.searchHighlights.ontick = () => {
-			this.searchHighlights.visible = this.searchHighlights.index > 0;
+		(this.searchHighlights as any).ontick = () => {
+			this.searchHighlights.visible = this.searchHighlightsIndex > 0;
 			if (this.highlightLater.length > 0) {
 				const later = this.highlightLater.splice(0);
 				for (let i = 0; i < later.length; i++)
@@ -232,32 +267,20 @@ class Tabletree {
 		this.scene.add(this.searchHighlights);
 	}
 
-	setGoToHighlight(fsEntry, line) {
+	setGoToHighlight(fsEntry: any, line: any) {
 		this.addHighlightedLine(fsEntry, line, 0);
 	}
 
-	addHighlightedLine(fsEntry, line, indexOverride = -1) {
-		if (fsEntry.textHeight) {
-			const lineCount = fsEntry.lineCount;
-			var geo = this.searchHighlights.geometry;
+	addHighlightedLine(fsEntry: FSEntry, line: number, indexOverride = -1) {
+		if (fsEntry.contentObject && fsEntry.contentObject.canHighlight) {
+			var geo = this.searchHighlights.geometry as THREE.Geometry;
 			var index = indexOverride;
 			if (indexOverride < 0) {
-				index = this.searchHighlights.index;
-				this.searchHighlights.index++;
+				index = this.searchHighlightsIndex;
+				this.searchHighlightsIndex++;
 			}
 
-			const lineBottom = fsEntry.textYZero - ((line + 1) / lineCount) * fsEntry.textHeight;
-			const lineTop = fsEntry.textYZero - (line / lineCount) * fsEntry.textHeight;
-			var c0 = new THREE.Vector3(fsEntry.x, lineBottom, fsEntry.z);
-			var c1 = new THREE.Vector3(fsEntry.x + fsEntry.scale * 0.5, lineBottom, fsEntry.z);
-			var c2 = new THREE.Vector3(fsEntry.x + fsEntry.scale * 0.5, lineTop, fsEntry.z);
-			var c3 = new THREE.Vector3(fsEntry.x, lineTop, fsEntry.z);
-
-			c0.applyMatrix4(this.model.matrixWorld);
-			c1.applyMatrix4(this.model.matrixWorld);
-			c2.applyMatrix4(this.model.matrixWorld);
-			c3.applyMatrix4(this.model.matrixWorld);
-
+			const { c0, c1, c2, c3 } = fsEntry.contentObject.getHighlightRegion([line]);
 			var off = index * 4;
 
 			geo.vertices[off++].copy(c0);
@@ -273,39 +296,40 @@ class Tabletree {
 	}
 
 	clearSearchHighlights() {
-		var geo = this.searchHighlights.geometry;
+		var geo = this.searchHighlights.geometry as THREE.Geometry;
 		var verts = geo.vertices;
 		for (var i = 0; i < verts.length; i++) {
 			var v = verts[i];
 			v.x = v.y = v.z = 0;
 		}
 		geo.verticesNeedUpdate = true;
-		this.searchHighlights.index = 1;
+		this.searchHighlightsIndex = 1;
 		this.highlightLater = [];
 		this.changed = true;
 	}
 
-	highlightResults(results) {
-		var ca = this.model.geometry.attributes.color;
+	highlightResults(results: SearchResult[]) {
+		var ca = (this.model.geometry as THREE.BufferGeometry).attributes
+			.color as THREE.BufferAttribute;
 		this.highlightedResults.forEach(function(highlighted) {
+			if (highlighted.fsEntry.index === undefined) return;
 			Geometry.setColor(
-				ca.array,
+				ca.array as Float32Array,
 				highlighted.fsEntry.index,
 				Colors[highlighted.fsEntry.entries === null ? 'getFileColor' : 'getDirectoryColor'](
 					highlighted.fsEntry
-				),
-				0
+				)
 			);
 		});
 		this.clearSearchHighlights();
 		for (var i = 0; i < results.length; i++) {
 			var fsEntry = results[i].fsEntry;
+			if (fsEntry.index === undefined) continue;
 			if (fsEntry.entries !== null && results[i].line === 0) {
 				Geometry.setColor(
-					ca.array,
+					ca.array as Float32Array,
 					fsEntry.index,
-					fsEntry.entries === null ? [1, 0, 0] : [0.6, 0, 0],
-					0
+					fsEntry.entries === null ? [1, 0, 0] : [0.6, 0, 0]
 				);
 			} else if (fsEntry.entries === null && results[i].line > 0) {
 				this.addHighlightedLine(fsEntry, results[i].line);
@@ -342,12 +366,12 @@ class Tabletree {
 		);
 		this.searchLine = searchLine;
 		searchLine.frustumCulled = false;
-		searchLine.geometry.setAttribute(
+		(searchLine.geometry as THREE.BufferGeometry).setAttribute(
 			'position',
 			new THREE.BufferAttribute(new Float32Array(40000 * 3), 3)
 		);
 
-		searchLine.ontick = () => {
+		(searchLine as any).ontick = () => {
 			searchLine.visible = this.searchResults && this.searchResults.length > 0;
 		};
 
@@ -369,17 +393,32 @@ class Tabletree {
 				opacity: 1,
 				transparent: true,
 				depthWrite: false,
-				vertexColors: true,
+				vertexColors: THREE.VertexColors,
 			})
 		);
 		this.lineModel.frustumCulled = false;
-		this.lineModel.ontick = () => {
+		(this.lineModel as any).ontick = () => {
 			this.lineModel.visible = this.links.length > 0;
 		};
 		this.scene.add(this.lineModel);
 	}
 
-	addScreenLine(geo, fsEntry, bbox, index, line, lineCount) {
+	addScreenLine(
+		geo: THREE.BufferGeometry,
+		fsEntry: {
+			x: number | undefined;
+			y: number | undefined;
+			z: number | undefined;
+			scale: number;
+			textHeight: number;
+			textXZero: number | undefined;
+			textYZero: number;
+		},
+		bbox: { bottom: number; top: number; left: any } | null,
+		index: number,
+		line: number,
+		lineCount: number
+	) {
 		var a = new THREE.Vector3(fsEntry.x, fsEntry.y, fsEntry.z);
 		a.applyMatrix4(this.model.matrixWorld);
 		var b = a,
@@ -423,7 +462,7 @@ class Tabletree {
 			}
 		}
 
-		const verts = geo.getAttribute('position').array;
+		const verts = geo.getAttribute('position').array as Float32Array;
 		off *= 3;
 		var v;
 		v = av;
@@ -442,7 +481,7 @@ class Tabletree {
 		verts[off++] = v.x;
 		verts[off++] = v.y;
 		verts[off++] = v.z;
-		geo.getAttribute('position').needsUpdate = true;
+		(geo.getAttribute('position') as THREE.BufferAttribute).needsUpdate = true;
 	}
 
 	updateSearchLines() {
@@ -455,12 +494,13 @@ class Tabletree {
 			this.searchLis = [].slice.call(document.body.querySelectorAll('#searchResults > li'));
 		}
 		const lis = this.searchLis;
-		var verts = this.searchLine.geometry.getAttribute('position').array;
+		var verts = (this.searchLine.geometry as THREE.BufferGeometry).getAttribute('position')
+			.array;
 		if (needsUpdate && lis.length <= verts.length / 3 / 4) {
 			for (var i = 0, l = lis.length; i < l; i++) {
-				var li = lis[i];
+				var li = lis[i] as any;
 				this.addScreenLine(
-					this.searchLine.geometry,
+					this.searchLine.geometry as THREE.BufferGeometry,
 					li.result.fsEntry,
 					null,
 					i,
@@ -472,7 +512,8 @@ class Tabletree {
 	}
 
 	clearSearchLine() {
-		var verts = this.searchLine.geometry.getAttribute('position').array;
+		var verts = (this.searchLine.geometry as THREE.BufferGeometry).getAttribute('position')
+			.array as Float32Array;
 		for (
 			var i = this.searchResults.length * 4 * 3;
 			i < this.previousSearchResults.length * 4 * 3;
@@ -480,13 +521,15 @@ class Tabletree {
 		) {
 			verts[i] = 0;
 		}
-		this.searchLine.geometry.getAttribute('position').needsUpdate = true;
+		((this.searchLine.geometry as THREE.BufferGeometry).getAttribute(
+			'position'
+		) as THREE.BufferAttribute).needsUpdate = true;
 		this.changed = true;
 	}
 
 	// File tree updates ////////////////////////////////////////////////////////////////////////////////
 
-	treeUpdater = async (fileTree) => {
+	treeUpdater = async (fileTree: FileTree) => {
 		const newTree = fileTree.tree !== this.fileTree;
 		if (newTree) {
 			this.viewRoot = fileTree.tree;
@@ -504,7 +547,7 @@ class Tabletree {
 		}
 	};
 
-	async setFileTree(fileTree) {
+	async setFileTree(fileTree: FileTree) {
 		if (this.renderer) {
 			this.treeUpdateQueue.pushMergeEnd(this.treeUpdater, fileTree);
 		} else {
@@ -518,11 +561,11 @@ class Tabletree {
 		}
 	}
 
-	async showFileTree(tree) {
+	async showFileTree(tree: FileTree) {
 		if (this.treeBuildInProgress) return;
 		this.treeBuildInProgress = true;
 		const builder = new ModelBuilder();
-		utils.traverseFSEntry(tree.tree, (e) => (e.building = false), '');
+		utils.traverseFSEntry(tree.tree, (e: { building: boolean }) => (e.building = false), '');
 		const model = await builder.buildModel(
 			tree,
 			this.viewRoot,
@@ -533,10 +576,10 @@ class Tabletree {
 		const { mesh, textGeometry, fileIndex, fsIndex, meshIndex } = model;
 		if (this.model) {
 			this.model.remove(this.visibleFiles);
-			this.model.parent.remove(this.model);
-			this.model.traverse(function(m) {
-				if (m.geometry) {
-					m.geometry.dispose();
+			if (this.model.parent) this.model.parent.remove(this.model);
+			this.model.traverse(function(m: THREE.Object3D) {
+				if ((m as THREE.Mesh).geometry) {
+					(m as THREE.Mesh).geometry.dispose();
 				}
 			});
 		}
@@ -545,7 +588,7 @@ class Tabletree {
 		this.fileCount = tree.count;
 		this.model = mesh;
 		mesh.add(this.visibleFiles);
-		this.model.ontick = this.determineVisibility(
+		(this.model as any).ontick = this.determineVisibility(
 			mesh,
 			textGeometry,
 			this.visibleFiles,
@@ -557,9 +600,10 @@ class Tabletree {
 		this.textGeometry = textGeometry;
 		this.model.position.set(0, 0, 0);
 
-		this.visibleFiles.children.forEach((f) => {
-			f.position.copy(f.fsEntry);
-			f.scale.set(f.fsEntry.scale, f.fsEntry.scale, f.fsEntry.scale);
+		this.visibleFiles.children.forEach((f: any) => {
+			const fsEntry: FSEntry = f.fsEntry;
+			f.position.copy(fsEntry);
+			f.scale.set(fsEntry.scale, fsEntry.scale, fsEntry.scale);
 		});
 
 		this.scene.add(this.model);
@@ -832,25 +876,30 @@ class Tabletree {
 	// 	return mesh;
 	// }
 
-	updateViewRoot(newRoot) {
+	updateViewRoot(newRoot: any) {
 		if (this.viewRootUpdated || this.treeBuildInProgress) return;
 		this.viewRoot = newRoot;
 		this.viewRootUpdated = true;
 	}
 
-	determineVisibility(mesh, textGeometry, visibleFiles, camera) {
-		return (t, dt) => {
+	determineVisibility(
+		mesh: THREE.Mesh,
+		textGeometry: ISDFTextGeometry,
+		visibleFiles: VisibleFiles,
+		camera: NavCamera
+	) {
+		return (t: any, dt: any) => {
 			if (this.viewRootUpdated || this.treeBuildInProgress) return;
-			window.debug.textContent =
+			document.getElementById('debug')!.textContent =
 				this.meshIndex.size +
 				' / ' +
-				mesh.geometry.maxFileCount +
+				(mesh.geometry as any).maxFileCount +
 				' | ' +
 				this.visibleEntries.size;
 			// Dispose loaded files that are outside the current view
 			for (let i = 0; i < visibleFiles.children.length; i++) {
 				const c = visibleFiles.children[i];
-				const fsEntry = c.fsEntry;
+				const fsEntry = (c as any).fsEntry;
 				const bbox = Geometry.getFSEntryBBox(fsEntry, mesh, camera);
 				if (!bbox.onScreen || bbox.width * window.innerWidth < 100) {
 					if (fsEntry.contentObject) {
@@ -858,7 +907,7 @@ class Tabletree {
 						fsEntry.contentObject = undefined;
 					}
 					const fullPath = getFullPath(fsEntry);
-					visibleFiles.visibleSet[fullPath] = false;
+					delete visibleFiles.visibleSet[fullPath];
 					visibleFiles.remove(c);
 					i--;
 				} else {
@@ -959,14 +1008,17 @@ class Tabletree {
 		};
 	}
 
-	cmpFSEntryDistanceFromCenter(a, b) {
+	cmpFSEntryDistanceFromCenter(
+		a: { scale: number; distanceFromCenter: number },
+		b: { scale: number; distanceFromCenter: number }
+	) {
 		return (
 			(b.scale - a.scale) / (b.scale + a.scale) +
 			0.1 * (a.distanceFromCenter - b.distanceFromCenter)
 		);
 	}
 
-	addFileView(visibleFiles, fullPath, fsEntry) {
+	addFileView(visibleFiles: VisibleFiles, fullPath: string, fsEntry: FSEntry) {
 		const view = Colors.imageRE.test(fullPath) ? ImageFileView : TextFileView;
 		fsEntry.contentObject = new view(
 			fsEntry,
@@ -986,13 +1038,19 @@ class Tabletree {
 		});
 		fsEntry.contentObject.load(this.api.server + '/repo/file' + fullPath);
 
-		visibleFiles.visibleSet[fullPath] = true;
+		visibleFiles.visibleSet[fullPath] = fsEntry.contentObject;
 		visibleFiles.add(fsEntry.contentObject);
 	}
 
 	// Linkage lines ////////////////////////////////////////////////////////////////////////////////
 
-	updateLineBetweenElements(geo, index, color, bboxA, bboxB) {
+	updateLineBetweenElements(
+		geo: THREE.BufferGeometry,
+		index: number,
+		color: { r: number; g: number; b: number } | undefined,
+		bboxA: { left: any; top: any },
+		bboxB: { left: any; top: any }
+	) {
 		this.screenPlane.visible = true;
 		var intersectionsA = utils.findIntersectionsUnderEvent(
 			{ clientX: bboxA.left, clientY: bboxA.top, target: this.renderer.domElement },
@@ -1010,7 +1068,7 @@ class Tabletree {
 		var b = intersectionsB[0].point;
 		var bv = new THREE.Vector3(b.x, b.y, b.z);
 
-		var verts = geo.getAttribute('position').array;
+		var verts = geo.getAttribute('position').array as Float32Array;
 		var off = index * 3;
 		var v;
 		v = av;
@@ -1039,7 +1097,7 @@ class Tabletree {
 		verts[off++] = v.z;
 
 		if (color) {
-			verts = geo.getAttribute('color').array;
+			verts = geo.getAttribute('color').array as Float32Array;
 			off = index * 3;
 			v = color;
 			verts[off++] = v.r;
@@ -1068,12 +1126,21 @@ class Tabletree {
 		}
 	}
 
-	updateLineBetweenEntryAndElement(geo, index, color, model, fsEntry, line, lineCount, bbox) {
+	updateLineBetweenEntryAndElement(
+		geo: THREE.BufferGeometry,
+		index: number,
+		color: { r: number; g: number; b: number } | undefined,
+		model: THREE.Object3D,
+		fsEntry: FSEntry,
+		coords: number[] | undefined,
+		lineCount: number,
+		bbox: { bottom: number; top: number; left: any }
+	) {
 		var a = new THREE.Vector3(fsEntry.x, fsEntry.y, fsEntry.z);
 		a.applyMatrix4(model.matrixWorld);
 		var b = a;
 
-		line = line ? line[0] : 0;
+		const line = coords ? coords[0] : 0;
 
 		var av = new THREE.Vector3(a.x + 0.05 * fsEntry.scale, a.y + 0.05 * fsEntry.scale, a.z);
 		var bv, aUp;
@@ -1100,11 +1167,11 @@ class Tabletree {
 			b = intersections[0].point;
 			bv = new THREE.Vector3(b.x, b.y, b.z);
 			aUp = new THREE.Vector3(av.x, av.y, av.z);
-			if (line > 0 && fsEntry.textHeight) {
-				const textYOff = ((line + 0.5) / lineCount) * fsEntry.textHeight;
+			if (line > 0 && fsEntry.contentObject && fsEntry.contentObject.textHeight) {
+				const textYOff = ((line + 0.5) / lineCount) * fsEntry.contentObject.textHeight;
 				const textLinePos = new THREE.Vector3(
-					fsEntry.textXZero,
-					fsEntry.textYZero - textYOff,
+					fsEntry.contentObject.textXZero,
+					fsEntry.contentObject.textYZero - textYOff,
 					fsEntry.z
 				);
 				textLinePos.applyMatrix4(this.model.matrixWorld);
@@ -1112,7 +1179,7 @@ class Tabletree {
 			}
 		}
 
-		var verts = geo.getAttribute('position').array;
+		var verts = geo.getAttribute('position').array as Float32Array;
 		var off = index * 3;
 		var v;
 		v = av;
@@ -1141,7 +1208,7 @@ class Tabletree {
 		verts[off++] = v.z;
 
 		if (color) {
-			verts = geo.getAttribute('color').array;
+			verts = geo.getAttribute('color').array as Float32Array;
 			off = index * 3;
 			v = color;
 			verts[off++] = v.r;
@@ -1171,23 +1238,23 @@ class Tabletree {
 	}
 
 	updateLineBetweenEntries(
-		geo,
-		index,
-		color,
-		modelA,
-		entryA,
-		lineA,
-		lineCountA,
-		modelB,
-		entryB,
-		lineB,
-		lineCountB
+		geo: THREE.BufferGeometry,
+		index: number,
+		color: { r: number; g: number; b: number } | undefined,
+		modelA: THREE.Object3D,
+		entryA: FSEntry,
+		coordsA: number[] | undefined,
+		lineCountA: number,
+		modelB: THREE.Object3D,
+		entryB: FSEntry,
+		coordsB: number[] | undefined,
+		lineCountB: number
 	) {
 		var a = entryA;
 		var b = entryB;
 
-		lineA = lineA ? lineA[0] : 0;
-		lineB = lineB ? lineB[0] : 0;
+		const lineA = coordsA ? coordsA[0] : 0;
+		const lineB = coordsB ? coordsB[0] : 0;
 
 		var av = new THREE.Vector3(a.x, a.y, a.z);
 		av.applyMatrix4(modelA.matrixWorld);
@@ -1195,21 +1262,21 @@ class Tabletree {
 		var bv = new THREE.Vector3(b.x, b.y + b.scale, b.z);
 		bv.applyMatrix4(modelB.matrixWorld);
 
-		if (lineA > 0 && entryA.textHeight) {
-			const textYOff = ((lineA + 0.5) / lineCountA) * entryA.textHeight;
+		if (lineA > 0 && entryA.contentObject && entryA.contentObject.textHeight) {
+			const textYOff = ((lineA + 0.5) / lineCountA) * entryA.contentObject.textHeight;
 			const textLinePos = new THREE.Vector3(
-				entryA.textXZero,
-				entryA.textYZero - textYOff,
+				entryA.contentObject.textXZero,
+				entryA.contentObject.textYZero - textYOff,
 				entryA.z
 			);
 			textLinePos.applyMatrix4(modelA.matrixWorld);
 			av = textLinePos;
 		}
-		if (lineB > 0 && entryB.textHeight) {
-			const textYOff = ((lineB + 0.5) / lineCountB) * entryB.textHeight;
+		if (lineB > 0 && entryB.contentObject && entryB.contentObject.textHeight) {
+			const textYOff = ((lineB + 0.5) / lineCountB) * entryB.contentObject.textHeight;
 			const textLinePos = new THREE.Vector3(
-				entryB.textXZero,
-				entryB.textYZero - textYOff,
+				entryB.contentObject.textXZero,
+				entryB.contentObject.textYZero - textYOff,
 				entryB.z
 			);
 			textLinePos.applyMatrix4(modelB.matrixWorld);
@@ -1229,7 +1296,7 @@ class Tabletree {
 		);
 		bUp.applyMatrix4(modelB.matrixWorld);
 
-		var verts = geo.getAttribute('position').array;
+		var verts = geo.getAttribute('position').array as Float32Array;
 		var off = index * 3;
 		var v;
 		v = av;
@@ -1258,7 +1325,7 @@ class Tabletree {
 		verts[off++] = v.z;
 
 		if (color) {
-			verts = geo.getAttribute('color').array;
+			verts = geo.getAttribute('color').array as Float32Array;
 			off = index * 3;
 			v = color;
 			verts[off++] = v.r;
@@ -1287,10 +1354,9 @@ class Tabletree {
 		}
 	}
 
-	parseTarget(dst, dstPoint) {
+	parseTarget(dst: string | FSEntry, dstPoint: any) {
 		if (typeof dst === 'string') {
-			const { fsEntry, point } = getFSEntryForURL(this.fileTree, dst);
-			return { fsEntry, point };
+			return getFSEntryForURL(this.fileTree, dst);
 		} else {
 			return { fsEntry: dst, point: dstPoint };
 		}
@@ -1303,10 +1369,10 @@ class Tabletree {
 		}
 	}
 
-	setLinks(links, updateOnlyElements = false) {
+	setLinks(links: TreeLink[], updateOnlyElements = false) {
 		if (this.lineGeo) {
 			const geo = this.lineGeo;
-			const verts = geo.getAttribute('position').array;
+			const verts = geo.getAttribute('position').array as Float32Array;
 
 			for (let i = links.length; i < this.links.length; i++) {
 				let j = i * 6 * 3;
@@ -1320,12 +1386,13 @@ class Tabletree {
 				const dstIsElem = l.dst instanceof Element;
 
 				if (srcIsElem && dstIsElem) {
-					const bboxA = l.src.getBoundingClientRect();
-					const bboxB = l.dst.getBoundingClientRect();
+					const bboxA = (l.src as Element).getBoundingClientRect();
+					const bboxB = (l.dst as Element).getBoundingClientRect();
 					this.updateLineBetweenElements(geo, i * 6, l.color, bboxA, bboxB);
 				} else if (srcIsElem) {
-					const bbox = l.src.getBoundingClientRect();
-					const dst = this.parseTarget(l.dst, l.dstPoint);
+					const bbox = (l.src as Element).getBoundingClientRect();
+					const dst = this.parseTarget(l.dst as string | FSEntry, l.dstPoint);
+					if (!dst) continue;
 					this.updateLineBetweenEntryAndElement(
 						geo,
 						i * 6,
@@ -1337,8 +1404,9 @@ class Tabletree {
 						bbox
 					);
 				} else if (dstIsElem) {
-					const bbox = l.dst.getBoundingClientRect();
-					const dst = this.parseTarget(l.src, l.srcPoint);
+					const bbox = (l.dst as Element).getBoundingClientRect();
+					const dst = this.parseTarget(l.src as string | FSEntry, l.srcPoint);
+					if (!dst) continue;
 					this.updateLineBetweenEntryAndElement(
 						geo,
 						i * 6,
@@ -1350,8 +1418,9 @@ class Tabletree {
 						bbox
 					);
 				} else if (!updateOnlyElements) {
-					const src = this.parseTarget(l.src, l.srcPoint);
-					const dst = this.parseTarget(l.dst, l.dstPoint);
+					const src = this.parseTarget(l.src as string | FSEntry, l.srcPoint);
+					const dst = this.parseTarget(l.dst as string | FSEntry, l.dstPoint);
+					if (!dst || !src) continue;
 					this.updateLineBetweenEntries(
 						geo,
 						i * 6,
@@ -1367,15 +1436,18 @@ class Tabletree {
 					);
 				}
 			}
-			geo.getAttribute('position').needsUpdate = true;
-			geo.getAttribute('color').needsUpdate = true;
+			(geo.getAttribute('position') as THREE.BufferAttribute).needsUpdate = true;
+			(geo.getAttribute('color') as THREE.BufferAttribute).needsUpdate = true;
 			this.changed = true;
 		}
 	}
 
 	// FSEntry Navigation ////////////////////////////////////////////////////////////////////////////////
 
-	goToFSEntry = (fsEntry, model = this.model) => {
+	goToFSEntry = (
+		fsEntry: { x: number; scale: number; entries: any; y: number; z: number },
+		model = this.model
+	) => {
 		if (!fsEntry) return;
 		const { scene, camera } = this;
 		scene.updateMatrixWorld();
@@ -1391,7 +1463,7 @@ class Tabletree {
 		this.changed = true;
 	};
 
-	async goToFSEntryCoords(fsEntry, coords, model = this.model) {
+	async goToFSEntryCoords(fsEntry: FSEntry, coords: number[], model = this.model) {
 		const { scene, camera } = this;
 		scene.updateMatrixWorld();
 		const res =
@@ -1406,7 +1478,7 @@ class Tabletree {
 		this.changed = true;
 	}
 
-	async goToFSEntryAtSearch(fsEntry, search, model = this.model) {
+	async goToFSEntryAtSearch(fsEntry: FSEntry, search: string, model = this.model) {
 		const { scene, camera } = this;
 		scene.updateMatrixWorld();
 		const res =
@@ -1424,7 +1496,7 @@ class Tabletree {
 
 	// URL Handling ////////////////////////////////////////////////////////////////////////////////
 
-	registerElementForURL(el, url) {
+	registerElementForURL(el: any, url: string) {
 		this.urlIndex[url] = this.urlIndex[url] || [];
 		this.urlIndex[url].push(el);
 	}
@@ -1432,7 +1504,7 @@ class Tabletree {
 	async gcURLElements() {
 		const deletions = [];
 		let i = 0;
-		const elFilter = (el) => {
+		const elFilter = (el: { ownerDocument: { body: { contains: (arg0: any) => any } } }) => {
 			i++;
 			return el.ownerDocument.body.contains(el);
 		};
@@ -1447,7 +1519,7 @@ class Tabletree {
 		deletions.forEach((n) => delete this.urlIndex[n]);
 	}
 
-	goToURL(url) {
+	goToURL(url: string = '') {
 		this.navUrl = url;
 		if (!this.fileTree) return;
 		const result = getFSEntryForURL(this.fileTree, url);
@@ -1462,7 +1534,7 @@ class Tabletree {
 		else this.goToFSEntry(fsEntry);
 	}
 
-	getURLForFSEntry(fsEntry, location = []) {
+	getURLForFSEntry(fsEntry: FSEntry, location = []) {
 		const locationStr = location.length > 0 ? '#' + location.join(',') : '';
 		return getFullPath(fsEntry) + locationStr;
 	}
@@ -1475,20 +1547,20 @@ class Tabletree {
 		const self = this;
 
 		var down = false;
-		var previousX, previousY, startX, startY;
+		var previousX: number, previousY: number, startX: number, startY: number;
 		var clickDisabled = false;
 
-		var pinchStart, pinchMid;
+		var pinchStart: number, pinchMid: { clientX: number; clientY: number };
 
 		var inGesture = false;
 
 		renderer.domElement.addEventListener(
 			'touchstart',
 			function(ev) {
-				document.activeElement.blur();
+				if (document.activeElement) (document.activeElement as any).blur();
 				ev.preventDefault();
 				if (ev.touches.length === 1) {
-					renderer.domElement.onmousedown(ev.touches[0]);
+					renderer.domElement.onmousedown!(ev.touches[0] as any);
 				} else if (ev.touches.length === 2) {
 					inGesture = true;
 					var dx = ev.touches[0].clientX - ev.touches[1].clientX;
@@ -1498,7 +1570,7 @@ class Tabletree {
 						clientX: ev.touches[1].clientX + dx / 2,
 						clientY: ev.touches[1].clientY + dy / 2,
 					};
-					renderer.domElement.onmousedown(pinchMid);
+					renderer.domElement.onmousedown!(pinchMid as any);
 				}
 			},
 			false
@@ -1510,7 +1582,7 @@ class Tabletree {
 				ev.preventDefault();
 				if (ev.touches.length === 1) {
 					if (!inGesture) {
-						window.onmousemove(ev.touches[0]);
+						window.onmousemove!(ev.touches[0] as any);
 					}
 				} else if (ev.touches.length === 2) {
 					var dx = ev.touches[0].clientX - ev.touches[1].clientX;
@@ -1524,7 +1596,7 @@ class Tabletree {
 					var cx = (pinchMid.clientX - window.innerWidth / 2) / window.innerWidth;
 					var cy = (pinchMid.clientY - window.innerHeight / 2) / window.innerHeight;
 					self.zoomCamera(zoom, cx, cy);
-					window.onmousemove(pinchMid);
+					window.onmousemove!(pinchMid as any);
 				}
 			},
 			false
@@ -1536,10 +1608,10 @@ class Tabletree {
 				ev.preventDefault();
 				if (ev.touches.length === 0) {
 					if (!inGesture) {
-						window.onmouseup(ev.changedTouches[0]);
+						window.onmouseup!(ev.changedTouches[0] as any);
 					} else {
 						inGesture = false;
-						window.onmouseup(pinchMid);
+						window.onmouseup!(pinchMid as any);
 					}
 				} else if (ev.touches.length === 1) {
 				}
@@ -1553,10 +1625,10 @@ class Tabletree {
 				ev.preventDefault();
 				if (ev.touches.length === 0) {
 					if (!inGesture) {
-						window.onmouseup(ev.changedTouches[0]);
+						window.onmouseup!(ev.changedTouches[0] as any);
 					} else {
 						inGesture = false;
-						window.onmouseup(pinchMid);
+						window.onmouseup!(pinchMid as any);
 					}
 				} else if (ev.touches.length === 1) {
 				}
@@ -1564,8 +1636,8 @@ class Tabletree {
 			false
 		);
 
-		window.onkeydown = function(ev) {
-			if (!ev.target || ev.target.tagName !== 'INPUT') {
+		window.onkeydown = function(ev: KeyboardEvent) {
+			if (!ev.target || (ev.target as any).tagName !== 'INPUT') {
 				var dx = 0,
 					dy = 0,
 					dz = 0;
@@ -1592,8 +1664,8 @@ class Tabletree {
 				switch (ev.key) {
 					case 'w': // scroll up
 						{
-							const fsEntry = getPathEntry(self.fileTree, self.breadcrumbPath);
-							if (fsEntry) {
+							const fsEntry = getPathEntry(self.fileTree, self.breadcrumbPath || '');
+							if (fsEntry && fsEntry.parent && fsEntry.parent.entries) {
 								const files = Object.values(fsEntry.parent.entries).sort(
 									self.fsEntryCmp
 								);
@@ -1604,8 +1676,8 @@ class Tabletree {
 						break;
 					case 's': // scroll down
 						{
-							const fsEntry = getPathEntry(self.fileTree, self.breadcrumbPath);
-							if (fsEntry) {
+							const fsEntry = getPathEntry(self.fileTree, self.breadcrumbPath || '');
+							if (fsEntry && fsEntry.parent && fsEntry.parent.entries) {
 								const files = Object.values(fsEntry.parent.entries).sort(
 									self.fsEntryCmp
 								);
@@ -1651,7 +1723,7 @@ class Tabletree {
 					case 'x': // zoom out of object
 						var fsEntry = getPathEntry(
 							self.fileTree,
-							self.breadcrumbPath.replace(/\/[^/]+$/, '')
+							(self.breadcrumbPath || '').replace(/\/[^/]+$/, '')
 						);
 						if (fsEntry && fsEntry.title) self.goToFSEntry(fsEntry, self.model);
 						break;
@@ -1671,7 +1743,7 @@ class Tabletree {
 		};
 
 		renderer.domElement.onmousedown = function(ev) {
-			document.activeElement.blur();
+			if (document.activeElement) (document.activeElement as any).blur();
 			if (ev.preventDefault) ev.preventDefault();
 			down = true;
 			clickDisabled = false;
@@ -1679,7 +1751,11 @@ class Tabletree {
 			startY = previousY = ev.clientY;
 		};
 
-		window.onmousemove = function(ev) {
+		window.onmousemove = function(ev: {
+			preventDefault: () => void;
+			clientX: number;
+			clientY: number;
+		}) {
 			if (down) {
 				self.changed = true;
 				if (ev.preventDefault) ev.preventDefault();
@@ -1701,7 +1777,7 @@ class Tabletree {
 		var lastScroll = Date.now();
 
 		var prevD = 0;
-		var wheelSnapTimer;
+		var wheelSnapTimer: NodeJS.Timeout;
 		var wheelFreePan = false;
 		renderer.domElement.onwheel = function(ev) {
 			ev.preventDefault();
@@ -1710,7 +1786,7 @@ class Tabletree {
 				// zoom on wheel
 				var cx = (ev.clientX - window.innerWidth / 2) / window.innerWidth;
 				var cy = (ev.clientY - window.innerHeight / 2) / window.innerHeight;
-				var d = ev.deltaY !== undefined ? ev.deltaY * 3 : ev.wheelDelta;
+				var d = ev.deltaY !== undefined ? ev.deltaY * 3 : (ev as any).wheelDelta;
 				if (Date.now() - lastScroll > 500) {
 					prevD = d;
 				}
@@ -1755,10 +1831,11 @@ class Tabletree {
 		});
 		window.addEventListener('gesturechange', function(ev) {
 			ev.preventDefault();
-			var cx = (ev.clientX - window.innerWidth / 2) / window.innerWidth;
-			var cy = (ev.clientY - window.innerHeight / 2) / window.innerHeight;
-			var d = ev.scale / gestureStartScale;
-			gestureStartScale = ev.scale;
+			const gev = (ev as unknown) as { clientX: number; clientY: number; scale: number };
+			var cx = (gev.clientX - window.innerWidth / 2) / window.innerWidth;
+			var cy = (gev.clientY - window.innerHeight / 2) / window.innerHeight;
+			var d = gev.scale / gestureStartScale;
+			gestureStartScale = gev.scale;
 			self.zoomCamera(1 / d, cx, cy);
 		});
 		window.addEventListener('gestureend', function(e) {
@@ -1766,7 +1843,7 @@ class Tabletree {
 		});
 
 		this.highlighted = null;
-		window.onmouseup = function(ev) {
+		window.onmouseup = function(ev: { preventDefault: () => void }) {
 			if (down && ev.preventDefault) ev.preventDefault();
 			if (clickDisabled) {
 				down = false;
@@ -1780,7 +1857,7 @@ class Tabletree {
 	}
 
 	// Used to navigate between entries
-	fsEntryCmp(a, b) {
+	fsEntryCmp(a: FSEntry, b: FSEntry) {
 		if (!!a.entries === !!b.entries) return a.title < b.title ? -1 : a.title > b.title ? 1 : 0;
 		else if (a.entries) return -1;
 		else return 1;
@@ -1800,7 +1877,7 @@ class Tabletree {
 		else return this.camera.position.distanceTo(this.model.position);
 	}
 
-	zoomCamera(zf, cx, cy) {
+	zoomCamera(zf: number, cx: number, cy: number) {
 		const camera = this.camera;
 		cx = (cx * window.innerWidth) / window.innerHeight;
 		const d = this.getCameraDistanceToModel();
@@ -1816,7 +1893,7 @@ class Tabletree {
 		this.changed = true;
 	}
 
-	zoomToEntry(ev) {
+	zoomToEntry(ev: any) {
 		const intersection = this.getEntryAtMouse(ev);
 		if (!intersection) debugger;
 		if (intersection) {
@@ -1835,7 +1912,7 @@ class Tabletree {
 		}
 	}
 
-	getEntryAtMouse(ev) {
+	getEntryAtMouse(ev: { clientX: any; clientY: any }) {
 		return Geometry.findFSEntry(
 			{ clientX: ev.clientX, clientY: ev.clientY, target: this.renderer.domElement },
 			this.camera,
@@ -1845,13 +1922,20 @@ class Tabletree {
 		);
 	}
 
-	getTextPosition(fsEntry, intersection) {
-		const fv = new THREE.Vector3(fsEntry.textXZero, fsEntry.textYZero, fsEntry.z);
+	getTextPosition(
+		fsEntry: FSEntry,
+		intersection: { point: THREE.Vector3; object: { matrixWorld: THREE.Matrix4 } }
+	) {
+		const fv = new THREE.Vector3(
+			fsEntry.contentObject.textXZero,
+			fsEntry.contentObject.textYZero,
+			fsEntry.z
+		);
 		const pv = new THREE.Vector3().copy(intersection.point);
 		const inv = new THREE.Matrix4().getInverse(intersection.object.matrixWorld);
 		pv.applyMatrix4(inv);
 		const uv = new THREE.Vector3().subVectors(pv, fv);
-		uv.divideScalar(fsEntry.scale * fsEntry.textScale);
+		uv.divideScalar(fsEntry.scale * fsEntry.contentObject.textScale);
 		uv.y /= 38;
 		uv.x /= 19;
 
@@ -1860,7 +1944,7 @@ class Tabletree {
 		return { line, col };
 	}
 
-	handleTextClick(ev, fsEntry, intersection) {
+	handleTextClick(ev: any, fsEntry: FSEntry, intersection: any) {
 		const { line, col } = this.getTextPosition(fsEntry, intersection);
 		const text = fsEntry.contentObject.geometry.layout._opt.text;
 		const lineStr = text.split('\n')[line - 1];
@@ -1885,7 +1969,8 @@ class Tabletree {
 					iframe.style.zIndex = '2';
 					iframe.style.width = '600px';
 					iframe.style.height = 'calc(100vh - 106px)';
-					this.renderer.domElement.parentNode.appendChild(iframe);
+					if (this.renderer.domElement.parentNode)
+						this.renderer.domElement.parentNode.appendChild(iframe);
 					return true;
 				} else {
 					// Open link in a new window.
@@ -1903,7 +1988,7 @@ class Tabletree {
 		const { scene, camera, renderer } = this;
 		scene.updateMatrixWorld(true);
 		var t = performance.now();
-		scene.tick(t, t - this.lastFrameTime);
+		(scene as any).tick(t, t - this.lastFrameTime);
 		this.lastFrameTime = t;
 		renderer.render(scene, camera);
 		this.currentFrame++;
@@ -2007,7 +2092,7 @@ class Tabletree {
 		}
 	};
 
-	yield = () => {
+	yield: () => Promise<void> = async () => {
 		if (this.frameStart > 0 && performance.now() - this.frameStart > 10) {
 			return new Promise((resolve, reject) => {
 				const resolver = () => {

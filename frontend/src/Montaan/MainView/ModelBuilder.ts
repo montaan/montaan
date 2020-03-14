@@ -11,8 +11,6 @@ import * as THREE from 'three';
 import Geometry, { IBufferGeometryWithFileCount } from '../lib/Geometry';
 
 export default class ModelBuilder {
-	constructor() {}
-
 	async buildModel(
 		tree: FileTree,
 		viewRoot: FSEntry,

@@ -10,15 +10,15 @@ if (!module.parent) {
 }
 
 export function updateComponents(files: string[]): void {
-	const components = new Map<string, number>();
+	const components: { [dir: string]: number } = {};
 	files.forEach((file) => {
 		const dir = path.dirname(file);
 		const stories = glob.sync(path.join(dir, '*.stories.tsx'));
 		if (stories.length > 0) {
-			components.set(dir, 1);
+			components[dir] = 1;
 		}
 	});
-	for (let dir of components.keys()) {
+	for (let dir in components) {
 		const segments = dir.split(path.sep);
 		const target = segments[segments.length - 2];
 		const name = segments[segments.length - 1];
