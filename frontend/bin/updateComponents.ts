@@ -1,4 +1,4 @@
-#!yarn ts-node
+#!/usr/bin/env yarn ts-node
 
 import { updateComponent } from './updateComponent';
 import path from 'path';

@@ -1,4 +1,4 @@
-#!yarn ts-node
+#!/usr/bin/env yarn ts-node
 
 const fs = require('fs');
 const { execSync } = require('child_process');
