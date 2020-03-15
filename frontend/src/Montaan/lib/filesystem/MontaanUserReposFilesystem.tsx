@@ -1,4 +1,5 @@
 import { Filesystem, FSEntry, createFSTree, mount, NotImplementedError } from '.';
+// import React from 'react';
 
 import QFrameAPI from '../../../lib/api';
 
@@ -23,8 +24,8 @@ export class RepoInfo {
 export default class MontaanUserReposFilesystem extends Filesystem {
 	name: string;
 
-	constructor(url: string, api: QFrameAPI) {
-		super(url, api);
+	constructor(url: string, api: QFrameAPI, mountPoint: FSEntry) {
+		super(url, api, mountPoint);
 		this.name = this.url.pathname.replace(/^\/+/, '');
 	}
 

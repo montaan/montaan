@@ -1,4 +1,5 @@
 import { Filesystem, FSEntry, getPathEntry, NotImplementedError } from '.';
+import React from 'react';
 
 import QFrameAPI from '../../../lib/api';
 
@@ -6,6 +7,11 @@ import utils from '../utils';
 import { RawCommitData, parseCommits, CommitData } from '../parse_commits';
 import { TreeLink, TreeLinkKey } from '../../MainApp';
 import * as THREE from 'three';
+import TourSelector from '../../TourSelector';
+import Player from '../../Player';
+import CommitControls from '../../CommitControls';
+import CommitInfo from '../../CommitInfo';
+import { getFullPath } from './filesystem';
 
 export default class MontaanGitFilesystem extends Filesystem {
 	repo: string;
@@ -15,11 +21,63 @@ export default class MontaanGitFilesystem extends Filesystem {
 	dependencySrcIndex?: Map<TreeLinkKey, TreeLink[]>;
 	dependencyDstIndex?: Map<TreeLinkKey, TreeLink[]>;
 
-	constructor(url: string, api: QFrameAPI) {
-		super(url, api);
+	constructor(url: string, api: QFrameAPI, mountPoint: FSEntry) {
+		super(url, api, mountPoint);
 		const urlSegments = this.url.pathname.replace(/^\/+/, '').split('/');
 		this.repo = urlSegments.slice(0, -1).join('/');
 		this.ref = urlSegments[urlSegments.length - 1];
+	}
+
+	getUIComponents(state: any): React.ReactElement {
+		const path = getFullPath(this.mountPoint);
+		const repoPrefix = this.repo;
+		return (
+			<>
+				<TourSelector
+					path={path}
+					repoPrefix={repoPrefix}
+					fileTree={this.mountPoint}
+					api={this.api}
+				/>
+				<Player
+					repoPrefix={repoPrefix}
+					fileTree={state.fileTree}
+					navigationTarget={state.navigationTarget}
+					api={this.api}
+				/>
+				<CommitControls
+					activeCommitData={state.activeCommitData}
+					commitData={state.commitData}
+					navigationTarget={state.navigationTarget}
+					searchQuery={state.searchQuery}
+					diffsLoaded={state.diffsLoaded}
+					commitFilter={state.commitFilter}
+					setCommitFilter={state.setCommitFilter}
+					addLinks={state.addLinks}
+					setLinks={state.setLinks}
+					links={state.links}
+				/>
+				<CommitInfo
+					activeCommitData={state.activeCommitData}
+					commitData={state.commitData}
+					navigationTarget={state.navigationTarget}
+					showFileCommitsClick={state.showFileCommitsClick}
+					searchQuery={state.searchQuery}
+					repoPrefix={state.repoPrefix}
+					diffsLoaded={state.diffsLoaded}
+					commitFilter={state.commitFilter}
+					setCommitFilter={state.setCommitFilter}
+					fileContents={state.fileContents}
+					loadFile={state.loadFile}
+					loadFileDiff={state.loadFileDiff}
+					closeFile={state.closeFile}
+					loadDiff={state.loadDiff}
+					addLinks={state.addLinks}
+					setLinks={state.setLinks}
+					links={state.links}
+				/>
+			</>
+		);
 	}
 
 	async readData() {
@@ -79,7 +137,7 @@ export default class MontaanGitFilesystem extends Filesystem {
 	async readFile(path: string) {
 		return this.api.postType(
 			'/repo/checkout',
-			{ repo: this.repo, path: path, head: this.ref },
+			{ repo: this.repo, path: path.replace(/^\//, ''), hash: this.ref },
 			{},
 			'arrayBuffer'
 		);

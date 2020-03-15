@@ -6,7 +6,7 @@ module.exports = async function(req, res) {
 		await bodyAsJson(req)
 	);
 	if (error) return error;
-	if (!/^[a-f0-9]+$/.test(hash)) return '400: Malformed hash';
+	if (!/^[a-f0-9A-Z]+$/.test(hash)) return '400: Malformed hash';
 	var [error, { filePath }] = assertRepoDir(Path.join(repo, 'repo'));
 	if (error) return error;
 	await new Promise((resolve, reject) => {

@@ -26,14 +26,11 @@ function parseMarkdown(tourMarkdown: string, repoPrefix: string) {
 	}
 	return sections.map((d, i) => {
 		const links = d.querySelectorAll('a');
-		const baseHref =
-			links.length > 0 ? '/' + repoPrefix + links[0].getAttribute('href') : undefined;
+		const baseHref = links.length > 0 ? repoPrefix + links[0].getAttribute('href') : undefined;
 		for (let i = 0; i < links.length; i++) {
 			const href = links[i].getAttribute('href');
 			if (!href || /^[a-z0-9]+:/i.test(href)) continue;
-			const absoluteHref = href.startsWith('/')
-				? '/' + repoPrefix + href
-				: baseHref + '/' + href;
+			const absoluteHref = href.startsWith('/') ? repoPrefix + href : baseHref + '/' + href;
 			links[i].setAttribute('href', absoluteHref.replace(/\/\/+/g, '/'));
 		}
 		const options: HTMLReactParserOptions = {
@@ -83,7 +80,6 @@ const Tour = ({ tourMarkdown, history, repoPrefix, name }: TourProps) => {
 
 	useEffect(() => {
 		if (tourSections[position]?.href) {
-			console.log(tourSections[position]?.href);
 			history.push(tourSections[position]?.href);
 		}
 	}, [history, position, tourSections]);

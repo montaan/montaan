@@ -1,6 +1,10 @@
 import QFrameAPI from '../../../lib/api';
+import React from 'react';
 
 export interface FSEntry {
+	mode: any;
+	type: any;
+	hash: any;
 	name: string;
 	title: string;
 	entries: null | { [filename: string]: FSEntry };
@@ -40,11 +44,13 @@ export interface FSEntry {
 export class NotImplementedError extends Error {}
 
 export interface IFilesystem {
+	mountPoint: FSEntry;
 	readDir(path: string): Promise<FSEntry | null>;
 	readFile(path: string): Promise<ArrayBuffer>;
 	writeFile(path: string, contents: ArrayBuffer): Promise<boolean>;
 	rm(path: string): Promise<boolean>;
 	rmdir(path: string): Promise<boolean>;
+	getUIComponents(state: any): React.ReactElement;
 }
 
 type Constructor<T> = {
@@ -52,16 +58,20 @@ type Constructor<T> = {
 };
 
 export class Namespace implements IFilesystem {
-	root: FSEntry;
-	constructor(rootFS: FSEntry) {
-		this.root = rootFS;
+	mountPoint: FSEntry;
+	constructor(mountPoint: FSEntry) {
+		this.mountPoint = mountPoint;
 	}
 
 	findFilesystemForPath(path: string) {
-		const fs = getFilesystemForPath(this.root, path);
+		const fs = getFilesystemForPath(this.mountPoint, path);
 		if (!fs || !fs.filesystem || !fs.filesystem.filesystem)
 			throw new Error('Filesystem not found for path ' + path);
 		return { relativePath: fs.relativePath, filesystem: fs.filesystem.filesystem };
+	}
+
+	getUIComponents(state: any): React.ReactElement {
+		return <></>;
 	}
 
 	async readDir(path: string) {
@@ -91,10 +101,16 @@ export class Namespace implements IFilesystem {
 export class Filesystem implements IFilesystem {
 	url: URL;
 	api: QFrameAPI;
+	mountPoint: FSEntry;
 
-	constructor(url: string, api: QFrameAPI) {
+	constructor(url: string, api: QFrameAPI, fsEntry: FSEntry) {
 		this.url = new URL(url);
 		this.api = api;
+		this.mountPoint = fsEntry;
+	}
+
+	getUIComponents(state: any): React.ReactElement {
+		return <></>;
 	}
 
 	async readDir(path: string): Promise<FSEntry | null> {
@@ -130,14 +146,17 @@ export function getFSType(url: string) {
 
 export function createFSTree(name: string, url: string, fsType?: string, api?: QFrameAPI): FSEntry {
 	const fs = fsType && RegisteredFileSystems.get(fsType);
-	return {
+	const fsEntry: FSEntry = {
 		name,
 		title: name,
 		entries: {},
 		fetched: false,
-		filesystem: fs ? new fs(url, api) : undefined,
+		filesystem: undefined,
 		size: 0,
 		scale: 0,
+		mode: '',
+		type: '',
+		hash: '',
 
 		x: 0,
 		y: 0,
@@ -155,6 +174,8 @@ export function createFSTree(name: string, url: string, fsType?: string, api?: Q
 
 		data: undefined,
 	};
+	if (fs) fsEntry.filesystem = new fs(url, api, fsEntry);
+	return fsEntry;
 }
 
 export function mount(fileTree: FSEntry, url: string, mountPoint: string, api: QFrameAPI) {
@@ -211,6 +232,19 @@ export function getFilesystemForPath(namespace: FSEntry, path: string): FSPath |
 		fsEntry = fsEntry.parent;
 	}
 	return { relativePath, filesystem: fsEntry };
+}
+
+export function getAllFilesystemsForPath(namespace: FSEntry, path: string): FSEntry[] {
+	const segments = path.split('/');
+	const list: FSEntry[] = [];
+	if (namespace.filesystem) list.push(namespace);
+	for (let i = 1; i < segments.length; i++) {
+		const segment = segments[i];
+		if (!namespace.entries || !namespace.entries[segment]) break;
+		namespace = namespace.entries[segment];
+		if (namespace.filesystem) list.push(namespace);
+	}
+	return list;
 }
 
 type ExtendedFSEntry = { fsEntry: FSEntry; point?: number[]; search?: string };

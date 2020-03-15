@@ -4,7 +4,6 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { withRouter, RouteComponentProps } from 'react-router-dom';
 
 import styles from './TourSelector.module.scss';
-import { FileTree } from '../MainApp';
 import Dropdown from 'react-bootstrap/Dropdown';
 import QFrameAPI from '../../lib/api';
 import DropdownButton from 'react-bootstrap/DropdownButton';
@@ -17,10 +16,10 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { FSEntry } from '../lib/filesystem';
 
 export interface TourSelectorProps extends RouteComponentProps {
-	fileTree: FileTree;
-	navigationTarget: string;
+	fileTree: FSEntry;
 	api: QFrameAPI;
 	repoPrefix: string;
+	path: string;
 }
 
 type TourRef = { name: string; path: string };
@@ -28,20 +27,24 @@ const EMPTY_TOUR: TourRef = { name: '', path: '' };
 type TourContent = { name: string; markdown: string };
 const EMPTY_TOUR_CONTENT: TourContent = { name: '', markdown: '' };
 
-const TourSelector = ({ fileTree, navigationTarget, api, repoPrefix }: TourSelectorProps) => {
+const TourSelector = ({ path, fileTree, api, repoPrefix }: TourSelectorProps) => {
 	const [currentTour, setCurrentTour] = useState(EMPTY_TOUR);
 	const [search, setSearch] = useState('');
 	const [tourContent, setTourContent] = useState(EMPTY_TOUR_CONTENT);
 
 	const toursInTree: TourRef[] = useMemo(() => {
 		const foundTours = [] as string[];
-		utils.traverseTree(fileTree, (fsEntry: FSEntry, path: string) => {
-			if (fsEntry.entries === null && fsEntry.title === '.tour.md') foundTours.push(path);
-		});
+		utils.traverseFSEntry(
+			fileTree,
+			(fsEntry: FSEntry, path: string) => {
+				if (fsEntry.entries === null && fsEntry.title === '.tour.md') foundTours.push(path);
+			},
+			''
+		);
 		return foundTours.sort().map((path) => {
 			const rawName = path
 				.split('/')
-				.slice(3, -1)
+				.slice(1, -1)
 				.join('/');
 			const name = (rawName ? rawName[0].toUpperCase() + rawName.slice(1) : 'Main') + ' tour';
 			return { path, name };
@@ -55,10 +58,11 @@ const TourSelector = ({ fileTree, navigationTarget, api, repoPrefix }: TourSelec
 	useEffect(() => {
 		if (!currentTour.path) setTourContent(EMPTY_TOUR_CONTENT);
 		else
-			api.getType('/repo/file' + currentTour.path, {}, 'text').then((markdown) =>
-				setTourContent({ name: currentTour.name, markdown })
-			);
-	}, [currentTour, api, setTourContent]);
+			fileTree.filesystem!.readFile(currentTour.path).then((ab) => {
+				const markdown = new TextDecoder().decode(ab);
+				setTourContent({ name: currentTour.name, markdown });
+			});
+	}, [currentTour, api, setTourContent, fileTree]);
 
 	const onTourSelect = useCallback(
 		(eventKey: string, event: any) =>
@@ -69,7 +73,10 @@ const TourSelector = ({ fileTree, navigationTarget, api, repoPrefix }: TourSelec
 	const endTour = useCallback(() => setCurrentTour(EMPTY_TOUR), [setCurrentTour]);
 
 	return (
-		<div className={styles.TourSelector} data-filename={'frontend/' + __filename.replace(/\\/g, '/')} >
+		<div
+			className={styles.TourSelector}
+			data-filename={'frontend/' + __filename.replace(/\\/g, '/')}
+		>
 			{toursInTree.length > 0 && (
 				<DropdownButton id="tourDropdown" alignRight title="Tours" onSelect={onTourSelect}>
 					{toursInTree.length > 8 && (
@@ -100,7 +107,7 @@ const TourSelector = ({ fileTree, navigationTarget, api, repoPrefix }: TourSelec
 					<Tour
 						name={tourContent.name}
 						tourMarkdown={tourContent.markdown}
-						repoPrefix={repoPrefix}
+						repoPrefix={path}
 					/>
 					<Button
 						type="button"

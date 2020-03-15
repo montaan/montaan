@@ -5,22 +5,26 @@ import { withRouter, RouteComponentProps } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
 
 import MainView from '../MainView';
-import CommitControls from '../CommitControls';
-import CommitInfo from '../CommitInfo';
+
 import Search from '../Search';
-import TourSelector from '../TourSelector';
 import Breadcrumb from '../Breadcrumb';
 import RepoSelector from '../RepoSelector';
 
 import utils from '../lib/utils';
 import { CommitData } from '../lib/parse_commits';
 import { authorCmp, Commit, CommitFile } from '../lib/parse-diff';
-import { getPathEntry, getFullPath, mount, readDir, registerFileSystem } from '../lib/filesystem';
+import {
+	getPathEntry,
+	getFullPath,
+	mount,
+	readDir,
+	registerFileSystem,
+	getAllFilesystemsForPath,
+} from '../lib/filesystem';
 
 import styles from './MainApp.module.scss';
 import TreeView from '../TreeView';
 import { QFrameAPI } from '../../lib/api';
-import Player from '../Player';
 import { FSEntry, createFSTree } from '../lib/filesystem';
 import Introduction from '../Introduction';
 import WorkQueue from '../lib/WorkQueue';
@@ -124,8 +128,6 @@ interface MainAppState {
 	dependencyDstIndex: TreeLinkIndex;
 	repos: RepoInfo[];
 	repoError: any;
-	processing: boolean;
-	processingCommits: boolean;
 	commitData: null | CommitData;
 	navUrl: string;
 	ref: string;
@@ -180,8 +182,6 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		dependencies: [],
 		dependencySrcIndex: new Map<TreeLinkKey, TreeLink[]>(),
 		dependencyDstIndex: new Map<TreeLinkKey, TreeLink[]>(),
-		processingCommits: false,
-		processing: false,
 		repoError: '',
 		treeLoaded: false,
 		fileTreeUpdated: 0,
@@ -247,7 +247,6 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 				this.props.location.search +
 				this.props.location.hash,
 			repos,
-			processing: false,
 			fileTreeUpdated: this.state.fileTreeUpdated + 1,
 		});
 	}
@@ -320,31 +319,6 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		}
 	};
 
-	parseFiles(text: string, repoPrefix: string, changedFiles: CommitFile[] = []) {
-		const fileTree = utils.parseFileList(text, {}, true, repoPrefix + '/');
-		if (this.state.repos) {
-			const reposEntry = fileTree.tree.entries[this.props.userInfo.name];
-			this.state.repos.forEach((repo: any) => {
-				if (!reposEntry.entries[repo.name]) {
-					reposEntry.entries[repo.name] = {
-						entries: {},
-						size: 0,
-						title: repo.name,
-						name: repo.name,
-						parent: reposEntry,
-						index: undefined,
-					};
-				}
-			});
-		}
-		for (var i = 0; i < changedFiles.length; i++) {
-			const { path, renamed, action } = changedFiles[i];
-			const fsEntry = getPathEntry(fileTree.tree, repoPrefix + '/' + (renamed || path));
-			if (fsEntry) fsEntry.action = action;
-		}
-		return fileTree;
-	}
-
 	showAllDependencies = () => {
 		this.setLinks(this.state.dependencies);
 	};
@@ -360,34 +334,6 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 	showFileDependencyGraph = (path: string) => {
 		// Traverse graph from path and set connected part as links
 	};
-
-	async animateFileTreeHistory(commits: Commit[], repoPrefix: string) {
-		window.clearInterval(this.animatedFiles);
-		const fileTrees = await Promise.all(
-			commits.map(async (commit) => {
-				console.log(commit.sha);
-				const files = await this.props.api.postType(
-					'/repo/tree',
-					{
-						repo: repoPrefix,
-						hash: commit.sha,
-						paths: [''],
-						recursive: true,
-					},
-					{},
-					'arrayBuffer'
-				);
-				return this.parseFiles(files, repoPrefix, commit.files);
-			})
-		);
-		this.animatedFiles = window.setInterval(() => {
-			if (this.state.treeLoaded) {
-				const idx = commits.length - 1 - this.commitIndex;
-				this.commitIndex = (this.commitIndex + 1) % commits.length;
-				this.setState({ fileTree: fileTrees[idx], treeLoaded: false });
-			}
-		}, 16);
-	}
 
 	setCommitFilter = (commitFilter: any) => {
 		this.setState({ commitFilter });
@@ -603,18 +549,6 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		}
 		searchResults.sort(this.searchSort);
 		this.setState({ searchResults });
-		// if (this.state.searchIndex) {
-		// 	console.time('token search');
-		// 	lunrResults = this.state.searchIndex.search(rawQuery);
-		// 	lunrResults = lunrResults.map(function(r) {
-		// 		const lineNumberMatch = r.ref.match(/:(\d+)\/(\d+)$/);
-		// 		const [_, lineStr, lineCountStr] = (lineNumberMatch || ['0','0','0']);
-		// 		const line = parseInt(lineStr);
-		// 		const lineCount = parseInt(lineCountStr);
-		// 		return {fsEntry: getPathEntry(this.state.fileTree.tree, r.ref.replace(/^\./, this.state.repoPrefix).replace(/:\d+\/\d+$/, '')), line, lineCount};
-		// 	});
-		// 	console.timeEnd('token search');
-		// }
 	}
 
 	searchString(searchQuery: string) {
@@ -703,15 +637,6 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		}
 	};
 
-	dots() {
-		var s = '';
-		var count = (Date.now() / 1000) % 3;
-		for (var i = 0; i < count; i++) {
-			s += '.';
-		}
-		return s;
-	}
-
 	setSearchHover = (el: HTMLElement, url: string) => {
 		if (this.state.links.find((v) => v.src === el)) return;
 		const links = this.state.links.slice();
@@ -750,11 +675,20 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		}
 	};
 
+	getPathFilesystems() {
+		return getAllFilesystemsForPath(this.state.fileTree.tree, this.state.navigationTarget);
+	}
+
 	render() {
 		const titlePrefix = /Chrome/.test(navigator.userAgent) ? '' : '🏔 ';
 		const title = this.state.navigationTarget
 			? titlePrefix + this.state.navigationTarget + ' - Montaan'
 			: 'Montaan 🏔';
+		const fsComponents: React.ReactElement[] = [];
+		this.getPathFilesystems().forEach((fsEntry) => {
+			fsComponents.push(fsEntry.filesystem!.getUIComponents(this.state));
+		});
+		console.log(this.state.navigationTarget, fsComponents);
 		return (
 			<div
 				id="mainApp"
@@ -771,12 +705,6 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 				<div id="debug" />
 				{fullscreenSupported && <div id="fullscreen" onClick={this.fullscreenOnClick} />}
 
-				{this.state.processing && (
-					<div id="processing">
-						<div>{this.state.repoPrefix}</div>
-						<div>Processing{this.dots()}</div>
-					</div>
-				)}
 				{this.state.repoError && <div id="repoError">{this.state.repoError}</div>}
 
 				{this.state.repoPrefix === '' && this.state.repos.length === 0 && (
@@ -807,49 +735,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 					navigationTarget={this.state.navigationTarget}
 					fileTree={this.state.fileTree}
 				/>
-				<TourSelector
-					repoPrefix={this.state.repoPrefix}
-					fileTree={this.state.fileTree}
-					navigationTarget={this.state.navigationTarget}
-					api={this.props.api}
-				/>
-				<Player
-					repoPrefix={this.state.repoPrefix}
-					fileTree={this.state.fileTree}
-					navigationTarget={this.state.navigationTarget}
-					api={this.props.api}
-				/>
-				<CommitControls
-					activeCommitData={this.state.activeCommitData}
-					commitData={this.state.commitData}
-					navigationTarget={this.state.navigationTarget}
-					searchQuery={this.state.searchQuery}
-					diffsLoaded={this.state.diffsLoaded}
-					commitFilter={this.state.commitFilter}
-					setCommitFilter={this.setCommitFilter}
-					addLinks={this.addLinks}
-					setLinks={this.setLinks}
-					links={this.state.links}
-				/>
-				<CommitInfo
-					activeCommitData={this.state.activeCommitData}
-					commitData={this.state.commitData}
-					navigationTarget={this.state.navigationTarget}
-					showFileCommitsClick={this.showFileCommitsClick}
-					searchQuery={this.state.searchQuery}
-					repoPrefix={this.state.repoPrefix}
-					diffsLoaded={this.state.diffsLoaded}
-					commitFilter={this.state.commitFilter}
-					setCommitFilter={this.setCommitFilter}
-					fileContents={this.state.fileContents}
-					loadFile={this.loadFile}
-					loadFileDiff={this.loadFileDiff}
-					closeFile={this.closeFile}
-					loadDiff={this.loadDiff}
-					addLinks={this.addLinks}
-					setLinks={this.setLinks}
-					links={this.state.links}
-				/>
+				{fsComponents}
 				{this.props.location.search === '?beta' ? (
 					<TreeView
 						navUrl={this.state.navUrl}

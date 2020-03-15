@@ -136,6 +136,7 @@ class Tabletree {
 	frameRequested: boolean | undefined;
 	_changed: any;
 	searchHighlightsIndex: number = 1;
+	started: boolean = false;
 
 	constructor() {
 		this.treeUpdateQueue = new WorkQueue();
@@ -177,6 +178,8 @@ class Tabletree {
 		Layout.font = font;
 		Layout.fontTexture = fontTexture;
 		Layout.textMaterial = Layout.makeTextMaterial();
+
+		this.started = true;
 
 		if (this._fileTree) await this.setFileTree(this._fileTree); // Show possibly pre-loaded file tree.
 
@@ -548,12 +551,12 @@ class Tabletree {
 	};
 
 	async setFileTree(fileTree: FileTree) {
-		if (this.renderer) {
+		if (this.started) {
 			this.treeUpdateQueue.pushMergeEnd(this.treeUpdater, fileTree);
 		} else {
 			return new Promise((resolve, reject) => {
 				const tick = () => {
-					if (this.renderer) this.setFileTree(fileTree).then(resolve);
+					if (this.started) this.setFileTree(fileTree).then(resolve);
 					else setTimeout(tick, 10);
 				};
 				tick();
@@ -565,7 +568,7 @@ class Tabletree {
 		if (this.treeBuildInProgress) return;
 		this.treeBuildInProgress = true;
 		const builder = new ModelBuilder();
-		utils.traverseFSEntry(tree.tree, (e: { building: boolean }) => (e.building = false), '');
+		utils.traverseFSEntry(tree.tree, (e: FSEntry) => (e.building = false), '');
 		const model = await builder.buildModel(
 			tree,
 			this.viewRoot,
