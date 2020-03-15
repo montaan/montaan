@@ -63,6 +63,7 @@
 		"imagemin": "gulp imagemin",
 		"test": "react-app-rewired test --env=jsdom",
 		"eject": "react-scripts eject",
+		"ts-node": "node_modules/.bin/ts-node -O '{\"module\": \"commonjs\"}'",
 		"makeComponent": "yarn ts-node bin/makeComponent.ts",
 		"makeFilesystem": "yarn makeComponent -t filesystem",
 		"updateComponent": "yarn ts-node bin/updateComponent.ts",
