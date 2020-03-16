@@ -1,4 +1,4 @@
-// src/components/RepoSelector/index.js
+// src/components/RepoSelector/index.tsx
 
 import React, { Component } from 'react';
 
@@ -9,8 +9,6 @@ import DropdownButton from 'react-bootstrap/DropdownButton';
 import Form from 'react-bootstrap/Form';
 import { Formik } from 'formik';
 import * as yup from 'yup';
-// import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-// import { faArrowLeft, faKey } from '@fortawesome/free-solid-svg-icons'
 
 import FormGroupTextInput from '../../lib/FormGroupTextInput';
 

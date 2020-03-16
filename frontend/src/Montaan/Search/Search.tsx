@@ -2,14 +2,55 @@ import React from 'react';
 import Button from 'react-bootstrap/Button';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes } from '@fortawesome/free-solid-svg-icons';
-import { withRouter } from 'react-router-dom';
+import { withRouter, RouteComponentProps } from 'react-router-dom';
 
-import strict from '../../lib/strictProxy.js';
-import styles_ from './css/style.module.scss';
-const styles = strict(styles_, 'components/Search/css/style.module.scss');
+import styles from './Search.module.scss';
+import { FSEntry } from '../lib/filesystem';
+import { SearchResult } from '../MainApp';
 
-class Search extends React.Component {
-	constructor(props) {
+export interface SearchProps extends RouteComponentProps {
+	setSearchQuery: (query: string) => void;
+	setSearchHover: (li: any, url: string) => void;
+	clearSearchHover: (li: any) => void;
+	navigationTarget: string;
+	searchQuery: string;
+	searchResults: SearchResult[];
+	updateSearchLines: () => void;
+}
+
+type HitTypes = { [index: number]: boolean };
+
+interface SearchState {
+	visibleCount: number;
+	resultCount: number;
+	allVisible: boolean;
+	visible: boolean;
+	hitTypes: HitTypes;
+}
+
+function onCollapseResult(
+	this: any,
+	ev: {
+		preventDefault: () => void;
+		stopPropagation: () => void;
+		shiftKey: any;
+	}
+) {
+	ev.preventDefault();
+	ev.stopPropagation();
+	this.parentNode.classList.toggle(styles.collapsed);
+	if (ev.shiftKey) {
+		const collapsed = this.parentNode.classList.contains(styles.collapsed);
+		const lis = this.parentNode.parentNode.childNodes;
+		for (var i = 0; i < lis.length; i++) {
+			if (lis[i].isTypeControl) continue;
+			lis[i].classList.toggle(styles.collapsed, collapsed);
+		}
+	}
+}
+
+class Search extends React.Component<SearchProps, SearchState> {
+	constructor(props: SearchProps) {
 		super(props);
 		this.state = {
 			visibleCount: 0,
@@ -20,12 +61,18 @@ class Search extends React.Component {
 		};
 	}
 
-	searchOnInput = (ev) => this.props.setSearchQuery(ev.target.value);
+	searchOnInput = (ev: { target: { value: any } }) => this.props.setSearchQuery(ev.target.value);
 
-	createResultLink(result) {
+	createResultLink(result: {
+		fsEntry: FSEntry;
+		line: number;
+		filename: string;
+		hitType: number;
+		snippet?: string;
+	}) {
 		const self = this;
 		const { fsEntry, line } = result;
-		const li = document.createElement('li');
+		const li = document.createElement('li') as any;
 		li.filename = result.filename;
 		li.hitType = result.hitType;
 		li.resultURL = result.filename + (line > 0 ? `#${line}` : '');
@@ -40,21 +87,13 @@ class Search extends React.Component {
 		fullPath.className = styles.searchFullPath;
 		fullPath.textContent = li.filename.replace(/^\/[^/]*\/[^/]*\//, '/');
 		li.result = result;
-		li.addEventListener(
-			'mouseover',
-			function (ev) {
-				if (ev.target.parentNode === this) self.props.setSearchHover(this, this.resultURL);
-			},
-			false
-		);
-		li.addEventListener(
-			'mouseout',
-			function (ev) {
-				if (ev.target === this) self.props.clearSearchHover(this);
-			},
-			false
-		);
-		li.onclick = function (ev) {
+		li.onmouseover = function(ev: any) {
+			if (ev.target.parentNode === this) self.props.setSearchHover(this, this.resultURL);
+		};
+		li.onmouseout = function(ev: any) {
+			if (ev.target === this) self.props.clearSearchHover(this);
+		};
+		li.onclick = function(ev: any) {
 			if (ev.target.className === styles.collapseToggle) return;
 			ev.preventDefault();
 			ev.stopPropagation();
@@ -71,7 +110,7 @@ class Search extends React.Component {
 		return li;
 	}
 
-	getHitTypeName(hitType) {
+	getHitTypeName(hitType: number) {
 		switch (hitType) {
 			case 0:
 				return 'Documentation';
@@ -86,37 +125,30 @@ class Search extends React.Component {
 		}
 	}
 
-	onToggleHitType = (ev) => {
+	onToggleHitType = (ev: { preventDefault: () => void; target: { hitType: any } }) => {
 		ev.preventDefault();
 		const hitType = ev.target.hitType;
 		this.toggleHitType(hitType);
 	};
 
-	setHitType = (hitType, value) => {
+	setHitType = (hitType: number, value: boolean) => {
 		var hitTypes = { ...this.state.hitTypes };
 		hitTypes[hitType] = value;
 		this.setState({ hitTypes });
 	};
-	toggleHitType = (hitType) => this.setHitType(hitType, !this.state.hitTypes[hitType]);
+	toggleHitType = (hitType: number) => this.setHitType(hitType, !this.state.hitTypes[hitType]);
 
-	onCollapseResult(ev) {
-		ev.preventDefault();
-		ev.stopPropagation();
-		this.parentNode.classList.toggle(styles.collapsed);
-		if (ev.shiftKey) {
-			const collapsed = this.parentNode.classList.contains(styles.collapsed);
-			const lis = this.parentNode.parentNode.childNodes;
-			for (var i = 0; i < lis.length; i++) {
-				if (lis[i].isTypeControl) continue;
-				lis[i].classList.toggle(styles.collapsed, collapsed);
-			}
-		}
-	}
-
-	populateSearchResults(searchResults, allVisible, hitTypes) {
-		window.searchResults.innerHTML = '';
+	populateSearchResults(searchResults: string | any[], allVisible: any, hitTypes: HitTypes) {
+		const searchResultsEl = document.getElementById('searchResults');
+		if (!searchResultsEl) return;
+		searchResultsEl.innerHTML = '';
 		const results = [];
-		const resIndex = { 0: {}, 1: {}, 2: {}, 3: {} };
+		const resIndex: { [hitType: number]: { [filename: string]: any } } = {
+			0: {},
+			1: {},
+			2: {},
+			3: {},
+		};
 		for (let i = 0; i < searchResults.length; i++) {
 			const r = searchResults[i];
 			if (!resIndex[r.hitType][r.filename]) {
@@ -125,7 +157,7 @@ class Search extends React.Component {
 					hitType: r.hitType,
 					line: 0,
 					filename: r.filename,
-					lineResults: [],
+					lineResults: [] as any[],
 				};
 				resIndex[r.hitType][r.filename] = result;
 				results.push(result);
@@ -137,19 +169,19 @@ class Search extends React.Component {
 			const result = results[i];
 			if (result.hitType !== hitType) {
 				hitType = result.hitType;
-				var div = document.createElement('div');
+				var div = document.createElement('div') as any;
 				div.className = styles.resultType + (hitTypes[hitType] ? '' : styles.collapsed);
 				div.textContent = this.getHitTypeName(hitType);
 				div.hitType = hitType;
 				div.isTypeControl = true;
 				div.onmousedown = this.onToggleHitType;
-				window.searchResults.appendChild(div);
+				searchResultsEl.appendChild(div);
 			}
 			const li = this.createResultLink(result);
 			li.fileHit = true;
 			const collapseDiv = document.createElement('div');
 			collapseDiv.className = styles.collapseToggle;
-			collapseDiv.onmousedown = this.onCollapseResult;
+			collapseDiv.onmousedown = onCollapseResult;
 			li.appendChild(collapseDiv);
 			if (result.lineResults) {
 				const ul = document.createElement('ul');
@@ -159,16 +191,18 @@ class Search extends React.Component {
 				});
 				li.appendChild(ul);
 			}
-			window.searchResults.appendChild(li);
+			searchResultsEl.appendChild(li);
 		}
 		this.updateSearchResults(this.props.navigationTarget, allVisible, hitTypes);
 	}
 
-	updateSearchResults(navigationPath, allVisible, hitTypes) {
-		const lis = [].slice.call(window.searchResults.childNodes);
+	updateSearchResults(navigationPath: string, allVisible: any, hitTypes: HitTypes) {
+		const searchResultsEl = document.getElementById('searchResults');
+		if (!searchResultsEl) return;
+		const lis = [].slice.call(searchResultsEl.childNodes);
 		var visibleCount = 0;
 		for (var i = 0; i < lis.length; i++) {
-			const li = lis[i];
+			const li = lis[i] as any;
 			if (li.isTypeControl) {
 				li.classList.toggle(styles.collapsed, !hitTypes[li.hitType]);
 				continue;
@@ -187,7 +221,7 @@ class Search extends React.Component {
 		this.setState({ resultCount: lis.length, visibleCount });
 	}
 
-	shouldComponentUpdate(nextProps, nextState) {
+	shouldComponentUpdate(nextProps: SearchProps, nextState: SearchState) {
 		if (this.props.searchResults !== nextProps.searchResults) {
 			this.populateSearchResults(
 				nextProps.searchResults,

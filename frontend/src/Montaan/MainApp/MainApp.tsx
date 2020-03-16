@@ -719,15 +719,10 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 
 				<Search
 					navigationTarget={this.state.navigationTarget}
-					requestFrame={this.requestFrame}
 					searchResults={this.state.searchResults}
 					setSearchQuery={this.setSearchQuery}
 					searchQuery={this.state.searchQuery}
-					commitFilter={this.state.commitFilter}
-					setCommitFilter={this.setCommitFilter}
-					activeCommitData={this.state.activeCommitData}
 					updateSearchLines={this.updateSearchLines}
-					commitData={this.state.commitData}
 					setSearchHover={this.setSearchHover}
 					clearSearchHover={this.clearSearchHover}
 				/>
