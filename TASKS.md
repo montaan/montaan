@@ -31,19 +31,27 @@
     - Looking Glass type 3D TVs mainstream
     - XR landed as consumer tech
 
+# Future alignment
+
+    [] GLSL Compute as the main language
+        [] Run everything as WebAssembly workers
+    []
+
 # FIX
 
-    [] Navigate to line in text view
+    [z] Loading trees takes forever and too many requests
+        [x] Each request returns >1 deep hierarchy (limit by count of files)
+    [x] Navigate to line in text view
     [] main.js is too large
-        [] Convert to TS
+        [x] Convert to TS
         [x] Move tree build to lib
         [] Move tree rendering to lib
         [] Move links rendering to lib
         [] Move highlight rendering to lib
-    [] MainApp is too large
-        [] Move commits to MontaanGit
+    [x] MainApp is too large
+        [x] Move commits to MontaanGit
         [] Move repo management to MontaanUserRepos
-        [] Move widget loading to FSOverlays
+        [x] Move widget loading to FSOverlays
     [] Move tree rebuild into a worker
 
 # KEY FEATURES
