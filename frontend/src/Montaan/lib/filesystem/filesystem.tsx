@@ -71,7 +71,7 @@ export class Namespace implements IFilesystem {
 	}
 
 	getUIComponents(state: any): React.ReactElement {
-		return <></>;
+		return <div key={'/'}></div>;
 	}
 
 	async readDir(path: string) {
@@ -110,7 +110,8 @@ export class Filesystem implements IFilesystem {
 	}
 
 	getUIComponents(state: any): React.ReactElement {
-		return <></>;
+		const path = getFullPath(this.mountPoint);
+		return <div key={path}></div>;
 	}
 
 	async readDir(path: string): Promise<FSEntry | null> {

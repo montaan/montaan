@@ -25,7 +25,7 @@
         Current: max/JS = 360x ST, 60x MT.
         Future: max/JS = 4000x ST, 130x MT.
         With WASM: 2-10x MT
-    - Stable WebGPU
+    - Stable WebGPU: another 10x perf
     - Compile to SPIR-V to WebGPU & Wasm+SIMD+MT
     - Foldable tablet phones mainstream
     - Looking Glass type 3D TVs mainstream
@@ -35,7 +35,8 @@
 
     [] GLSL Compute as the main language
         [] Run everything as WebAssembly workers
-    []
+        [] WebGPU backend
+    [] VR-AR port
 
 # FIX
 

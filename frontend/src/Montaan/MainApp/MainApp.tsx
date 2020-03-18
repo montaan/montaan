@@ -688,7 +688,6 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		this.getPathFilesystems().forEach((fsEntry) => {
 			fsComponents.push(fsEntry.filesystem!.getUIComponents(this.state));
 		});
-		console.log(this.state.navigationTarget, fsComponents);
 		return (
 			<div
 				id="mainApp"

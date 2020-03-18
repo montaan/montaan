@@ -32,7 +32,7 @@ export default class MontaanGitFilesystem extends Filesystem {
 		const path = getFullPath(this.mountPoint);
 		const repoPrefix = this.repo;
 		return (
-			<>
+			<div key={path}>
 				<TourSelector
 					path={path}
 					repoPrefix={repoPrefix}
@@ -76,7 +76,7 @@ export default class MontaanGitFilesystem extends Filesystem {
 					setLinks={state.setLinks}
 					links={state.links}
 				/>
-			</>
+			</div>
 		);
 	}
 

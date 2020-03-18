@@ -1461,8 +1461,6 @@ class Tabletree {
 		);
 		fsPoint.applyMatrix4(model.matrixWorld);
 		camera.targetPosition.copy(fsPoint);
-		camera.near = fsEntry.scale * 0.2;
-		camera.far = fsEntry.scale * 100;
 		this.changed = true;
 	};
 
@@ -1476,7 +1474,6 @@ class Tabletree {
 			return this.goToFSEntry(fsEntry, model);
 		}
 		const { targetPoint } = res;
-		console.log(camera.targetPosition, targetPoint);
 		camera.targetPosition.copy(targetPoint);
 		this.changed = true;
 	}
@@ -1490,10 +1487,8 @@ class Tabletree {
 			fsEntry.targetLine = { search };
 			return this.goToFSEntry(fsEntry, model);
 		}
-		const { targetPoint, near, far } = res;
+		const { targetPoint } = res;
 		camera.targetPosition.copy(targetPoint);
-		camera.near = near;
-		camera.far = far;
 		this.changed = true;
 	}
 
@@ -2013,38 +2008,43 @@ class Tabletree {
 			dt = 16;
 		}
 
+		const d = this.getCameraDistanceToModel();
+		camera.near = 0.1 * d;
+		camera.far = 100 * d;
+
 		if (
 			camera.targetPosition.x !== camera.position.x ||
 			camera.targetPosition.y !== camera.position.y ||
 			camera.targetPosition.z !== camera.position.z ||
 			camera.fov !== camera.targetFOV
 		) {
+			const pxSize = (0.05 * d) / Math.max(window.innerHeight, window.innerWidth);
 			camera.position.x +=
 				(camera.targetPosition.x - camera.position.x) * (1 - Math.pow(0.85, dt / 16));
 			camera.position.y +=
 				(camera.targetPosition.y - camera.position.y) * (1 - Math.pow(0.85, dt / 16));
 			camera.position.z +=
 				(camera.targetPosition.z - camera.position.z) * (1 - Math.pow(0.85, dt / 16));
-			if (Math.abs(camera.position.x - camera.targetPosition.x) < Number.EPSILON) {
+			if (Math.abs(camera.position.x - camera.targetPosition.x) < pxSize) {
 				camera.position.x = camera.targetPosition.x;
 			}
-			if (Math.abs(camera.position.y - camera.targetPosition.y) < Number.EPSILON) {
+			if (Math.abs(camera.position.y - camera.targetPosition.y) < pxSize) {
 				camera.position.y = camera.targetPosition.y;
 			}
-			if (Math.abs(camera.position.z - camera.targetPosition.z) < Number.EPSILON) {
+			if (Math.abs(camera.position.z - camera.targetPosition.z) < pxSize) {
 				camera.position.z = camera.targetPosition.z;
 			}
 			camera.fov += (camera.targetFOV - camera.fov) * (1 - Math.pow(0.85, dt / 16));
 			if (Math.abs(camera.fov - camera.targetFOV) < camera.targetFOV / 1000) {
 				camera.fov = camera.targetFOV;
 			}
-			camera.updateProjectionMatrix();
 			this.updateLinks();
 			this.changed = true;
 			this.animating = true;
 		} else {
 			this.animating = false;
 		}
+		camera.updateProjectionMatrix();
 		var wasChanged = this.changed || this.frameFibers.length > 0;
 		this.changed = false;
 		if (wasChanged || this.animating) this.render();

@@ -88,9 +88,14 @@ export default class TextFileView extends THREE.Object3D {
 	__goToCoords(coords: number[]) {
 		if (this.textHeight <= 0 || !this.textMesh) return false;
 		const line = coords[0];
-		const textYOff = -(this.lineCount - (line + 0.5)) * 44;
+		let textYOff = -(this.lineCount - (line + 0.5)) * 44;
+		if (line === 0) {
+			const realHeight = window.innerHeight / ((window.pageZoom || 100) / 100);
+			const heightInLines = realHeight / 22;
+			textYOff += 0.5 * heightInLines * 44;
+		}
 		let textX = 18 * 80;
-		const targetPoint = new THREE.Vector3(textX, textYOff, 12000);
+		const targetPoint = new THREE.Vector3(textX, textYOff, 10000);
 		targetPoint.applyMatrix4(this.textMesh.matrixWorld);
 		return { targetPoint };
 	}
