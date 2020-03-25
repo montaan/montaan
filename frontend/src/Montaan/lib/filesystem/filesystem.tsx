@@ -2,6 +2,7 @@ import QFrameAPI from '../../../lib/api';
 import React from 'react';
 
 export interface FSEntry {
+	distanceFromCenter: number;
 	mode: any;
 	type: any;
 	hash: any;
@@ -35,7 +36,7 @@ export interface FSEntry {
 	lastVertexIndex: number;
 	lastTextVertexIndex: number;
 
-	targetLine: any;
+	navigationCoords?: { coords?: number[]; search?: string };
 	lineCount: number;
 
 	action?: string;
@@ -162,8 +163,9 @@ export function createFSTree(name: string, url: string, fsType?: string, api?: Q
 		x: 0,
 		y: 0,
 		z: 0,
+		distanceFromCenter: 1e9,
 
-		targetLine: undefined,
+		navigationCoords: undefined,
 		lineCount: 0,
 
 		filesBox: {},
@@ -248,7 +250,7 @@ export function getAllFilesystemsForPath(namespace: FSEntry, path: string): FSEn
 	return list;
 }
 
-type ExtendedFSEntry = { fsEntry: FSEntry; point?: number[]; search?: string };
+export type ExtendedFSEntry = { fsEntry: FSEntry; point?: number[]; search?: string };
 
 export function getFSEntryForURL(namespace: FSEntry, url: string): ExtendedFSEntry | null {
 	const [treePath, coords] = url.split('#');

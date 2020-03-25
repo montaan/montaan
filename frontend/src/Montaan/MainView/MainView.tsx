@@ -30,8 +30,7 @@ class MainView extends React.Component<MainViewProps, {}> {
 	constructor(props: MainViewProps) {
 		tabletree.requestDirs = props.requestDirs;
 		tabletree.setNavigationTarget = props.setNavigationTarget;
-		tabletree.init(props.api);
-		tabletree.history = props.history;
+		tabletree.init(props.api, props.history);
 		super(props);
 	}
 
@@ -45,9 +44,9 @@ class MainView extends React.Component<MainViewProps, {}> {
 		if (this.props.searchResults !== nextProps.searchResults)
 			tabletree.setSearchResults(nextProps.searchResults);
 		if (this.props.searchLinesRequest !== nextProps.searchLinesRequest)
-			tabletree.updateSearchLines();
-		tabletree.updateLinks();
-		if (this.props.links !== nextProps.links) tabletree.setLinks(nextProps.links);
+			tabletree.searchLandmarks.updateSearchLines();
+		tabletree.linksModel.updateLinks(tabletree.currentFrame);
+		if (this.props.links !== nextProps.links) tabletree.linksModel.setLinks(nextProps.links);
 		if (this.props.navUrl !== nextProps.navUrl) tabletree.goToURL(nextProps.navUrl);
 		if (this.props.frameRequestTime !== nextProps.frameRequestTime) tabletree.changed = true;
 		tabletree.history = nextProps.history;

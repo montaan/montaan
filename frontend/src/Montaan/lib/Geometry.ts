@@ -31,7 +31,7 @@ export default {
 		camera: THREE.Camera,
 		models: THREE.Mesh[],
 		fsIndex: FSEntry[],
-		highlighted: FSEntry
+		highlighted?: FSEntry
 	) {
 		const intersections = utils.findIntersectionsUnderEvent(ev, camera, models);
 

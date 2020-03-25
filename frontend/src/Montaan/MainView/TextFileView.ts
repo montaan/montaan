@@ -140,6 +140,65 @@ export default class TextFileView extends THREE.Object3D {
 		return false;
 	}
 
+	getTextPosition(
+		fsEntry: FSEntry,
+		intersection: { point: THREE.Vector3; object: { matrixWorld: THREE.Matrix4 } }
+	) {
+		const fv = new THREE.Vector3(
+			fsEntry.contentObject.textXZero,
+			fsEntry.contentObject.textYZero,
+			fsEntry.z
+		);
+		const pv = new THREE.Vector3().copy(intersection.point);
+		const inv = new THREE.Matrix4().getInverse(intersection.object.matrixWorld);
+		pv.applyMatrix4(inv);
+		const uv = new THREE.Vector3().subVectors(pv, fv);
+		uv.divideScalar(fsEntry.scale * fsEntry.contentObject.textScale);
+		uv.y /= 38;
+		uv.x /= 19;
+
+		const line = Math.floor(-uv.y);
+		const col = Math.floor(uv.x + 1);
+		return { line, col };
+	}
+
+	handleTextClick(ev: any, fsEntry: FSEntry, intersection: any, openInIFrame: boolean = false) {
+		const { line, col } = this.getTextPosition(fsEntry, intersection);
+		const text = fsEntry.contentObject.geometry.layout._opt.text;
+		const lineStr = text.split('\n')[line - 1];
+		const urlRE = /https?:\/\/[a-z0-9.%$#@&?/_-]+/gi;
+		var hit = null;
+		while ((hit = urlRE.exec(lineStr))) {
+			const startIndex = hit.index;
+			const endIndex = hit.index + hit[0].length - 1;
+			if (col >= startIndex && col <= endIndex) {
+				if (openInIFrame) {
+					// Open link in a floating iframe added to the tree.
+					// On render, update the matrix of the iframe's 3D transform.
+					// This can only be done on Electron as X-Frame-Options: DENY
+					// disables cross-origin iframes.
+					var iframe = document.createElement('iframe');
+					iframe.src = hit[0];
+					iframe.style.border = '10px solid white';
+					iframe.style.backgroundColor = 'white';
+					iframe.style.position = 'absolute';
+					iframe.style.right = '10px';
+					iframe.style.top = 96 + 'px';
+					iframe.style.zIndex = '2';
+					iframe.style.width = '600px';
+					iframe.style.height = 'calc(100vh - 106px)';
+					if (document.body) document.body.appendChild(iframe);
+					return true;
+				} else {
+					// Open link in a new window.
+					window.open(hit[0]);
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
 	ontick(t: number, dt: number): void {}
 
 	static hex: string[] = (() => {

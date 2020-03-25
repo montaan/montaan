@@ -1,4 +1,10 @@
-import { getPathEntry, getFullPath, getFSEntryForURL, FSEntry } from '../lib/filesystem';
+import {
+	getPathEntry,
+	getFullPath,
+	getFSEntryForURL,
+	FSEntry,
+	ExtendedFSEntry,
+} from '../lib/filesystem';
 import Colors from '../lib/Colors';
 import Layout, { ISDFTextGeometry } from '../lib/Layout';
 import utils from '../lib/utils';
@@ -16,8 +22,12 @@ import loadFont from 'load-bmfont';
 import WorkQueue from '../lib/WorkQueue';
 import ModelBuilder from './ModelBuilder';
 import NavTarget from './NavTarget';
-import { FileTree, SearchResult, TreeLink } from '../MainApp';
+import { FileTree, SearchResult } from '../MainApp';
 import QFrameAPI from '../../lib/api';
+import HighlightedLines from './HighlightedLines';
+import SearchLandmarks from './SearchLandmarks';
+import LinksModel from './LinksModel';
+import { RouteComponentProps } from 'react-router-dom';
 
 function save(blob: Blob, filename: string) {
 	const link = document.createElement('a');
@@ -76,7 +86,15 @@ class VisibleFiles extends THREE.Object3D {
 
 type Fiber = () => void;
 
+export type ParseTargetSignature = (
+	dst: string | FSEntry,
+	dstPoint?: number[]
+) => ExtendedFSEntry | null;
+
 class Tabletree {
+	initDone: boolean = false;
+	frameFibers: Fiber[] = [];
+	frameStart: number = -1;
 	treeUpdateQueue: WorkQueue<FileTree> = new WorkQueue();
 	animating: boolean = false;
 	commitsPlaying: boolean = false;
@@ -85,22 +103,16 @@ class Tabletree {
 	resAdjust: number = 1;
 	textMinScale: number = 1;
 	textMaxScale: number = 1000;
-	deletionsCount: number = 0;
+	fsIndex: FSEntry[] = [];
 	meshIndex: Map<FSEntry, number> = new Map();
 	visibleEntries: Map<FSEntry, number> = new Map();
-	history: any;
+	history?: RouteComponentProps['history'];
 	model: THREE.Mesh = new THREE.Mesh();
-	lineModel: THREE.LineSegments = new THREE.LineSegments();
-	lineGeo: THREE.BufferGeometry = new THREE.BufferGeometry();
-	links: TreeLink[] = [];
-	fsIndex: FSEntry[] = [];
 	searchResults: SearchResult[] = [];
-	previousSearchResults: SearchResult[] = [];
-	frameFibers: Fiber[] = [];
-	frameStart: number = -1;
-	initDone: boolean = false;
-	requestDirs: any;
-	setNavigationTarget: any;
+
+	requestDirs: (paths: string[], discard: string[]) => Promise<void> = async () => {};
+	setNavigationTarget: (target: string) => void = () => {};
+
 	api: QFrameAPI = QFrameAPI.mock;
 	_fileTree?: FileTree;
 	lastFrameTime: number = 0;
@@ -109,34 +121,32 @@ class Tabletree {
 	scene: THREE.Scene = new THREE.Scene();
 	camera: NavCamera = new NavCamera();
 	visibleFiles: VisibleFiles = new VisibleFiles();
-	highlightedResults: SearchResult[] = [];
-	highlightLater: [FSEntry, number][] = [];
-	searchHighlights: THREE.Mesh = new THREE.Mesh();
 	screenPlane: THREE.Mesh = new THREE.Mesh();
-	searchLine: THREE.LineSegments = new THREE.LineSegments();
-	searchLis: HTMLElement[] = [];
-	fileTree: any;
-	viewRoot: any;
-	navUrl: any;
-	treeBuildInProgress: any;
-	tree: any;
-	fileCount: any;
-	fileIndex: number | undefined;
+	fileTree?: FSEntry;
+	viewRoot?: FSEntry;
+	navUrl?: string;
+	treeBuildInProgress: boolean = false;
+	tree?: FileTree;
+	fileCount: number = 0;
+	fileIndex: number = 0;
+
 	textGeometry: ISDFTextGeometry | undefined;
 	viewRootUpdated: boolean | undefined;
 	zoomedInPath: string | undefined;
 	breadcrumbPath: string | undefined;
-	smallestCovering: any;
-	linksUpdatedOn: any;
-	urlIndex: any;
+
+	smallestCovering?: FSEntry;
+
 	navTarget: NavTarget | undefined;
-	highlighted: any;
-	onElectron: any;
-	frameLoopPaused: boolean | undefined;
-	frameRequested: boolean | undefined;
-	_changed: any;
-	searchHighlightsIndex: number = 1;
+	highlighted?: FSEntry;
+	onElectron: boolean = false;
+	frameLoopPaused: boolean = false;
+	frameRequested: boolean = true;
+	_changed: boolean = true;
 	started: boolean = false;
+	highlightedLines: HighlightedLines;
+	searchLandmarks: SearchLandmarks;
+	linksModel: LinksModel;
 
 	constructor() {
 		this.treeUpdateQueue = new WorkQueue();
@@ -150,18 +160,23 @@ class Tabletree {
 			}
 		}
 		this.setupScene(); // Renderer, scene and camera setup.
-		this.setupSearchLines(); // Search landmark and connection lines
-		this.setupSearchHighlighting(); // Search highlighting lines
+		this.searchLandmarks = new SearchLandmarks(this.screenPointToWorldPoint);
+		this.model.add(this.searchLandmarks.model);
+		this.highlightedLines = new HighlightedLines();
+		this.model.add(this.highlightedLines.model);
+		this.linksModel = new LinksModel(this.screenPointToWorldPoint, this.parseTarget);
+		this.model.add(this.linksModel.model);
 		this.setupEventListeners(); // UI event listeners
 		this.changed = true;
 	}
 
-	init(api: QFrameAPI) {
+	init(api: QFrameAPI, history: RouteComponentProps['history']) {
 		if (this.api !== QFrameAPI.mock) {
 			console.error('ALREADY INITIALIZED');
 			return;
 		}
 		this.api = api;
+		this.history = history;
 		var fontTex: THREE.Texture, fontDesc: any;
 		new THREE.TextureLoader().load(fontSDF, (tex) => {
 			fontTex = tex;
@@ -218,134 +233,6 @@ class Tabletree {
 
 		this.visibleFiles = new VisibleFiles();
 
-		window.onresize = this.onResize.bind(this);
-		this.onResize();
-	}
-
-	// Set search results ////////////////////////////////////////////////////////////////////////////////
-
-	setSearchResults(searchResults: SearchResult[]) {
-		this.searchResults = searchResults || [];
-		this.highlightResults(searchResults || []);
-		this.updateSearchLines();
-	}
-
-	// Highlighting lines ////////////////////////////////////////////////////////////////////////////////
-
-	setupSearchHighlighting() {
-		this.highlightedResults = [];
-		this.highlightLater = [];
-		this.searchHighlights = new THREE.Mesh(
-			new THREE.Geometry(),
-			new THREE.MeshBasicMaterial({
-				side: THREE.DoubleSide,
-				color: 0xff0000,
-				opacity: 0.33,
-				transparent: true,
-				depthTest: false,
-				depthWrite: false,
-			})
-		);
-		this.searchHighlights.frustumCulled = false;
-		this.searchHighlightsIndex = 1;
-		for (let i = 0; i < 40000; i++) {
-			(this.searchHighlights.geometry as THREE.Geometry).vertices.push(new THREE.Vector3());
-		}
-		for (let i = 0; i < 10000; i++) {
-			let off = i * 4;
-			(this.searchHighlights.geometry as THREE.Geometry).faces.push(
-				new THREE.Face3(off, off + 1, off + 2),
-				new THREE.Face3(off, off + 2, off + 3)
-			);
-		}
-		(this.searchHighlights as any).ontick = () => {
-			this.searchHighlights.visible = this.searchHighlightsIndex > 0;
-			if (this.highlightLater.length > 0) {
-				const later = this.highlightLater.splice(0);
-				for (let i = 0; i < later.length; i++)
-					this.addHighlightedLine(later[i][0], later[i][1]);
-			}
-		};
-
-		this.scene.add(this.searchHighlights);
-	}
-
-	setGoToHighlight(fsEntry: any, line: any) {
-		this.addHighlightedLine(fsEntry, line, 0);
-	}
-
-	addHighlightedLine(fsEntry: FSEntry, line: number, indexOverride = -1) {
-		if (fsEntry.contentObject && fsEntry.contentObject.canHighlight) {
-			var geo = this.searchHighlights.geometry as THREE.Geometry;
-			var index = indexOverride;
-			if (indexOverride < 0) {
-				index = this.searchHighlightsIndex;
-				this.searchHighlightsIndex++;
-			}
-
-			const { c0, c1, c2, c3 } = fsEntry.contentObject.getHighlightRegion([line]);
-			var off = index * 4;
-
-			geo.vertices[off++].copy(c0);
-			geo.vertices[off++].copy(c1);
-			geo.vertices[off++].copy(c2);
-			geo.vertices[off++].copy(c3);
-
-			geo.verticesNeedUpdate = true;
-		} else {
-			this.highlightLater.push([fsEntry, line]);
-		}
-		this.changed = true;
-	}
-
-	clearSearchHighlights() {
-		var geo = this.searchHighlights.geometry as THREE.Geometry;
-		var verts = geo.vertices;
-		for (var i = 0; i < verts.length; i++) {
-			var v = verts[i];
-			v.x = v.y = v.z = 0;
-		}
-		geo.verticesNeedUpdate = true;
-		this.searchHighlightsIndex = 1;
-		this.highlightLater = [];
-		this.changed = true;
-	}
-
-	highlightResults(results: SearchResult[]) {
-		var ca = (this.model.geometry as THREE.BufferGeometry).attributes
-			.color as THREE.BufferAttribute;
-		this.highlightedResults.forEach(function(highlighted) {
-			if (highlighted.fsEntry.index === undefined) return;
-			Geometry.setColor(
-				ca.array as Float32Array,
-				highlighted.fsEntry.index,
-				Colors[highlighted.fsEntry.entries === null ? 'getFileColor' : 'getDirectoryColor'](
-					highlighted.fsEntry
-				)
-			);
-		});
-		this.clearSearchHighlights();
-		for (var i = 0; i < results.length; i++) {
-			var fsEntry = results[i].fsEntry;
-			if (fsEntry.index === undefined) continue;
-			if (fsEntry.entries !== null && results[i].line === 0) {
-				Geometry.setColor(
-					ca.array as Float32Array,
-					fsEntry.index,
-					fsEntry.entries === null ? [1, 0, 0] : [0.6, 0, 0]
-				);
-			} else if (fsEntry.entries === null && results[i].line > 0) {
-				this.addHighlightedLine(fsEntry, results[i].line);
-			}
-		}
-		this.highlightedResults = results;
-		ca.needsUpdate = true;
-		this.changed = true;
-	}
-
-	// Search result connection lines ////////////////////////////////////////////////////////////////////////////////
-
-	setupSearchLines() {
 		var screenPlane = new THREE.Mesh(
 			new THREE.PlaneBufferGeometry(2000, 2000),
 			new THREE.MeshBasicMaterial({ color: 0xff00ff })
@@ -356,178 +243,22 @@ class Tabletree {
 
 		this.screenPlane = screenPlane;
 
-		var searchLine = new THREE.LineSegments(
-			new THREE.BufferGeometry(),
-			new THREE.LineBasicMaterial({
-				color: 0xff0000,
-				opacity: 1,
-				transparent: true,
-				depthTest: false,
-				depthWrite: false,
-				// linewidth: 2 * (window.devicePixelRatio || 1)
-			})
-		);
-		this.searchLine = searchLine;
-		searchLine.frustumCulled = false;
-		(searchLine.geometry as THREE.BufferGeometry).setAttribute(
-			'position',
-			new THREE.BufferAttribute(new Float32Array(40000 * 3), 3)
-		);
-
-		(searchLine as any).ontick = () => {
-			searchLine.visible = this.searchResults && this.searchResults.length > 0;
-		};
-
-		this.scene.add(this.searchLine);
-
-		this.lineGeo = new THREE.BufferGeometry();
-		this.lineGeo.setAttribute(
-			'position',
-			new THREE.BufferAttribute(new Float32Array(40000 * 3), 3)
-		);
-		this.lineGeo.setAttribute(
-			'color',
-			new THREE.BufferAttribute(new Float32Array(40000 * 3), 3)
-		);
-		this.lineModel = new THREE.LineSegments(
-			this.lineGeo,
-			new THREE.LineBasicMaterial({
-				color: new THREE.Color(1.0, 1.0, 1.0),
-				opacity: 1,
-				transparent: true,
-				depthWrite: false,
-				vertexColors: THREE.VertexColors,
-			})
-		);
-		this.lineModel.frustumCulled = false;
-		(this.lineModel as any).ontick = () => {
-			this.lineModel.visible = this.links.length > 0;
-		};
-		this.scene.add(this.lineModel);
+		window.onresize = this.onResize.bind(this);
+		this.onResize();
 	}
 
-	addScreenLine(
-		geo: THREE.BufferGeometry,
-		fsEntry: {
-			x: number | undefined;
-			y: number | undefined;
-			z: number | undefined;
-			scale: number;
-			textHeight: number;
-			textXZero: number | undefined;
-			textYZero: number;
-		},
-		bbox: { bottom: number; top: number; left: any } | null,
-		index: number,
-		line: number,
-		lineCount: number
-	) {
-		var a = new THREE.Vector3(fsEntry.x, fsEntry.y, fsEntry.z);
-		a.applyMatrix4(this.model.matrixWorld);
-		var b = a,
-			bv,
-			aUp;
+	// Set search results ////////////////////////////////////////////////////////////////////////////////
 
-		var av = new THREE.Vector3(a.x + 0.05 * fsEntry.scale, a.y + 0.05 * fsEntry.scale, a.z);
-
-		var off = index * 4;
-		if (!bbox || bbox.bottom < 0 || bbox.top > window.innerHeight) {
-			bv = new THREE.Vector3(
-				b.x - fsEntry.scale * 0.5 - 0.02,
-				av.y + 0.05 * fsEntry.scale + 0.01 * 3.15,
-				av.z - fsEntry.scale * 0.5
-			);
-			aUp = new THREE.Vector3(
-				av.x - fsEntry.scale * 0.075,
-				av.y + 0.05 * fsEntry.scale,
-				av.z
-			);
-		} else {
-			this.screenPlane.visible = true;
-			var intersections = utils.findIntersectionsUnderEvent(
-				{ clientX: bbox.left, clientY: bbox.top + 24, target: this.renderer.domElement },
-				this.camera,
-				[this.screenPlane]
-			);
-			this.screenPlane.visible = false;
-			b = intersections[0].point;
-			bv = new THREE.Vector3(b.x, b.y, b.z);
-			aUp = new THREE.Vector3(av.x, av.y, av.z);
-			if (line > 0 && fsEntry.textHeight) {
-				const textYOff = ((line + 0.5) / lineCount) * fsEntry.textHeight;
-				const textLinePos = new THREE.Vector3(
-					fsEntry.textXZero,
-					fsEntry.textYZero - textYOff,
-					fsEntry.z
-				);
-				textLinePos.applyMatrix4(this.model.matrixWorld);
-				aUp = av = textLinePos;
-			}
-		}
-
-		const verts = geo.getAttribute('position').array as Float32Array;
-		off *= 3;
-		var v;
-		v = av;
-		verts[off++] = v.x;
-		verts[off++] = v.y;
-		verts[off++] = v.z;
-		v = aUp;
-		verts[off++] = v.x;
-		verts[off++] = v.y;
-		verts[off++] = v.z;
-		v = aUp;
-		verts[off++] = v.x;
-		verts[off++] = v.y;
-		verts[off++] = v.z;
-		v = bv;
-		verts[off++] = v.x;
-		verts[off++] = v.y;
-		verts[off++] = v.z;
-		(geo.getAttribute('position') as THREE.BufferAttribute).needsUpdate = true;
-	}
-
-	updateSearchLines() {
-		var needsUpdate = false;
-		if (this.searchResults !== this.previousSearchResults) {
-			this.clearSearchLine();
-			this.previousSearchResults = this.searchResults;
-			needsUpdate = true;
-			this.changed = true;
-			this.searchLis = [].slice.call(document.body.querySelectorAll('#searchResults > li'));
-		}
-		const lis = this.searchLis;
-		var verts = (this.searchLine.geometry as THREE.BufferGeometry).getAttribute('position')
-			.array;
-		if (needsUpdate && lis.length <= verts.length / 3 / 4) {
-			for (var i = 0, l = lis.length; i < l; i++) {
-				var li = lis[i] as any;
-				this.addScreenLine(
-					this.searchLine.geometry as THREE.BufferGeometry,
-					li.result.fsEntry,
-					null,
-					i,
-					li.result.line,
-					li.result.fsEntry.lineCount
-				);
-			}
-		}
-	}
-
-	clearSearchLine() {
-		var verts = (this.searchLine.geometry as THREE.BufferGeometry).getAttribute('position')
-			.array as Float32Array;
-		for (
-			var i = this.searchResults.length * 4 * 3;
-			i < this.previousSearchResults.length * 4 * 3;
-			i++
-		) {
-			verts[i] = 0;
-		}
-		((this.searchLine.geometry as THREE.BufferGeometry).getAttribute(
-			'position'
-		) as THREE.BufferAttribute).needsUpdate = true;
-		this.changed = true;
+	setSearchResults(searchResults: SearchResult[]) {
+		this.searchResults = searchResults;
+		this.highlightedLines.highlightResults(
+			this.searchResults,
+			(this.model.geometry as THREE.BufferGeometry).getAttribute(
+				'color'
+			) as THREE.BufferAttribute
+		);
+		this.searchLandmarks.searchResults = this.searchResults;
+		this.searchLandmarks.updateSearchLines();
 	}
 
 	// File tree updates ////////////////////////////////////////////////////////////////////////////////
@@ -565,7 +296,7 @@ class Tabletree {
 	}
 
 	async showFileTree(tree: FileTree) {
-		if (this.treeBuildInProgress) return;
+		if (this.treeBuildInProgress || !this.viewRoot) return;
 		this.treeBuildInProgress = true;
 		const builder = new ModelBuilder();
 		utils.traverseFSEntry(tree.tree, (e: FSEntry) => (e.building = false), '');
@@ -616,269 +347,6 @@ class Tabletree {
 		this.viewRootUpdated = false;
 	}
 
-	// updateTree = async (fileTree) => {
-	// 	const oldTreeUpdateInProgress = this.treeUpdateInProgress;
-	// 	this.treeUpdateInProgress = true;
-	// 	/*
-	// 		Traverse tree to find subtrees that are not in a model.
-	// 		Append the subtree to this.model geometry.
-	// 	*/
-	// 	const promises = [];
-	// 	utils.traverseFSEntry(
-	// 		fileTree,
-	// 		(tree, path) => {
-	// 			if (tree.index === undefined && tree.parent && !tree.parent.building) {
-	// 				// console.log(
-	// 				// 	'building tree',
-	// 				// 	getFullPath(tree.parent),
-	// 				// 	'due to',
-	// 				// 	getFullPath(tree),
-	// 				// 	tree.parent.scale,
-	// 				// 	tree.scale
-	// 				// );
-	// 				tree.parent.building = true;
-	// 				promises.push(tree.parent);
-	// 			}
-	// 		},
-	// 		''
-	// 	);
-	// 	for (let i = 0; i < promises.length; i++) {
-	// 		await this.addFile(promises[i]);
-	// 		promises[i].building = false;
-	// 	}
-	// 	this.changed = true;
-	// 	this.treeUpdateInProgress = oldTreeUpdateInProgress;
-	// };
-
-	// addFile = async (tree) => {
-	// 	// console.log(tree);
-	// 	if (this.addingFile) {
-	// 		console.log('This is bad.');
-	// 		debugger;
-	// 		return;
-	// 	}
-	// 	this.addingFile = true;
-	// 	await this.yield();
-	// 	utils.traverseFSEntry(tree, () => this.model.fileCount++, '');
-	// 	const vertexIndices = {
-	// 		vertexIndex: this.fileTree.lastVertexIndex,
-	// 		textVertexIndex: this.fileTree.lastTextVertexIndex,
-	// 	};
-
-	// 	await this.updateFileTreeGeometry(
-	// 		this.model.fileCount,
-	// 		tree,
-	// 		this.fsIndex,
-	// 		this.model.geometry,
-	// 		this.model.textGeometry,
-	// 		vertexIndices
-	// 	);
-	// 	this.model.fileCount = this.meshIndex.size;
-	// 	while (tree) {
-	// 		tree.lastVertexIndex = vertexIndices.vertexIndex;
-	// 		tree.lastTextVertexIndex = vertexIndices.textVertexIndex;
-	// 		tree = tree.parent;
-	// 	}
-	// 	this.changed = true;
-	// 	this.addingFile = false;
-	// };
-
-	// reparentTree = async (fileTree, newRoot) => {
-	// 	let { x, y, z, scale } = newRoot;
-	// 	let fx = fileTree.x,
-	// 		fy = fileTree.y,
-	// 		fz = fileTree.z,
-	// 		fs = fileTree.scale;
-	// 	x = (x - fileTree.x) / fileTree.scale;
-	// 	y = (y - fileTree.y) / fileTree.scale;
-	// 	z = (z - fileTree.z) / fileTree.scale;
-	// 	scale /= fileTree.scale;
-
-	// 	fileTree.x = -x / scale;
-	// 	fileTree.y = -y / scale;
-	// 	fileTree.z = -z / scale;
-	// 	fileTree.scale = 1 / scale;
-
-	// 	const vertexIndices = {
-	// 		vertexIndex: this.fileTree.lastVertexIndex,
-	// 		textVertexIndex: this.fileTree.lastTextVertexIndex,
-	// 	};
-	// 	const size = this.meshIndex.size;
-	// 	this.meshIndex.clear();
-	// 	this.deletionsIndex.clear();
-	// 	await this.updateFileTreeGeometry(
-	// 		size,
-	// 		fileTree,
-	// 		this.fsIndex,
-	// 		this.model.geometry,
-	// 		this.model.textGeometry,
-	// 		vertexIndices,
-	// 		true
-	// 	);
-	// 	this.model.visibleFiles.children.forEach((f) => {
-	// 		f.position.copy(f.fsEntry);
-	// 		f.scale.set(f.fsEntry.scale, f.fsEntry.scale, f.fsEntry.scale);
-	// 	});
-
-	// 	x -= newRoot.x;
-	// 	y -= newRoot.y;
-	// 	z -= newRoot.z;
-	// 	scale /= newRoot.scale;
-	// 	this.camera.position.x = ((this.camera.position.x - fx) / fs) * fileTree.scale + fileTree.x;
-	// 	this.camera.position.y = ((this.camera.position.y - fy) / fs) * fileTree.scale + fileTree.y;
-	// 	this.camera.position.z = ((this.camera.position.z - fz) / fs) * fileTree.scale + fileTree.z;
-	// 	this.camera.targetPosition.x =
-	// 		((this.camera.targetPosition.x - fx) / fs) * fileTree.scale + fileTree.x;
-	// 	this.camera.targetPosition.y =
-	// 		((this.camera.targetPosition.y - fy) / fs) * fileTree.scale + fileTree.y;
-	// 	this.camera.targetPosition.z =
-	// 		((this.camera.targetPosition.z - fz) / fs) * fileTree.scale + fileTree.z;
-	// 	this.camera.near = (this.camera.near / fs) * fileTree.scale;
-	// 	this.camera.far = (this.camera.far / fs) * fileTree.scale;
-	// 	this.camera.updateProjectionMatrix();
-	// 	this.scene.updateWorldMatrix(true, true);
-	// 	this.changed = true;
-	// };
-
-	// async updateFileTreeGeometry(
-	// 	fileCount,
-	// 	fileTree,
-	// 	fsIndex,
-	// 	geo,
-	// 	textGeometry,
-	// 	vertexIndices,
-	// 	rebuild = false
-	// ) {
-	// 	let deletionsIndex = new Map();
-	// 	if (geo.maxFileCount < fileCount + 1) Geometry.resizeGeometry(geo, 2 * (fileCount + 1));
-	// 	if (rebuild || this.deletionsIndex.size > 100) {
-	// 		this.rebuildingTree = true;
-
-	// 		deletionsIndex = this.deletionsIndex;
-	// 		this.deletionsIndex = new Map();
-	// 		geo.fileIndex = 0;
-
-	// 		fileTree = this.fileTree;
-	// 		this.meshIndex.clear();
-
-	// 		fsIndex = fileTree.fsIndex = [fileTree];
-	// 		fileTree.index = undefined;
-	// 		fileTree.vertexIndex = 0;
-	// 		fileTree.textVertexIndex = 0;
-	// 		vertexIndices.textVertexIndex = 0;
-	// 		vertexIndices.vertexIndex = 0;
-
-	// 		textGeometry.vertCount = 0;
-	// 	}
-
-	// 	const fileIndex = geo.fileIndex;
-
-	// 	const labels = new THREE.Object3D();
-	// 	const thumbnails = new THREE.Object3D();
-	// 	geo.fileIndex = await Layout.createFileTreeQuads(
-	// 		this.yield,
-	// 		fileTree,
-	// 		fileIndex,
-	// 		geo.getAttribute('position').array,
-	// 		geo.getAttribute('color').array,
-	// 		labels,
-	// 		thumbnails,
-	// 		fsIndex,
-	// 		this.meshIndex,
-	// 		vertexIndices,
-	// 		deletionsIndex
-	// 	);
-	// 	geo.getAttribute('position').needsUpdate = true;
-	// 	geo.getAttribute('color').needsUpdate = true;
-	// 	geo.computeBoundingSphere();
-
-	// 	let textVertCount = textGeometry.vertCount;
-	// 	labels.traverse(function(c) {
-	// 		if (c.geometry) {
-	// 			textVertCount += c.geometry.attributes.position.array.length;
-	// 		}
-	// 	});
-	// 	if (textVertCount > textGeometry.getAttribute('position').array.length) {
-	// 		const positionArray = new Float32Array(textVertCount * 2);
-	// 		const uvArray = new Float32Array(textVertCount);
-	// 		positionArray.set(textGeometry.getAttribute('position').array);
-	// 		uvArray.set(textGeometry.getAttribute('uv').array);
-	// 		textGeometry.setAttribute('position', new THREE.BufferAttribute(positionArray, 4));
-	// 		textGeometry.setAttribute('uv', new THREE.BufferAttribute(uvArray, 2));
-	// 	}
-	// 	const positionArray = textGeometry.getAttribute('position').array;
-	// 	const uvArray = textGeometry.getAttribute('uv').array;
-	// 	let j = textGeometry.vertCount;
-	// 	labels.traverse(function(c) {
-	// 		if (c.geometry) {
-	// 			const attributes = c.geometry.attributes;
-	// 			const labelPositionArray = attributes.position.array;
-	// 			positionArray.set(labelPositionArray, j);
-	// 			uvArray.set(attributes.uv.array, j / 2);
-	// 			j += labelPositionArray.length;
-	// 		}
-	// 	});
-	// 	textGeometry.vertCount = textVertCount;
-	// 	textGeometry.getAttribute('position').needsUpdate = true;
-	// 	textGeometry.getAttribute('uv').needsUpdate = true;
-	// 	this.rebuildingTree = false;
-	// }
-
-	// async createFileTreeModel(fileCount, fileTree) {
-	// 	const geo = Geometry.makeGeometry(2 * (fileCount + 1));
-	// 	geo.fileIndex = 0;
-
-	// 	fileTree.fsIndex = [fileTree];
-	// 	fileTree.vertexIndex = 0;
-	// 	fileTree.textVertexIndex = 0;
-	// 	const vertexIndices = {
-	// 		textVertexIndex: 0,
-	// 		vertexIndex: 0,
-	// 	};
-	// 	fileTree.x = 0;
-	// 	fileTree.y = 0;
-	// 	fileTree.z = 0;
-	// 	fileTree.scale = 1;
-
-	// 	const textGeometry = await Layout.createText({ text: '', noBounds: true }, this.yield);
-	// 	textGeometry.vertCount = 0;
-
-	// 	await this.updateFileTreeGeometry(
-	// 		fileCount,
-	// 		fileTree,
-	// 		fileTree.fsIndex,
-	// 		geo,
-	// 		textGeometry,
-	// 		vertexIndices
-	// 	);
-
-	// 	const textMesh = new THREE.Mesh(textGeometry, Layout.textMaterial);
-	// 	textMesh.frustumCulled = false;
-
-	// 	const mesh = new THREE.Mesh(
-	// 		geo,
-	// 		new THREE.MeshBasicMaterial({
-	// 			color: 0xffffff,
-	// 			vertexColors: THREE.VertexColors,
-	// 			side: THREE.DoubleSide,
-	// 		})
-	// 	);
-	// 	mesh.fileTree = fileTree;
-
-	// 	const visibleFiles = new THREE.Object3D();
-	// 	visibleFiles.visibleSet = {};
-
-	// 	mesh.add(visibleFiles);
-	// 	mesh.add(textMesh);
-	// 	mesh.visibleFiles = visibleFiles;
-	// 	mesh.textGeometry = textGeometry;
-	// 	mesh.fileCount = fileCount + 1;
-
-	// 	mesh.ontick = this.determineVisibility(mesh);
-
-	// 	return mesh;
-	// }
-
 	updateViewRoot(newRoot: any) {
 		if (this.viewRootUpdated || this.treeBuildInProgress) return;
 		this.viewRoot = newRoot;
@@ -926,12 +394,14 @@ class Tabletree {
 			// - determines fsEntry visibility
 			// - finds the covering fsEntry
 			// - finds the currently zoomed-in path and breadcrumb path
+			if (!this.fileTree) return;
 			const stack = [this.fileTree];
 			const visibleEntries = new Map();
 			const entriesToFetch = [];
 			let needModelUpdate = false;
 			while (stack.length > 0) {
 				const tree = stack.pop();
+				if (!tree) break;
 				visibleEntries.set(tree, 1); // It's visible, let's keep it in the mesh.
 				for (let name in tree.entries) {
 					const fsEntry = tree.entries[name];
@@ -1007,7 +477,7 @@ class Tabletree {
 				this.updateViewRoot(smallestCovering);
 				needModelUpdate = true;
 			}
-			if (needModelUpdate) this.setFileTree(this.tree);
+			if (needModelUpdate && this.tree) this.setFileTree(this.tree);
 		};
 	}
 
@@ -1032,11 +502,11 @@ class Tabletree {
 			this.requestFrame
 		);
 		fsEntry.contentObject.loadListeners.push(() => {
-			if (fsEntry.targetLine) {
-				const { line, search } = fsEntry.targetLine;
-				if (line !== undefined) this.goToFSEntryCoords(fsEntry, line);
+			if (fsEntry.navigationCoords) {
+				const { coords, search } = fsEntry.navigationCoords;
+				if (coords !== undefined) this.goToFSEntryCoords(fsEntry, coords);
 				else if (search !== undefined) this.goToFSEntryAtSearch(fsEntry, search);
-				delete fsEntry.targetLine;
+				delete fsEntry.navigationCoords;
 			}
 		});
 		fsEntry.contentObject.load(this.api.server + '/repo/file' + fullPath);
@@ -1045,407 +515,27 @@ class Tabletree {
 		visibleFiles.add(fsEntry.contentObject);
 	}
 
-	// Linkage lines ////////////////////////////////////////////////////////////////////////////////
-
-	updateLineBetweenElements(
-		geo: THREE.BufferGeometry,
-		index: number,
-		color: { r: number; g: number; b: number } | undefined,
-		bboxA: { left: any; top: any },
-		bboxB: { left: any; top: any }
-	) {
+	screenPointToWorldPoint = (x: number, y: number): THREE.Vector3 => {
 		this.screenPlane.visible = true;
-		var intersectionsA = utils.findIntersectionsUnderEvent(
-			{ clientX: bboxA.left, clientY: bboxA.top, target: this.renderer.domElement },
-			this.camera,
-			[this.screenPlane]
-		);
-		var intersectionsB = utils.findIntersectionsUnderEvent(
-			{ clientX: bboxB.left, clientY: bboxB.top, target: this.renderer.domElement },
+		var intersections = utils.findIntersectionsUnderEvent(
+			{ clientX: x, clientY: y, target: this.renderer.domElement },
 			this.camera,
 			[this.screenPlane]
 		);
 		this.screenPlane.visible = false;
-		var a = intersectionsA[0].point;
-		var av = new THREE.Vector3(a.x, a.y, a.z);
-		var b = intersectionsB[0].point;
-		var bv = new THREE.Vector3(b.x, b.y, b.z);
+		return intersections[0].point;
+	};
 
-		var verts = geo.getAttribute('position').array as Float32Array;
-		var off = index * 3;
-		var v;
-		v = av;
-		verts[off++] = v.x;
-		verts[off++] = v.y;
-		verts[off++] = v.z;
-		v = av;
-		verts[off++] = v.x;
-		verts[off++] = v.y;
-		verts[off++] = v.z;
-		v = av;
-		verts[off++] = v.x;
-		verts[off++] = v.y;
-		verts[off++] = v.z;
-		v = bv;
-		verts[off++] = v.x;
-		verts[off++] = v.y;
-		verts[off++] = v.z;
-		v = bv;
-		verts[off++] = v.x;
-		verts[off++] = v.y;
-		verts[off++] = v.z;
-		v = bv;
-		verts[off++] = v.x;
-		verts[off++] = v.y;
-		verts[off++] = v.z;
+	// FSEntry Navigation ////////////////////////////////////////////////////////////////////////////////
 
-		if (color) {
-			verts = geo.getAttribute('color').array as Float32Array;
-			off = index * 3;
-			v = color;
-			verts[off++] = v.r;
-			verts[off++] = v.g;
-			verts[off++] = v.b;
-			v = color;
-			verts[off++] = v.r;
-			verts[off++] = v.g;
-			verts[off++] = v.b;
-			v = color;
-			verts[off++] = v.r;
-			verts[off++] = v.g;
-			verts[off++] = v.b;
-			v = color;
-			verts[off++] = v.r;
-			verts[off++] = v.g;
-			verts[off++] = v.b;
-			v = color;
-			verts[off++] = v.r;
-			verts[off++] = v.g;
-			verts[off++] = v.b;
-			v = color;
-			verts[off++] = v.r;
-			verts[off++] = v.g;
-			verts[off++] = v.b;
-		}
-	}
-
-	updateLineBetweenEntryAndElement(
-		geo: THREE.BufferGeometry,
-		index: number,
-		color: { r: number; g: number; b: number } | undefined,
-		model: THREE.Object3D,
-		fsEntry: FSEntry,
-		coords: number[] | undefined,
-		lineCount: number,
-		bbox: { bottom: number; top: number; left: any }
-	) {
-		var a = new THREE.Vector3(fsEntry.x, fsEntry.y, fsEntry.z);
-		a.applyMatrix4(model.matrixWorld);
-		var b = a;
-
-		const line = coords ? coords[0] : 0;
-
-		var av = new THREE.Vector3(a.x + 0.05 * fsEntry.scale, a.y + 0.05 * fsEntry.scale, a.z);
-		var bv, aUp;
-
-		if (!bbox || bbox.bottom < 0 || bbox.top > window.innerHeight) {
-			bv = new THREE.Vector3(
-				b.x - fsEntry.scale * 0.5 - 0.02,
-				av.y + 0.05 * fsEntry.scale, // + 0.01 * 3.15,
-				av.z - fsEntry.scale * 0.5
-			);
-			aUp = new THREE.Vector3(
-				av.x - fsEntry.scale * 0.075,
-				av.y + 0.05 * fsEntry.scale,
-				av.z
-			);
-		} else {
-			this.screenPlane.visible = true;
-			var intersections = utils.findIntersectionsUnderEvent(
-				{ clientX: bbox.left, clientY: bbox.top, target: this.renderer.domElement },
-				this.camera,
-				[this.screenPlane]
-			);
-			this.screenPlane.visible = false;
-			b = intersections[0].point;
-			bv = new THREE.Vector3(b.x, b.y, b.z);
-			aUp = new THREE.Vector3(av.x, av.y, av.z);
-			if (line > 0 && fsEntry.contentObject && fsEntry.contentObject.textHeight) {
-				const textYOff = ((line + 0.5) / lineCount) * fsEntry.contentObject.textHeight;
-				const textLinePos = new THREE.Vector3(
-					fsEntry.contentObject.textXZero,
-					fsEntry.contentObject.textYZero - textYOff,
-					fsEntry.z
-				);
-				textLinePos.applyMatrix4(this.model.matrixWorld);
-				aUp = av = textLinePos;
-			}
-		}
-
-		var verts = geo.getAttribute('position').array as Float32Array;
-		var off = index * 3;
-		var v;
-		v = av;
-		verts[off++] = v.x;
-		verts[off++] = v.y;
-		verts[off++] = v.z;
-		v = aUp;
-		verts[off++] = v.x;
-		verts[off++] = v.y;
-		verts[off++] = v.z;
-		v = aUp;
-		verts[off++] = v.x;
-		verts[off++] = v.y;
-		verts[off++] = v.z;
-		v = bv;
-		verts[off++] = v.x;
-		verts[off++] = v.y;
-		verts[off++] = v.z;
-		v = bv;
-		verts[off++] = v.x;
-		verts[off++] = v.y;
-		verts[off++] = v.z;
-		v = bv;
-		verts[off++] = v.x;
-		verts[off++] = v.y;
-		verts[off++] = v.z;
-
-		if (color) {
-			verts = geo.getAttribute('color').array as Float32Array;
-			off = index * 3;
-			v = color;
-			verts[off++] = v.r;
-			verts[off++] = v.g;
-			verts[off++] = v.b;
-			v = color;
-			verts[off++] = v.r;
-			verts[off++] = v.g;
-			verts[off++] = v.b;
-			v = color;
-			verts[off++] = v.r;
-			verts[off++] = v.g;
-			verts[off++] = v.b;
-			v = color;
-			verts[off++] = v.r;
-			verts[off++] = v.g;
-			verts[off++] = v.b;
-			v = color;
-			verts[off++] = v.r;
-			verts[off++] = v.g;
-			verts[off++] = v.b;
-			v = color;
-			verts[off++] = v.r;
-			verts[off++] = v.g;
-			verts[off++] = v.b;
-		}
-	}
-
-	updateLineBetweenEntries(
-		geo: THREE.BufferGeometry,
-		index: number,
-		color: { r: number; g: number; b: number } | undefined,
-		modelA: THREE.Object3D,
-		entryA: FSEntry,
-		coordsA: number[] | undefined,
-		lineCountA: number,
-		modelB: THREE.Object3D,
-		entryB: FSEntry,
-		coordsB: number[] | undefined,
-		lineCountB: number
-	) {
-		var a = entryA;
-		var b = entryB;
-
-		const lineA = coordsA ? coordsA[0] : 0;
-		const lineB = coordsB ? coordsB[0] : 0;
-
-		var av = new THREE.Vector3(a.x, a.y, a.z);
-		av.applyMatrix4(modelA.matrixWorld);
-
-		var bv = new THREE.Vector3(b.x, b.y + b.scale, b.z);
-		bv.applyMatrix4(modelB.matrixWorld);
-
-		if (lineA > 0 && entryA.contentObject && entryA.contentObject.textHeight) {
-			const textYOff = ((lineA + 0.5) / lineCountA) * entryA.contentObject.textHeight;
-			const textLinePos = new THREE.Vector3(
-				entryA.contentObject.textXZero,
-				entryA.contentObject.textYZero - textYOff,
-				entryA.z
-			);
-			textLinePos.applyMatrix4(modelA.matrixWorld);
-			av = textLinePos;
-		}
-		if (lineB > 0 && entryB.contentObject && entryB.contentObject.textHeight) {
-			const textYOff = ((lineB + 0.5) / lineCountB) * entryB.contentObject.textHeight;
-			const textLinePos = new THREE.Vector3(
-				entryB.contentObject.textXZero,
-				entryB.contentObject.textYZero - textYOff,
-				entryB.z
-			);
-			textLinePos.applyMatrix4(modelB.matrixWorld);
-			av = textLinePos;
-		}
-
-		var aUp = new THREE.Vector3(
-			a.x + (a.x < b.x ? 1 : -1) * 0.1 * entryA.scale,
-			a.y + (0.1 + 0.01 * (entryB.size % 10)) * entryA.scale,
-			Math.max(a.z, b.z) + 1 * entryA.scale
-		);
-		aUp.applyMatrix4(modelA.matrixWorld);
-		var bUp = new THREE.Vector3(
-			b.x + (a.x > b.x ? 1 : -1) * 0.1 * entryB.scale,
-			b.y + b.scale + (0.1 + 0.01 * (entryB.size % 10)) * entryB.scale,
-			Math.max(a.z, b.z) + 1 * entryB.scale
-		);
-		bUp.applyMatrix4(modelB.matrixWorld);
-
-		var verts = geo.getAttribute('position').array as Float32Array;
-		var off = index * 3;
-		var v;
-		v = av;
-		verts[off++] = v.x;
-		verts[off++] = v.y;
-		verts[off++] = v.z;
-		v = aUp;
-		verts[off++] = v.x;
-		verts[off++] = v.y;
-		verts[off++] = v.z;
-		v = aUp;
-		verts[off++] = v.x;
-		verts[off++] = v.y;
-		verts[off++] = v.z;
-		v = bUp;
-		verts[off++] = v.x;
-		verts[off++] = v.y;
-		verts[off++] = v.z;
-		v = bUp;
-		verts[off++] = v.x;
-		verts[off++] = v.y;
-		verts[off++] = v.z;
-		v = bv;
-		verts[off++] = v.x;
-		verts[off++] = v.y;
-		verts[off++] = v.z;
-
-		if (color) {
-			verts = geo.getAttribute('color').array as Float32Array;
-			off = index * 3;
-			v = color;
-			verts[off++] = v.r;
-			verts[off++] = v.g;
-			verts[off++] = v.b;
-			v = color;
-			verts[off++] = v.r;
-			verts[off++] = v.g;
-			verts[off++] = v.b;
-			v = color;
-			verts[off++] = v.r;
-			verts[off++] = v.g;
-			verts[off++] = v.b;
-			v = color;
-			verts[off++] = v.r;
-			verts[off++] = v.g;
-			verts[off++] = v.b;
-			v = color;
-			verts[off++] = v.r;
-			verts[off++] = v.g;
-			verts[off++] = v.b;
-			v = color;
-			verts[off++] = v.r;
-			verts[off++] = v.g;
-			verts[off++] = v.b;
-		}
-	}
-
-	parseTarget(dst: string | FSEntry, dstPoint: any) {
+	parseTarget = (dst: string | FSEntry, dstPoint: any): ExtendedFSEntry | null => {
+		if (!this.fileTree) return null;
 		if (typeof dst === 'string') {
 			return getFSEntryForURL(this.fileTree, dst);
 		} else {
 			return { fsEntry: dst, point: dstPoint };
 		}
-	}
-
-	updateLinks() {
-		if (this.linksUpdatedOn !== this.currentFrame) {
-			this.setLinks(this.links, true);
-			this.linksUpdatedOn = this.currentFrame;
-		}
-	}
-
-	setLinks(links: TreeLink[], updateOnlyElements = false) {
-		if (this.lineGeo) {
-			const geo = this.lineGeo;
-			const verts = geo.getAttribute('position').array as Float32Array;
-
-			for (let i = links.length; i < this.links.length; i++) {
-				let j = i * 6 * 3;
-				for (let k = 0; k < 18; k++) verts[j + k] = -100;
-			}
-			this.links = links;
-			for (let i = 0; i < links.length; i++) {
-				const l = links[i];
-				const model = this.model;
-				const srcIsElem = l.src instanceof Element;
-				const dstIsElem = l.dst instanceof Element;
-
-				if (srcIsElem && dstIsElem) {
-					const bboxA = (l.src as Element).getBoundingClientRect();
-					const bboxB = (l.dst as Element).getBoundingClientRect();
-					this.updateLineBetweenElements(geo, i * 6, l.color, bboxA, bboxB);
-				} else if (srcIsElem) {
-					const bbox = (l.src as Element).getBoundingClientRect();
-					const dst = this.parseTarget(l.dst as string | FSEntry, l.dstPoint);
-					if (!dst) continue;
-					this.updateLineBetweenEntryAndElement(
-						geo,
-						i * 6,
-						l.color,
-						model,
-						dst.fsEntry,
-						dst.point,
-						dst.fsEntry.lineCount,
-						bbox
-					);
-				} else if (dstIsElem) {
-					const bbox = (l.dst as Element).getBoundingClientRect();
-					const dst = this.parseTarget(l.src as string | FSEntry, l.srcPoint);
-					if (!dst) continue;
-					this.updateLineBetweenEntryAndElement(
-						geo,
-						i * 6,
-						l.color,
-						model,
-						dst.fsEntry,
-						dst.point,
-						dst.fsEntry.lineCount,
-						bbox
-					);
-				} else if (!updateOnlyElements) {
-					const src = this.parseTarget(l.src as string | FSEntry, l.srcPoint);
-					const dst = this.parseTarget(l.dst as string | FSEntry, l.dstPoint);
-					if (!dst || !src) continue;
-					this.updateLineBetweenEntries(
-						geo,
-						i * 6,
-						l.color,
-						model,
-						src.fsEntry,
-						src.point,
-						src.fsEntry.lineCount,
-						model,
-						dst.fsEntry,
-						dst.point,
-						dst.fsEntry.lineCount
-					);
-				}
-			}
-			(geo.getAttribute('position') as THREE.BufferAttribute).needsUpdate = true;
-			(geo.getAttribute('color') as THREE.BufferAttribute).needsUpdate = true;
-			this.changed = true;
-		}
-	}
-
-	// FSEntry Navigation ////////////////////////////////////////////////////////////////////////////////
+	};
 
 	goToFSEntry = (
 		fsEntry: { x: number; scale: number; entries: any; y: number; z: number },
@@ -1470,7 +560,7 @@ class Tabletree {
 		const res =
 			fsEntry.contentObject && (await fsEntry.contentObject.goToCoords(coords, model));
 		if (!res) {
-			fsEntry.targetLine = { line: coords };
+			fsEntry.navigationCoords = { coords };
 			return this.goToFSEntry(fsEntry, model);
 		}
 		const { targetPoint } = res;
@@ -1484,7 +574,7 @@ class Tabletree {
 		const res =
 			fsEntry.contentObject && (await fsEntry.contentObject.goToSearch(search, model));
 		if (!res) {
-			fsEntry.targetLine = { search };
+			fsEntry.navigationCoords = { search };
 			return this.goToFSEntry(fsEntry, model);
 		}
 		const { targetPoint } = res;
@@ -1493,29 +583,6 @@ class Tabletree {
 	}
 
 	// URL Handling ////////////////////////////////////////////////////////////////////////////////
-
-	registerElementForURL(el: any, url: string) {
-		this.urlIndex[url] = this.urlIndex[url] || [];
-		this.urlIndex[url].push(el);
-	}
-
-	async gcURLElements() {
-		const deletions = [];
-		let i = 0;
-		const elFilter = (el: { ownerDocument: { body: { contains: (arg0: any) => any } } }) => {
-			i++;
-			return el.ownerDocument.body.contains(el);
-		};
-		for (let n in this.urlIndex) {
-			this.urlIndex[n] = this.urlIndex[n].filter(elFilter);
-			if (this.urlIndex[n].length === 0) deletions.push(n);
-			if (i > 100) {
-				await this.yield();
-				i = 0;
-			}
-		}
-		deletions.forEach((n) => delete this.urlIndex[n]);
-	}
 
 	goToURL(url: string = '') {
 		this.navUrl = url;
@@ -1662,6 +729,7 @@ class Tabletree {
 				switch (ev.key) {
 					case 'w': // scroll up
 						{
+							if (!self.fileTree) return;
 							const fsEntry = getPathEntry(self.fileTree, self.breadcrumbPath || '');
 							if (fsEntry && fsEntry.parent && fsEntry.parent.entries) {
 								const files = Object.values(fsEntry.parent.entries).sort(
@@ -1674,6 +742,7 @@ class Tabletree {
 						break;
 					case 's': // scroll down
 						{
+							if (!self.fileTree) return;
 							const fsEntry = getPathEntry(self.fileTree, self.breadcrumbPath || '');
 							if (fsEntry && fsEntry.parent && fsEntry.parent.entries) {
 								const files = Object.values(fsEntry.parent.entries).sort(
@@ -1719,6 +788,7 @@ class Tabletree {
 						// self.zoomToEntry({clientX: window.innerWidth/2, clientY: window.innerHeight/2});
 						break;
 					case 'x': // zoom out of object
+						if (!self.fileTree) return;
 						var fsEntry = getPathEntry(
 							self.fileTree,
 							(self.breadcrumbPath || '').replace(/\/[^/]+$/, '')
@@ -1840,7 +910,7 @@ class Tabletree {
 			e.preventDefault();
 		});
 
-		this.highlighted = null;
+		this.highlighted = undefined;
 		window.onmouseup = function(ev: { preventDefault: () => void }) {
 			if (down && ev.preventDefault) ev.preventDefault();
 			if (clickDisabled) {
@@ -1904,7 +974,7 @@ class Tabletree {
 					Geometry.getFSEntryBBox(fsEntry, this.model, this.camera),
 					this.navTarget
 				);
-			this.history.push(this.getURLForFSEntry(fsEntry, coords));
+			if (this.history) this.history.push(this.getURLForFSEntry(fsEntry, coords));
 			this.highlighted = fsEntry;
 			this.changed = true;
 		}
@@ -1918,66 +988,6 @@ class Tabletree {
 			this.fsIndex,
 			this.highlighted
 		);
-	}
-
-	getTextPosition(
-		fsEntry: FSEntry,
-		intersection: { point: THREE.Vector3; object: { matrixWorld: THREE.Matrix4 } }
-	) {
-		const fv = new THREE.Vector3(
-			fsEntry.contentObject.textXZero,
-			fsEntry.contentObject.textYZero,
-			fsEntry.z
-		);
-		const pv = new THREE.Vector3().copy(intersection.point);
-		const inv = new THREE.Matrix4().getInverse(intersection.object.matrixWorld);
-		pv.applyMatrix4(inv);
-		const uv = new THREE.Vector3().subVectors(pv, fv);
-		uv.divideScalar(fsEntry.scale * fsEntry.contentObject.textScale);
-		uv.y /= 38;
-		uv.x /= 19;
-
-		const line = Math.floor(-uv.y);
-		const col = Math.floor(uv.x + 1);
-		return { line, col };
-	}
-
-	handleTextClick(ev: any, fsEntry: FSEntry, intersection: any) {
-		const { line, col } = this.getTextPosition(fsEntry, intersection);
-		const text = fsEntry.contentObject.geometry.layout._opt.text;
-		const lineStr = text.split('\n')[line - 1];
-		const urlRE = /https?:\/\/[a-z0-9.%$#@&?/_-]+/gi;
-		var hit = null;
-		while ((hit = urlRE.exec(lineStr))) {
-			const startIndex = hit.index;
-			const endIndex = hit.index + hit[0].length - 1;
-			if (col >= startIndex && col <= endIndex) {
-				if (this.onElectron) {
-					// Open link in a floating iframe added to the tree.
-					// On render, update the matrix of the iframe's 3D transform.
-					// This can only be done on Electron as X-Frame-Options: DENY
-					// disables cross-origin iframes.
-					var iframe = document.createElement('iframe');
-					iframe.src = hit[0];
-					iframe.style.border = '10px solid white';
-					iframe.style.backgroundColor = 'white';
-					iframe.style.position = 'absolute';
-					iframe.style.right = '10px';
-					iframe.style.top = 96 + 'px';
-					iframe.style.zIndex = '2';
-					iframe.style.width = '600px';
-					iframe.style.height = 'calc(100vh - 106px)';
-					if (this.renderer.domElement.parentNode)
-						this.renderer.domElement.parentNode.appendChild(iframe);
-					return true;
-				} else {
-					// Open link in a new window.
-					window.open(hit[0]);
-					return true;
-				}
-			}
-		}
-		return false;
 	}
 
 	// Rendering ////////////////////////////////////////////////////////////////////////////////
@@ -2038,7 +1048,7 @@ class Tabletree {
 			if (Math.abs(camera.fov - camera.targetFOV) < camera.targetFOV / 1000) {
 				camera.fov = camera.targetFOV;
 			}
-			this.updateLinks();
+			this.linksModel.updateLinks(this.currentFrame);
 			this.changed = true;
 			this.animating = true;
 		} else {

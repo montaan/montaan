@@ -38,17 +38,32 @@
         [] WebGPU backend
     [] VR-AR port
 
+# Release checklist
+
+    [] Solid file tree rebuilds (no missing files)
+    [] Clean well-documented path to create a new component & integrate it
+    [] Search works
+    [] Commit history works
+    [] Solid repo import path
+        [] Import Github repo
+        [] In-progress spinner
+        [] Import local repo
+    [] Repo auto-pull & update
+    [] Tests pass
+
 # FIX
 
+    [] Tree rebuilds have files missing
     [z] Loading trees takes forever and too many requests
         [x] Each request returns >1 deep hierarchy (limit by count of files)
+        [] Move visibility checking to tree builder
     [x] Navigate to line in text view
     [] main.js is too large
         [x] Convert to TS
         [x] Move tree build to lib
         [] Move tree rendering to lib
-        [] Move links rendering to lib
-        [] Move highlight rendering to lib
+        [x] Move links rendering to lib
+        [x] Move highlight rendering to lib
     [x] MainApp is too large
         [x] Move commits to MontaanGit
         [] Move repo management to MontaanUserRepos
