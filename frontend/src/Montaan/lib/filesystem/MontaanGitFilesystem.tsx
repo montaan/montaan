@@ -20,6 +20,7 @@ export default class MontaanGitFilesystem extends Filesystem {
 	dependencies?: TreeLink[];
 	dependencySrcIndex?: Map<TreeLinkKey, TreeLink[]>;
 	dependencyDstIndex?: Map<TreeLinkKey, TreeLink[]>;
+	fetchingCommits = false;
 
 	constructor(url: string, api: QFrameAPI, mountPoint: FSEntry) {
 		super(url, api, mountPoint);
@@ -29,6 +30,13 @@ export default class MontaanGitFilesystem extends Filesystem {
 	}
 
 	getUIComponents(state: any): React.ReactElement {
+		if (!this.commitData && !this.fetchingCommits) {
+			this.readData().then((d) => {
+				this.fetchingCommits = false;
+				state.setCommitData(this.commitData);
+				if (this.dependencies) state.setDependencies(this.dependencies);
+			});
+		}
 		const path = getFullPath(this.mountPoint);
 		const repoPrefix = this.repo;
 		return (
@@ -61,8 +69,8 @@ export default class MontaanGitFilesystem extends Filesystem {
 					activeCommitData={state.activeCommitData}
 					commitData={state.commitData}
 					navigationTarget={state.navigationTarget}
-					showFileCommitsClick={state.showFileCommitsClick}
 					searchQuery={state.searchQuery}
+					path={path}
 					repoPrefix={state.repoPrefix}
 					diffsLoaded={state.diffsLoaded}
 					commitFilter={state.commitFilter}

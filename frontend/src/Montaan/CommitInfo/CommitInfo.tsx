@@ -60,7 +60,7 @@ export interface CommitInfoProps {
 
 	fileContents: null | FileContents;
 
-	showFileCommitsClick(event: React.MouseEvent<HTMLButtonElement, MouseEvent>): void;
+	path: string;
 }
 
 interface CommitInfoState {
@@ -446,7 +446,7 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 
 	onShowFileCommits = (event: React.MouseEvent<HTMLButtonElement, MouseEvent>): void => {
 		this.setState({ visible: true });
-		this.props.showFileCommitsClick(event);
+		this.props.setCommitFilter({});
 	};
 
 	getFileCommits(path: string, hash: string): { path: string; commit: Commit }[] {

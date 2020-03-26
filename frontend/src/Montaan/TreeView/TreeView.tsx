@@ -24,8 +24,8 @@ export interface TreeViewProps extends RouteComponentProps {
 	api: QFrameAPI;
 	repoPrefix: string;
 	fileTree: FileTree;
-	commitData: null | CommitData;
-	activeCommitData: null | ActiveCommitData;
+	commitData?: CommitData;
+	activeCommitData?: ActiveCommitData;
 	commitFilter: any;
 	navigationTarget: string;
 	searchResults: SearchResult[];

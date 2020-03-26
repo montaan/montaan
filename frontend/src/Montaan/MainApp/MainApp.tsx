@@ -109,8 +109,7 @@ interface MainAppState {
 	repoPrefix: string;
 	commitFilter: CommitFilter;
 	searchQuery: string;
-	commits: Commit[];
-	activeCommitData: null | ActiveCommitData;
+	activeCommitData?: ActiveCommitData;
 	fileTree: FileTree;
 	commitLog: string;
 	commitChanges: string;
@@ -128,7 +127,7 @@ interface MainAppState {
 	dependencyDstIndex: TreeLinkIndex;
 	repos: RepoInfo[];
 	repoError: any;
-	commitData: null | CommitData;
+	commitData?: CommitData;
 	navUrl: string;
 	ref: string;
 	searchHover?: any;
@@ -166,8 +165,8 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		repoPrefix: '',
 		commitFilter: {},
 		searchQuery: '',
-		commits: [],
-		activeCommitData: null,
+		commitData: undefined,
+		activeCommitData: undefined,
 		commitLog: '',
 		commitChanges: '',
 		files: '',
@@ -205,7 +204,6 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 			fileTree: { count: 0, tree: createFSTree('', '') },
 			repos: [],
 			navUrl: '',
-			commitData: null,
 			ref: 'HEAD',
 			repoPrefix,
 		};
@@ -333,6 +331,10 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 
 	showFileDependencyGraph = (path: string) => {
 		// Traverse graph from path and set connected part as links
+	};
+
+	setCommitData = (commitData: CommitData) => {
+		this.setState({ commitData });
 	};
 
 	setCommitFilter = (commitFilter: any) => {
@@ -579,11 +581,6 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		);
 	}
 
-	showFileCommitsClick = (ev: any) => {
-		this.setCommitFilter({ path: this.state.navigationTarget });
-		this.requestFrame();
-	};
-
 	fullscreenOnClick(ev: any) {
 		var d = document;
 		if (d.fullscreenElement) {
@@ -596,6 +593,8 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 
 	setLinks = (links: TreeLink[]) => this.setState({ links });
 	addLinks = (links: TreeLink[]) => this.setLinks(this.state.links.concat(links));
+
+	setDependencies = (dependencies: TreeLink[]) => this.setState({ dependencies });
 
 	shouldComponentUpdate(nextProps: MainAppProps, nextState: MainAppState) {
 		if (nextProps.userInfo !== this.props.userInfo) this.updateUserRepos(nextProps.userInfo);
@@ -685,8 +684,18 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 			? titlePrefix + this.state.navigationTarget + ' - Montaan'
 			: 'Montaan 🏔';
 		const fsComponents: React.ReactElement[] = [];
+		const fsState = {
+			...this.state,
+			setCommitData: this.setCommitData,
+			setDependencies: this.setDependencies,
+			setCommitFilter: this.setCommitFilter,
+			loadDiff: this.loadDiff,
+			loadFile: this.loadFile,
+			loadFileDiff: this.loadFileDiff,
+			closeFile: this.closeFile,
+		};
 		this.getPathFilesystems().forEach((fsEntry) => {
-			fsComponents.push(fsEntry.filesystem!.getUIComponents(this.state));
+			fsComponents.push(fsEntry.filesystem!.getUIComponents(fsState));
 		});
 		return (
 			<div
