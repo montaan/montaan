@@ -375,6 +375,15 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 			this.updateActiveCommitSetAuthors([], {}, []);
 			this.updateActiveCommitSetDiffs([]);
 		}
+		if (nextProps.fileContents !== this.props.fileContents && nextProps.fileContents) {
+			if (nextState.diffEditor && nextProps.fileContents.original) {
+				const model = nextState.diffEditor.getModel();
+				model.original.setValue(nextProps.fileContents.original);
+				model.modified.setValue(nextProps.fileContents.content);
+			} else if (nextState.editor && nextProps.fileContents.content) {
+				nextState.editor.getModel().setValue(nextProps.fileContents.content);
+			}
+		}
 		return true;
 	}
 
