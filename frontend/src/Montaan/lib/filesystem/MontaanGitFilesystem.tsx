@@ -34,8 +34,11 @@ export default class MontaanGitFilesystem extends Filesystem {
 			this.readData().then((d) => {
 				this.fetchingCommits = false;
 				state.setCommitData(this.commitData);
-				if (this.dependencies) state.setDependencies(this.dependencies);
+				state.setDependencies(this.dependencies);
 			});
+		} else if (state.commitData !== this.commitData) {
+			state.setCommitData(this.commitData);
+			state.setDependencies(this.dependencies);
 		}
 		const path = getFullPath(this.mountPoint);
 		const repoPrefix = this.repo;
@@ -70,6 +73,8 @@ export default class MontaanGitFilesystem extends Filesystem {
 					commitData={state.commitData}
 					navigationTarget={state.navigationTarget}
 					searchQuery={state.searchQuery}
+					commitsVisible={state.commitsVisible}
+					setCommitsVisible={state.setCommitsVisible}
 					path={path}
 					repoPrefix={state.repoPrefix}
 					diffsLoaded={state.diffsLoaded}

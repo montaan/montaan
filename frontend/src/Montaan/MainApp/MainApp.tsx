@@ -133,6 +133,7 @@ interface MainAppState {
 	searchHover?: any;
 	treeLoaded: boolean;
 	fileTreeUpdated: number;
+	commitsVisible: boolean;
 }
 
 declare global {
@@ -206,6 +207,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 			navUrl: '',
 			ref: 'HEAD',
 			repoPrefix,
+			commitsVisible: false,
 		};
 		this.repoTimeout = 0;
 		this.commitIndex = 0;
@@ -334,7 +336,8 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 	};
 
 	setCommitData = (commitData: CommitData) => {
-		this.setState({ commitData });
+		this.setState({ commitData, activeCommitData: undefined, commitFilter: {} });
+		this.setActiveCommits(commitData.commits);
 	};
 
 	setCommitFilter = (commitFilter: any) => {
@@ -596,6 +599,8 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 
 	setDependencies = (dependencies: TreeLink[]) => this.setState({ dependencies });
 
+	setCommitsVisible = (commitsVisible: boolean) => this.setState({ commitsVisible });
+
 	shouldComponentUpdate(nextProps: MainAppProps, nextState: MainAppState) {
 		if (nextProps.userInfo !== this.props.userInfo) this.updateUserRepos(nextProps.userInfo);
 		if (nextProps.location !== this.props.location) {
@@ -693,6 +698,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 			loadFile: this.loadFile,
 			loadFileDiff: this.loadFileDiff,
 			closeFile: this.closeFile,
+			setCommitsVisible: this.setCommitsVisible,
 		};
 		this.getPathFilesystems().forEach((fsEntry) => {
 			fsComponents.push(fsEntry.filesystem!.getUIComponents(fsState));

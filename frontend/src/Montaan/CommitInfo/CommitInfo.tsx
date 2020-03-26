@@ -60,11 +60,13 @@ export interface CommitInfoProps {
 
 	fileContents: null | FileContents;
 
+	commitsVisible: boolean;
+	setCommitsVisible: (visible: boolean) => void;
+
 	path: string;
 }
 
 interface CommitInfoState {
-	visible: boolean;
 	authorSort: string;
 	commitFilter: any;
 	diffEditor: any;
@@ -79,7 +81,6 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 		this.state = {
 			diffEditor: null,
 			editor: null,
-			visible: false,
 			authorSort: 'commits',
 			commitFilter: undefined,
 		};
@@ -350,22 +351,18 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 	}
 
 	toggleVisible = (ev: MouseEvent) => {
-		this.setState({ visible: !this.state.visible });
+		this.props.setCommitsVisible(!this.props.commitsVisible);
 	};
 
 	shouldComponentUpdate(nextProps: CommitInfoProps, nextState: CommitInfoState) {
-		if (nextProps.activeCommitData !== this.props.activeCommitData) {
-			if (nextProps.activeCommitData && nextProps.commitData) {
+		if (nextProps.activeCommitData && nextProps.commitData) {
+			if (nextProps.activeCommitData !== this.props.activeCommitData) {
 				const { authors, commits, authorCommitCounts } = nextProps.activeCommitData;
-				if (!nextState.visible && commits && commits !== nextProps.commitData.commits)
-					this.setState({ visible: true });
 				const diffView = document.getElementById('diffView')!;
 				while (diffView.firstChild) diffView.removeChild(diffView.firstChild);
 				this.updateActiveCommitSetAuthors(authors, authorCommitCounts, commits);
 				this.updateActiveCommitSetDiffs(commits);
-			}
-		} else if (nextState.authorSort !== this.state.authorSort) {
-			if (nextProps.activeCommitData && nextProps.commitData) {
+			} else if (nextState.authorSort !== this.state.authorSort) {
 				const { authors, commits, authorCommitCounts } = nextProps.activeCommitData;
 				this.updateActiveCommitSetAuthors(
 					authors,
@@ -374,6 +371,9 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 					nextState.authorSort
 				);
 			}
+		} else {
+			this.updateActiveCommitSetAuthors([], {}, []);
+			this.updateActiveCommitSetDiffs([]);
 		}
 		return true;
 	}
@@ -442,10 +442,10 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 	sortByEmail = () => this.setState({ authorSort: 'email' });
 	sortByCommits = () => this.setState({ authorSort: 'commits' });
 	sortByDate = () => this.setState({ authorSort: 'date' });
-	hideCommitsPane = () => this.setState({ visible: false });
+	hideCommitsPane = () => this.props.setCommitsVisible(false);
 
 	onShowFileCommits = (event: React.MouseEvent<HTMLButtonElement, MouseEvent>): void => {
-		this.setState({ visible: true });
+		this.props.setCommitsVisible(true);
 		this.props.setCommitFilter({});
 	};
 
@@ -532,7 +532,7 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 					className={
 						styles.CommitInfo +
 						' ' +
-						(this.state.visible ? styles.visible : styles.hidden)
+						(this.props.commitsVisible ? styles.visible : styles.hidden)
 					}
 					data-filename={'frontend/' + __filename.replace(/\\/g, '/')}
 				>
