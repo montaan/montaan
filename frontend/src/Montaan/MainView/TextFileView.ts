@@ -4,9 +4,9 @@ import { FSEntry } from '../lib/filesystem';
 import QFrameAPI from '../../lib/api';
 
 import Layout, { SDFTextMesh } from '../lib/Layout';
-import { Intersection } from 'three';
 import { BBox } from '../lib/Geometry';
 import NavTarget from './NavTarget';
+import FileView, { ContentBBox, EmptyContentBBox } from './FileView';
 
 type PrettyPrintResult = {
 	language: string;
@@ -21,16 +21,9 @@ type NodeStyle = {
 	text: string;
 };
 
-export default class TextFileView extends THREE.Object3D {
+export default class TextFileView extends FileView {
 	MAX_SIZE = 1e5;
-	fsEntry: FSEntry;
-	model: THREE.Mesh;
-	api: QFrameAPI;
-	yield: any;
-	path: string;
-	requestFrame: any;
 	fullyVisible: boolean = false;
-	loadListeners: (() => void)[];
 	textMesh?: SDFTextMesh;
 	textScale: number = 0;
 	textX: number = 0;
@@ -39,7 +32,6 @@ export default class TextFileView extends THREE.Object3D {
 	textHeight: number = 0;
 	textWidth: number = 0;
 	lineCount: number = 0;
-	canHighlight: boolean = true;
 
 	constructor(
 		fsEntry: FSEntry,
@@ -49,15 +41,8 @@ export default class TextFileView extends THREE.Object3D {
 		yieldFn: any,
 		requestFrame: any
 	) {
-		super();
-		this.visible = false;
-		this.fsEntry = fsEntry;
-		this.model = model;
-		this.api = api;
-		this.yield = yieldFn;
-		this.path = fullPath;
-		this.requestFrame = requestFrame;
-		this.loadListeners = [];
+		super(fsEntry, model, fullPath, api, yieldFn, requestFrame);
+		this.canHighlight = true;
 	}
 
 	dispose() {
@@ -69,7 +54,7 @@ export default class TextFileView extends THREE.Object3D {
 		this.loadListeners.splice(0);
 	}
 
-	goToCoords(coords: number[]) {
+	async goToCoords(coords: number[]): Promise<THREE.Vector3 | undefined> {
 		if (this.textHeight > 0) return this.__goToCoords(coords);
 		else
 			return new Promise((resolve, reject) => {
@@ -77,7 +62,7 @@ export default class TextFileView extends THREE.Object3D {
 			});
 	}
 
-	goToSearch(search: string) {
+	async goToSearch(search: string): Promise<THREE.Vector3 | undefined> {
 		if (this.textHeight > 0) return this.__goToSearch(search);
 		else
 			return new Promise((resolve, reject) => {
@@ -85,8 +70,8 @@ export default class TextFileView extends THREE.Object3D {
 			});
 	}
 
-	__goToCoords(coords: number[]) {
-		if (this.textHeight <= 0 || !this.textMesh) return false;
+	__goToCoords(coords: number[]): THREE.Vector3 | undefined {
+		if (this.textHeight <= 0 || !this.textMesh) return undefined;
 		const line = coords[0];
 		let textYOff = -(this.lineCount - (line + 0.5)) * 44;
 		if (line === 0) {
@@ -97,11 +82,11 @@ export default class TextFileView extends THREE.Object3D {
 		let textX = 18 * 80;
 		const targetPoint = new THREE.Vector3(textX, textYOff, 10000);
 		targetPoint.applyMatrix4(this.textMesh.matrixWorld);
-		return { targetPoint };
+		return targetPoint;
 	}
 
-	__goToSearch(search: string) {
-		if (this.textHeight <= 0 || !this.textMesh) return false;
+	__goToSearch(search: string): THREE.Vector3 | undefined {
+		if (this.textHeight <= 0 || !this.textMesh) return undefined;
 		const text = this.textMesh.geometry.layout._opt.text;
 		let line = 1;
 		let index = 0;
@@ -112,92 +97,95 @@ export default class TextFileView extends THREE.Object3D {
 			if (res) index = res.index;
 		} else index = text.indexOf(search);
 		for (let i = 0; i < index; i++) if (text.charCodeAt(i) === 10) line++;
-		return this.goToCoords([line]);
+		return this.__goToCoords([line]);
 	}
 
-	getHighlightRegion(coords: number[]) {
-		return {
-			c0: new THREE.Vector3(),
-			c1: new THREE.Vector3(),
-			c2: new THREE.Vector3(),
-			c3: new THREE.Vector3(),
-		};
+	getHighlightRegion(coords: number[]): ContentBBox {
+		if (!this.textMesh) return EmptyContentBBox;
+		const line = coords[0];
+		let textYOff = -(this.lineCount - line) * 44 + 16;
+		const m = this.textMesh.matrixWorld;
+		const topLeft = new THREE.Vector3(0, textYOff - 44, 0).applyMatrix4(m);
+		const topRight = new THREE.Vector3(this.textWidth, textYOff - 44, 0).applyMatrix4(m);
+		const bottomLeft = new THREE.Vector3(0, textYOff, 0).applyMatrix4(m);
+		const bottomRight = new THREE.Vector3(this.textWidth, textYOff, 0).applyMatrix4(m);
+		return new ContentBBox(topLeft, topRight, bottomLeft, bottomRight);
 	}
 
 	loaded() {
 		this.loadListeners.splice(0).forEach((f) => f());
 	}
 
-	onclick(ev: MouseEvent, intersection: Intersection, bbox: BBox, navTarget: NavTarget) {
+	onclick(ev: MouseEvent, intersection: THREE.Intersection, bbox: BBox, navTarget: NavTarget) {
 		if (bbox.width > 0.2) {
 			if (navTarget.fsEntry === this.fsEntry) {
 				if (navTarget.coords.length > 0 || navTarget.search.length > 0) {
-					return false;
+					return undefined;
 				}
 			}
 			return [0];
 		}
-		return false;
+		return undefined;
 	}
 
-	getTextPosition(
-		fsEntry: FSEntry,
-		intersection: { point: THREE.Vector3; object: { matrixWorld: THREE.Matrix4 } }
-	) {
-		const fv = new THREE.Vector3(
-			fsEntry.contentObject.textXZero,
-			fsEntry.contentObject.textYZero,
-			fsEntry.z
-		);
-		const pv = new THREE.Vector3().copy(intersection.point);
-		const inv = new THREE.Matrix4().getInverse(intersection.object.matrixWorld);
-		pv.applyMatrix4(inv);
-		const uv = new THREE.Vector3().subVectors(pv, fv);
-		uv.divideScalar(fsEntry.scale * fsEntry.contentObject.textScale);
-		uv.y /= 38;
-		uv.x /= 19;
+	// getTextPosition(
+	// 	fsEntry: FSEntry,
+	// 	intersection: { point: THREE.Vector3; object: { matrixWorld: THREE.Matrix4 } }
+	// ) {
+	// 	const fv = new THREE.Vector3(
+	// 		fsEntry.contentObject.textXZero,
+	// 		fsEntry.contentObject.textYZero,
+	// 		fsEntry.z
+	// 	);
+	// 	const pv = new THREE.Vector3().copy(intersection.point);
+	// 	const inv = new THREE.Matrix4().getInverse(intersection.object.matrixWorld);
+	// 	pv.applyMatrix4(inv);
+	// 	const uv = new THREE.Vector3().subVectors(pv, fv);
+	// 	uv.divideScalar(fsEntry.scale * fsEntry.contentObject.textScale);
+	// 	uv.y /= 38;
+	// 	uv.x /= 19;
 
-		const line = Math.floor(-uv.y);
-		const col = Math.floor(uv.x + 1);
-		return { line, col };
-	}
+	// 	const line = Math.floor(-uv.y);
+	// 	const col = Math.floor(uv.x + 1);
+	// 	return { line, col };
+	// }
 
-	handleTextClick(ev: any, fsEntry: FSEntry, intersection: any, openInIFrame: boolean = false) {
-		const { line, col } = this.getTextPosition(fsEntry, intersection);
-		const text = fsEntry.contentObject.geometry.layout._opt.text;
-		const lineStr = text.split('\n')[line - 1];
-		const urlRE = /https?:\/\/[a-z0-9.%$#@&?/_-]+/gi;
-		var hit = null;
-		while ((hit = urlRE.exec(lineStr))) {
-			const startIndex = hit.index;
-			const endIndex = hit.index + hit[0].length - 1;
-			if (col >= startIndex && col <= endIndex) {
-				if (openInIFrame) {
-					// Open link in a floating iframe added to the tree.
-					// On render, update the matrix of the iframe's 3D transform.
-					// This can only be done on Electron as X-Frame-Options: DENY
-					// disables cross-origin iframes.
-					var iframe = document.createElement('iframe');
-					iframe.src = hit[0];
-					iframe.style.border = '10px solid white';
-					iframe.style.backgroundColor = 'white';
-					iframe.style.position = 'absolute';
-					iframe.style.right = '10px';
-					iframe.style.top = 96 + 'px';
-					iframe.style.zIndex = '2';
-					iframe.style.width = '600px';
-					iframe.style.height = 'calc(100vh - 106px)';
-					if (document.body) document.body.appendChild(iframe);
-					return true;
-				} else {
-					// Open link in a new window.
-					window.open(hit[0]);
-					return true;
-				}
-			}
-		}
-		return false;
-	}
+	// handleTextClick(ev: any, fsEntry: FSEntry, intersection: any, openInIFrame: boolean = false) {
+	// 	const { line, col } = this.getTextPosition(fsEntry, intersection);
+	// 	const text = fsEntry.contentObject.geometry.layout._opt.text;
+	// 	const lineStr = text.split('\n')[line - 1];
+	// 	const urlRE = /https?:\/\/[a-z0-9.%$#@&?/_-]+/gi;
+	// 	var hit = null;
+	// 	while ((hit = urlRE.exec(lineStr))) {
+	// 		const startIndex = hit.index;
+	// 		const endIndex = hit.index + hit[0].length - 1;
+	// 		if (col >= startIndex && col <= endIndex) {
+	// 			if (openInIFrame) {
+	// 				// Open link in a floating iframe added to the tree.
+	// 				// On render, update the matrix of the iframe's 3D transform.
+	// 				// This can only be done on Electron as X-Frame-Options: DENY
+	// 				// disables cross-origin iframes.
+	// 				var iframe = document.createElement('iframe');
+	// 				iframe.src = hit[0];
+	// 				iframe.style.border = '10px solid white';
+	// 				iframe.style.backgroundColor = 'white';
+	// 				iframe.style.position = 'absolute';
+	// 				iframe.style.right = '10px';
+	// 				iframe.style.top = 96 + 'px';
+	// 				iframe.style.zIndex = '2';
+	// 				iframe.style.width = '600px';
+	// 				iframe.style.height = 'calc(100vh - 106px)';
+	// 				if (document.body) document.body.appendChild(iframe);
+	// 				return true;
+	// 			} else {
+	// 				// Open link in a new window.
+	// 				window.open(hit[0]);
+	// 				return true;
+	// 			}
+	// 		}
+	// 	}
+	// 	return false;
+	// }
 
 	ontick(t: number, dt: number): void {}
 

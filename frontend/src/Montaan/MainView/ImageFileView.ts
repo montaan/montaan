@@ -1,8 +1,7 @@
 import * as THREE from 'three';
 import { FSEntry } from '../lib/filesystem';
 import QFrameAPI from '../../lib/api';
-import { Intersection } from 'three';
-import { BBox } from '../lib/Geometry';
+import FileView from './FileView';
 
 const emptyMaterial = new THREE.MeshBasicMaterial();
 
@@ -10,17 +9,9 @@ interface ImageMesh extends THREE.Mesh {
 	material: THREE.MeshBasicMaterial;
 }
 
-export default class ImageFileView extends THREE.Mesh {
-	fsEntry: FSEntry;
-	model: THREE.Mesh;
-	api: QFrameAPI;
-	yield: any;
-	path: string;
+export default class ImageFileView extends FileView {
 	mesh: ImageMesh;
-	requestFrame: any;
 	fullyVisible: boolean = false;
-	loadListeners: (() => void)[];
-	canHighlight: boolean = false;
 
 	constructor(
 		fsEntry: FSEntry,
@@ -30,15 +21,7 @@ export default class ImageFileView extends THREE.Mesh {
 		yieldFn: any,
 		requestFrame: any
 	) {
-		super();
-		this.visible = false;
-		this.fsEntry = fsEntry;
-		this.model = model;
-		this.api = api;
-		this.yield = yieldFn;
-		this.path = fullPath;
-		this.requestFrame = requestFrame;
-		this.loadListeners = [];
+		super(fsEntry, model, fullPath, api, yieldFn, requestFrame);
 
 		const geometry = new THREE.PlaneBufferGeometry(1, 1);
 		const material = emptyMaterial;
@@ -55,35 +38,10 @@ export default class ImageFileView extends THREE.Mesh {
 		if (this.mesh.material && this.mesh.material.map) {
 			this.mesh.material.map.dispose();
 		}
-		if (this.geometry) {
-			this.geometry.dispose();
+		if (this.mesh.geometry) {
+			this.mesh.geometry.dispose();
 		}
 		this.loadListeners.splice(0);
-	}
-
-	onclick(ev: MouseEvent, intersection: Intersection, bbox: BBox) {
-		return false;
-	}
-
-	loaded() {
-		this.loadListeners.splice(0).forEach((f) => f());
-	}
-
-	goToCoords(coords: number[]) {
-		return false;
-	}
-
-	goToSearch(search: string) {
-		return false;
-	}
-
-	getHighlightRegion(coords: number[]) {
-		return {
-			c0: new THREE.Vector3(),
-			c1: new THREE.Vector3(),
-			c2: new THREE.Vector3(),
-			c3: new THREE.Vector3(),
-		};
 	}
 
 	load(src: string) {

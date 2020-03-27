@@ -19,7 +19,6 @@ import {
 	readDir,
 	registerFileSystem,
 	getAllFilesystemsForPath,
-	getNearestFSEntryForURL,
 } from '../lib/filesystem';
 
 import styles from './MainApp.module.scss';

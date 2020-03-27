@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { FSEntry } from '../lib/filesystem';
+import { FSEntry, getFSEntryForURL } from '../lib/filesystem';
 import { SearchResult } from '../MainApp';
 import Geometry from '../lib/Geometry';
 import Colors from '../lib/Colors';
@@ -48,7 +48,7 @@ export default class HighlightedLines {
 		};
 	}
 
-	setGoToHighlight(fsEntry: any, line: any) {
+	setGoToHighlight(fsEntry: FSEntry, line: any) {
 		this.addHighlightedLine(fsEntry, line, 0);
 	}
 
@@ -61,13 +61,18 @@ export default class HighlightedLines {
 				this.highlightIndex++;
 			}
 
-			const { c0, c1, c2, c3 } = fsEntry.contentObject.getHighlightRegion([line]);
+			const {
+				topLeft,
+				topRight,
+				bottomLeft,
+				bottomRight,
+			} = fsEntry.contentObject.getHighlightRegion([line]);
 			var off = index * 4;
 
-			geo.vertices[off++].copy(c0);
-			geo.vertices[off++].copy(c1);
-			geo.vertices[off++].copy(c2);
-			geo.vertices[off++].copy(c3);
+			geo.vertices[off++].copy(topLeft);
+			geo.vertices[off++].copy(topRight);
+			geo.vertices[off++].copy(bottomRight);
+			geo.vertices[off++].copy(bottomLeft);
 
 			geo.verticesNeedUpdate = true;
 		} else {
@@ -87,21 +92,24 @@ export default class HighlightedLines {
 		this.highlightLater = [];
 	}
 
-	highlightResults(results: SearchResult[], ca: THREE.BufferAttribute) {
-		this.highlightedResults.forEach(function(highlighted) {
-			if (highlighted.fsEntry.index === undefined) return;
+	highlightResults(tree: FSEntry, results: SearchResult[], ca: THREE.BufferAttribute) {
+		this.highlightedResults.forEach((highlighted, i) => {
+			const res = getFSEntryForURL(tree, highlighted.filename);
+			if (!res) return;
+			const fsEntry = res.fsEntry;
+			if (fsEntry.index === undefined) return;
 			Geometry.setColor(
 				ca.array as Float32Array,
-				highlighted.fsEntry.index,
-				Colors[highlighted.fsEntry.entries === null ? 'getFileColor' : 'getDirectoryColor'](
-					highlighted.fsEntry
-				)
+				fsEntry.index,
+				Colors[fsEntry.entries === null ? 'getFileColor' : 'getDirectoryColor'](fsEntry)
 			);
 		});
 		this.clearSearchHighlights();
 		for (var i = 0; i < results.length; i++) {
-			var fsEntry = results[i].fsEntry;
-			if (fsEntry.index === undefined) continue;
+			const res = getFSEntryForURL(tree, results[i].filename);
+			if (!res) return;
+			const fsEntry = res.fsEntry;
+			if (fsEntry.index === undefined) return;
 			if (fsEntry.entries !== null && results[i].line === 0) {
 				Geometry.setColor(
 					ca.array as Float32Array,

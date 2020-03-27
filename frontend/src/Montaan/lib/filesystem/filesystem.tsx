@@ -1,5 +1,6 @@
 import QFrameAPI from '../../../lib/api';
 import React from 'react';
+import FileView from '../../MainView/FileView';
 
 export interface FSEntry {
 	distanceFromCenter: number;
@@ -26,7 +27,7 @@ export interface FSEntry {
 
 	data: any;
 
-	contentObject?: any;
+	contentObject?: FileView;
 
 	index?: number;
 	vertexIndex: number;

@@ -72,7 +72,6 @@ export default class LinksModel {
 		model: THREE.Object3D,
 		fsEntry: FSEntry,
 		coords: number[] | undefined,
-		lineCount: number,
 		bbox: { bottom: number; top: number; left: any }
 	) {
 		var a = new THREE.Vector3(fsEntry.x, fsEntry.y, fsEntry.z);
@@ -98,14 +97,10 @@ export default class LinksModel {
 		} else {
 			bv = this.screenPointToWorldPoint(bbox.left, bbox.top);
 			aUp = new THREE.Vector3(av.x, av.y, av.z);
-			if (line > 0 && fsEntry.contentObject && fsEntry.contentObject.textHeight) {
-				const textYOff = ((line + 0.5) / lineCount) * fsEntry.contentObject.textHeight;
-				const textLinePos = new THREE.Vector3(
-					fsEntry.contentObject.textXZero,
-					fsEntry.contentObject.textYZero - textYOff,
-					fsEntry.z
-				);
-				aUp = av = textLinePos;
+			if (line > 0 && fsEntry.contentObject) {
+				const lineBBox = fsEntry.contentObject.getHighlightRegion([line]);
+				lineBBox.topLeft.y = (lineBBox.topLeft.y + lineBBox.bottomLeft.y) * 0.5;
+				aUp = av = lineBBox.topLeft;
 			}
 		}
 		this.setLine(geo, index, av, aUp, aUp, bv, bv, bv, color);
@@ -136,25 +131,15 @@ export default class LinksModel {
 		var bv = new THREE.Vector3(b.x, b.y + b.scale, b.z);
 		bv.applyMatrix4(modelB.matrixWorld);
 
-		if (lineA > 0 && entryA.contentObject && entryA.contentObject.textHeight) {
-			const textYOff = ((lineA + 0.5) / lineCountA) * entryA.contentObject.textHeight;
-			const textLinePos = new THREE.Vector3(
-				entryA.contentObject.textXZero,
-				entryA.contentObject.textYZero - textYOff,
-				entryA.z
-			);
-			textLinePos.applyMatrix4(modelA.matrixWorld);
-			av = textLinePos;
+		if (lineA > 0 && entryA.contentObject) {
+			const lineBBox = entryA.contentObject.getHighlightRegion([lineA]);
+			lineBBox.topLeft.y = (lineBBox.topLeft.y + lineBBox.bottomLeft.y) * 0.5;
+			av = lineBBox.topLeft;
 		}
-		if (lineB > 0 && entryB.contentObject && entryB.contentObject.textHeight) {
-			const textYOff = ((lineB + 0.5) / lineCountB) * entryB.contentObject.textHeight;
-			const textLinePos = new THREE.Vector3(
-				entryB.contentObject.textXZero,
-				entryB.contentObject.textYZero - textYOff,
-				entryB.z
-			);
-			textLinePos.applyMatrix4(modelB.matrixWorld);
-			av = textLinePos;
+		if (lineB > 0 && entryB.contentObject) {
+			const lineBBox = entryB.contentObject.getHighlightRegion([lineB]);
+			lineBBox.topLeft.y = (lineBBox.topLeft.y + lineBBox.bottomLeft.y) * 0.5;
+			bv = lineBBox.topLeft;
 		}
 
 		var aUp = new THREE.Vector3(
@@ -211,7 +196,6 @@ export default class LinksModel {
 						model,
 						dst.fsEntry,
 						dst.point,
-						dst.fsEntry.lineCount,
 						bbox
 					);
 				} else if (dstIsElem) {
@@ -228,7 +212,6 @@ export default class LinksModel {
 						model,
 						dst.fsEntry,
 						dst.point,
-						dst.fsEntry.lineCount,
 						bbox
 					);
 				} else if (!updateOnlyElements) {

@@ -42,8 +42,8 @@
 
     [] Solid file tree rebuilds (no missing files)
     [] Clean well-documented path to create a new component & integrate it
-    [] Search works
-    [] Commit history works
+    [x] Search works
+    [x] Commit history works
     [] Solid repo import path
         [] Import Github repo
         [] In-progress spinner

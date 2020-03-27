@@ -251,8 +251,10 @@ class Tabletree {
 	// Set search results ////////////////////////////////////////////////////////////////////////////////
 
 	setSearchResults(searchResults: SearchResult[]) {
+		if (!this.fileTree) return;
 		this.searchResults = searchResults;
 		this.highlightedLines.highlightResults(
+			this.fileTree,
 			this.searchResults,
 			(this.model.geometry as THREE.BufferGeometry).getAttribute(
 				'color'
@@ -362,12 +364,6 @@ class Tabletree {
 	) {
 		return (t: any, dt: any) => {
 			if (this.viewRootUpdated || this.treeBuildInProgress) return;
-			document.getElementById('debug')!.textContent =
-				this.meshIndex.size +
-				' / ' +
-				(mesh.geometry as any).maxFileCount +
-				' | ' +
-				this.visibleEntries.size;
 			// Dispose loaded files that are outside the current view
 			for (let i = 0; i < visibleFiles.children.length; i++) {
 				const c = visibleFiles.children[i];
@@ -565,13 +561,12 @@ class Tabletree {
 	async goToFSEntryCoords(fsEntry: FSEntry, coords: number[], model = this.model) {
 		const { scene, camera } = this;
 		scene.updateMatrixWorld();
-		const res =
-			fsEntry.contentObject && (await fsEntry.contentObject.goToCoords(coords, model));
+		const res = fsEntry.contentObject && (await fsEntry.contentObject.goToCoords(coords));
 		if (!res) {
 			fsEntry.navigationCoords = { coords };
 			return this.goToFSEntry(fsEntry, model);
 		}
-		const { targetPoint } = res;
+		const targetPoint = res;
 		camera.targetPosition.copy(targetPoint);
 		this.changed = true;
 	}
@@ -579,13 +574,12 @@ class Tabletree {
 	async goToFSEntryAtSearch(fsEntry: FSEntry, search: string, model = this.model) {
 		const { scene, camera } = this;
 		scene.updateMatrixWorld();
-		const res =
-			fsEntry.contentObject && (await fsEntry.contentObject.goToSearch(search, model));
+		const res = fsEntry.contentObject && (await fsEntry.contentObject.goToSearch(search));
 		if (!res) {
 			fsEntry.navigationCoords = { search };
 			return this.goToFSEntry(fsEntry, model);
 		}
-		const { targetPoint } = res;
+		const targetPoint = res;
 		camera.targetPosition.copy(targetPoint);
 		this.changed = true;
 	}

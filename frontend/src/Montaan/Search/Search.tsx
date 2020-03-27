@@ -5,7 +5,6 @@ import { faTimes } from '@fortawesome/free-solid-svg-icons';
 import { withRouter, RouteComponentProps } from 'react-router-dom';
 
 import styles from './Search.module.scss';
-import { FSEntry } from '../lib/filesystem';
 import { SearchResult } from '../MainApp';
 
 export interface SearchProps extends RouteComponentProps {
@@ -71,7 +70,6 @@ class Search extends React.Component<SearchProps, SearchState> {
 		hitType: number;
 		snippet?: string;
 	}) {
-		const self = this;
 		const { line } = result;
 		const li = document.createElement('li') as any;
 		li.filename = result.filename;
@@ -80,7 +78,7 @@ class Search extends React.Component<SearchProps, SearchState> {
 
 		const title = document.createElement('div');
 		title.className = styles.searchTitle;
-		title.textContent = fsEntry.title;
+		title.textContent = result.filename.slice(result.filename.lastIndexOf('/') + 1);
 		if (line > 0) {
 			title.textContent = line + ':';
 		}
@@ -88,22 +86,22 @@ class Search extends React.Component<SearchProps, SearchState> {
 		fullPath.className = styles.searchFullPath;
 		fullPath.textContent = li.filename.replace(/^\/[^/]*\/[^/]*\//, '/');
 		li.result = result;
-		li.onmouseover = function(ev: any) {
-			if (ev.target.parentNode === this) self.props.setSearchHover(this, this.resultURL);
+		li.onmouseenter = (ev: any) => {
+			this.props.setSearchHover(li, li.resultURL);
 		};
-		li.onmouseout = function(ev: any) {
-			if (ev.target === this) self.props.clearSearchHover(this);
+		li.onmouseleave = (ev: any) => {
+			this.props.clearSearchHover(li);
 		};
-		li.onclick = function(ev: any) {
+		li.onclick = (ev: any) => {
 			if (ev.target.className === styles.collapseToggle) return;
 			ev.preventDefault();
 			ev.stopPropagation();
-			self.props.history.push(this.resultURL);
+			this.props.history.push(li.resultURL);
 		};
 		li.appendChild(title);
 		li.appendChild(fullPath);
 		if (result.snippet) {
-			var snippet = document.createElement('div');
+			const snippet = document.createElement('div');
 			snippet.className = styles.searchSnippet;
 			snippet.textContent = result.snippet;
 			li.appendChild(snippet);
