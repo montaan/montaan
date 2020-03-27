@@ -8,6 +8,7 @@ import {
 	CalendarMouseEventHandler,
 	CalendarElement,
 	Commit,
+	CommitFile,
 } from '../lib/parse-diff';
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
@@ -34,8 +35,14 @@ declare global {
 }
 
 export interface CommitInfoProps {
-	loadFileDiff(sha: string, previousSha: string, path: string, el?: HTMLElement): void;
-	loadFile(sha: string, path: string, el: HTMLElement): void;
+	loadFileDiff(
+		repo: string,
+		sha: string,
+		previousSha: string,
+		path: string,
+		el?: HTMLElement
+	): void;
+	loadFile(repo: string, sha: string, path: string, el: HTMLElement): void;
 
 	searchQuery: string;
 
@@ -46,19 +53,19 @@ export interface CommitInfoProps {
 	links: TreeLink[];
 
 	commitFilter: CommitFilter;
-	setCommitFilter(commitFilter: CommitFilter): void;
+	setCommitFilter(repo: string, commitFilter: CommitFilter): void;
 
 	navigationTarget: string;
 	repoPrefix: string;
 
 	closeFile(): void;
-	loadDiff(commit: Commit): Promise<void>;
+	loadDiff(repo: string, commit: Commit): Promise<void>;
 
-	activeCommitData: null | ActiveCommitData;
+	activeCommitData?: ActiveCommitData;
 
-	commitData: null | CommitData;
+	commitData?: CommitData;
 
-	fileContents: null | FileContents;
+	fileContents?: FileContents;
 
 	commitsVisible: boolean;
 	setCommitsVisible: (visible: boolean) => void;
@@ -68,7 +75,7 @@ export interface CommitInfoProps {
 
 interface CommitInfoState {
 	authorSort: string;
-	commitFilter: any;
+	commitFilter?: CommitFilter;
 	diffEditor: any;
 	editor: any;
 }
@@ -88,8 +95,8 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 	}
 
 	showFile = (sha: string, previousSha: string, path: string, el: HTMLElement) => {
-		if (previousSha) this.props.loadFileDiff(sha, previousSha, path, el);
-		else this.props.loadFile(sha, path, el);
+		if (previousSha) this.props.loadFileDiff(this.props.repoPrefix, sha, previousSha, path, el);
+		else this.props.loadFile(this.props.repoPrefix, sha, path, el);
 	};
 
 	pad2(v: string) {
@@ -99,8 +106,12 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 
 	setDateFilter(date: string) {
 		if (this.props.commitFilter.date === date)
-			this.props.setCommitFilter({ ...this.props.commitFilter, date: undefined });
-		else this.props.setCommitFilter({ ...this.props.commitFilter, date });
+			this.props.setCommitFilter(this.props.repoPrefix, {
+				...this.props.commitFilter,
+				date: undefined,
+			});
+		else
+			this.props.setCommitFilter(this.props.repoPrefix, { ...this.props.commitFilter, date });
 	}
 
 	onYearClick: CalendarMouseEventHandler = (ev) => {
@@ -122,6 +133,10 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 	onDayClick: CalendarMouseEventHandler = (ev) => {
 		const target = ev.target as CalendarElement;
 		this.setDateFilter(target.dataset.fullDate || '');
+	};
+
+	getFileURL = (file: CommitFile) => {
+		return this.props.path + '/' + (file.renamed || file.path);
 	};
 
 	updateActiveCommitSetDiffs(activeCommits: Commit[]) {
@@ -224,6 +239,18 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 			var authorSpan = span(styles['commit-author'], c.author);
 			var messageSpan = span(styles['commit-message'], c.message);
 			var toggleDiffs = span(styles['commit-toggle-diffs'], 'All changes');
+			div.onmouseenter = (ev) => {
+				this.props.setLinks(
+					c.files.map((f) => ({
+						src: div,
+						dst: this.getFileURL(f),
+						color: { r: 0, g: 1, b: 0 },
+					}))
+				);
+			};
+			div.onmouseleave = (ev) => {
+				this.props.setLinks([]);
+			};
 			div.onmousedown = async (ev) => {
 				ev.preventDefault();
 				const diffView = document.getElementById('diffView');
@@ -237,7 +264,7 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 					return;
 				}
 				while (diffView.firstChild) diffView.removeChild(diffView.firstChild);
-				if (c.diff == null) await this.props.loadDiff(c);
+				if (c.diff == null) await this.props.loadDiff(this.props.repoPrefix, c);
 				diffView.classList.remove(styles['expanded-diffs']);
 				diffView.classList.add(styles['expanded']);
 				const diffSpan = span(styles['commit-diff']);
@@ -282,7 +309,6 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 		activeCommits: Commit[],
 		authorSort = this.state.authorSort
 	) {
-		var self = this;
 		var el = document.getElementById('authorList')!;
 		while (el.firstChild) el.removeChild(el.firstChild);
 		if (!authors) return;
@@ -315,11 +341,18 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 			div.dataset.commitCount = authorCommitCounts[author].toString();
 			const nameSpan = span(styles['author-name'], author);
 			div.append(nameSpan);
-			div.onmousedown = function(ev) {
+			div.onmousedown = (ev) => {
 				ev.preventDefault();
-				if (self.props.commitFilter.author === author)
-					self.props.setCommitFilter({ ...self.props.commitFilter, author: undefined });
-				else self.props.setCommitFilter({ ...self.props.commitFilter, author });
+				if (this.props.commitFilter.author === author)
+					this.props.setCommitFilter(this.props.repoPrefix, {
+						...this.props.commitFilter,
+						author: undefined,
+					});
+				else
+					this.props.setCommitFilter(this.props.repoPrefix, {
+						...this.props.commitFilter,
+						author,
+					});
 			};
 			el.appendChild(div);
 			runningCommitCount += authorCommitCounts[author];
@@ -388,7 +421,7 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 	}
 
 	handleDiffEditorDidMount = (_: any, _editor: any, diffEditor: any) => {
-		if (this.props.fileContents === null) return;
+		if (!this.props.fileContents) return;
 		const original = window.monaco.editor.createModel(
 			this.props.fileContents.original || '',
 			undefined,
@@ -409,7 +442,7 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 	};
 
 	handleEditorDidMount = (_: any, editor: any) => {
-		if (this.props.fileContents === null) return;
+		if (!this.props.fileContents) return;
 		const model = window.monaco.editor.createModel(
 			this.props.fileContents.content,
 			undefined,
@@ -429,7 +462,7 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 
 		this.searchTimeout = setTimeout(
 			(() =>
-				this.props.setCommitFilter({
+				this.props.setCommitFilter(this.props.repoPrefix, {
 					...this.state.commitFilter,
 					authorSearch,
 				})) as TimerHandler,
@@ -442,7 +475,10 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 		clearTimeout(this.searchTimeout);
 		this.searchTimeout = setTimeout(
 			(() =>
-				this.props.setCommitFilter({ ...this.state.commitFilter, search })) as TimerHandler,
+				this.props.setCommitFilter(this.props.repoPrefix, {
+					...this.state.commitFilter,
+					search,
+				})) as TimerHandler,
 			200
 		);
 	};
@@ -455,7 +491,7 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 
 	onShowFileCommits = (event: React.MouseEvent<HTMLButtonElement, MouseEvent>): void => {
 		this.props.setCommitsVisible(true);
-		this.props.setCommitFilter({});
+		this.props.setCommitFilter(this.props.repoPrefix, {});
 	};
 
 	getFileCommits(path: string, hash: string): { path: string; commit: Commit }[] {
@@ -495,7 +531,7 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 	}
 
 	previousFileVersion = (): void => {
-		if (this.props.fileContents === null) return;
+		if (!this.props.fileContents) return;
 		const fileCommits = this.getFileCommits(
 			this.props.fileContents.path,
 			this.props.fileContents.hash
@@ -505,12 +541,17 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 		if (idx < fileCommits.length - 1) {
 			const { path, commit } = fileCommits[idx + 1];
 			const previous = idx + 2 <= fileCommits.length ? fileCommits[idx + 2] : undefined;
-			this.props.loadFileDiff(commit.sha, previous ? previous.commit.sha : '00000000', path);
+			this.props.loadFileDiff(
+				this.props.repoPrefix,
+				commit.sha,
+				previous ? previous.commit.sha : '00000000',
+				path
+			);
 		}
 	};
 
 	nextFileVersion = (): void => {
-		if (this.props.fileContents === null) return;
+		if (!this.props.fileContents) return;
 		const fileCommits = this.getFileCommits(
 			this.props.fileContents.path,
 			this.props.fileContents.hash
@@ -520,7 +561,12 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 		if (idx > 0) {
 			const { path, commit } = fileCommits[idx];
 			const previous = fileCommits[idx - 1];
-			this.props.loadFileDiff(previous ? previous.commit.sha : '00000000', commit.sha, path);
+			this.props.loadFileDiff(
+				this.props.repoPrefix,
+				previous ? previous.commit.sha : '00000000',
+				commit.sha,
+				path
+			);
 		}
 	};
 

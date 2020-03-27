@@ -9,9 +9,10 @@ import { FSEntry } from '../lib/filesystem';
 import { SearchResult } from '../MainApp';
 
 export interface SearchProps extends RouteComponentProps {
-	setSearchQuery: (query: string) => void;
+	setSearchQuery: (repo: string, query: string) => void;
 	setSearchHover: (li: any, url: string) => void;
 	clearSearchHover: (li: any) => void;
+	repoPrefix: string;
 	navigationTarget: string;
 	searchQuery: string;
 	searchResults: SearchResult[];
@@ -61,17 +62,17 @@ class Search extends React.Component<SearchProps, SearchState> {
 		};
 	}
 
-	searchOnInput = (ev: { target: { value: any } }) => this.props.setSearchQuery(ev.target.value);
+	searchOnInput = (ev: { target: { value: any } }) =>
+		this.props.setSearchQuery(this.props.repoPrefix, ev.target.value);
 
 	createResultLink(result: {
-		fsEntry: FSEntry;
 		line: number;
 		filename: string;
 		hitType: number;
 		snippet?: string;
 	}) {
 		const self = this;
-		const { fsEntry, line } = result;
+		const { line } = result;
 		const li = document.createElement('li') as any;
 		li.filename = result.filename;
 		li.hitType = result.hitType;
@@ -138,7 +139,7 @@ class Search extends React.Component<SearchProps, SearchState> {
 	};
 	toggleHitType = (hitType: number) => this.setHitType(hitType, !this.state.hitTypes[hitType]);
 
-	populateSearchResults(searchResults: string | any[], allVisible: any, hitTypes: HitTypes) {
+	populateSearchResults(searchResults: SearchResult[], allVisible: boolean, hitTypes: HitTypes) {
 		const searchResultsEl = document.getElementById('searchResults');
 		if (!searchResultsEl) return;
 		searchResultsEl.innerHTML = '';
@@ -153,7 +154,6 @@ class Search extends React.Component<SearchProps, SearchState> {
 			const r = searchResults[i];
 			if (!resIndex[r.hitType][r.filename]) {
 				const result = {
-					fsEntry: r.fsEntry,
 					hitType: r.hitType,
 					line: 0,
 					filename: r.filename,

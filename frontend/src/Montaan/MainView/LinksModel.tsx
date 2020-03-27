@@ -6,8 +6,7 @@ import { ParseTargetSignature } from './main';
 export default class LinksModel {
 	linksUpdatedOn: number = -1;
 	links: TreeLink[] = [];
-	model: THREE.Object3D;
-	lineModel: THREE.LineSegments;
+	model: THREE.LineSegments;
 	lineGeo: THREE.BufferGeometry;
 	screenPointToWorldPoint: (x: number, y: number) => THREE.Vector3;
 	parseTarget: ParseTargetSignature;
@@ -18,7 +17,6 @@ export default class LinksModel {
 	) {
 		this.screenPointToWorldPoint = screenPointToWorldPoint;
 		this.parseTarget = parseTarget;
-		this.model = new THREE.Object3D();
 
 		this.lineGeo = new THREE.BufferGeometry();
 		this.lineGeo.setAttribute(
@@ -29,22 +27,21 @@ export default class LinksModel {
 			'color',
 			new THREE.BufferAttribute(new Float32Array(40000 * 3), 3)
 		);
-		this.lineModel = new THREE.LineSegments(
+		this.model = new THREE.LineSegments(
 			this.lineGeo,
 			new THREE.LineBasicMaterial({
 				color: new THREE.Color(1.0, 1.0, 1.0),
 				opacity: 1,
 				transparent: true,
 				depthWrite: false,
+				depthTest: false,
 				vertexColors: THREE.VertexColors,
 			})
 		);
-		this.lineModel.frustumCulled = false;
-		(this.lineModel as any).ontick = () => {
-			this.lineModel.visible = this.links.length > 0;
+		this.model.frustumCulled = false;
+		(this.model as any).ontick = () => {
+			this.model.visible = this.links.length > 0;
 		};
-		this.model.add(this.lineModel);
-		this.model.add(this.lineModel);
 	}
 
 	// Linkage lines ////////////////////////////////////////////////////////////////////////////////
@@ -65,63 +62,7 @@ export default class LinksModel {
 	) {
 		var av = this.screenPointToWorldPoint(bboxA.left, bboxA.top);
 		var bv = this.screenPointToWorldPoint(bboxB.left, bboxB.top);
-
-		var verts = geo.getAttribute('position').array as Float32Array;
-		var off = index * 3;
-		var v;
-		v = av;
-		verts[off++] = v.x;
-		verts[off++] = v.y;
-		verts[off++] = v.z;
-		v = av;
-		verts[off++] = v.x;
-		verts[off++] = v.y;
-		verts[off++] = v.z;
-		v = av;
-		verts[off++] = v.x;
-		verts[off++] = v.y;
-		verts[off++] = v.z;
-		v = bv;
-		verts[off++] = v.x;
-		verts[off++] = v.y;
-		verts[off++] = v.z;
-		v = bv;
-		verts[off++] = v.x;
-		verts[off++] = v.y;
-		verts[off++] = v.z;
-		v = bv;
-		verts[off++] = v.x;
-		verts[off++] = v.y;
-		verts[off++] = v.z;
-
-		if (color) {
-			verts = geo.getAttribute('color').array as Float32Array;
-			off = index * 3;
-			v = color;
-			verts[off++] = v.r;
-			verts[off++] = v.g;
-			verts[off++] = v.b;
-			v = color;
-			verts[off++] = v.r;
-			verts[off++] = v.g;
-			verts[off++] = v.b;
-			v = color;
-			verts[off++] = v.r;
-			verts[off++] = v.g;
-			verts[off++] = v.b;
-			v = color;
-			verts[off++] = v.r;
-			verts[off++] = v.g;
-			verts[off++] = v.b;
-			v = color;
-			verts[off++] = v.r;
-			verts[off++] = v.g;
-			verts[off++] = v.b;
-			v = color;
-			verts[off++] = v.r;
-			verts[off++] = v.g;
-			verts[off++] = v.b;
-		}
+		this.setLine(geo, index, av, av, av, bv, bv, bv, color);
 	}
 
 	updateLineBetweenEntryAndElement(
@@ -164,67 +105,10 @@ export default class LinksModel {
 					fsEntry.contentObject.textYZero - textYOff,
 					fsEntry.z
 				);
-				textLinePos.applyMatrix4(this.model.matrixWorld);
 				aUp = av = textLinePos;
 			}
 		}
-
-		var verts = geo.getAttribute('position').array as Float32Array;
-		var off = index * 3;
-		var v;
-		v = av;
-		verts[off++] = v.x;
-		verts[off++] = v.y;
-		verts[off++] = v.z;
-		v = aUp;
-		verts[off++] = v.x;
-		verts[off++] = v.y;
-		verts[off++] = v.z;
-		v = aUp;
-		verts[off++] = v.x;
-		verts[off++] = v.y;
-		verts[off++] = v.z;
-		v = bv;
-		verts[off++] = v.x;
-		verts[off++] = v.y;
-		verts[off++] = v.z;
-		v = bv;
-		verts[off++] = v.x;
-		verts[off++] = v.y;
-		verts[off++] = v.z;
-		v = bv;
-		verts[off++] = v.x;
-		verts[off++] = v.y;
-		verts[off++] = v.z;
-
-		if (color) {
-			verts = geo.getAttribute('color').array as Float32Array;
-			off = index * 3;
-			v = color;
-			verts[off++] = v.r;
-			verts[off++] = v.g;
-			verts[off++] = v.b;
-			v = color;
-			verts[off++] = v.r;
-			verts[off++] = v.g;
-			verts[off++] = v.b;
-			v = color;
-			verts[off++] = v.r;
-			verts[off++] = v.g;
-			verts[off++] = v.b;
-			v = color;
-			verts[off++] = v.r;
-			verts[off++] = v.g;
-			verts[off++] = v.b;
-			v = color;
-			verts[off++] = v.r;
-			verts[off++] = v.g;
-			verts[off++] = v.b;
-			v = color;
-			verts[off++] = v.r;
-			verts[off++] = v.g;
-			verts[off++] = v.b;
-		}
+		this.setLine(geo, index, av, aUp, aUp, bv, bv, bv, color);
 	}
 
 	updateLineBetweenEntries(
@@ -285,63 +169,12 @@ export default class LinksModel {
 			Math.max(a.z, b.z) + 1 * entryB.scale
 		);
 		bUp.applyMatrix4(modelB.matrixWorld);
+		this.setLine(geo, index, av, aUp, aUp, bUp, bUp, bv, color);
+	}
 
-		var verts = geo.getAttribute('position').array as Float32Array;
-		var off = index * 3;
-		var v;
-		v = av;
-		verts[off++] = v.x;
-		verts[off++] = v.y;
-		verts[off++] = v.z;
-		v = aUp;
-		verts[off++] = v.x;
-		verts[off++] = v.y;
-		verts[off++] = v.z;
-		v = aUp;
-		verts[off++] = v.x;
-		verts[off++] = v.y;
-		verts[off++] = v.z;
-		v = bUp;
-		verts[off++] = v.x;
-		verts[off++] = v.y;
-		verts[off++] = v.z;
-		v = bUp;
-		verts[off++] = v.x;
-		verts[off++] = v.y;
-		verts[off++] = v.z;
-		v = bv;
-		verts[off++] = v.x;
-		verts[off++] = v.y;
-		verts[off++] = v.z;
-
-		if (color) {
-			verts = geo.getAttribute('color').array as Float32Array;
-			off = index * 3;
-			v = color;
-			verts[off++] = v.r;
-			verts[off++] = v.g;
-			verts[off++] = v.b;
-			v = color;
-			verts[off++] = v.r;
-			verts[off++] = v.g;
-			verts[off++] = v.b;
-			v = color;
-			verts[off++] = v.r;
-			verts[off++] = v.g;
-			verts[off++] = v.b;
-			v = color;
-			verts[off++] = v.r;
-			verts[off++] = v.g;
-			verts[off++] = v.b;
-			v = color;
-			verts[off++] = v.r;
-			verts[off++] = v.g;
-			verts[off++] = v.b;
-			v = color;
-			verts[off++] = v.r;
-			verts[off++] = v.g;
-			verts[off++] = v.b;
-		}
+	clearLine(geo: THREE.BufferGeometry, index: number) {
+		const v = new THREE.Vector3();
+		this.setLine(geo, index, v, v, v, v, v, v, undefined);
 	}
 
 	setLinks(links: TreeLink[], updateOnlyElements = false) {
@@ -367,7 +200,10 @@ export default class LinksModel {
 				} else if (srcIsElem) {
 					const bbox = (l.src as Element).getBoundingClientRect();
 					const dst = this.parseTarget(l.dst as string | FSEntry, l.dstPoint);
-					if (!dst) continue;
+					if (!dst) {
+						this.clearLine(geo, i * 6);
+						continue;
+					}
 					this.updateLineBetweenEntryAndElement(
 						geo,
 						i * 6,
@@ -381,7 +217,10 @@ export default class LinksModel {
 				} else if (dstIsElem) {
 					const bbox = (l.dst as Element).getBoundingClientRect();
 					const dst = this.parseTarget(l.src as string | FSEntry, l.srcPoint);
-					if (!dst) continue;
+					if (!dst) {
+						this.clearLine(geo, i * 6);
+						continue;
+					}
 					this.updateLineBetweenEntryAndElement(
 						geo,
 						i * 6,
@@ -395,7 +234,10 @@ export default class LinksModel {
 				} else if (!updateOnlyElements) {
 					const src = this.parseTarget(l.src as string | FSEntry, l.srcPoint);
 					const dst = this.parseTarget(l.dst as string | FSEntry, l.dstPoint);
-					if (!dst || !src) continue;
+					if (!dst || !src) {
+						this.clearLine(geo, i * 6);
+						continue;
+					}
 					this.updateLineBetweenEntries(
 						geo,
 						i * 6,
@@ -413,6 +255,77 @@ export default class LinksModel {
 			}
 			(geo.getAttribute('position') as THREE.BufferAttribute).needsUpdate = true;
 			(geo.getAttribute('color') as THREE.BufferAttribute).needsUpdate = true;
+		}
+	}
+
+	setLine(
+		geo: THREE.BufferGeometry,
+		index: number,
+		v1: THREE.Vector3,
+		v2: THREE.Vector3,
+		v3: THREE.Vector3,
+		v4: THREE.Vector3,
+		v5: THREE.Vector3,
+		v6: THREE.Vector3,
+		color?: { r: number; g: number; b: number }
+	) {
+		{
+			const verts = geo.getAttribute('position').array as Float32Array;
+			let off = index * 3;
+			let v;
+			v = v1;
+			verts[off++] = v.x;
+			verts[off++] = v.y;
+			verts[off++] = v.z;
+			v = v2;
+			verts[off++] = v.x;
+			verts[off++] = v.y;
+			verts[off++] = v.z;
+			v = v3;
+			verts[off++] = v.x;
+			verts[off++] = v.y;
+			verts[off++] = v.z;
+			v = v4;
+			verts[off++] = v.x;
+			verts[off++] = v.y;
+			verts[off++] = v.z;
+			v = v5;
+			verts[off++] = v.x;
+			verts[off++] = v.y;
+			verts[off++] = v.z;
+			v = v6;
+			verts[off++] = v.x;
+			verts[off++] = v.y;
+			verts[off++] = v.z;
+		}
+
+		if (color) {
+			const verts = geo.getAttribute('color').array as Float32Array;
+			let off = index * 3;
+			let v = color;
+			verts[off++] = v.r;
+			verts[off++] = v.g;
+			verts[off++] = v.b;
+			v = color;
+			verts[off++] = v.r;
+			verts[off++] = v.g;
+			verts[off++] = v.b;
+			v = color;
+			verts[off++] = v.r;
+			verts[off++] = v.g;
+			verts[off++] = v.b;
+			v = color;
+			verts[off++] = v.r;
+			verts[off++] = v.g;
+			verts[off++] = v.b;
+			v = color;
+			verts[off++] = v.r;
+			verts[off++] = v.g;
+			verts[off++] = v.b;
+			v = color;
+			verts[off++] = v.r;
+			verts[off++] = v.g;
+			verts[off++] = v.b;
 		}
 	}
 }

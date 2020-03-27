@@ -6,13 +6,12 @@ import { Helmet } from 'react-helmet';
 
 import MainView from '../MainView';
 
-import Search from '../Search';
 import Breadcrumb from '../Breadcrumb';
 import RepoSelector from '../RepoSelector';
 
 import utils from '../lib/utils';
 import { CommitData } from '../lib/parse_commits';
-import { authorCmp, Commit, CommitFile } from '../lib/parse-diff';
+import { authorCmp, Commit } from '../lib/parse-diff';
 import {
 	getPathEntry,
 	getFullPath,
@@ -20,13 +19,12 @@ import {
 	readDir,
 	registerFileSystem,
 	getAllFilesystemsForPath,
+	getNearestFSEntryForURL,
 } from '../lib/filesystem';
 
 import styles from './MainApp.module.scss';
-import TreeView from '../TreeView';
 import { QFrameAPI } from '../../lib/api';
 import { FSEntry, createFSTree } from '../lib/filesystem';
-import Introduction from '../Introduction';
 import WorkQueue from '../lib/WorkQueue';
 
 import MontaanGitFilesystem from '../lib/filesystem/MontaanGitFilesystem';
@@ -55,7 +53,6 @@ export interface TreeLink {
 type TreeLinkIndex = Map<TreeLinkKey, TreeLink[]>;
 
 export interface SearchResult {
-	fsEntry: FSEntry;
 	filename: string;
 	line: number;
 	snippet?: string;
@@ -106,7 +103,6 @@ export interface ActiveCommitData {
 }
 
 interface MainAppState {
-	repoPrefix: string;
 	commitFilter: CommitFilter;
 	searchQuery: string;
 	activeCommitData?: ActiveCommitData;
@@ -116,11 +112,11 @@ interface MainAppState {
 	files: string;
 	searchResults: SearchResult[];
 	navigationTarget: string;
-	goToTarget: null | GoToTarget;
+	goToTarget?: GoToTarget;
 	frameRequestTime: number;
 	searchLinesRequest: number;
 	diffsLoaded: number;
-	fileContents: null | FileContents;
+	fileContents?: FileContents;
 	links: TreeLink[];
 	dependencies: TreeLink[];
 	dependencySrcIndex: TreeLinkIndex;
@@ -134,6 +130,23 @@ interface MainAppState {
 	treeLoaded: boolean;
 	fileTreeUpdated: number;
 	commitsVisible: boolean;
+}
+
+export interface FSState extends MainAppState {
+	setCommitData: (commitData?: CommitData) => void;
+	setDependencies: (dependencies: TreeLink[]) => void;
+	setCommitFilter: (repo: string, commitFilter: CommitFilter) => void;
+	loadDiff: (repo: string, commit: Commit) => Promise<void>;
+	loadFile: (repo: string, hash: string, path: string) => Promise<void>;
+	loadFileDiff: (repo: string, hash: string, previousHash: string, path: string) => Promise<void>;
+	closeFile: () => void;
+	setCommitsVisible: (commitsVisible: boolean) => void;
+	setLinks: (links: TreeLink[]) => void;
+	addLinks: (links: TreeLink[]) => void;
+	setSearchQuery: (repo: string, query: string) => void;
+	updateSearchLines: () => void;
+	setSearchHover: (el: HTMLElement, url: string) => void;
+	clearSearchHover: (el: HTMLElement) => void;
 }
 
 declare global {
@@ -163,7 +176,6 @@ let LoadDirWorkQueueLocked = false;
 
 class MainApp extends React.Component<MainAppProps, MainAppState> {
 	emptyState = {
-		repoPrefix: '',
 		commitFilter: {},
 		searchQuery: '',
 		commitData: undefined,
@@ -173,11 +185,11 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		files: '',
 		searchResults: [],
 		navigationTarget: '',
-		goToTarget: null,
+		goToTarget: undefined,
 		frameRequestTime: 0,
 		searchLinesRequest: 0,
 		diffsLoaded: 0,
-		fileContents: null,
+		fileContents: undefined,
 		links: [],
 		dependencies: [],
 		dependencySrcIndex: new Map<TreeLinkKey, TreeLink[]>(),
@@ -196,17 +208,12 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 
 	constructor(props: MainAppProps) {
 		super(props);
-		var repoPrefix = '';
-		if (props.match && props.match.params.user) {
-			repoPrefix = props.match.params.user + '/' + props.match.params.name;
-		}
 		this.state = {
 			...this.emptyState,
 			fileTree: { count: 0, tree: createFSTree('', '') },
 			repos: [],
 			navUrl: '',
 			ref: 'HEAD',
-			repoPrefix,
 			commitsVisible: false,
 		};
 		this.repoTimeout = 0;
@@ -335,19 +342,19 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		// Traverse graph from path and set connected part as links
 	};
 
-	setCommitData = (commitData: CommitData) => {
+	setCommitData = (commitData?: CommitData) => {
 		this.setState({ commitData, activeCommitData: undefined, commitFilter: {} });
-		this.setActiveCommits(commitData.commits);
+		if (commitData) this.setActiveCommits(commitData.commits);
 	};
 
-	setCommitFilter = (commitFilter: any) => {
+	setCommitFilter = (repo: string, commitFilter: CommitFilter = {}) => {
 		this.setState({ commitFilter });
-		this.setActiveCommits(this.filterCommits(commitFilter));
+		this.setActiveCommits(this.filterCommits(repo, commitFilter));
 	};
 
-	setSearchQuery = (searchQuery: string) => {
+	setSearchQuery = (repo: string, searchQuery: string) => {
 		this.setState({ searchQuery });
-		this.searchString(searchQuery);
+		this.searchString(repo, searchQuery);
 	};
 
 	setNavigationTarget = (navigationTarget: string) => {
@@ -373,25 +380,25 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		});
 	};
 
-	loadFile = async (hash: string, path: string) => {
+	loadFile = async (repo: string, hash: string, path: string) => {
 		path = path.replace(/^\//, '');
 		var content = await this.props.api.post('/repo/checkout', {
-			repo: this.state.repoPrefix,
+			repo,
 			hash,
 			path,
 		});
 		this.setState({ fileContents: { path, content, hash } });
 	};
 
-	loadFileDiff = async (hash: string, previousHash: string, path: string) => {
+	loadFileDiff = async (repo: string, hash: string, previousHash: string, path: string) => {
 		path = path.replace(/^\//, '');
 		const contentF = await this.props.api.post('/repo/checkout', {
-			repo: this.state.repoPrefix,
+			repo,
 			hash,
 			path,
 		});
 		const originalF = await this.props.api.post('/repo/checkout', {
-			repo: this.state.repoPrefix,
+			repo,
 			hash: previousHash,
 			path,
 		});
@@ -400,11 +407,11 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		this.setState({ fileContents: { path, original, content, hash } });
 	};
 
-	closeFile = () => this.setState({ fileContents: null });
+	closeFile = () => this.setState({ fileContents: undefined });
 
-	loadDiff = async (commit: Commit) => {
+	loadDiff = async (repo: string, commit: Commit) => {
 		const diff = await this.props.api.post('/repo/diff', {
-			repo: this.state.repoPrefix,
+			repo,
 			hash: commit.sha,
 		});
 		commit.diff = diff;
@@ -422,10 +429,10 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		});
 	};
 
-	filterCommits(commitFilter: CommitFilter): Commit[] {
+	filterCommits(repo: string, commitFilter: CommitFilter): Commit[] {
 		if (!this.state.commitData) return [];
 
-		var path = (commitFilter.path || '').substring(this.state.repoPrefix.length + 2);
+		var path = (commitFilter.path || '').substring(repo.length + 2);
 		var author = commitFilter.author;
 		var authorSearch = commitFilter.authorSearch;
 		var search = commitFilter.search || '';
@@ -510,7 +517,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		return HitType.USE;
 	}
 
-	async search(query: RegExp[], rawQuery: string) {
+	async search(repo: string, query: RegExp[], rawQuery: string) {
 		clearTimeout(searchResultsTimeout);
 		var searchResults = [];
 		if (rawQuery.length > 2) {
@@ -520,7 +527,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 			);
 			var myNumber = ++searchQueryNumber;
 			var text = await this.props.api.post('/repo/search', {
-				repo: this.state.repoPrefix,
+				repo,
 				query: rawQuery,
 			});
 			var lines = text.split('\n');
@@ -533,9 +540,8 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 						const [_, filename, lineStr, snippet] = lineNumberMatch;
 						const line = parseInt(lineStr);
 						const hitType = this.getHitType(rawQueryRE, filename, snippet);
-						const fullPath = '/' + this.state.repoPrefix + '/' + filename;
+						const fullPath = '/' + repo + '/' + filename;
 						return {
-							fsEntry: getPathEntry(this.state.fileTree.tree, fullPath),
 							filename: fullPath,
 							line,
 							snippet,
@@ -556,7 +562,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		this.setState({ searchResults });
 	}
 
-	searchString(searchQuery: string) {
+	searchString(repo: string, searchQuery: string) {
 		this.clearSearchHover(this.state.searchHover);
 		if (searchQuery === '') {
 			this.setState({ searchResults: [] });
@@ -565,23 +571,8 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 			try {
 				re[0] = new RegExp(searchQuery, 'i');
 			} catch (e) {}
-			this.search(re, searchQuery);
+			this.search(repo, re, searchQuery);
 		}
-	}
-
-	findCommitsForPath(path: string): Commit[] {
-		if (!this.state.commitData) return [];
-		path = path.substring(this.state.repoPrefix.length + 2);
-		return this.state.commitData.commits.filter((c: Commit) =>
-			c.files.some((f: CommitFile) => {
-				if (f.renamed && f.renamed.startsWith(path)) {
-					if (f.renamed === path) path = f.path;
-					return true;
-				}
-				if (f.path.startsWith(path)) return true;
-				return false;
-			})
-		);
 	}
 
 	fullscreenOnClick(ev: any) {
@@ -628,10 +619,10 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		const res = await this.props.api.post('/repo/rename', { name: repo.name, newName });
 		if (res === 'OK') {
 			this.updateUserRepos(this.props.userInfo);
-			if (this.props.userInfo.name + '/' + repo.name === this.state.repoPrefix) {
+			if (this.props.userInfo.name + '/' + repo.name) {
 				this.props.history.push(
 					this.props.location.pathname.replace(
-						this.state.repoPrefix,
+						repo.name,
 						this.props.userInfo.name + '/' + newName
 					) +
 						this.props.location.search +
@@ -689,7 +680,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 			? titlePrefix + this.state.navigationTarget + ' - Montaan'
 			: 'Montaan 🏔';
 		const fsComponents: React.ReactElement[] = [];
-		const fsState = {
+		const fsState: FSState = {
 			...this.state,
 			setCommitData: this.setCommitData,
 			setDependencies: this.setDependencies,
@@ -699,6 +690,13 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 			loadFileDiff: this.loadFileDiff,
 			closeFile: this.closeFile,
 			setCommitsVisible: this.setCommitsVisible,
+			setLinks: this.setLinks,
+			addLinks: this.addLinks,
+
+			setSearchQuery: this.setSearchQuery,
+			updateSearchLines: this.updateSearchLines,
+			setSearchHover: this.setSearchHover,
+			clearSearchHover: this.clearSearchHover,
 		};
 		this.getPathFilesystems().forEach((fsEntry) => {
 			fsComponents.push(fsEntry.filesystem!.getUIComponents(fsState));
@@ -721,74 +719,38 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 
 				{this.state.repoError && <div id="repoError">{this.state.repoError}</div>}
 
-				{this.state.repoPrefix === '' && this.state.repos.length === 0 && (
-					<Introduction userInfo={this.props.userInfo} />
-				)}
-
 				<RepoSelector
 					repos={this.state.repos}
 					createRepo={this.createRepo}
 					renameRepo={this.renameRepo}
 				/>
 
-				<Search
-					navigationTarget={this.state.navigationTarget}
-					searchResults={this.state.searchResults}
-					setSearchQuery={this.setSearchQuery}
-					searchQuery={this.state.searchQuery}
-					updateSearchLines={this.updateSearchLines}
-					setSearchHover={this.setSearchHover}
-					clearSearchHover={this.clearSearchHover}
-				/>
 				<Breadcrumb
 					navigationTarget={this.state.navigationTarget}
 					fileTree={this.state.fileTree}
 				/>
 				{fsComponents}
-				{this.props.location.search === '?beta' ? (
-					<TreeView
-						navUrl={this.state.navUrl}
-						activeCommitData={this.state.activeCommitData}
-						diffsLoaded={this.state.diffsLoaded}
-						fileTree={this.state.fileTree}
-						commitData={this.state.commitData}
-						frameRequestTime={this.state.frameRequestTime}
-						api={this.props.api}
-						repoPrefix={this.state.repoPrefix}
-						navigationTarget={this.state.navigationTarget}
-						searchLinesRequest={this.state.searchLinesRequest}
-						searchResults={this.state.searchResults}
-						searchQuery={this.state.searchQuery}
-						commitFilter={this.state.commitFilter}
-						addLinks={this.addLinks}
-						setLinks={this.setLinks}
-						links={this.state.links}
-						setNavigationTarget={this.setNavigationTarget}
-						requestDirs={this.requestDirs}
-					/>
-				) : (
-					<MainView
-						navUrl={this.state.navUrl}
-						treeLoaded={this.onTreeLoaded}
-						activeCommitData={this.state.activeCommitData}
-						diffsLoaded={this.state.diffsLoaded}
-						fileTree={this.state.fileTree}
-						commitData={this.state.commitData}
-						frameRequestTime={this.state.frameRequestTime}
-						api={this.props.api}
-						navigationTarget={this.state.navigationTarget}
-						searchLinesRequest={this.state.searchLinesRequest}
-						searchResults={this.state.searchResults}
-						searchQuery={this.state.searchQuery}
-						commitFilter={this.state.commitFilter}
-						addLinks={this.addLinks}
-						setLinks={this.setLinks}
-						links={this.state.links}
-						setNavigationTarget={this.setNavigationTarget}
-						requestDirs={this.requestDirs}
-						fileTreeUpdated={this.state.fileTreeUpdated}
-					/>
-				)}
+				<MainView
+					navUrl={this.state.navUrl}
+					treeLoaded={this.onTreeLoaded}
+					activeCommitData={this.state.activeCommitData}
+					diffsLoaded={this.state.diffsLoaded}
+					fileTree={this.state.fileTree}
+					commitData={this.state.commitData}
+					frameRequestTime={this.state.frameRequestTime}
+					api={this.props.api}
+					navigationTarget={this.state.navigationTarget}
+					searchLinesRequest={this.state.searchLinesRequest}
+					searchResults={this.state.searchResults}
+					searchQuery={this.state.searchQuery}
+					commitFilter={this.state.commitFilter}
+					addLinks={this.addLinks}
+					setLinks={this.setLinks}
+					links={this.state.links}
+					setNavigationTarget={this.setNavigationTarget}
+					requestDirs={this.requestDirs}
+					fileTreeUpdated={this.state.fileTreeUpdated}
+				/>
 			</div>
 		);
 	}

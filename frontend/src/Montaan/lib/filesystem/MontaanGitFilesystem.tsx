@@ -5,13 +5,14 @@ import QFrameAPI from '../../../lib/api';
 
 import utils from '../utils';
 import { RawCommitData, parseCommits, CommitData } from '../parse_commits';
-import { TreeLink, TreeLinkKey } from '../../MainApp';
+import { TreeLink, TreeLinkKey, FSState } from '../../MainApp';
 import * as THREE from 'three';
 import TourSelector from '../../TourSelector';
 import Player from '../../Player';
 import CommitControls from '../../CommitControls';
 import CommitInfo from '../../CommitInfo';
 import { getFullPath } from './filesystem';
+import Search from '../../Search';
 
 export default class MontaanGitFilesystem extends Filesystem {
 	repo: string;
@@ -29,21 +30,31 @@ export default class MontaanGitFilesystem extends Filesystem {
 		this.ref = urlSegments[urlSegments.length - 1];
 	}
 
-	getUIComponents(state: any): React.ReactElement {
+	getUIComponents(state: FSState): React.ReactElement {
 		if (!this.commitData && !this.fetchingCommits) {
 			this.readData().then((d) => {
 				this.fetchingCommits = false;
 				state.setCommitData(this.commitData);
-				state.setDependencies(this.dependencies);
+				state.setDependencies(this.dependencies || []);
 			});
 		} else if (state.commitData !== this.commitData) {
 			state.setCommitData(this.commitData);
-			state.setDependencies(this.dependencies);
+			state.setDependencies(this.dependencies || []);
 		}
 		const path = getFullPath(this.mountPoint);
 		const repoPrefix = this.repo;
 		return (
 			<div key={path}>
+				<Search
+					navigationTarget={state.navigationTarget}
+					searchResults={state.searchResults}
+					setSearchQuery={state.setSearchQuery}
+					searchQuery={state.searchQuery}
+					updateSearchLines={state.updateSearchLines}
+					setSearchHover={state.setSearchHover}
+					clearSearchHover={state.clearSearchHover}
+					repoPrefix={repoPrefix}
+				/>
 				<TourSelector
 					path={path}
 					repoPrefix={repoPrefix}
@@ -76,7 +87,7 @@ export default class MontaanGitFilesystem extends Filesystem {
 					commitsVisible={state.commitsVisible}
 					setCommitsVisible={state.setCommitsVisible}
 					path={path}
-					repoPrefix={state.repoPrefix}
+					repoPrefix={repoPrefix}
 					diffsLoaded={state.diffsLoaded}
 					commitFilter={state.commitFilter}
 					setCommitFilter={state.setCommitFilter}

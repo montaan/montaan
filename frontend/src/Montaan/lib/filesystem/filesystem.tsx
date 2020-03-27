@@ -211,6 +211,24 @@ export function getPathEntry(fileTree: FSEntry, path: string): FSEntry | null {
 	return branch;
 }
 
+export function getNearestPathEntry(fileTree: FSEntry, path: string): FSEntry | null {
+	path = path.replace(/\/+$/, '');
+	var segments = path.split('/');
+	while (segments[0] === '') {
+		segments.shift();
+	}
+	var branch = fileTree;
+	var last = fileTree;
+	for (var i = 0; i < segments.length; i++) {
+		var segment = segments[i];
+		if (!branch.entries) return last;
+		branch = branch.entries[segment];
+		if (!branch) return last;
+		last = branch;
+	}
+	return branch;
+}
+
 export function getFullPath(fsEntry: FSEntry): string {
 	if (!fsEntry.parent) return '';
 	return getFullPath(fsEntry.parent) + '/' + fsEntry.name;
@@ -262,6 +280,18 @@ export function getFSEntryForURL(namespace: FSEntry, url: string): ExtendedFSEnt
 	const fs = getFilesystemForPath(namespace, treePath);
 	if (!fs) return null;
 	const fsEntry = getPathEntry(fs.filesystem, fs.relativePath);
+	if (!fsEntry) return null;
+	return { fsEntry, point, search };
+}
+
+export function getNearestFSEntryForURL(namespace: FSEntry, url: string): ExtendedFSEntry | null {
+	const [treePath, coords] = url.split('#');
+	const point =
+		(coords && /^[.\d]+(,[.\d]+)*$/.test(coords) && coords.split(',').map(parseFloat)) ||
+		undefined;
+	const search =
+		(coords && /^find:/.test(coords) && decodeURIComponent(coords.slice(5))) || undefined;
+	const fsEntry = getNearestPathEntry(namespace, treePath);
 	if (!fsEntry) return null;
 	return { fsEntry, point, search };
 }

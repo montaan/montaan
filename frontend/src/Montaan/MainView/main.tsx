@@ -2,6 +2,7 @@ import {
 	getPathEntry,
 	getFullPath,
 	getFSEntryForURL,
+	getNearestFSEntryForURL,
 	FSEntry,
 	ExtendedFSEntry,
 } from '../lib/filesystem';
@@ -161,11 +162,11 @@ class Tabletree {
 		}
 		this.setupScene(); // Renderer, scene and camera setup.
 		this.searchLandmarks = new SearchLandmarks(this.screenPointToWorldPoint);
-		this.model.add(this.searchLandmarks.model);
+		this.scene.add(this.searchLandmarks.model);
 		this.highlightedLines = new HighlightedLines();
-		this.model.add(this.highlightedLines.model);
+		this.scene.add(this.highlightedLines.model);
 		this.linksModel = new LinksModel(this.screenPointToWorldPoint, this.parseTarget);
-		this.model.add(this.linksModel.model);
+		this.scene.add(this.linksModel.model);
 		this.setupEventListeners(); // UI event listeners
 		this.changed = true;
 	}
@@ -239,7 +240,7 @@ class Tabletree {
 		);
 		screenPlane.visible = false;
 		screenPlane.position.z = 0.75;
-		this.scene.add(screenPlane);
+		this.camera.add(screenPlane);
 
 		this.screenPlane = screenPlane;
 
@@ -515,14 +516,21 @@ class Tabletree {
 		visibleFiles.add(fsEntry.contentObject);
 	}
 
+	_tmpMatrix4 = new THREE.Matrix4();
 	screenPointToWorldPoint = (x: number, y: number): THREE.Vector3 => {
 		this.screenPlane.visible = true;
+		this.screenPlane.position.z = -this.camera.near;
+		this.screenPlane.updateMatrixWorld();
 		var intersections = utils.findIntersectionsUnderEvent(
 			{ clientX: x, clientY: y, target: this.renderer.domElement },
 			this.camera,
 			[this.screenPlane]
 		);
 		this.screenPlane.visible = false;
+		if (!intersections[0]) return new THREE.Vector3();
+		intersections[0].point.applyMatrix4(
+			this.screenPlane.matrixWorld.getInverse(this._tmpMatrix4)
+		);
 		return intersections[0].point;
 	};
 
@@ -531,7 +539,7 @@ class Tabletree {
 	parseTarget = (dst: string | FSEntry, dstPoint: any): ExtendedFSEntry | null => {
 		if (!this.fileTree) return null;
 		if (typeof dst === 'string') {
-			return getFSEntryForURL(this.fileTree, dst);
+			return getNearestFSEntryForURL(this.fileTree, dst);
 		} else {
 			return { fsEntry: dst, point: dstPoint };
 		}
@@ -1048,18 +1056,19 @@ class Tabletree {
 			if (Math.abs(camera.fov - camera.targetFOV) < camera.targetFOV / 1000) {
 				camera.fov = camera.targetFOV;
 			}
-			this.linksModel.updateLinks(this.currentFrame);
 			this.changed = true;
 			this.animating = true;
 		} else {
 			this.animating = false;
 		}
+		this.linksModel.updateLinks(this.currentFrame);
 		camera.updateProjectionMatrix();
 		var wasChanged = this.changed || this.frameFibers.length > 0;
 		this.changed = false;
 		if (wasChanged || this.animating) this.render();
 		this.frameRequested = false;
-		if (this.frameFibers.length > 0 || this.changed || this.animating) this.requestFrame();
+		//if (this.frameFibers.length > 0 || this.changed || this.animating)
+		this.requestFrame();
 		this.frameLoopPaused = !this.frameRequested;
 	};
 
