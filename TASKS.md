@@ -1,4 +1,4 @@
-### Tasks
+# Tasks
 
 # Strengths
 
@@ -17,26 +17,14 @@
     [] Editing content in-line
     [] Fast filesystem browsing
 
-# Target machine
+# FIX
 
-    32-core laptop with 16-wide SIMD and 3 x 2080Ti as GPU
-    - Path tracing with 2 spp at 4k
-    - Wasm + Workers + SIMD crucial for perf
-        Current: max/JS = 360x ST, 60x MT.
-        Future: max/JS = 4000x ST, 130x MT.
-        With WASM: 2-10x MT
-    - Stable WebGPU: another 10x perf
-    - Compile to SPIR-V to WebGPU & Wasm+SIMD+MT
-    - Foldable tablet phones mainstream
-    - Looking Glass type 3D TVs mainstream
-    - XR landed as consumer tech
-
-# Future alignment
-
-    [] GLSL Compute as the main language
-        [] Run everything as WebAssembly workers
-        [] WebGPU backend
-    [] VR-AR port
+    [] Tree rebuilds have files missing
+    [] Loading trees takes forever and too many requests
+    [] Move visibility checking to tree builder
+    [] Move tree rendering to lib
+    [] Move repo management to MontaanUserRepos
+    [] Move tree rebuild into a worker
 
 # Release checklist
 
@@ -50,25 +38,6 @@
         [] Import local repo
     [] Repo auto-pull & update
     [] Tests pass
-
-# FIX
-
-    [] Tree rebuilds have files missing
-    [z] Loading trees takes forever and too many requests
-        [x] Each request returns >1 deep hierarchy (limit by count of files)
-        [] Move visibility checking to tree builder
-    [x] Navigate to line in text view
-    [] main.js is too large
-        [x] Convert to TS
-        [x] Move tree build to lib
-        [] Move tree rendering to lib
-        [x] Move links rendering to lib
-        [x] Move highlight rendering to lib
-    [x] MainApp is too large
-        [x] Move commits to MontaanGit
-        [] Move repo management to MontaanUserRepos
-        [x] Move widget loading to FSOverlays
-    [] Move tree rebuild into a worker
 
 # KEY FEATURES
 
@@ -93,53 +62,49 @@
         [] 10k commits at a time
         [] Calendar data from server
 
-# Make a pleasant place
+# Features
+
+## Make a pleasant place
 
     [] Party
     [] Artwork
 
-# Plugins
+## Plugins
 
     [] Some sort of plugin system to enable parallel development
-        [x] Filesystem mounts
-        [] Overlay filesystems to add metadata & selections & UI state
-    [x] TreeProvider - filesystem mounts
-    [x] FileInlineProvider - file views
+    [] Overlay filesystems to add metadata & selections & UI state
     [] FileViewProvider - PopupFileView
-    [] LinkageProvider - overlay fs?
     [] HistoryProvider - overlay fs?
     [] MetadataProvider - overlay fs?
     Somehow:
-      - Detect when you're viewing a git repo with node_modules, pull in commits and tree history and depcruise.
-      - Register FileViewProvider for filename pattern
-      - Display directory of photos organized into calendar and events
+    - Detect when you're viewing a git repo with node_modules, pull in commits and tree history and depcruise.
+    - Register FileViewProvider for filename pattern
+    - Display directory of photos organized into calendar and events
+    [] Fetch plugins from GitHub
+        [] Sandbox plugins
 
-# "Payment" system
+## "Payment" system
 
     [] Commit prompt to pay for use via commit
 
-# Frontend data model
+## Frontend data model
 
     [] Use paths to refer to objects
-        [x] files
-            [] /repo/branch/tree/path
+        [] /repo/branch/tree/path
+        [] branches
         [] commits
         [] authors
-    [] Path-based links
-        [] Objects have links to other paths
-            [] Register paths in central registry
-        [] When drawing a link, find all objects with the path and link them
 
-# UX tweaks
+## UX tweaks
 
     [] Snap scroll to document boundaries
     [] Line numbers for text view
     [] Kb navigation of search results
-    [x] Better dashboard view
+    [] Better dashboard view
         [] Recent activity (commits, issues)
     [] Navigate to coords in image
 
-# Performance
+## Performance
 
     [] Optimize lines
         [] Limit to ~10k lines in view
@@ -149,20 +114,20 @@
     [] Server approximates what's visible and sends that in one go
     [] Instanced rendering of all models
 
-# Website engine
+## Website engine
 
     [] Turn README.md into HTML and display it on top of directory
     [] Display images nicely - design system for directories
     [] Use a Blender scene as directory and models as files
 
-# Layout
+## Layout
 
     [] Navigation tags (little models next to long lists like e.g. Android contacts)
         [] Commit date tags (show "2019-09-01" next to first commit on that date)
             [] Commit dates in UTC
         [] Author alphabetical tags (show "C" next to first author starting with "C")
 
-# Font
+## Font
 
     [] Target is "HTML layouts in 3D"
         [] Full Unicode support
@@ -175,22 +140,24 @@
         [] Render videos
         [] Text wrapped on 3D shapes (e.g. ring of text, text stamped on mesh)
 
-# Search
+## Search
 
     [] Highlight found search token
     [] Non-regexp search FFS. Exact string matching (case-sensitive).
     [] Color code search results by category
     [] Uncategorized result view
 
-# Backend
+## Backend
 
     [] Public/private repos
-    [] Public repo/list
+    [] Public repo list
     [] Better non-logged-in experience
         [] Public repos explorer
     [] Poll server for new commits
+    [] Automatically pull changes
+        [] Show activity in real-time (Large projects get a commit every five minutes. If you have a few of them on-screen, you'd see a constant flurry of activity.)
 
-# Version history
+## Version history
 
     [] Compare file at any revision to HEAD in file diff view (so that you can first find a file with code you want to revert, then compare that with the current version to know what to revert.)
     [] Commit view
@@ -213,34 +180,32 @@
         Commit-Queue: Santiago Aboy Solanes <solanes@chromium.org>
         Cr-Commit-Position: refs/heads/master@{#65730}
     [] Parse URLs into links
-    [x] Crop commits by date
-    [x] Sort authors by commit count
 
-# Commits
+## Commits
 
     [] Display list of files touched by author
     [] Navigate to file in zoom view
 
-# Visualization
+## Visualization
 
     [] All files in repo by type (all the images, all the c, all the py, all the rs, all the js)
 
-# Visuals
+## Visuals
 
     [] Sub-pixel AA & hinting for fonts https://github.com/astiopin/webgl_fonts/issues/7
     [] Fade out text before hiding it
     [] Sparkling precious particle diamonds like on Precious Nature map
     [] Design that makes you feel awesome
 
-# Payment system
+## Payment system
 
     [] Ad magazine to pay for today's use
     [] Buy ads
     [] Buy platform credits
 
-## Completed
+# Completed
 
-# KEY FEATURES
+## KEY FEATURES
 
     [x] [Directories | Files] layout
         [x] 1:1 wide rectangle
@@ -262,21 +227,29 @@
         [x] Change transformation matrices  when containing object changes
     [x] View re-parenting
 
-# Make a pleasant place
+## Plugins
+
+    [x] Filesystem mounts
+    [x] Filesystem-specific UI
+    [x] TreeProvider - filesystem mounts
+    [x] FileInlineProvider - file views
+    [x] LinkageProvider - overlay fs?
+
+## Make a pleasant place
 
     [x] Mockup target visuals
     [x] Theme music for tasks / parts of project
         [x] Per-dir playlist URL
 
-# Font
+## Font
 
     [x] MSDF for sharp corners
 
-# Visuals
+## Visuals
 
     [x] Output a 3D model for rendering with a path tracer
 
-# Backend
+## Backend
 
     [x] Register & Log in
     [x] Add your own repos (supply repo URL -> pull repo -> add to repo list)
@@ -289,7 +262,7 @@
     [] Better non-logged-in experience
         [x] Public repo MainApp view
 
-# Search
+## Search
 
     [x] Add line number to search index
     [x] Group search results by file and sort in-file hits by line number:
@@ -314,7 +287,7 @@
     [x] Categorize results
     [x] Search for Commits and Authors
 
-# Commits
+## Commits
 
     [x] Animated file tree history
     [x] Animated commit history
@@ -339,19 +312,21 @@
     [/] Click handler for commit timeline (raycast to scene, find closest commit to ray if ray is in the active area for commits)
     [x] Link from commits list to files and authors in current active set
 
-# Version history
+## Version history
 
     [x] Single-file version history + moving between versions
+    [x] Crop commits by date
+    [x] Sort authors by commit count
 
-# Visualization
+## Visualization
 
     [/] Different representation for zoomed-out-text (solid lines minimap)
 
-# Visuals
+## Visuals
 
     [x] Fix images: proper alpha & CORS
 
-# UX tweaks
+## UX tweaks
 
     [x] Breadcrumb navigation
         [x] Show sibling dirs in breadcrumb (like OSX column view)
@@ -384,17 +359,17 @@
         [x] Links
         [x] Search results
 
-# Performance
+## Performance
 
     [x] Pipeline text model creation to avoid frame stutter (probably coming from shader compile / geometry creation)
     [z] Handle a million commits somehow
 
-# Layout
+## Layout
 
     [x] Layout text files as vertical [] (think of the minimap, source files are tall and narrow)
     [x] Split folders into [subdirs | files]
 
-# FIX
+## FIX
 
     [x] Fix click navigation
         (use px coords everywhere)
@@ -411,3 +386,59 @@
     [x] Issue where reparenting screws up everything (appeared after using yield in Layout createFileTreeQuads)
     [x] Issue where things don't show up
     [x] Issue where pinch zoom fucks everything up
+    [x] Each request returns >1 deep hierarchy (limit by count of files)
+    [x] Navigate to line in text view
+    [x] main.js is too large
+        [x] Convert to TS
+        [x] Move tree build to lib
+        [x] Move links rendering to lib
+        [x] Move highlight rendering to lib
+    [x] MainApp is too large
+        [x] Move commits to MontaanGit
+        [x] Move widget loading to FSOverlays
+
+# Ideas
+
+    [] BERT for question-answering about code
+    [] AI code review (train best practices)
+
+# Future alignment
+
+## Target machine
+
+    32-core laptop with 16-wide SIMD and 3 x 2080Ti as GPU
+    - Path tracing with 2 spp at 4k
+    - Wasm + Workers + SIMD crucial for perf
+        Current: max/JS = 360x ST, 60x MT.
+        Future: max/JS = 4000x ST, 130x MT.
+        With WASM: 2-10x MT
+    - Stable WebGPU: another 10x perf
+    - Compile to SPIR-V to WebGPU & Wasm+SIMD+MT
+    - Foldable tablet phones mainstream
+    - Looking Glass type 3D TVs mainstream
+    - XR landed as consumer tech
+
+## Target common use in 2030 - stay nimble
+
+    [] GLSL Compute as the main language
+        [] Run everything as WebAssembly workers
+        [] WebGPU backend
+    [] XR version
+    [] Mobile-friendly UI
+
+# Rolling rewrites plan
+
+    Towards fast execution and safety.
+
+    [] Move from async coroutines to workers
+        [] No shared state
+        [] No parsing on main thread
+        [] Offscreen canvas
+    [] Use spirv-wasm to write parts in GLSL
+        [] Tree rebuild
+        [] Text geometry generation
+    [] Change to code pretty-printing library with TSX support
+        [] Remove the need for DOM + CSS
+    [] Rewrite backend away from executing shell commands & sanitize inputs
+    [] Backend to WebAssembly sandboxes
+        - https://www.fastly.com/blog/announcing-lucet-fastly-native-webassembly-compiler-runtime
