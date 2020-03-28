@@ -1,4 +1,4 @@
-import { Filesystem, FSEntry, createFSTree, mount, NotImplementedError } from '.';
+import { Filesystem, FSEntry, createFSTree, mount, NotImplementedError } from '../filesystem';
 // import React from 'react';
 
 import QFrameAPI from '../../../lib/api';

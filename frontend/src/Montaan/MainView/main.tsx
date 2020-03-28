@@ -11,8 +11,8 @@ import Layout, { ISDFTextGeometry } from '../lib/Layout';
 import utils from '../lib/utils';
 import Geometry from '../lib/Geometry';
 
-import TextFileView from './TextFileView';
-import ImageFileView from './ImageFileView';
+import TextFileView from '../FileViews/TextFileView/TextFileView';
+import ImageFileView from '../FileViews/ImageFileView/ImageFileView';
 
 import fontDescription from './assets/fnt/Inconsolata-Regular.fnt';
 import fontSDF from './assets/fnt/Inconsolata-Regular.png';
@@ -21,13 +21,13 @@ import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter';
 import * as THREE from 'three';
 import loadFont from 'load-bmfont';
 import WorkQueue from '../lib/WorkQueue';
-import ModelBuilder from './ModelBuilder';
-import NavTarget from './NavTarget';
+import ModelBuilder from '../ModelBuilder/ModelBuilder';
+import NavTarget from '../lib/NavTarget';
 import { FileTree, SearchResult } from '../MainApp';
 import QFrameAPI from '../../lib/api';
-import HighlightedLines from './HighlightedLines';
-import SearchLandmarks from './SearchLandmarks';
-import LinksModel from './LinksModel';
+import HighlightedLines from '../HighlightedLines/HighlightedLines';
+import SearchLandmarks from '../SearchLandmarks/SearchLandmarks';
+import LinksModel from '../LinksModel/LinksModel';
 import { RouteComponentProps } from 'react-router-dom';
 
 function save(blob: Blob, filename: string) {

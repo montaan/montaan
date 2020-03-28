@@ -1,4 +1,4 @@
-import { Filesystem, FSEntry, getPathEntry, NotImplementedError } from '.';
+import { Filesystem, FSEntry, getPathEntry, NotImplementedError } from '../filesystem';
 import React from 'react';
 
 import QFrameAPI from '../../../lib/api';
@@ -11,7 +11,7 @@ import TourSelector from '../../TourSelector';
 import Player from '../../Player';
 import CommitControls from '../../CommitControls';
 import CommitInfo from '../../CommitInfo';
-import { getFullPath } from './filesystem';
+import { getFullPath } from '../filesystem/filesystem';
 import Search from '../../Search';
 
 export default class MontaanGitFilesystem extends Filesystem {

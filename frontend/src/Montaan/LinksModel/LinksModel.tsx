@@ -1,7 +1,7 @@
 import { FSEntry } from '../lib/filesystem';
 import { TreeLink } from '../MainApp';
 import * as THREE from 'three';
-import { ParseTargetSignature } from './main';
+import { ParseTargetSignature } from '../MainView/main';
 
 export default class LinksModel {
 	linksUpdatedOn: number = -1;

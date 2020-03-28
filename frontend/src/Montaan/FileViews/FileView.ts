@@ -2,7 +2,7 @@ import { FSEntry } from '../lib/filesystem';
 import QFrameAPI from '../../lib/api';
 import * as THREE from 'three';
 import { BBox } from '../lib/Geometry';
-import NavTarget from './NavTarget';
+import NavTarget from '../lib/NavTarget';
 
 export class ContentBBox {
 	topLeft: THREE.Vector3;

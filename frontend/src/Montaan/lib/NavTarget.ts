@@ -1,4 +1,4 @@
-import { FSEntry, createFSTree } from '../lib/filesystem';
+import { FSEntry, createFSTree } from './filesystem';
 
 export default class NavTarget {
 	static mock: NavTarget = new NavTarget(createFSTree('', ''), [], '');

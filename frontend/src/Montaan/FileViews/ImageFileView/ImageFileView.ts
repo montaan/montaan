@@ -1,7 +1,7 @@
 import * as THREE from 'three';
-import { FSEntry } from '../lib/filesystem';
-import QFrameAPI from '../../lib/api';
-import FileView from './FileView';
+import { FSEntry } from '../../lib/filesystem';
+import QFrameAPI from '../../../lib/api';
+import FileView from '../FileView';
 
 const emptyMaterial = new THREE.MeshBasicMaterial();
 

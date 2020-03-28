@@ -1,6 +1,6 @@
 import QFrameAPI from '../../../lib/api';
 import React from 'react';
-import FileView from '../../MainView/FileView';
+import FileView from '../../FileViews/FileView';
 
 export interface FSEntry {
 	distanceFromCenter: number;

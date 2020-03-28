@@ -26,8 +26,10 @@ import { QFrameAPI } from '../../lib/api';
 import { FSEntry, createFSTree } from '../lib/filesystem';
 import WorkQueue from '../lib/WorkQueue';
 
-import MontaanGitFilesystem from '../lib/filesystem/MontaanGitFilesystem';
-import MontaanUserReposFilesystem, { RepoInfo } from '../lib/filesystem/MontaanUserReposFilesystem';
+import MontaanGitFilesystem from '../lib/filesystems/MontaanGitFilesystem';
+import MontaanUserReposFilesystem, {
+	RepoInfo,
+} from '../lib/filesystems/MontaanUserReposFilesystem';
 
 registerFileSystem('montaanGit', MontaanGitFilesystem);
 registerFileSystem('montaanUserRepos', MontaanUserReposFilesystem);

@@ -1,12 +1,12 @@
-import prettyPrintWorker from '../lib/pretty-print';
+import prettyPrintWorker from '../../lib/pretty-print';
 import * as THREE from 'three';
-import { FSEntry } from '../lib/filesystem';
-import QFrameAPI from '../../lib/api';
+import { FSEntry } from '../../lib/filesystem';
+import QFrameAPI from '../../../lib/api';
 
-import Layout, { SDFTextMesh } from '../lib/Layout';
-import { BBox } from '../lib/Geometry';
-import NavTarget from './NavTarget';
-import FileView, { ContentBBox, EmptyContentBBox } from './FileView';
+import Layout, { SDFTextMesh } from '../../lib/Layout';
+import { BBox } from '../../lib/Geometry';
+import NavTarget from '../../lib/NavTarget';
+import FileView, { ContentBBox, EmptyContentBBox } from '../FileView';
 
 type PrettyPrintResult = {
 	language: string;
