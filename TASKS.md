@@ -83,6 +83,16 @@
     [] Fetch plugins from GitHub
         [] Sandbox plugins
 
+## Faster commit flow
+
+    [] Bors for driving CI
+    [] Remove unnecessary hurdles to commit flow
+        [] Aim for fully-automated merges of unsafe code - think Wikipedia
+        [] If your commit passes automated tests, either your commit is good or the tests are broken
+        [] Fast & easy reverts
+        [] Sandbox everything
+    [] Instead of a single core codebase, multiple core codebases (core maintainers do 95% of code, and are difficult to scale in-codebase -> better to have multiple codebases)
+
 ## "Payment" system
 
     [] Commit prompt to pay for use via commit
@@ -399,6 +409,17 @@
 
 # Ideas
 
+    [] Correct-by-construction programming system (like Blockly & Scratch & node salad editors)
+        - No syntax errors
+        - No shared state
+        - GLSL semantics for execution (parallel SPMD on remote processors, explicitly passed heap)
+        - Bind nodes manipulation to keys & chords to be faster to type
+        - Reference to nodes by name
+        - Should feel like IntelliSense
+        - Touch manipulation and voice input for mobile
+        - Should have same flexibility as text-based model but with fewer correctness issues (syntax errors, typos, type mismatches, null handling, state smashing, ...)
+        - Fewer merge conflicts?
+    [] Migrate from git-like model to Wikipedia-like model
     [] BERT for question-answering about code
     [] AI code review (train best practices)
 
