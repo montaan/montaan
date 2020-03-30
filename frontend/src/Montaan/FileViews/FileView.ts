@@ -33,7 +33,6 @@ export default class FileView extends THREE.Object3D {
 	fsEntry: FSEntry;
 	model: THREE.Mesh;
 	api: QFrameAPI;
-	yield: any;
 	path: string;
 	requestFrame: any;
 	loadListeners: (() => void)[];
@@ -44,7 +43,6 @@ export default class FileView extends THREE.Object3D {
 		model: THREE.Mesh,
 		fullPath: string,
 		api: QFrameAPI,
-		yieldFn: any,
 		requestFrame: any
 	) {
 		super();
@@ -52,7 +50,6 @@ export default class FileView extends THREE.Object3D {
 		this.fsEntry = fsEntry;
 		this.model = model;
 		this.api = api;
-		this.yield = yieldFn;
 		this.path = fullPath;
 		this.requestFrame = requestFrame;
 		this.loadListeners = [];

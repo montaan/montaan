@@ -7,9 +7,9 @@ var utils = require('./lib/utils');
 
 var Base = THREE.BufferGeometry;
 
-export default async function createTextGeometry(opt, yieldFn) {
+export default function createTextGeometry(opt) {
 	var geo = new SDFTextGeometry();
-	await geo.update(opt, yieldFn);
+	geo.update(opt);
 	return geo;
 }
 
@@ -19,7 +19,7 @@ export function SDFTextGeometry() {
 
 inherits(SDFTextGeometry, Base);
 
-SDFTextGeometry.prototype.update = async function(opt, yieldFn) {
+SDFTextGeometry.prototype.update = function(opt) {
 	if (typeof opt === 'string') {
 		opt = { text: opt };
 	}
@@ -31,7 +31,7 @@ SDFTextGeometry.prototype.update = async function(opt, yieldFn) {
 		throw new TypeError('must specify a { font } in options');
 	}
 
-	this.layout = await createLayout(opt, yieldFn);
+	this.layout = createLayout(opt);
 
 	// get vec2 texcoords
 	var flipY = opt.flipY !== false;
@@ -49,7 +49,6 @@ SDFTextGeometry.prototype.update = async function(opt, yieldFn) {
 	for (let i = 0; i < lglyphs.length; i++) {
 		const bitmap = lglyphs[i].data;
 		if (bitmap.width * bitmap.height > 0) glyphs.push(lglyphs[i]);
-		if (i % 10000 === 9999) await yieldFn();
 	}
 
 	// provide visible glyphs for convenience
@@ -73,17 +72,17 @@ SDFTextGeometry.prototype.update = async function(opt, yieldFn) {
 		this.setAttribute('page', new THREE.BufferAttribute(pages, 1));
 	}
 
-	if (!opt.noBounds) await this.computeBounds(yieldFn);
+	if (!opt.noBounds) this.computeBounds();
 };
 
-SDFTextGeometry.prototype.computeBounds = async function(yieldFn) {
+SDFTextGeometry.prototype.computeBounds = function() {
 	this.boundingBox = new THREE.Box3();
 	this.boundingSphere = new THREE.Sphere();
 
 	var itemSize = 4;
 	var box = { min: [0, 0, 0], max: [0, 0, 0] };
 
-	const bounds = async function(positions) {
+	const bounds = function(positions) {
 		const count = positions.length / itemSize;
 		box.min[0] = positions[0];
 		box.min[1] = positions[1];
@@ -102,12 +101,11 @@ SDFTextGeometry.prototype.computeBounds = async function(yieldFn) {
 			else if (y > box.max[1]) box.max[1] = y;
 			if (z < box.min[2]) box.min[2] = z;
 			else if (z > box.max[2]) box.max[2] = z;
-			if (i % 10000 === 9999) await yieldFn();
 		}
 	};
 
 	var positions = this.getAttribute('position').array;
-	await bounds(positions);
+	bounds(positions);
 
 	var width = box.max[0] - box.min[0];
 	var height = box.max[1] - box.min[1];

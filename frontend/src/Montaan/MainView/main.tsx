@@ -7,7 +7,7 @@ import {
 	ExtendedFSEntry,
 } from '../lib/filesystem';
 import Colors from '../lib/Colors';
-import Layout, { ISDFTextGeometry } from '../lib/Layout';
+import Layout, { ISDFTextGeometry } from '../lib/Text';
 import utils from '../lib/utils';
 import Geometry from '../lib/Geometry';
 
@@ -29,6 +29,7 @@ import HighlightedLines from '../HighlightedLines/HighlightedLines';
 import SearchLandmarks from '../SearchLandmarks/SearchLandmarks';
 import LinksModel from '../LinksModel/LinksModel';
 import { RouteComponentProps } from 'react-router-dom';
+import FileView from '../FileViews/FileView';
 
 function save(blob: Blob, filename: string) {
 	const link = document.createElement('a');
@@ -76,23 +77,23 @@ function exportGLTF(input: THREE.Object3D) {
 	}
 };
 
-class NavCamera extends THREE.PerspectiveCamera {
+export class NavCamera extends THREE.PerspectiveCamera {
 	targetPosition: THREE.Vector3 = new THREE.Vector3();
 	targetFOV: number = 60;
 }
 
-class VisibleFiles extends THREE.Object3D {
-	visibleSet: { [index: string]: THREE.Object3D } = {};
+export class VisibleFiles extends THREE.Object3D {
+	visibleSet: Map<string, THREE.Object3D> = new Map();
 }
 
-type Fiber = () => void;
+export type Fiber = () => void;
 
 export type ParseTargetSignature = (
 	dst: string | FSEntry,
 	dstPoint?: number[]
 ) => ExtendedFSEntry | null;
 
-class Tabletree {
+export class Tabletree {
 	initDone: boolean = false;
 	frameFibers: Fiber[] = [];
 	frameStart: number = -1;
@@ -272,7 +273,7 @@ class Tabletree {
 			this.viewRoot = fileTree.tree;
 			this.viewRoot.scale = 1;
 		}
-		await this.showFileTree(fileTree);
+		this.showFileTree(fileTree);
 		if (newTree) {
 			this.camera.position.set(0.5, 0.75, 3);
 			this.camera.targetPosition.copy(this.camera.position);
@@ -286,7 +287,7 @@ class Tabletree {
 
 	async setFileTree(fileTree: FileTree) {
 		if (this.started) {
-			this.treeUpdateQueue.pushMergeEnd(this.treeUpdater, fileTree);
+			this.treeUpdateQueue.pushMerge(this.treeUpdater, fileTree);
 		} else {
 			return new Promise((resolve, reject) => {
 				const tick = () => {
@@ -298,19 +299,30 @@ class Tabletree {
 		}
 	}
 
-	async showFileTree(tree: FileTree) {
-		if (this.treeBuildInProgress || !this.viewRoot) return;
+	showFileTree(tree: FileTree) {
+		if (this.treeBuildInProgress) return;
 		this.treeBuildInProgress = true;
 		const builder = new ModelBuilder();
 		utils.traverseFSEntry(tree.tree, (e: FSEntry) => (e.building = false), '');
-		const model = await builder.buildModel(
-			tree,
-			this.viewRoot,
-			this.camera,
-			this.visibleEntries,
-			this.yield
-		);
-		const { mesh, textGeometry, fileIndex, fsIndex, meshIndex } = model;
+		const {
+			mesh,
+			textGeometry,
+			fileIndex,
+			fsEntryIndex,
+			meshIndex,
+			zoomedInPath,
+			navigationTarget,
+			smallestCovering,
+			entriesToFetch,
+			visibleFiles,
+		} = builder.buildModel(tree, tree.tree, this.camera, this.model);
+		this.zoomedInPath = zoomedInPath;
+		this.fsIndex = fsEntryIndex;
+		this.smallestCovering = smallestCovering;
+		if (entriesToFetch.length > 0) {
+			this.requestDirs(entriesToFetch.map(getFullPath), []);
+		}
+		this.setNavigationTarget(navigationTarget);
 		if (this.model) {
 			this.model.remove(this.visibleFiles);
 			if (this.model.parent) this.model.parent.remove(this.model);
@@ -320,21 +332,29 @@ class Tabletree {
 				}
 			});
 		}
+		const currentlyVisible = new Set();
+		visibleFiles.forEach((fsEntry) => {
+			const path = getFullPath(fsEntry);
+			this.addFileView(this.visibleFiles, path, fsEntry);
+			currentlyVisible.add(fsEntry);
+		});
+		Array.from(this.visibleFiles.visibleSet.keys()).forEach((path) => {
+			if (!currentlyVisible.has(path)) {
+				const fileView = this.visibleFiles.visibleSet.get(path) as FileView;
+				this.visibleFiles.remove(fileView);
+				fileView.dispose();
+				this.visibleFiles.visibleSet.delete(path);
+			}
+		});
+
 		this.tree = tree;
 		this.fileTree = tree.tree;
 		this.fileCount = tree.count;
 		this.model = mesh;
 		mesh.add(this.visibleFiles);
-		(this.model as any).ontick = this.determineVisibility(
-			mesh,
-			textGeometry,
-			this.visibleFiles,
-			this.camera
-		);
 		this.meshIndex = meshIndex;
 		this.fileIndex = fileIndex;
-		this.fsIndex = fsIndex;
-		this.textGeometry = textGeometry;
+		this.textGeometry = textGeometry as ISDFTextGeometry;
 		this.model.position.set(0, 0, 0);
 
 		this.visibleFiles.children.forEach((f: any) => {
@@ -350,132 +370,39 @@ class Tabletree {
 		this.viewRootUpdated = false;
 	}
 
+	// determineVisibility(
+	// 	mesh: THREE.Mesh,
+	// 	textGeometry: ISDFTextGeometry,
+	// 	visibleFiles: VisibleFiles,
+	// 	camera: NavCamera
+	// ) {
+	// 	return (t: any, dt: any) => {
+	// 		// Dispose loaded files that are outside the current view
+	// 		for (let i = 0; i < visibleFiles.children.length; i++) {
+	// 			const c = visibleFiles.children[i];
+	// 			const fsEntry = (c as any).fsEntry;
+	// 			const bbox = Geometry.getFSEntryBBox(fsEntry, mesh, camera);
+	// 			if (!bbox.onScreen || bbox.width * window.innerWidth < 100) {
+	// 				if (fsEntry.contentObject) {
+	// 					fsEntry.contentObject.dispose();
+	// 					fsEntry.contentObject = undefined;
+	// 				}
+	// 				const fullPath = getFullPath(fsEntry);
+	// 				delete visibleFiles.visibleSet[fullPath];
+	// 				visibleFiles.remove(c);
+	// 				i--;
+	// 			} else {
+	// 				c.position.copy(fsEntry);
+	// 				c.scale.set(fsEntry.scale, fsEntry.scale, fsEntry.scale);
+	// 			}
+	// 		}
+	// 	};
+	// }
+
 	updateViewRoot(newRoot: any) {
 		if (this.viewRootUpdated || this.treeBuildInProgress) return;
 		this.viewRoot = newRoot;
 		this.viewRootUpdated = true;
-	}
-
-	determineVisibility(
-		mesh: THREE.Mesh,
-		textGeometry: ISDFTextGeometry,
-		visibleFiles: VisibleFiles,
-		camera: NavCamera
-	) {
-		return (t: any, dt: any) => {
-			if (this.viewRootUpdated || this.treeBuildInProgress) return;
-			// Dispose loaded files that are outside the current view
-			for (let i = 0; i < visibleFiles.children.length; i++) {
-				const c = visibleFiles.children[i];
-				const fsEntry = (c as any).fsEntry;
-				const bbox = Geometry.getFSEntryBBox(fsEntry, mesh, camera);
-				if (!bbox.onScreen || bbox.width * window.innerWidth < 100) {
-					if (fsEntry.contentObject) {
-						fsEntry.contentObject.dispose();
-						fsEntry.contentObject = undefined;
-					}
-					const fullPath = getFullPath(fsEntry);
-					delete visibleFiles.visibleSet[fullPath];
-					visibleFiles.remove(c);
-					i--;
-				} else {
-					c.position.copy(fsEntry);
-					c.scale.set(fsEntry.scale, fsEntry.scale, fsEntry.scale);
-				}
-			}
-			var zoomedInPath = '';
-			var navigationTarget = '';
-			var smallestCovering = this.fileTree;
-
-			// Breadth-first traversal of mesh.fileTree
-			// - determines fsEntry visibility
-			// - finds the covering fsEntry
-			// - finds the currently zoomed-in path and breadcrumb path
-			if (!this.fileTree) return;
-			const stack = [this.fileTree];
-			const visibleEntries = new Map();
-			const entriesToFetch = [];
-			let needModelUpdate = false;
-			while (stack.length > 0) {
-				const tree = stack.pop();
-				if (!tree) break;
-				visibleEntries.set(tree, 1); // It's visible, let's keep it in the mesh.
-				for (let name in tree.entries) {
-					const fsEntry = tree.entries[name];
-					if (fsEntry.entries && !fsEntry.building) {
-						visibleEntries.set(fsEntry, 1); // Build fresh dirs
-						needModelUpdate = true;
-						continue;
-					}
-					const bbox = Geometry.getFSEntryBBox(fsEntry, mesh, camera);
-					const pxWidth = bbox.width * window.innerWidth * 0.5;
-					const isSmall = pxWidth < (fsEntry.entries ? 15 : 150);
-
-					// Skip entries that are outside frustum or too small.
-					if (!bbox.onScreen || isSmall) continue;
-
-					// Directory
-					if (fsEntry.entries) {
-						stack.push(fsEntry); // Descend into directories.
-						if (!this.meshIndex.has(fsEntry)) needModelUpdate = true;
-						// Fetch directories that haven't been fetched yet.
-						if (pxWidth > 30 && !fsEntry.fetched) {
-							fsEntry.distanceFromCenter = Geometry.bboxDistanceToFrustumCenter(
-								bbox,
-								mesh,
-								camera
-							);
-							entriesToFetch.push(fsEntry);
-						}
-					} else {
-						// File that's large on screen, let's add a file view if needed.
-						let fullPath = getFullPath(fsEntry);
-						if (
-							visibleFiles.children.length < 30 &&
-							!visibleFiles.visibleSet[fullPath]
-						) {
-							this.addFileView(visibleFiles, fullPath, fsEntry);
-						}
-					}
-
-					// Large items
-					// Update navigation target and smallest covering fsEntry (and its path).
-					if (bbox.width > 1) {
-						if (Geometry.bboxCoversFrustum(bbox, mesh, camera)) {
-							zoomedInPath += '/' + fsEntry.name;
-							navigationTarget += '/' + fsEntry.name;
-							smallestCovering = fsEntry;
-						} else if (Geometry.bboxAtFrustumCenter(bbox, mesh, camera)) {
-							navigationTarget += '/' + fsEntry.name;
-						}
-					}
-				}
-			}
-			this.zoomedInPath = zoomedInPath;
-			this.breadcrumbPath = navigationTarget;
-			this.smallestCovering = smallestCovering;
-			this.setNavigationTarget(navigationTarget);
-			this.visibleEntries = visibleEntries;
-			if (entriesToFetch.length > 0) {
-				this.requestDirs(
-					entriesToFetch
-						.filter((e) => !e.fetched)
-						.sort(this.cmpFSEntryDistanceFromCenter)
-						.map(getFullPath),
-					[]
-				);
-			}
-			if (
-				!this.viewRootUpdated &&
-				!this.treeBuildInProgress &&
-				smallestCovering &&
-				(smallestCovering.scale < 0.1 || smallestCovering.scale > 10)
-			) {
-				this.updateViewRoot(smallestCovering);
-				needModelUpdate = true;
-			}
-			if (needModelUpdate && this.tree) this.setFileTree(this.tree);
-		};
 	}
 
 	cmpFSEntryDistanceFromCenter(
@@ -489,13 +416,13 @@ class Tabletree {
 	}
 
 	addFileView(visibleFiles: VisibleFiles, fullPath: string, fsEntry: FSEntry) {
+		if (visibleFiles.visibleSet.has(fullPath)) return;
 		const view = Colors.imageRE.test(fullPath) ? ImageFileView : TextFileView;
 		fsEntry.contentObject = new view(
 			fsEntry,
 			this.model,
 			fullPath,
 			this.api,
-			this.yield,
 			this.requestFrame
 		);
 		fsEntry.contentObject.loadListeners.push(() => {
@@ -508,7 +435,7 @@ class Tabletree {
 		});
 		fsEntry.contentObject.load(this.api.server + '/repo/file' + fullPath);
 
-		visibleFiles.visibleSet[fullPath] = fsEntry.contentObject;
+		visibleFiles.visibleSet.set(fullPath, fsEntry.contentObject);
 		visibleFiles.add(fsEntry.contentObject);
 	}
 
@@ -1010,7 +937,6 @@ class Tabletree {
 			this.onResize();
 		}
 		this.frameStart = performance.now();
-		this.frameFibers.splice(0).map((f) => f());
 		const camera = this.camera;
 		if (!camera) return this.requestFrame();
 		const currentFrameTime = performance.now();
@@ -1057,6 +983,9 @@ class Tabletree {
 		}
 		this.linksModel.updateLinks(this.currentFrame);
 		camera.updateProjectionMatrix();
+
+		// if (this.tree) this.showFileTree(this.tree);
+
 		var wasChanged = this.changed || this.frameFibers.length > 0;
 		this.changed = false;
 		if (wasChanged || this.animating) this.render();
@@ -1106,20 +1035,6 @@ class Tabletree {
 			this.frameRequested = true;
 			window.requestAnimationFrame(this.tick);
 		}
-	};
-
-	yield: () => Promise<void> = async () => {
-		if (this.frameStart > 0 && performance.now() - this.frameStart > 10) {
-			return new Promise((resolve, reject) => {
-				const resolver = () => {
-					this.changed = true;
-					if (performance.now() - this.frameStart > 10) this.frameFibers.push(resolver);
-					else resolve();
-				};
-				this.frameFibers.push(resolver);
-			});
-		}
-		this.changed = true;
 	};
 }
 

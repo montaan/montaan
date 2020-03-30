@@ -18,10 +18,9 @@ export default class ImageFileView extends FileView {
 		model: THREE.Mesh,
 		fullPath: string,
 		api: QFrameAPI,
-		yieldFn: any,
 		requestFrame: any
 	) {
-		super(fsEntry, model, fullPath, api, yieldFn, requestFrame);
+		super(fsEntry, model, fullPath, api, requestFrame);
 
 		const geometry = new THREE.PlaneBufferGeometry(1, 1);
 		const material = emptyMaterial;

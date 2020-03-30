@@ -10,9 +10,9 @@ var ALIGN_LEFT = 0,
 	ALIGN_CENTER = 1,
 	ALIGN_RIGHT = 2;
 
-export default async function createLayout(opt, yieldFn) {
+export default function createLayout(opt) {
 	var layout = new TextLayout();
-	await layout.update(opt, yieldFn);
+	layout.update(opt);
 	return layout;
 }
 
@@ -21,7 +21,7 @@ function TextLayout() {
 	this._measure = this.computeMetrics.bind(this);
 }
 
-TextLayout.prototype.update = async function(opt, yieldFn) {
+TextLayout.prototype.update = function(opt) {
 	opt.measure = this._measure;
 	this._opt = opt;
 	if (this._opt.tabSize === undefined) this._opt.tabSize = 4;
@@ -81,7 +81,6 @@ TextLayout.prototype.update = async function(opt, yieldFn) {
 
 		//for each glyph in that line...
 		for (let i = start; i < end; i++, ccount++) {
-			if (ccount % 3000 === 2999) await yieldFn();
 			var id = text.charCodeAt(i);
 			var glyph = this.getGlyph(font, id) || this.getGlyph(font, '?'.charCodeAt(0));
 			if (glyph) {

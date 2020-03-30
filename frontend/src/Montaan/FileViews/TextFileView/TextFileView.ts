@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { FSEntry } from '../../lib/filesystem';
 import QFrameAPI from '../../../lib/api';
 
-import Layout, { SDFTextMesh } from '../../lib/Layout';
+import Text, { SDFTextMesh } from '../../lib/Text';
 import { BBox } from '../../lib/Geometry';
 import NavTarget from '../../lib/NavTarget';
 import FileView, { ContentBBox, EmptyContentBBox } from '../FileView';
@@ -38,10 +38,9 @@ export default class TextFileView extends FileView {
 		model: THREE.Mesh,
 		fullPath: string,
 		api: QFrameAPI,
-		yieldFn: any,
 		requestFrame: any
 	) {
-		super(fsEntry, model, fullPath, api, yieldFn, requestFrame);
+		super(fsEntry, model, fullPath, api, requestFrame);
 		this.canHighlight = true;
 	}
 
@@ -286,25 +285,17 @@ export default class TextFileView extends FileView {
 
 		if (contents.length === 0) return;
 
-		await this.yield();
-
 		const fsEntry = this.fsEntry;
 
-		prettyPrintWorker.prettyPrint(contents, fsEntry.name, async (result: PrettyPrintResult) => {
+		prettyPrintWorker.prettyPrint(contents, fsEntry.name, (result: PrettyPrintResult) => {
 			if (!this.parent) return;
-			await this.yield();
-			const geometry = await Layout.createText(
-				{
-					text: contents,
-					mode: 'pre',
-				},
-				this.yield
-			);
+			const geometry = Text.createText({
+				text: contents,
+				mode: 'pre',
+			});
 			let material: THREE.RawShaderMaterial;
 			if (result.language) {
-				const { nodeStyles, palette, lineCount } = await this.parsePrettyPrintResult(
-					result
-				);
+				const { nodeStyles, palette, lineCount } = this.parsePrettyPrintResult(result);
 				const verts = geometry.getAttribute('position').array as Float32Array;
 				for (let i = 0, off = 3; i < nodeStyles.length; i++) {
 					const t = nodeStyles[i];
@@ -319,15 +310,14 @@ export default class TextFileView extends FileView {
 							off += 4;
 						}
 					}
-					if (off % 12004 === 12003) await this.yield();
 				}
-				material = Layout.makeTextMaterial(palette);
+				material = Text.makeTextMaterial(palette);
 				this.lineCount = lineCount;
 			} else {
 				let lineCount = 0;
 				for (let i = 0; i < contents.length; i++)
 					if (contents.charCodeAt(i) === 10) lineCount++;
-				material = Layout.makeTextMaterial();
+				material = Text.makeTextMaterial();
 				this.lineCount = lineCount;
 			}
 
@@ -380,7 +370,7 @@ export default class TextFileView extends FileView {
 		});
 	}
 
-	async fillElement(html: string, element: HTMLElement) {
+	fillElement(html: string, element: HTMLElement) {
 		let i = 0,
 			start = 0,
 			spanStack = [],
@@ -422,7 +412,6 @@ export default class TextFileView extends FileView {
 					prefix += html.substring(spanStack[k], spanStack[k + 1]);
 				}
 				element.appendChild(d.content);
-				await this.yield();
 				lines = 0;
 				chars = 0;
 				start = i + 1;
@@ -433,18 +422,16 @@ export default class TextFileView extends FileView {
 			const d = document.createElement('template');
 			d.innerHTML = prefix + str;
 			element.appendChild(d.content);
-			await this.yield();
 		}
 		return totalLines;
 	}
 
-	async collectNodeStyles(
+	collectNodeStyles(
 		doc: HTMLElement,
 		nodeStyles: NodeStyle[],
 		palette: THREE.Vector3[],
 		paletteIndex: { [color: string]: number }
 	) {
-		await this.yield();
 		const style = getComputedStyle(doc);
 		const colorString = style.color || 'inherit';
 		if (!paletteIndex[colorString]) {
@@ -459,7 +446,7 @@ export default class TextFileView extends FileView {
 		for (var i = 0; i < doc.childNodes.length; i++) {
 			const cc = doc.childNodes[i] as HTMLElement;
 			if (cc.tagName) {
-				await this.collectNodeStyles(cc, nodeStyles, palette, paletteIndex);
+				this.collectNodeStyles(cc, nodeStyles, palette, paletteIndex);
 			} else {
 				nodeStyles.push({
 					color: color,
@@ -472,19 +459,18 @@ export default class TextFileView extends FileView {
 		}
 	}
 
-	async parsePrettyPrintResult(result: PrettyPrintResult) {
-		await this.yield();
+	parsePrettyPrintResult(result: PrettyPrintResult) {
 		const doc = document.createElement('pre');
 		doc.className = 'hljs ' + result.language;
 		doc.style.display = 'none';
 		document.body.appendChild(doc);
 
-		const lineCount = await this.fillElement(result.value, doc);
+		const lineCount = this.fillElement(result.value, doc);
 
 		const paletteIndex = {};
 		const palette: THREE.Vector3[] = [];
 		const nodeStyles: NodeStyle[] = [];
-		await this.collectNodeStyles(doc, nodeStyles, palette, paletteIndex);
+		this.collectNodeStyles(doc, nodeStyles, palette, paletteIndex);
 		document.body.removeChild(doc);
 		return { nodeStyles, palette, lineCount };
 	}
