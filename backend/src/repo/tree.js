@@ -44,30 +44,30 @@ module.exports = async function(req, res) {
 	var [error, { filePath }] = assertRepoDir(Path.join(repo, 'repo'));
 	if (error) return error;
 	await new Promise(async (resolve, reject) => {
-		if (recursive) {
-			Exec(
-				`cd ${filePath} && git ls-tree --full-tree -l ${
-					recursive ? '-r' : ''
-				} -z ${hash} ${paths.join(' ')}`,
-				{ maxBuffer: 100000000 },
-				async function(error, stdout, stderr) {
-					if (error) reject(error);
-					res.writeHeader(200, { 'Content-Type': 'text/plain' });
-					await res.end(stdout || '');
-					resolve();
-				}
-			);
-		} else {
-			let maxCount = 100;
-			res.writeHeader(200, { 'Content-Type': 'text/plain' });
-			for (let i = 0; i < paths.length; i++) {
-				const pathResults = await listTree(filePath, hash, paths[i], maxCount);
-				pathResults.push('');
-				res.write(pathResults.join('\x00'));
-				maxCount = Math.max(1, maxCount - pathResults);
+		// if (recursive) {
+		Exec(
+			`cd ${filePath} && git ls-tree --full-tree -l ${
+				recursive ? '-r' : ''
+			} -z ${hash} ${paths.join(' ')}`,
+			{ maxBuffer: 100000000 },
+			async function(error, stdout, stderr) {
+				if (error) reject(error);
+				res.writeHeader(200, { 'Content-Type': 'text/plain' });
+				await res.end(stdout || '');
+				resolve();
 			}
-			await res.end();
-			resolve();
-		}
+		);
+		// } else {
+		// 	let maxCount = 100;
+		// 	res.writeHeader(200, { 'Content-Type': 'text/plain' });
+		// 	for (let i = 0; i < paths.length; i++) {
+		// 		const pathResults = await listTree(filePath, hash, paths[i], maxCount);
+		// 		pathResults.push('');
+		// 		res.write(pathResults.join('\x00'));
+		// 		maxCount = Math.max(1, maxCount - pathResults);
+		// 	}
+		// 	await res.end();
+		// 	resolve();
+		// }
 	});
 };

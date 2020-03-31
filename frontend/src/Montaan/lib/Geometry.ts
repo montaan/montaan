@@ -190,7 +190,7 @@ export default {
 	bboxCoversFrustum: function(bbox: BBox, model: THREE.Mesh, camera: THREE.Camera) {
 		const { a, b, c, d, minX, maxX, minY, maxY } = bbox;
 		// Bounding box covers frustum
-		if (!(maxX > 1 && minX < -1 && maxY > 1 && minY < -1)) return false;
+		return maxX > 1 && minX < -1 && maxY > 1 && minY < -1;
 		// All the four corners of the frustum are inside the quad a, b, c, d.
 		const points = [a, b, c, d];
 		return (

@@ -15,23 +15,31 @@
  * time, the previous frame's model is used.
  */
 
-import Text, { ISDFTextGeometry, SDFTextMesh } from '../lib/Text';
+import Text from '../lib/Text';
 import { FileTree } from '../MainApp';
 import { FSEntry } from '../lib/filesystem';
 import * as THREE from 'three';
 import Geometry from '../lib/Geometry';
 import { NavCamera } from '../MainView/main';
 import Colors from '../lib/Colors';
+import { SDFText } from '../lib/third_party/three-bmfont-text-modified';
 
 export default class ModelBuilder {
+	smallestCovering?: FSEntry;
+	_modelVerts = new Float32Array(36 * 1000);
+	_modelColorVerts = new Float32Array(36 * 1000);
+	_labelVerts = new Float32Array(4 * 10000);
+	_labelUVs = new Float32Array(4 * 10000);
+
 	buildModel(
 		tree: FileTree,
-		viewRoot: FSEntry,
 		camera: NavCamera,
 		mesh: THREE.Mesh
 	): {
-		mesh: THREE.Mesh;
-		textGeometry: THREE.BufferGeometry;
+		verts: Float32Array;
+		colorVerts: Float32Array;
+		labelVerts: Float32Array;
+		labelUVs: Float32Array;
 		fileIndex: number;
 		fsEntryIndex: FSEntry[];
 		meshIndex: Map<FSEntry, number>;
@@ -40,8 +48,23 @@ export default class ModelBuilder {
 		smallestCovering: FSEntry;
 		entriesToFetch: FSEntry[];
 		visibleFiles: FSEntry[];
+		vertexCount: number;
+		textVertexCount: number;
 	} {
 		const fileTree = tree.tree;
+
+		let viewRoot = this.smallestCovering;
+		while (
+			viewRoot &&
+			!Geometry.bboxCoversFrustum(
+				Geometry.getFSEntryBBox(viewRoot, mesh, camera),
+				mesh,
+				camera
+			)
+		) {
+			viewRoot = viewRoot.parent;
+		}
+		if (!viewRoot) viewRoot = fileTree;
 
 		let { x, y, z, scale } = viewRoot;
 		let fx = fileTree.x,
@@ -58,11 +81,15 @@ export default class ModelBuilder {
 		fileTree.z = -z / scale;
 		fileTree.scale = 1 / scale;
 
-		const textGeometry = Text.createText({ text: '', noBounds: true });
+		fileTree.index = undefined;
+		fileTree.vertexIndex = 0;
+		fileTree.textVertexIndex = 0;
 
 		const {
-			geo,
+			verts,
+			colorVerts,
 			fileIndex,
+			labelGeometries,
 			fsEntryIndex,
 			meshIndex,
 			zoomedInPath,
@@ -70,21 +97,38 @@ export default class ModelBuilder {
 			smallestCovering,
 			entriesToFetch,
 			visibleFiles,
-		} = this.updateFileTreeGeometry(fileTree, textGeometry, camera, mesh);
+		} = this.createFileTreeQuads(fileTree, 0, camera, mesh);
 
-		const textMesh = new THREE.Mesh(textGeometry, Text.textMaterial);
-		textMesh.frustumCulled = false;
-
-		const treeMesh = new THREE.Mesh(
-			geo,
-			new THREE.MeshBasicMaterial({
-				color: 0xffffff,
-				vertexColors: THREE.VertexColors,
-				side: THREE.DoubleSide,
-			})
-		);
-
-		treeMesh.add(textMesh);
+		let textVertCount = 0;
+		for (let i = 0; i < labelGeometries.length; i++) {
+			const c = labelGeometries[i];
+			textVertCount += c.position.length;
+		}
+		if (this._labelVerts.length < textVertCount) {
+			this._labelVerts = new Float32Array(textVertCount * 2);
+			this._labelUVs = new Float32Array(textVertCount);
+		}
+		const labelVerts = this._labelVerts;
+		const labelUVs = this._labelUVs;
+		let j = 0;
+		for (let i = 0; i < labelGeometries.length; i++) {
+			const c = labelGeometries[i];
+			const fsEntry = c.fsEntry;
+			const xScale = c.xScale;
+			const positionX = fsEntry.x + fsEntry.scale * (fsEntry.entries ? 0 : 0.02);
+			const positionY = fsEntry.y + fsEntry.scale * (fsEntry.entries ? 1.02 : 0.02);
+			const positionZ = fsEntry.z;
+			const scale = xScale * fsEntry.scale * 0.00436;
+			const arr = c.position;
+			for (let k = 0; k < arr.length; k += 4) {
+				labelVerts[j + k] = arr[k] * scale + positionX;
+				labelVerts[j + k + 1] = arr[k + 1] * scale + positionY;
+				labelVerts[j + k + 2] = arr[k + 2] * scale + positionZ;
+				labelVerts[j + k + 3] = arr[k + 3];
+			}
+			labelUVs.set(c.uv, j / 2);
+			j += c.position.length;
+		}
 
 		camera.position.x = ((camera.position.x - fx) / fs) * fileTree.scale + fileTree.x;
 		camera.position.y = ((camera.position.y - fy) / fs) * fileTree.scale + fileTree.y;
@@ -98,85 +142,16 @@ export default class ModelBuilder {
 		camera.near = (camera.near / fs) * fileTree.scale;
 		camera.far = (camera.far / fs) * fileTree.scale;
 
-		return {
-			mesh: treeMesh,
-			textGeometry,
-			fileIndex,
-			fsEntryIndex,
-			meshIndex,
-			zoomedInPath,
-			navigationTarget,
-			smallestCovering,
-			entriesToFetch,
-			visibleFiles,
-		};
-	}
+		this.smallestCovering = smallestCovering;
 
-	updateFileTreeGeometry(
-		fileTree: FSEntry,
-		textGeometry: ISDFTextGeometry,
-		camera: NavCamera,
-		mesh: THREE.Mesh
-	): {
-		geo: THREE.BufferGeometry;
-		fileIndex: number;
-		fsEntryIndex: FSEntry[];
-		meshIndex: Map<FSEntry, number>;
-		zoomedInPath: string;
-		navigationTarget: string;
-		smallestCovering: FSEntry;
-		entriesToFetch: FSEntry[];
-		visibleFiles: FSEntry[];
-	} {
-		fileTree.index = undefined;
-		fileTree.vertexIndex = 0;
-		fileTree.textVertexIndex = 0;
-
-		const {
-			geo,
-			fileIndex,
-			labels,
-			thumbnails,
-			fsEntryIndex,
-			meshIndex,
-			zoomedInPath,
-			navigationTarget,
-			smallestCovering,
-			entriesToFetch,
-			visibleFiles,
-		} = this.createFileTreeQuads(fileTree, 0, camera, mesh);
-		const geometry: THREE.BufferGeometry = new THREE.BufferGeometry();
-		geometry.setAttribute('position', new THREE.BufferAttribute(geo.verts, 3));
-		geometry.setAttribute('color', new THREE.BufferAttribute(geo.colorVerts, 3));
-
-		geometry.computeBoundingSphere();
-
-		let textVertCount = 0;
-		labels.traverse(function(o) {
-			const c = o as THREE.Mesh;
-			if (c.geometry) {
-				textVertCount += (c.geometry as THREE.BufferGeometry).attributes.position.array
-					.length;
-			}
-		});
-		const positionArray = new Float32Array(textVertCount);
-		const uvArray = new Float32Array(textVertCount / 2);
-		let j = 0;
-		labels.traverse(function(o) {
-			const c = o as THREE.Mesh;
-			if (c.geometry) {
-				const attributes = (c.geometry as THREE.BufferGeometry).attributes;
-				const labelPositionArray = attributes.position.array;
-				positionArray.set(labelPositionArray, j);
-				uvArray.set(attributes.uv.array, j / 2);
-				j += labelPositionArray.length;
-			}
-		});
-		textGeometry.setAttribute('position', new THREE.BufferAttribute(positionArray, 4));
-		textGeometry.setAttribute('uv', new THREE.BufferAttribute(uvArray, 2));
+		const vertexCount = fileIndex * 12;
+		const textVertexCount = textVertCount / 4;
 
 		return {
-			geo: geometry,
+			verts,
+			colorVerts,
+			labelVerts,
+			labelUVs,
 			fileIndex,
 			fsEntryIndex,
 			meshIndex,
@@ -185,6 +160,8 @@ export default class ModelBuilder {
 			smallestCovering,
 			entriesToFetch,
 			visibleFiles,
+			vertexCount,
+			textVertexCount,
 		};
 	}
 
@@ -204,10 +181,10 @@ export default class ModelBuilder {
 		camera: NavCamera,
 		mesh: THREE.Mesh
 	): {
-		geo: { verts: Float32Array; colorVerts: Float32Array };
+		verts: Float32Array;
+		colorVerts: Float32Array;
 		fileIndex: number;
-		labels: THREE.Object3D;
-		thumbnails: THREE.Object3D;
+		labelGeometries: ExtendedSDFText[];
 		fsEntryIndex: FSEntry[];
 		meshIndex: Map<FSEntry, number>;
 		zoomedInPath: string;
@@ -216,9 +193,11 @@ export default class ModelBuilder {
 		entriesToFetch: FSEntry[];
 		visibleFiles: FSEntry[];
 	} {
-		const geo = { verts: new Float32Array(36 * 1000), colorVerts: new Float32Array(36 * 1000) };
-		const labels = new THREE.Object3D();
-		const thumbnails = new THREE.Object3D();
+		const geo = {
+			verts: this._modelVerts,
+			colorVerts: this._modelColorVerts,
+		};
+		const labelGeometries: ExtendedSDFText[] = [];
 		const fsEntryIndex: FSEntry[] = [];
 		const meshIndex: Map<FSEntry, number> = new Map();
 		const vertexIndices = { vertexIndex: 0, textVertexIndex: 0 };
@@ -235,6 +214,7 @@ export default class ModelBuilder {
 		const stack = [fileTree];
 		const entriesToFetch = [];
 		const visibleFiles = [];
+		let skipped = 0;
 		while (stack.length > 0) {
 			const tree = stack.pop();
 			if (!tree) break;
@@ -242,18 +222,20 @@ export default class ModelBuilder {
 				tree,
 				fileIndex,
 				geo,
-				labels,
-				thumbnails,
+				labelGeometries,
 				fsEntryIndex,
 				meshIndex,
 				vertexIndices
 			);
+			if (fileIndex > 10000) break;
 			for (let name in tree.entries) {
 				const fsEntry = tree.entries[name];
 
 				const bbox = Geometry.getFSEntryBBox(fsEntry, mesh, camera);
 				const pxWidth = bbox.width * window.innerWidth * 0.5;
 				const isSmall = pxWidth < (fsEntry.entries ? 15 : 150);
+
+				if (!bbox.onScreen) skipped++;
 
 				// Skip entries that are outside frustum or too small.
 				if (!bbox.onScreen || isSmall) continue;
@@ -288,12 +270,13 @@ export default class ModelBuilder {
 				}
 			}
 		}
+		// console.log(skipped, fileIndex);
 		entriesToFetch.sort(this.cmpFSEntryDistanceFromCenter);
 		return {
-			geo,
+			verts: geo.verts,
+			colorVerts: geo.colorVerts,
 			fileIndex,
-			labels,
-			thumbnails,
+			labelGeometries,
 			fsEntryIndex,
 			meshIndex,
 			zoomedInPath,
@@ -308,8 +291,7 @@ export default class ModelBuilder {
 		fileTree: FSEntry,
 		fileIndex: number,
 		geo: { verts: Float32Array; colorVerts: Float32Array },
-		parentText: THREE.Object3D,
-		thumbnails: THREE.Object3D,
+		labelGeometries: ExtendedSDFText[],
 		index: FSEntry[],
 		meshIndex: Map<FSEntry, number>,
 		vertexIndices: { vertexIndex: number; textVertexIndex: number }
@@ -445,7 +427,7 @@ export default class ModelBuilder {
 				);
 				vertexIndices.textVertexIndex = this.createTextForEntry(
 					dir,
-					parentText,
+					labelGeometries,
 					vertexIndices.textVertexIndex,
 					0.65
 				);
@@ -496,7 +478,7 @@ export default class ModelBuilder {
 				);
 				vertexIndices.textVertexIndex = this.createTextForEntry(
 					file,
-					parentText,
+					labelGeometries,
 					vertexIndices.textVertexIndex,
 					1
 				);
@@ -511,7 +493,7 @@ export default class ModelBuilder {
 		geo: { verts: Float32Array; colorVerts: Float32Array },
 		vertexIndices: { vertexIndex: number; textVertexIndex: number }
 	) {
-		if (geo.verts.length < (vertexIndices.vertexIndex + 1) * 18 * Geometry.quadCount) {
+		if (geo.verts.length / 3 < vertexIndices.vertexIndex + 6 * Geometry.quadCount) {
 			const newVerts = new Float32Array(
 				Math.max(18 * Geometry.quadCount, geo.verts.length * 2)
 			);
@@ -520,57 +502,50 @@ export default class ModelBuilder {
 			newColorVerts.set(geo.colorVerts);
 			geo.verts = newVerts;
 			geo.colorVerts = newColorVerts;
+			this._modelVerts = newVerts;
+			this._modelColorVerts = newColorVerts;
 		}
 	}
 
 	createTextForEntry(
-		obj: FSEntry,
-		parentText: THREE.Object3D,
+		fsEntry: FSEntry,
+		labelGeometries: SDFText[],
 		textVertexIndex: number,
 		xScale: number = 1
 	) {
-		var title = obj.title;
-		if (obj.entries == null) {
-			if (title.indexOf('\n') === -1 && title.length > 16) {
-				var breakPoint = Math.max(16, Math.floor(title.length / 2));
-				title = title.substring(0, breakPoint) + '\n' + title.substring(breakPoint);
+		if (!fsEntry.labelGeometry) {
+			const textGeometry = Text.createTextArrays({
+				text: fsEntry.title,
+				font: Text.font,
+				noBounds: true,
+			}) as ExtendedSDFText;
+			textGeometry.xScale = xScale;
+			textGeometry.fsEntry = fsEntry;
+
+			const textScaleW =
+				220 / (textGeometry.layout.width > 220 ? textGeometry.layout.width : 220);
+			const textScaleH = (fsEntry.entries ? 30 : 50) / textGeometry.layout.height;
+
+			const textScale = textScaleW > textScaleH ? textScaleH : textScaleW;
+			const arr = textGeometry.position;
+			for (let j = 0; j < arr.length; j += 4) {
+				arr[j] = arr[j] * textScale;
+				arr[j + 1] = arr[j + 1] * -textScale;
+				arr[j + 2] = arr[j + 2] * textScale;
 			}
+
+			fsEntry.labelGeometry = textGeometry;
 		}
 
-		var textGeometry = (Text.createText({
-			text: title,
-			font: Text.font,
-			noBounds: true,
-		}) as unknown) as ISDFTextGeometry;
-		var text = new SDFTextMesh();
-		text.geometry = textGeometry;
+		fsEntry.textVertexIndex = textVertexIndex;
+		fsEntry.lastTextVertexIndex = textVertexIndex + fsEntry.labelGeometry.position.length / 4;
+		labelGeometries.push(fsEntry.labelGeometry);
 
-		obj.textVertexIndex = textVertexIndex;
-		obj.lastTextVertexIndex =
-			textVertexIndex + text.geometry.attributes.position.array.length / 4;
-
-		var textScaleW = 220 / Math.max(textGeometry.layout.width, 220);
-		var textScaleH = (obj.entries ? 30 : 50) / textGeometry.layout.height;
-
-		var scale = Math.min(textScaleW, textScaleH);
-
-		text.position.x = obj.x + (obj.entries ? 0 : obj.scale * 0.02);
-		text.position.y = obj.y + (obj.entries ? obj.scale * 1.02 : obj.scale * 0.02);
-		text.position.z = obj.z;
-		text.scale.multiplyScalar(xScale * obj.scale * 0.00436 * scale);
-		text.scale.y *= -1;
-		var arr = textGeometry.attributes.position.array as Float32Array;
-		for (var j = 0; j < arr.length; j += 4) {
-			arr[j] = arr[j] * text.scale.x + text.position.x;
-			arr[j + 1] = arr[j + 1] * text.scale.y + text.position.y;
-			arr[j + 2] = arr[j + 2] * text.scale.z + text.position.z;
-		}
-		text.position.set(0, 0, 0);
-		text.scale.set(1, 1, 1);
-		var o = new THREE.Object3D();
-		o.add(text);
-		parentText.add(o);
-
-		return obj.lastTextVertexIndex;
+		return fsEntry.lastTextVertexIndex;
 	}
+}
+
+interface ExtendedSDFText extends SDFText {
+	xScale: number;
+	fsEntry: FSEntry;
 }

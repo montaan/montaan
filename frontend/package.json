@@ -76,9 +76,6 @@
 		}
 	},
 	"lint-staged": {
-		"src/**/*.tsx": [
-			"yarn updateComponents"
-		],
 		"src/**/*.{js,jsx,ts,tsx,json}": [
 			"eslint --fix"
 		],

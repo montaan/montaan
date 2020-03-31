@@ -7,7 +7,7 @@ import {
 	ExtendedFSEntry,
 } from '../lib/filesystem';
 import Colors from '../lib/Colors';
-import Layout, { ISDFTextGeometry } from '../lib/Text';
+import Text from '../lib/Text';
 import utils from '../lib/utils';
 import Geometry from '../lib/Geometry';
 
@@ -83,7 +83,7 @@ export class NavCamera extends THREE.PerspectiveCamera {
 }
 
 export class VisibleFiles extends THREE.Object3D {
-	visibleSet: Map<string, THREE.Object3D> = new Map();
+	visibleSet: Map<string, FileView> = new Map();
 }
 
 export type Fiber = () => void;
@@ -92,6 +92,18 @@ export type ParseTargetSignature = (
 	dst: string | FSEntry,
 	dstPoint?: number[]
 ) => ExtendedFSEntry | null;
+
+export class Mesh extends THREE.Mesh {
+	geometry: THREE.BufferGeometry;
+
+	constructor(
+		geometry: THREE.BufferGeometry = new THREE.BufferGeometry(),
+		material?: THREE.Material
+	) {
+		super(geometry, material);
+		this.geometry = geometry;
+	}
+}
 
 export class Tabletree {
 	initDone: boolean = false;
@@ -109,8 +121,9 @@ export class Tabletree {
 	meshIndex: Map<FSEntry, number> = new Map();
 	visibleEntries: Map<FSEntry, number> = new Map();
 	history?: RouteComponentProps['history'];
-	model: THREE.Mesh = new THREE.Mesh();
+	model: Mesh = new Mesh();
 	searchResults: SearchResult[] = [];
+	modelBuilder: ModelBuilder = new ModelBuilder();
 
 	requestDirs: (paths: string[], discard: string[]) => Promise<void> = async () => {};
 	setNavigationTarget: (target: string) => void = () => {};
@@ -132,7 +145,7 @@ export class Tabletree {
 	fileCount: number = 0;
 	fileIndex: number = 0;
 
-	textGeometry: ISDFTextGeometry | undefined;
+	textGeometry: THREE.BufferGeometry = new THREE.BufferGeometry();
 	viewRootUpdated: boolean | undefined;
 	zoomedInPath: string | undefined;
 	breadcrumbPath: string | undefined;
@@ -186,15 +199,25 @@ export class Tabletree {
 		});
 		loadFont(fontDescription, (err: any, font: any) => {
 			if (err) throw err;
+			font.glyphs = new Map();
+			font.chars.forEach((c: any) => font.glyphs.set(c.id, c));
+			if (font.kernings) {
+				const kerningArray = font.kernings;
+				font.kernings = new Map();
+				kerningArray.forEach((k: any) => {
+					if (!font.kernings.has(k.left)) font.kernings.set(k.left, new Map());
+					font.kernings.get(k.left).set(k.right, k.width);
+				});
+			}
 			fontDesc = font;
 			if (fontDesc && fontTex) this.start(fontDesc, fontTex);
 		});
 	}
 
-	async start(font: any, fontTexture: THREE.Texture | null) {
-		Layout.font = font;
-		Layout.fontTexture = fontTexture;
-		Layout.textMaterial = Layout.makeTextMaterial();
+	async start(font: any, fontTexture: THREE.Texture) {
+		Text.font = font;
+		Text.fontTexture = fontTexture;
+		Text.textMaterial = Text.makeTextMaterial();
 
 		this.started = true;
 
@@ -302,11 +325,11 @@ export class Tabletree {
 	showFileTree(tree: FileTree) {
 		if (this.treeBuildInProgress) return;
 		this.treeBuildInProgress = true;
-		const builder = new ModelBuilder();
-		utils.traverseFSEntry(tree.tree, (e: FSEntry) => (e.building = false), '');
 		const {
-			mesh,
-			textGeometry,
+			verts,
+			colorVerts,
+			labelVerts,
+			labelUVs,
 			fileIndex,
 			fsEntryIndex,
 			meshIndex,
@@ -315,7 +338,9 @@ export class Tabletree {
 			smallestCovering,
 			entriesToFetch,
 			visibleFiles,
-		} = builder.buildModel(tree, tree.tree, this.camera, this.model);
+			vertexCount,
+			textVertexCount,
+		} = this.modelBuilder.buildModel(tree, this.camera, this.model);
 		this.zoomedInPath = zoomedInPath;
 		this.fsIndex = fsEntryIndex;
 		this.smallestCovering = smallestCovering;
@@ -323,26 +348,56 @@ export class Tabletree {
 			this.requestDirs(entriesToFetch.map(getFullPath), []);
 		}
 		this.setNavigationTarget(navigationTarget);
-		if (this.model) {
-			this.model.remove(this.visibleFiles);
-			if (this.model.parent) this.model.parent.remove(this.model);
-			this.model.traverse(function(m: THREE.Object3D) {
-				if ((m as THREE.Mesh).geometry) {
-					(m as THREE.Mesh).geometry.dispose();
-				}
+		if (!this.model.geometry.attributes.position) {
+			this.model.material = new THREE.MeshBasicMaterial({
+				color: 0xffffff,
+				vertexColors: THREE.VertexColors,
+				side: THREE.DoubleSide,
 			});
+			this.model.frustumCulled = false;
+			this.model.geometry.setAttribute(
+				'position',
+				new THREE.BufferAttribute(new Float32Array(), 3)
+			);
+			this.model.geometry.setAttribute(
+				'color',
+				new THREE.BufferAttribute(new Float32Array(), 3)
+			);
+
+			const textGeometry = Text.createText({ text: '', noBounds: true });
+			textGeometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(), 4));
+			textGeometry.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(), 2));
+			this.textGeometry = textGeometry;
+
+			const textMesh = new THREE.Mesh(textGeometry, Text.textMaterial);
+			textMesh.frustumCulled = false;
+
+			this.model.add(textMesh);
+			this.model.add(this.visibleFiles);
 		}
+		this.updateAttribute(this.model.geometry, 'position', verts, vertexCount, 3);
+		this.updateAttribute(this.model.geometry, 'color', colorVerts, vertexCount, 3);
+		this.updateAttribute(this.textGeometry, 'position', labelVerts, textVertexCount, 4);
+		this.updateAttribute(this.textGeometry, 'uv', labelUVs, textVertexCount, 2);
 		const currentlyVisible = new Set();
 		visibleFiles.forEach((fsEntry) => {
-			const path = getFullPath(fsEntry);
-			this.addFileView(this.visibleFiles, path, fsEntry);
+			// const path = getFullPath(fsEntry);
+			// this.addFileView(this.visibleFiles, path, fsEntry);
 			currentlyVisible.add(fsEntry);
+		});
+		this.visibleFiles.children.forEach((child) => {
+			const fileView = child as FileView;
+			fileView.position.set(fileView.fsEntry.x, fileView.fsEntry.y, fileView.fsEntry.z);
+			const scale = fileView.fsEntry.scale;
+			fileView.scale.set(scale, scale, scale);
 		});
 		Array.from(this.visibleFiles.visibleSet.keys()).forEach((path) => {
 			if (!currentlyVisible.has(path)) {
-				const fileView = this.visibleFiles.visibleSet.get(path) as FileView;
-				this.visibleFiles.remove(fileView);
-				fileView.dispose();
+				const fileView = this.visibleFiles.visibleSet.get(path);
+				if (fileView) {
+					this.visibleFiles.remove(fileView);
+					fileView.dispose();
+				}
 				this.visibleFiles.visibleSet.delete(path);
 			}
 		});
@@ -350,11 +405,8 @@ export class Tabletree {
 		this.tree = tree;
 		this.fileTree = tree.tree;
 		this.fileCount = tree.count;
-		this.model = mesh;
-		mesh.add(this.visibleFiles);
 		this.meshIndex = meshIndex;
 		this.fileIndex = fileIndex;
-		this.textGeometry = textGeometry as ISDFTextGeometry;
 		this.model.position.set(0, 0, 0);
 
 		this.visibleFiles.children.forEach((f: any) => {
@@ -370,34 +422,24 @@ export class Tabletree {
 		this.viewRootUpdated = false;
 	}
 
-	// determineVisibility(
-	// 	mesh: THREE.Mesh,
-	// 	textGeometry: ISDFTextGeometry,
-	// 	visibleFiles: VisibleFiles,
-	// 	camera: NavCamera
-	// ) {
-	// 	return (t: any, dt: any) => {
-	// 		// Dispose loaded files that are outside the current view
-	// 		for (let i = 0; i < visibleFiles.children.length; i++) {
-	// 			const c = visibleFiles.children[i];
-	// 			const fsEntry = (c as any).fsEntry;
-	// 			const bbox = Geometry.getFSEntryBBox(fsEntry, mesh, camera);
-	// 			if (!bbox.onScreen || bbox.width * window.innerWidth < 100) {
-	// 				if (fsEntry.contentObject) {
-	// 					fsEntry.contentObject.dispose();
-	// 					fsEntry.contentObject = undefined;
-	// 				}
-	// 				const fullPath = getFullPath(fsEntry);
-	// 				delete visibleFiles.visibleSet[fullPath];
-	// 				visibleFiles.remove(c);
-	// 				i--;
-	// 			} else {
-	// 				c.position.copy(fsEntry);
-	// 				c.scale.set(fsEntry.scale, fsEntry.scale, fsEntry.scale);
-	// 			}
-	// 		}
-	// 	};
-	// }
+	updateAttribute(
+		geo: THREE.BufferGeometry,
+		attributeName: string,
+		array: Float32Array,
+		itemCount: number,
+		itemSize: number
+	): void {
+		let attribute = geo.getAttribute(attributeName) as THREE.BufferAttribute;
+		if (!attribute || attribute.array !== array) {
+			attribute = new THREE.BufferAttribute(array, itemSize);
+			attribute.setUsage(THREE.DynamicDrawUsage);
+			geo.setAttribute(attributeName, attribute);
+		} else {
+			attribute.needsUpdate = true;
+		}
+		geo.drawRange.count = itemCount;
+		geo.computeBoundingBox();
+	}
 
 	updateViewRoot(newRoot: any) {
 		if (this.viewRootUpdated || this.treeBuildInProgress) return;
@@ -861,6 +903,9 @@ export class Tabletree {
 	}
 
 	getCameraDistanceToModel() {
+		if (!this.model.geometry.boundingBox) {
+			return this.camera.position.distanceTo(this.model.position);
+		}
 		const intersections = utils.findIntersectionsUnderEvent(
 			{
 				clientX: window.innerWidth / 2,
@@ -946,6 +991,8 @@ export class Tabletree {
 			dt = 16;
 		}
 
+		if (this.tree) this.showFileTree(this.tree);
+
 		const d = this.getCameraDistanceToModel();
 		camera.near = 0.1 * d;
 		camera.far = 100 * d;
@@ -984,13 +1031,10 @@ export class Tabletree {
 		this.linksModel.updateLinks(this.currentFrame);
 		camera.updateProjectionMatrix();
 
-		// if (this.tree) this.showFileTree(this.tree);
-
 		var wasChanged = this.changed || this.frameFibers.length > 0;
 		this.changed = false;
 		if (wasChanged || this.animating) this.render();
 		this.frameRequested = false;
-		//if (this.frameFibers.length > 0 || this.changed || this.animating)
 		this.requestFrame();
 		this.frameLoopPaused = !this.frameRequested;
 	};

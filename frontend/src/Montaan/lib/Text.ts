@@ -1,27 +1,24 @@
-import createText, { SDFTextGeometry } from './third_party/three-bmfont-text-modified';
+import createText, { SDFTextGeometry, SDFText } from './third_party/three-bmfont-text-modified';
 import SDFShader from './third_party/three-bmfont-text-modified/shaders/msdf';
 import Colors from './Colors';
 import * as THREE from 'three';
-
-export interface ISDFTextGeometry extends THREE.BufferGeometry {
-	layout: {
-		width: number;
-		height: number;
-		_opt: { text: string };
-	};
-}
+import {
+	Font,
+	LayoutOptionsWithoutFont,
+	LayoutOptions,
+} from './third_party/layout-bmfont-text-modified';
 
 const emptyMaterial = new THREE.RawShaderMaterial();
-const emptyGeometry = (new SDFTextGeometry() as unknown) as ISDFTextGeometry;
+const emptyGeometry = (new THREE.BufferGeometry() as unknown) as SDFTextGeometry;
 
 export class SDFTextMesh extends THREE.Mesh {
 	material: THREE.RawShaderMaterial = emptyMaterial;
-	geometry: ISDFTextGeometry = emptyGeometry;
+	geometry: SDFTextGeometry = emptyGeometry;
 }
 
 export default {
-	font: null as any | null,
-	fontTexture: null as THREE.Texture | null,
+	font: undefined as Font | undefined,
+	fontTexture: undefined as THREE.Texture | undefined,
 	textMaterial: emptyMaterial,
 
 	makeTextMaterial(
@@ -60,7 +57,15 @@ export default {
 		);
 	},
 
-	createText: function(opts: any) {
-		return (createText({ font: this.font, ...opts }) as unknown) as ISDFTextGeometry;
+	createText: function(options: LayoutOptionsWithoutFont): SDFTextGeometry {
+		options.font = options.font || this.font;
+		if (!options.font) throw new Error('No font specified and no default font set.');
+		return createText(options as LayoutOptions);
+	},
+
+	createTextArrays: function(options: LayoutOptionsWithoutFont): SDFText {
+		options.font = options.font || this.font;
+		if (!options.font) throw new Error('No font specified and no default font set.');
+		return new SDFText(options as LayoutOptions);
 	},
 };

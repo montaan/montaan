@@ -31,16 +31,17 @@ export default class MontaanGitFilesystem extends Filesystem {
 	}
 
 	getUIComponents(state: FSState): React.ReactElement {
-		if (!this.commitData && !this.fetchingCommits) {
-			this.readData().then((d) => {
-				this.fetchingCommits = false;
-				state.setCommitData(this.commitData);
-				state.setDependencies(this.dependencies || []);
-			});
-		} else if (state.commitData !== this.commitData) {
-			state.setCommitData(this.commitData);
-			state.setDependencies(this.dependencies || []);
-		}
+		// if (!this.commitData && !this.fetchingCommits) {
+		// 	this.fetchingCommits = true;
+		// 	this.readData().then((d) => {
+		// 		this.fetchingCommits = false;
+		// 		state.setCommitData(this.commitData);
+		// 		state.setDependencies(this.dependencies || []);
+		// 	});
+		// } else if (state.commitData !== this.commitData) {
+		// 	state.setCommitData(this.commitData);
+		// 	state.setDependencies(this.dependencies || []);
+		// }
 		const path = getFullPath(this.mountPoint);
 		const repoPrefix = this.repo;
 		return (

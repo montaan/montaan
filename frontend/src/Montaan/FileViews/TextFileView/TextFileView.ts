@@ -86,7 +86,7 @@ export default class TextFileView extends FileView {
 
 	__goToSearch(search: string): THREE.Vector3 | undefined {
 		if (this.textHeight <= 0 || !this.textMesh) return undefined;
-		const text = this.textMesh.geometry.layout._opt.text;
+		const text = this.textMesh.geometry.sdfText.layout.options.text;
 		let line = 1;
 		let index = 0;
 		if (search.startsWith('/')) {
@@ -151,7 +151,7 @@ export default class TextFileView extends FileView {
 
 	// handleTextClick(ev: any, fsEntry: FSEntry, intersection: any, openInIFrame: boolean = false) {
 	// 	const { line, col } = this.getTextPosition(fsEntry, intersection);
-	// 	const text = fsEntry.contentObject.geometry.layout._opt.text;
+	// 	const text = fsEntry.contentObject.geometry.layout.options.text;
 	// 	const lineStr = text.split('\n')[line - 1];
 	// 	const urlRE = /https?:\/\/[a-z0-9.%$#@&?/_-]+/gi;
 	// 	var hit = null;
@@ -339,12 +339,14 @@ export default class TextFileView extends FileView {
 			};
 
 			var textScale = Math.min(
-				1 / (geometry.layout.width + 60),
-				1 / ((geometry.layout.height + 30) / 0.75)
+				1 / (geometry.sdfText.layout.width + 60),
+				1 / ((geometry.sdfText.layout.height + 30) / 0.75)
 			);
 			var vAspect = Math.min(
 				1,
-				(geometry.layout.height + 30) / 0.75 / ((geometry.layout.width + 60) / 1)
+				(geometry.sdfText.layout.height + 30) /
+					0.75 /
+					((geometry.sdfText.layout.width + 60) / 1)
 			);
 			material.depthTest = false;
 
@@ -359,11 +361,11 @@ export default class TextFileView extends FileView {
 			this.textMesh.position.y += 0.25 + 0.75 * (1 - vAspect);
 
 			this.textScale = textScale;
-			this.textX = Math.min(40 * 30 + 60, geometry.layout.width + 60) * 0.5;
+			this.textX = Math.min(40 * 30 + 60, geometry.sdfText.layout.width + 60) * 0.5;
 			this.textYZero = 0.75;
 			this.textY = 0.75 - textScale * 7.5;
-			this.textWidth = geometry.layout.width;
-			this.textHeight = geometry.layout.height;
+			this.textWidth = geometry.sdfText.layout.width;
+			this.textHeight = geometry.sdfText.layout.height;
 
 			this.loaded();
 			this.requestFrame();

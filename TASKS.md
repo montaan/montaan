@@ -19,12 +19,14 @@
 
 # FIX
 
-    [] Tree rebuilds have files missing
     [] Loading trees takes forever and too many requests
-    [] Move visibility checking to tree builder
     [] Move tree rendering to lib
     [] Move repo management to MontaanUserRepos
     [] Move tree rebuild into a worker
+    [] Optimize the text layout library
+    [] Optimize layoutDir
+    [x] Move visibility checking to tree builder
+    [x] Tree rebuilds have files missing
 
 # Release checklist
 

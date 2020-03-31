@@ -1,8 +1,10 @@
 import QFrameAPI from '../../../lib/api';
 import React from 'react';
 import FileView from '../../FileViews/FileView';
+import { SDFText } from '../third_party/three-bmfont-text-modified';
 
 export interface FSEntry {
+	labelGeometry?: SDFText;
 	distanceFromCenter: number;
 	mode: any;
 	type: any;
@@ -177,6 +179,7 @@ export function createFSTree(name: string, url: string, fsType?: string, api?: Q
 		vertexIndex: -1,
 
 		data: undefined,
+		labelGeometry: undefined,
 	};
 	if (fs) fsEntry.filesystem = new fs(url, api, fsEntry);
 	return fsEntry;

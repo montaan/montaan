@@ -1,6 +1,23 @@
 import * as THREE from 'three';
 
-export default function createMSDFShader(opt) {
+export interface MSDFShaderOptions {
+	map?: THREE.Texture;
+	side?: THREE.Side;
+	transparent?: boolean;
+	color?: string | number | THREE.Color;
+	palette?: THREE.Vector3[];
+	polygonOffset?: boolean;
+	polygonOffsetFactor?: number;
+	polygonOffsetUnits?: number;
+	depthTest?: boolean;
+	depthWrite?: boolean;
+	opacity?: number;
+	alphaTest?: number;
+	precision?: 'highp' | 'mediump' | 'lowp' | null;
+	negate?: boolean;
+}
+
+export default function createMSDFShader(opt: MSDFShaderOptions) {
 	opt = opt || {};
 	var opacity = typeof opt.opacity === 'number' ? opt.opacity : 1;
 	var alphaTest = typeof opt.alphaTest === 'number' ? opt.alphaTest : 0.0001;
