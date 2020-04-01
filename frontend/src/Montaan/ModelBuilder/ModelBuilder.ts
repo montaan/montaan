@@ -17,7 +17,7 @@
 
 import Text from '../lib/Text';
 import { FileTree } from '../MainApp';
-import { FSEntry } from '../lib/filesystem';
+import { FSEntry, getNearestFSEntryForURL } from '../lib/filesystem';
 import * as THREE from 'three';
 import Geometry from '../lib/Geometry';
 import { NavCamera } from '../MainView/main';
@@ -41,7 +41,8 @@ export default class ModelBuilder {
 	buildModel(
 		tree: FileTree,
 		camera: NavCamera,
-		mesh: THREE.Mesh
+		mesh: THREE.Mesh,
+		navUrl?: string
 	): {
 		verts: Float32Array;
 		colorVerts: Float32Array;
@@ -125,7 +126,7 @@ export default class ModelBuilder {
 			smallestCovering,
 			entriesToFetch,
 			visibleFiles,
-		} = this.createFileTreeQuads(fileTree, 0, camera, mesh);
+		} = this.createFileTreeQuads(fileTree, 0, camera, mesh, navUrl);
 
 		let textVertCount = 0;
 		for (let i = 0; i < labelGeometries.length; i++) {
@@ -258,7 +259,8 @@ export default class ModelBuilder {
 		fileTree: FSEntry,
 		fileIndex: number,
 		camera: NavCamera,
-		mesh: THREE.Mesh
+		mesh: THREE.Mesh,
+		navUrl?: string
 	): {
 		verts: Float32Array;
 		colorVerts: Float32Array;
@@ -288,6 +290,19 @@ export default class ModelBuilder {
 		// - finds the covering fsEntry
 		// - finds the currently zoomed-in path and breadcrumb path
 
+		const navTargetPath = [];
+		if (navUrl) {
+			const nearestFSEntryToNavUrl = getNearestFSEntryForURL(fileTree, navUrl);
+			if (nearestFSEntryToNavUrl) {
+				let entry = nearestFSEntryToNavUrl.fsEntry;
+				while (entry.parent) {
+					navTargetPath.push(entry);
+					entry = entry.parent;
+				}
+				navTargetPath.push(entry);
+			}
+		}
+
 		const stack = [fileTree];
 		const entriesToFetch = [];
 		const visibleFiles = [];
@@ -303,20 +318,24 @@ export default class ModelBuilder {
 				fsEntryIndex,
 				vertexIndices
 			);
-			if (fileIndex > 5000) break;
+			const treeInNavTargetPath = tree === navTargetPath[navTargetPath.length - 1];
+			if (treeInNavTargetPath) navTargetPath.pop();
+			if (fileIndex > 5000 && !treeInNavTargetPath) break;
 			for (let fsEntry of tree.entries.values()) {
+				const fsEntryInNavTargetPath = fsEntry === navTargetPath[navTargetPath.length - 1];
+
 				const bbox = Geometry.getFSEntryBBox(fsEntry, mesh, camera);
 				const pxWidth = bbox.width * viewWidth * 0.5;
 				const isSmall = pxWidth < (fsEntry.entries ? 50 : 150);
 
-				// Skip entries that are outside frustum or too small.
-				if (!bbox.onScreen || isSmall) continue;
+				// Skip entries that are outside frustum or too small, and aren't on the nav target path.
+				if (!fsEntryInNavTargetPath && (!bbox.onScreen || isSmall)) continue;
 
 				// Directory
 				if (fsEntry.entries) {
 					stack.push(fsEntry); // Descend into directories.
 					// Fetch directories that haven't been fetched yet.
-					if (pxWidth > 30 && !fsEntry.fetched) {
+					if ((fsEntryInNavTargetPath || pxWidth > 30) && !fsEntry.fetched) {
 						fsEntry.distanceFromCenter = Geometry.bboxDistanceToFrustumCenter(
 							bbox,
 							mesh,

@@ -167,6 +167,9 @@ export class Tabletree {
 	searchLandmarks: SearchLandmarks;
 	linksModel: LinksModel;
 
+	treeVersion: number = 0;
+	treeBuildVersion: number = -1;
+
 	constructor() {
 		this.treeUpdateQueue = new WorkQueue();
 		this.animating = false;
@@ -298,6 +301,7 @@ export class Tabletree {
 		const newTree = fileTree.tree !== this.fileTree;
 		this.tree = fileTree;
 		this.fileTree = fileTree.tree;
+		this.treeVersion++;
 		if (newTree) {
 			fileTree.tree.scale = 1;
 			fileTree.tree.x = 0;
@@ -311,6 +315,7 @@ export class Tabletree {
 			this.scene.updateWorldMatrix(true, true);
 			if (this.navUrl) this.goToURL(this.navUrl);
 		}
+		this.changed = true;
 	};
 
 	async setFileTree(fileTree: FileTree) {
@@ -327,9 +332,12 @@ export class Tabletree {
 		}
 	}
 
-	showFileTree(tree: FileTree) {
-		if (this.treeBuildInProgress) return;
+	showFileTree(tree: FileTree, force: boolean = false) {
+		if (this.treeBuildInProgress || this.treeVersion === this.treeBuildVersion || force) {
+			return;
+		}
 		this.treeBuildInProgress = true;
+		this.treeBuildVersion = this.treeVersion;
 		// Can't use worker because tree can't be serialized for passing to a worker.
 		// Tree should be in an ArrayBuffer that we get from MainApp worker / whoever is doing tree building.
 		// Then we'd pass the ArrayBuffer to ModelBuilder, and get back models and instructions for tweaking camera.
@@ -349,7 +357,7 @@ export class Tabletree {
 			textVertexCount,
 			boundingBox,
 			boundingSphere,
-		} = this.modelBuilder.buildModel(tree, this.camera, this.model);
+		} = this.modelBuilder.buildModel(tree, this.camera, this.model, this.navUrl);
 		this.zoomedInPath = zoomedInPath;
 		this.fsIndex = fsEntryIndex;
 		this.smallestCovering = smallestCovering;
@@ -563,12 +571,15 @@ export class Tabletree {
 		this.navUrl = url;
 		if (!this.fileTree) return;
 		const result = getFSEntryForURL(this.fileTree, url);
+		if (result) {
+			const { fsEntry, point, search } = result;
+			this.navTarget = new NavTarget(fsEntry, point, search);
+		}
 		if (!result || result.fsEntry.index === undefined) {
 			setTimeout(() => this.goToURL(url), 100);
 			return;
 		}
 		const { fsEntry, point, search } = result;
-		this.navTarget = new NavTarget(fsEntry, point, search);
 		if (point) this.goToFSEntryCoords(fsEntry, point);
 		else if (search) this.goToFSEntryAtSearch(fsEntry, search);
 		else this.goToFSEntry(fsEntry);
@@ -972,6 +983,15 @@ export class Tabletree {
 
 	render() {
 		const { scene, camera, renderer } = this;
+
+		if (this.tree) this.showFileTree(this.tree);
+		this.linksModel.updateLinks(this.currentFrame);
+
+		const d = this.getCameraDistanceToModel();
+		camera.near = 0.01 * d;
+		camera.far = 10 * d;
+		camera.updateProjectionMatrix();
+
 		scene.updateMatrixWorld(true);
 		var t = performance.now();
 		(scene as any).tick(t, t - this.lastFrameTime);
@@ -994,9 +1014,6 @@ export class Tabletree {
 		if (dt > 16 || this.frameLoopPaused) {
 			dt = 16;
 		}
-
-		if (this.tree) this.showFileTree(this.tree);
-		this.linksModel.updateLinks(this.currentFrame);
 
 		const d = this.getCameraDistanceToModel();
 		camera.near = 0.01 * d;
@@ -1033,13 +1050,12 @@ export class Tabletree {
 		} else {
 			this.animating = false;
 		}
-		camera.updateProjectionMatrix();
 
 		var wasChanged = this.changed || this.frameFibers.length > 0;
 		this.changed = false;
 		if (wasChanged || this.animating) this.render();
 		this.frameRequested = false;
-		this.requestFrame();
+		if (this.frameFibers.length > 0 || this.changed || this.animating) this.requestFrame();
 		this.frameLoopPaused = !this.frameRequested;
 	};
 
