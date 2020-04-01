@@ -21,6 +21,7 @@
 		"@types/yup": "^0.26.30",
 		"bootstrap": "^4.3.1",
 		"buffer": "^5.4.0",
+		"comlink": "^4.2.0",
 		"dompurify": "^2.0.8",
 		"fast-check": "^1.22.1",
 		"flatten-vertex-data": "^1.0.2",
@@ -49,6 +50,7 @@
 		"three": "0.113.0",
 		"typescript": "~3.7.2",
 		"uncontrollable": "^7.0.0",
+		"worker-loader": "^2.0.0",
 		"yup": "^0.27.0"
 	},
 	"scripts": {
