@@ -101,7 +101,9 @@ export default class HighlightedLines {
 			Geometry.setColor(
 				ca.array as Float32Array,
 				fsEntry.index,
-				Colors[fsEntry.entries === null ? 'getFileColor' : 'getDirectoryColor'](fsEntry)
+				Colors[fsEntry.entries === undefined ? 'getFileColor' : 'getDirectoryColor'](
+					fsEntry
+				)
 			);
 		});
 		this.clearSearchHighlights();
@@ -110,13 +112,13 @@ export default class HighlightedLines {
 			if (!res) return;
 			const fsEntry = res.fsEntry;
 			if (fsEntry.index === undefined) return;
-			if (fsEntry.entries !== null && results[i].line === 0) {
+			if (fsEntry.entries !== undefined && results[i].line === 0) {
 				Geometry.setColor(
 					ca.array as Float32Array,
 					fsEntry.index,
-					fsEntry.entries === null ? [1, 0, 0] : [0.6, 0, 0]
+					fsEntry.entries === undefined ? [1, 0, 0] : [0.6, 0, 0]
 				);
-			} else if (fsEntry.entries === null && results[i].line > 0) {
+			} else if (fsEntry.entries === undefined && results[i].line > 0) {
 				this.addHighlightedLine(fsEntry, results[i].line);
 			}
 		}

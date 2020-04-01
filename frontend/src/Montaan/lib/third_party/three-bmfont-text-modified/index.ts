@@ -23,7 +23,6 @@ export class SDFTextGeometry extends THREE.BufferGeometry {
 	}
 
 	bounds3(positions: Float32Array, itemSize: number, box: { min: number[]; max: number[] }) {
-		const count = positions.length / itemSize;
 		box.min[0] = positions[0];
 		box.min[1] = positions[1];
 		box.min[2] = positions[2];
@@ -31,10 +30,10 @@ export class SDFTextGeometry extends THREE.BufferGeometry {
 		box.max[1] = positions[1];
 		box.max[2] = positions[2];
 
-		for (let i = 0; i < count; i++) {
-			var x = positions[i * itemSize + 0];
-			var y = positions[i * itemSize + 1];
-			var z = positions[i * itemSize + 2];
+		for (let i = 0, l = positions.length; i < l; i += itemSize) {
+			var x = positions[i + 0];
+			var y = positions[i + 1];
+			var z = positions[i + 2];
 			if (x < box.min[0]) box.min[0] = x;
 			else if (x > box.max[0]) box.max[0] = x;
 			if (y < box.min[1]) box.min[1] = y;
@@ -70,7 +69,7 @@ export class SDFTextGeometry extends THREE.BufferGeometry {
 	}
 
 	computeBoundingSphere() {
-		if (this.boundingSphere === null) {
+		if (!this.boundingSphere) {
 			this.boundingSphere = new THREE.Sphere();
 		}
 
@@ -91,7 +90,7 @@ export class SDFTextGeometry extends THREE.BufferGeometry {
 	}
 
 	computeBoundingBox() {
-		if (this.boundingBox === null) {
+		if (!this.boundingBox) {
 			this.boundingBox = new THREE.Box3();
 		}
 
@@ -112,6 +111,13 @@ export class SDFText {
 	position: Float32Array;
 	uv: Float32Array;
 	page?: Float32Array;
+
+	static mock: SDFText = {
+		position: new Float32Array(),
+		uv: new Float32Array(),
+		visibleGlyphs: [],
+		layout: TextLayout.mock,
+	};
 
 	constructor(options: LayoutOptions) {
 		this.layout = new TextLayout(options);

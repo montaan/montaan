@@ -93,42 +93,42 @@ var utils = {
 		if (dir) {
 			segments.pop();
 		}
-		var branch = tree;
+		var branch: FSEntry = tree;
 		var addCount = 0;
 		for (var i = 0; i < segments.length - 1; i++) {
 			var segment = segments[i];
-			if (branch.entries === null) {
-				branch.entries = {};
+			if (branch.entries === undefined) {
+				branch.entries = new Map<string, FSEntry>();
 			}
-			if (typeof branch.entries[segment] !== 'object') {
-				branch.entries[segment] = {
+			if (!branch.entries.has(segment)) {
+				branch.entries.set(segment, {
 					...createFSTree(segment, ''),
 					name: segment,
 					title: segment,
-					entries: {},
+					entries: new Map<string, FSEntry>(),
 					index: undefined,
 					size: 0,
-				};
+				});
 				addCount++;
 			}
-			branch = branch.entries[segment];
+			branch = branch.entries.get(segment)!; // We set entries#segment to a value above.
 		}
-		if (branch.entries === null) {
-			branch.entries = {};
+		if (branch.entries === undefined) {
+			branch.entries = new Map<string, FSEntry>();
 		}
-		if (typeof branch.entries[segments[i]] !== 'object') {
+		if (!branch.entries.has(segments[i])) {
 			branch.size++;
-			branch.entries[segments[i]] = {
+			branch.entries.set(segments[i], {
 				...createFSTree(segments[i], ''),
 				name: segments[i],
 				title: segments[i],
-				entries: dir ? {} : null,
+				entries: dir ? new Map<string, FSEntry>() : undefined,
 				index: undefined,
 				parent: branch,
-			};
+			});
 			addCount++;
 		}
-		branch = branch.entries[segments[i]];
+		branch = branch.entries.get(segments[i])!; // We set entries#segment to a value above.
 		branch.mode = mode;
 		branch.type = type;
 		branch.hash = hash;
@@ -151,100 +151,11 @@ var utils = {
 		callback(fsEntry, path);
 		if (fsEntry.entries) {
 			var dirName = path + '/';
-			for (var i in fsEntry.entries) {
-				this.traverseFSEntry(fsEntry.entries[i], callback, dirName + i);
+			for (let name of fsEntry.entries.keys()) {
+				this.traverseFSEntry(fsEntry.entries.get(name)!, callback, dirName + name);
 			}
 		}
 	},
-
-	// convertXMLToTree: function(node:any, uid:{value:number}) {
-	// 	var obj = {
-	// 		name: uid.value++,
-	// 		title: node.tagName || 'document',
-	// 		index: undefined,
-	// 		entries: {},
-	// 	};
-	// 	var files = [];
-	// 	if (node.attributes) {
-	// 		for (let i = 0; i < node.attributes.length; i++) {
-	// 			var attr = node.attributes[i];
-	// 			files.push({
-	// 				name: uid.value++,
-	// 				title: attr.name + '=' + attr.value,
-	// 				index: undefined,
-	// 				entries: null,
-	// 			});
-	// 		}
-	// 	}
-	// 	var file;
-	// 	for (let i = 0, l = node.childNodes.length; i < l; i++) {
-	// 		var c = node.childNodes[i];
-	// 		if (c.tagName) {
-	// 			file = this.convertXMLToTree(c, uid);
-	// 			obj.entries[file.name] = file;
-	// 		} else {
-	// 			if (c.textContent && /\S/.test(c.textContent)) {
-	// 				files.push({
-	// 					name: uid.value++,
-	// 					title: c.textContent,
-	// 					index: undefined,
-	// 					entries: null,
-	// 				});
-	// 			}
-	// 		}
-	// 	}
-	// 	for (let i = 0; i < files.length; i++) {
-	// 		file = files[i];
-	// 		obj.entries[file.name] = file;
-	// 	}
-	// 	return obj;
-	// },
-
-	// convertBookmarksToTree: function(node: { tagName: string; textContent: any; href: any; parentNode: { querySelector: (arg0: string) => any; }; childNodes: string | any[]; }, uid: { value: number; }) {
-	// 	if (node.tagName === 'A') {
-	// 		// Bookmark
-	// 		return {
-	// 			name: uid.value++,
-	// 			title: node.textContent,
-	// 			index: undefined,
-	// 			entries: null,
-	// 			href: node.href,
-	// 		};
-	// 	} else if (node.tagName === 'DL') {
-	// 		// List of bookmarks
-	// 		var titleEl = node.parentNode.querySelector('H1,H2,H3,H4,H5,H6');
-	// 		var title = '';
-	// 		if (titleEl) {
-	// 			title = titleEl.textContent;
-	// 		}
-	// 		var obj = { name: uid.value++, title: title, index: undefined, entries: {} };
-	// 		var file;
-	// 		var files = [];
-	// 		for (let i = 0, l = node.childNodes.length; i < l; i++) {
-	// 			var c = node.childNodes[i];
-	// 			file = this.convertBookmarksToTree(c, uid);
-	// 			if (file) {
-	// 				if (file.entries) {
-	// 					obj.entries[file.name] = file;
-	// 				} else {
-	// 					files.push(file);
-	// 				}
-	// 			}
-	// 		}
-	// 		for (let i = 0; i < files.length; i++) {
-	// 			file = files[i];
-	// 			obj.entries[file.name] = file;
-	// 		}
-	// 		return obj;
-	// 	} else {
-	// 		for (let i = 0, l = node.childNodes.length; i < l; i++) {
-	// 			file = this.convertBookmarksToTree(node.childNodes[i], uid);
-	// 			if (file) {
-	// 				return file;
-	// 			}
-	// 		}
-	// 	}
-	// },
 
 	parseFileList: function(
 		fileString: string,
@@ -252,64 +163,6 @@ var utils = {
 		includePrefix: any,
 		prefix: string | undefined
 	) {
-		// var xml = xhr && xhr.responseXML;
-		// if (!xml) {
-		// 	var parser = new DOMParser();
-		// 	var type = undefined;
-		// 	if (/^\s*<!DOCTYPE /i.test(fileString)) {
-		// 		type = 'text/html';
-		// 	} else if (/^\s*<\?xml /.test(fileString)) {
-		// 		type = 'application/xml';
-		// 	} else if (/^\s*<html/i.test(fileString)) {
-		// 		type = 'text/html';
-		// 	}
-		// 	if (type) {
-		// 		xml = parser.parseFromString(fileString, type as SupportedType);
-		// 		if (xml.querySelector('parsererror')) {
-		// 			xml = undefined;
-		// 		}
-		// 	}
-		// }
-
-		// if (xml) {
-		// 	// This is some XML here.
-		// 	if (/^\s*<!DOCTYPE NETSCAPE-Bookmark-file-1>/.test(fileString)) {
-		// 		// Bookmarks! Let's parse them!
-		// 		let uid = { value: 0 };
-		// 		let tree = this.convertBookmarksToTree(xml, uid);
-		// 		return {
-		// 			tree: { name: -1, title: '', index: undefined, entries: { Bookmarks: tree } },
-		// 			count: uid.value + 1,
-		// 		};
-		// 	} else {
-		// 		// XML visualization is go.
-		// 		let uid = { value: 0 };
-		// 		window.xml = xml;
-		// 		let tree = this.convertXMLToTree(xml, uid);
-		// 		return {
-		// 			tree: { name: -1, title: '', index: undefined, entries: { XML: tree } },
-		// 			count: uid.value + 1,
-		// 		};
-		// 	}
-		// } else {
-		// 	try {
-		// 		var list = JSON.parse(fileString);
-		// 		// Hey it's JSON, let's check for GitHub API & Google Drive API & Dropbox API formats.
-		// 		if (list && list.sha && list.url && /\/git\//.test(list.url) && list.tree) {
-		// 			return this.parseGitHubTree(list);
-		// 		} else if (list && list instanceof Array) {
-		// 			if (
-		// 				list.every(function(it) {
-		// 					return typeof it === 'string';
-		// 				})
-		// 			) {
-		// 				fileString = list.join('\n') + '\n';
-		// 			}
-		// 		}
-		// 	} catch (e) {
-		// 		// Not JSON.
-		// 	}
-		// }
 		return this.parseFileList_(fileString, includePrefix, prefix);
 	},
 
@@ -441,28 +294,6 @@ var utils = {
 			false
 		);
 	},
-
-	// loadFromText: function(text: any, onSuccess: (arg0: { tree: any; count: any; }, arg1: any) => void, onError: (arg0: any) => void, prefix: any) {
-	// 	try {
-	// 		onSuccess(this.parseFileList(text, {}, undefined, prefix), text);
-	// 	} catch (e) {
-	// 		if (onError) onError(e);
-	// 	}
-	// },
-
-	// loadFiles: function(url: string, onSuccess: (arg0: { tree: any; count: any; }, arg1: any) => void, onError: ((this: XMLHttpRequest, ev: ProgressEvent<EventTarget>) => any) | null, prefix: any) {
-	// 	var utils = this;
-	// 	var xhr = new XMLHttpRequest();
-	// 	xhr.open('GET', url);
-	// 	xhr.onload = function(ev) {
-	// 		onSuccess(
-	// 			utils.parseFileList(ev.target.responseText, ev.target, undefined, prefix),
-	// 			ev.target.responseText
-	// 		);
-	// 	};
-	// 	xhr.onerror = onError;
-	// 	xhr.send();
-	// },
 };
 
 export default utils;

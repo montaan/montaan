@@ -3,15 +3,17 @@ import React from 'react';
 import FileView from '../../FileViews/FileView';
 import { SDFText } from '../third_party/three-bmfont-text-modified';
 
+export const EmptyLabelGeometry = SDFText;
+
 export interface FSEntry {
-	labelGeometry?: SDFText;
+	labelGeometry: SDFText;
 	distanceFromCenter: number;
 	mode: any;
 	type: any;
 	hash: any;
 	name: string;
 	title: string;
-	entries: null | { [filename: string]: FSEntry };
+	entries?: Map<string, FSEntry>;
 	parent?: FSEntry;
 	filesystem?: IFilesystem;
 	size: number;
@@ -154,7 +156,7 @@ export function createFSTree(name: string, url: string, fsType?: string, api?: Q
 	const fsEntry: FSEntry = {
 		name,
 		title: name,
-		entries: {},
+		entries: new Map(),
 		fetched: false,
 		filesystem: undefined,
 		size: 0,
@@ -179,7 +181,7 @@ export function createFSTree(name: string, url: string, fsType?: string, api?: Q
 		vertexIndex: -1,
 
 		data: undefined,
-		labelGeometry: undefined,
+		labelGeometry: SDFText.mock,
 	};
 	if (fs) fsEntry.filesystem = new fs(url, api, fsEntry);
 	return fsEntry;
@@ -195,7 +197,7 @@ export function mount(fileTree: FSEntry, url: string, mountPoint: string, api: Q
 	if (!fsEntry.entries) throw new Error('mountPoint is not a directory');
 	const fs = createFSTree(name, url, fsType, api);
 	fs.parent = fsEntry;
-	fsEntry.entries[name] = fs;
+	fsEntry.entries.set(name, fs);
 	return fs;
 }
 
@@ -205,11 +207,11 @@ export function getPathEntry(fileTree: FSEntry, path: string): FSEntry | null {
 	while (segments[0] === '') {
 		segments.shift();
 	}
-	var branch = fileTree;
+	var branch: FSEntry | undefined = fileTree;
 	for (var i = 0; i < segments.length; i++) {
 		var segment = segments[i];
 		if (!branch.entries) return null;
-		branch = branch.entries[segment];
+		branch = branch.entries.get(segment);
 		if (!branch) return null;
 	}
 	return branch;
@@ -221,12 +223,12 @@ export function getNearestPathEntry(fileTree: FSEntry, path: string): FSEntry | 
 	while (segments[0] === '') {
 		segments.shift();
 	}
-	var branch = fileTree;
+	var branch: FSEntry | undefined = fileTree;
 	var last = fileTree;
 	for (var i = 0; i < segments.length; i++) {
 		var segment = segments[i];
 		if (!branch.entries) return last;
-		branch = branch.entries[segment];
+		branch = branch.entries.get(segment);
 		if (!branch) return last;
 		last = branch;
 	}
@@ -262,19 +264,20 @@ export function getFilesystemForPath(namespace: FSEntry, path: string): FSPath |
 export function getAllFilesystemsForPath(namespace: FSEntry, path: string): FSEntry[] {
 	const segments = path.split('/');
 	const list: FSEntry[] = [];
-	if (namespace.filesystem) list.push(namespace);
+	let fsEntry: FSEntry | undefined = namespace;
+	if (fsEntry.filesystem) list.push(fsEntry);
 	for (let i = 1; i < segments.length; i++) {
 		const segment = segments[i];
-		if (!namespace.entries || !namespace.entries[segment]) break;
-		namespace = namespace.entries[segment];
-		if (namespace.filesystem) list.push(namespace);
+		if (!fsEntry || !fsEntry.entries) break;
+		fsEntry = fsEntry.entries.get(segment);
+		if (fsEntry && fsEntry.filesystem) list.push(fsEntry);
 	}
 	return list;
 }
 
 export type ExtendedFSEntry = { fsEntry: FSEntry; point?: number[]; search?: string };
 
-export function getFSEntryForURL(namespace: FSEntry, url: string): ExtendedFSEntry | null {
+export function getFSEntryForURL(namespace: FSEntry, url: string): ExtendedFSEntry | undefined {
 	const [treePath, coords] = url.split('#');
 	const point =
 		(coords && /^[.\d]+(,[.\d]+)*$/.test(coords) && coords.split(',').map(parseFloat)) ||
@@ -282,13 +285,16 @@ export function getFSEntryForURL(namespace: FSEntry, url: string): ExtendedFSEnt
 	const search =
 		(coords && /^find:/.test(coords) && decodeURIComponent(coords.slice(5))) || undefined;
 	const fs = getFilesystemForPath(namespace, treePath);
-	if (!fs) return null;
+	if (!fs) return undefined;
 	const fsEntry = getPathEntry(fs.filesystem, fs.relativePath);
-	if (!fsEntry) return null;
+	if (!fsEntry) return undefined;
 	return { fsEntry, point, search };
 }
 
-export function getNearestFSEntryForURL(namespace: FSEntry, url: string): ExtendedFSEntry | null {
+export function getNearestFSEntryForURL(
+	namespace: FSEntry,
+	url: string
+): ExtendedFSEntry | undefined {
 	const [treePath, coords] = url.split('#');
 	const point =
 		(coords && /^[.\d]+(,[.\d]+)*$/.test(coords) && coords.split(',').map(parseFloat)) ||
@@ -296,7 +302,7 @@ export function getNearestFSEntryForURL(namespace: FSEntry, url: string): Extend
 	const search =
 		(coords && /^find:/.test(coords) && decodeURIComponent(coords.slice(5))) || undefined;
 	const fsEntry = getNearestPathEntry(namespace, treePath);
-	if (!fsEntry) return null;
+	if (!fsEntry) return undefined;
 	return { fsEntry, point, search };
 }
 
@@ -309,20 +315,21 @@ export async function readDir(tree: FSEntry, path: string): Promise<void> {
 			const targetDir = getPathEntry(filesystem, relativePath);
 			// if (targetDir && targetDir.name === 'backend') debugger;
 			if (!dir || !targetDir || !targetDir.entries || !dir.entries) return;
-			for (let i in dir.entries) {
-				if (!targetDir.entries[i]) {
-					targetDir.entries[i] = dir.entries[i];
-					dir.entries[i].parent = targetDir;
+			for (let i of dir.entries.keys()) {
+				const fsEntry = dir.entries.get(i);
+				if (!targetDir.entries.get(i) && fsEntry) {
+					targetDir.entries.set(i, fsEntry);
+					fsEntry.parent = targetDir;
 				}
 			}
 			const deletions = [];
-			for (let i in targetDir.entries) {
-				if (!dir.entries[i]) {
+			for (let i of targetDir.entries.keys()) {
+				if (!dir.entries.has(i)) {
 					deletions.push(i);
 				}
 			}
 			for (let i = 0; i < deletions.length; i++) {
-				delete targetDir.entries[deletions[i]];
+				targetDir.entries.delete(deletions[i]);
 			}
 		}
 	}

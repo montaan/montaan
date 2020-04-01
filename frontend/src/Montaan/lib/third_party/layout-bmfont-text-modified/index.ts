@@ -103,6 +103,28 @@ export class TextLayout {
 
 	defaultTabSize: number = 4;
 
+	static mock: TextLayout = {
+		glyphs: [] as LayoutGlyph[],
+		options: { text: '', font: ({} as unknown) as Font },
+		width: 0,
+		height: 0,
+		descender: 0,
+		baseline: 0,
+		xHeight: 0,
+		capHeight: 0,
+		lineHeight: 0,
+		ascender: 0,
+		linesTotal: 0,
+
+		defaultTabSize: 4,
+		setupFallbackGlyphs: () => {},
+		computeMetrics: (text: string, start: number, end: number, width: number): Metrics => ({
+			start: 0,
+			end: 0,
+			width: 0,
+		}),
+	};
+
 	constructor(options: LayoutOptions) {
 		this.glyphs = [];
 		this.options = options;

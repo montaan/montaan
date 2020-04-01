@@ -37,7 +37,8 @@ const TourSelector = ({ path, fileTree, api, repoPrefix }: TourSelectorProps) =>
 		utils.traverseFSEntry(
 			fileTree,
 			(fsEntry: FSEntry, path: string) => {
-				if (fsEntry.entries === null && fsEntry.title === '.tour.md') foundTours.push(path);
+				if (fsEntry.entries === undefined && fsEntry.title === '.tour.md')
+					foundTours.push(path);
 			},
 			''
 		);

@@ -238,15 +238,16 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 
 		const user = this.props.userInfo.name;
 
-		if (!tree.entries[user]) {
+		if (!tree.entries.has(user)) {
 			mount(tree, `montaanUserRepos:///${user}`, `/${user}`, this.props.api);
 		}
 
 		await this.requestDirs([`/${user}`], []);
-		if (!tree.entries[user]) return;
-		const repoEntries = tree.entries[user].entries;
+		if (!tree.entries.has(user)) return;
+		const repoEntries = tree.entries.get(user)!.entries;
 		if (!repoEntries) return;
-		const repos = Object.keys(repoEntries).map((name) => repoEntries[name].data);
+		const repos = [];
+		for (let repo of repoEntries.values()) repos.push(repo.data);
 		await this.assertPathLoaded(this.props.location.pathname);
 
 		this.setState({
@@ -295,7 +296,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		}
 		if (dropEntries.length > 0) {
 			dropEntries.forEach((fsEntry) => {
-				fsEntry.entries = {};
+				fsEntry.entries = new Map();
 				fsEntry.fetched = false;
 				fsEntry.building = false;
 			});
@@ -498,8 +499,10 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 				hitType: this.getHitType(rawQueryRE, filename, undefined),
 			});
 		}
-		for (var i in fileTree.entries) {
-			this.searchTree(query, fileTree.entries[i], results, rawQueryRE);
+		if (fileTree.entries) {
+			for (let fsEntry of fileTree.entries.values()) {
+				this.searchTree(query, fsEntry, results, rawQueryRE);
+			}
 		}
 		return results;
 	}

@@ -3,13 +3,7 @@ import './railscasts.min.css';
 import './ColorsDark.css';
 
 import * as THREE from 'three';
-
-interface FSEntry {
-	name: string;
-	mimeType?: string;
-	action?: string;
-	entries: null | { [propType: string]: FSEntry };
-}
+import { FSEntry } from './filesystem';
 
 type ColorArray = number[];
 
@@ -120,7 +114,7 @@ const Colors = {
 
 	getFileColor: function(file: FSEntry): ColorArray {
 		var name = file.name;
-		var mimeType = file.mimeType;
+		// var mimeType = file.mimeType;
 		if (file.action) {
 			switch (file.action[0]) {
 				case 'M':
@@ -135,15 +129,15 @@ const Colors = {
 					return this.colors.actionCFile;
 			}
 		}
-		if (mimeType) {
-			if (/^image/.test(mimeType)) {
-				return this.colors.imageFile;
-			} else if (/^audio/.test(mimeType)) {
-				return this.colors.musicFile;
-			} else if (/^video/.test(mimeType)) {
-				return this.colors.videoFile;
-			}
-		}
+		// if (mimeType) {
+		// 	if (/^image/.test(mimeType)) {
+		// 		return this.colors.imageFile;
+		// 	} else if (/^audio/.test(mimeType)) {
+		// 		return this.colors.musicFile;
+		// 	} else if (/^video/.test(mimeType)) {
+		// 		return this.colors.videoFile;
+		// 	}
+		// }
 
 		if (this.musicRE.test(name)) {
 			return this.colors.musicFile;
@@ -218,7 +212,7 @@ const Colors = {
 	},
 
 	getColor: function(fsEntry: FSEntry) {
-		if (fsEntry.entries !== null) {
+		if (fsEntry.entries !== undefined) {
 			return this.getDirectoryColor(fsEntry);
 		}
 		return this.getFileColor(fsEntry);

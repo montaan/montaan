@@ -23,23 +23,23 @@
     [] Move tree rendering to lib
     [] Move repo management to MontaanUserRepos
     [] Move tree rebuild into a worker
-    [] Optimize the text layout library
-    [] Optimize layoutDir
+    [x] Optimize the text layout library
+    [x] Optimize layoutDir
     [x] Move visibility checking to tree builder
     [x] Tree rebuilds have files missing
 
 # Release checklist
 
-    [] Solid file tree rebuilds (no missing files)
     [] Clean well-documented path to create a new component & integrate it
-    [x] Search works
-    [x] Commit history works
     [] Solid repo import path
         [] Import Github repo
         [] In-progress spinner
         [] Import local repo
     [] Repo auto-pull & update
     [] Tests pass
+    [x] Search works
+    [x] Commit history works
+    [x] Solid file tree rebuilds (no missing files)
 
 # KEY FEATURES
 

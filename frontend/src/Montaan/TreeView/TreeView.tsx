@@ -296,7 +296,7 @@ function TreeContainerInstanceArrays({
 		var stack = [fileTree.tree];
 		while (stack.length > 0) {
 			var obj = stack.pop() as any;
-			for (var name in obj.entries) {
+			for (var name of obj.entries.keys()) {
 				var o = obj.entries[name];
 				const mesh = o.entries ? dMesh : fMesh;
 				mesh.getMatrixAt(o.instanceId, m);

@@ -154,7 +154,7 @@ const Player = ({ fileTree, navigationTarget, api }: PlayerProps) => {
 	const playlistsInTree: PlaylistRef[] = useMemo(() => {
 		const foundPlaylists = [] as string[];
 		utils.traverseTree(fileTree, (fsEntry: FSEntry, path: string) => {
-			if (fsEntry.entries === null && fsEntry.title === '.playlist')
+			if (fsEntry.entries === undefined && fsEntry.title === '.playlist')
 				foundPlaylists.push(path);
 		});
 		return foundPlaylists.sort().map((path) => {
@@ -189,7 +189,7 @@ const Player = ({ fileTree, navigationTarget, api }: PlayerProps) => {
 	const endPlaylist = useCallback(() => setCurrentPlaylist(EMPTY_PLAYLIST), [setCurrentPlaylist]);
 
 	return (
-		<div className={styles.Player} data-filename={'frontend/' + __filename.replace(/\\/g, '/')} >
+		<div className={styles.Player} data-filename={'frontend/' + __filename.replace(/\\/g, '/')}>
 			{playlistsInTree.length > 0 && (
 				<DropdownButton
 					id="tourDropdown"

@@ -30,6 +30,10 @@ import SearchLandmarks from '../SearchLandmarks/SearchLandmarks';
 import LinksModel from '../LinksModel/LinksModel';
 import { RouteComponentProps } from 'react-router-dom';
 import FileView from '../FileViews/FileView';
+// import * as Comlink from 'comlink';
+
+// /* eslint-disable import/no-webpack-loader-syntax */
+// import ModelBuilderWorker from 'worker-loader!../ModelBuilder/ModelBuilder';
 
 function save(blob: Blob, filename: string) {
 	const link = document.createElement('a');
@@ -91,7 +95,7 @@ export type Fiber = () => void;
 export type ParseTargetSignature = (
 	dst: string | FSEntry,
 	dstPoint?: number[]
-) => ExtendedFSEntry | null;
+) => ExtendedFSEntry | undefined;
 
 export class Mesh extends THREE.Mesh {
 	geometry: THREE.BufferGeometry;
@@ -118,12 +122,12 @@ export class Tabletree {
 	textMinScale: number = 1;
 	textMaxScale: number = 1000;
 	fsIndex: FSEntry[] = [];
-	meshIndex: Map<FSEntry, number> = new Map();
 	visibleEntries: Map<FSEntry, number> = new Map();
 	history?: RouteComponentProps['history'];
 	model: Mesh = new Mesh();
 	searchResults: SearchResult[] = [];
 	modelBuilder: ModelBuilder = new ModelBuilder();
+	// modelBuilderWorker: ModelBuilderWorker = Comlink.wrap(new ModelBuilderWorker());
 
 	requestDirs: (paths: string[], discard: string[]) => Promise<void> = async () => {};
 	setNavigationTarget: (target: string) => void = () => {};
@@ -292,12 +296,13 @@ export class Tabletree {
 
 	treeUpdater = async (fileTree: FileTree) => {
 		const newTree = fileTree.tree !== this.fileTree;
+		this.tree = fileTree;
+		this.fileTree = fileTree.tree;
 		if (newTree) {
-			this.viewRoot = fileTree.tree;
-			this.viewRoot.scale = 1;
-		}
-		this.showFileTree(fileTree);
-		if (newTree) {
+			fileTree.tree.scale = 1;
+			fileTree.tree.x = 0;
+			fileTree.tree.y = 0;
+			fileTree.tree.z = 0;
 			this.camera.position.set(0.5, 0.75, 3);
 			this.camera.targetPosition.copy(this.camera.position);
 			this.camera.near = 0.5;
@@ -325,6 +330,9 @@ export class Tabletree {
 	showFileTree(tree: FileTree) {
 		if (this.treeBuildInProgress) return;
 		this.treeBuildInProgress = true;
+		// Can't use worker because tree can't be serialized for passing to a worker.
+		// Tree should be in an ArrayBuffer that we get from MainApp worker / whoever is doing tree building.
+		// Then we'd pass the ArrayBuffer to ModelBuilder, and get back models and instructions for tweaking camera.
 		const {
 			verts,
 			colorVerts,
@@ -332,7 +340,6 @@ export class Tabletree {
 			labelUVs,
 			fileIndex,
 			fsEntryIndex,
-			meshIndex,
 			zoomedInPath,
 			navigationTarget,
 			smallestCovering,
@@ -340,6 +347,8 @@ export class Tabletree {
 			visibleFiles,
 			vertexCount,
 			textVertexCount,
+			boundingBox,
+			boundingSphere,
 		} = this.modelBuilder.buildModel(tree, this.camera, this.model);
 		this.zoomedInPath = zoomedInPath;
 		this.fsIndex = fsEntryIndex;
@@ -375,10 +384,14 @@ export class Tabletree {
 			this.model.add(textMesh);
 			this.model.add(this.visibleFiles);
 		}
-		this.updateAttribute(this.model.geometry, 'position', verts, vertexCount, 3);
-		this.updateAttribute(this.model.geometry, 'color', colorVerts, vertexCount, 3);
-		this.updateAttribute(this.textGeometry, 'position', labelVerts, textVertexCount, 4);
-		this.updateAttribute(this.textGeometry, 'uv', labelUVs, textVertexCount, 2);
+		this.updateAttribute(this.model.geometry, 'position', verts, 3);
+		this.updateAttribute(this.model.geometry, 'color', colorVerts, 3);
+		this.updateAttribute(this.textGeometry, 'position', labelVerts, 4);
+		this.updateAttribute(this.textGeometry, 'uv', labelUVs, 2);
+		this.model.geometry.drawRange.count = vertexCount;
+		this.textGeometry.drawRange.count = textVertexCount;
+		this.model.geometry.boundingBox = boundingBox;
+		this.model.geometry.boundingSphere = boundingSphere;
 		const currentlyVisible = new Set();
 		visibleFiles.forEach((fsEntry) => {
 			// const path = getFullPath(fsEntry);
@@ -391,7 +404,7 @@ export class Tabletree {
 			const scale = fileView.fsEntry.scale;
 			fileView.scale.set(scale, scale, scale);
 		});
-		Array.from(this.visibleFiles.visibleSet.keys()).forEach((path) => {
+		for (let path of this.visibleFiles.visibleSet.keys()) {
 			if (!currentlyVisible.has(path)) {
 				const fileView = this.visibleFiles.visibleSet.get(path);
 				if (fileView) {
@@ -400,12 +413,9 @@ export class Tabletree {
 				}
 				this.visibleFiles.visibleSet.delete(path);
 			}
-		});
+		}
 
-		this.tree = tree;
-		this.fileTree = tree.tree;
 		this.fileCount = tree.count;
-		this.meshIndex = meshIndex;
 		this.fileIndex = fileIndex;
 		this.model.position.set(0, 0, 0);
 
@@ -426,7 +436,6 @@ export class Tabletree {
 		geo: THREE.BufferGeometry,
 		attributeName: string,
 		array: Float32Array,
-		itemCount: number,
 		itemSize: number
 	): void {
 		let attribute = geo.getAttribute(attributeName) as THREE.BufferAttribute;
@@ -437,8 +446,6 @@ export class Tabletree {
 		} else {
 			attribute.needsUpdate = true;
 		}
-		geo.drawRange.count = itemCount;
-		geo.computeBoundingBox();
 	}
 
 	updateViewRoot(newRoot: any) {
@@ -501,8 +508,8 @@ export class Tabletree {
 
 	// FSEntry Navigation ////////////////////////////////////////////////////////////////////////////////
 
-	parseTarget = (dst: string | FSEntry, dstPoint: any): ExtendedFSEntry | null => {
-		if (!this.fileTree) return null;
+	parseTarget = (dst: string | FSEntry, dstPoint: any): ExtendedFSEntry | undefined => {
+		if (!this.fileTree) return undefined;
 		if (typeof dst === 'string') {
 			return getNearestFSEntryForURL(this.fileTree, dst);
 		} else {
@@ -510,10 +517,7 @@ export class Tabletree {
 		}
 	};
 
-	goToFSEntry = (
-		fsEntry: { x: number; scale: number; entries: any; y: number; z: number },
-		model = this.model
-	) => {
+	goToFSEntry = (fsEntry: FSEntry, model = this.model) => {
 		if (!fsEntry) return;
 		const { scene, camera } = this;
 		scene.updateMatrixWorld();
@@ -992,10 +996,11 @@ export class Tabletree {
 		}
 
 		if (this.tree) this.showFileTree(this.tree);
+		this.linksModel.updateLinks(this.currentFrame);
 
 		const d = this.getCameraDistanceToModel();
-		camera.near = 0.1 * d;
-		camera.far = 100 * d;
+		camera.near = 0.01 * d;
+		camera.far = 10 * d;
 
 		if (
 			camera.targetPosition.x !== camera.position.x ||
@@ -1028,7 +1033,6 @@ export class Tabletree {
 		} else {
 			this.animating = false;
 		}
-		this.linksModel.updateLinks(this.currentFrame);
 		camera.updateProjectionMatrix();
 
 		var wasChanged = this.changed || this.frameFibers.length > 0;

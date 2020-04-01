@@ -24,6 +24,13 @@ import { NavCamera } from '../MainView/main';
 import Colors from '../lib/Colors';
 import { SDFText } from '../lib/third_party/three-bmfont-text-modified';
 
+import * as Comlink from 'comlink';
+
+interface ExtendedSDFText extends SDFText {
+	xScale: number;
+	fsEntry: FSEntry;
+}
+
 export default class ModelBuilder {
 	smallestCovering?: FSEntry;
 	_modelVerts = new Float32Array(36 * 1000);
@@ -40,16 +47,22 @@ export default class ModelBuilder {
 		colorVerts: Float32Array;
 		labelVerts: Float32Array;
 		labelUVs: Float32Array;
+
+		vertexCount: number;
+		textVertexCount: number;
+
+		boundingBox: THREE.Box3;
+		boundingSphere: THREE.Sphere;
+
 		fileIndex: number;
 		fsEntryIndex: FSEntry[];
-		meshIndex: Map<FSEntry, number>;
+
 		zoomedInPath: string;
 		navigationTarget: string;
 		smallestCovering: FSEntry;
+
 		entriesToFetch: FSEntry[];
 		visibleFiles: FSEntry[];
-		vertexCount: number;
-		textVertexCount: number;
 	} {
 		const fileTree = tree.tree;
 
@@ -81,6 +94,22 @@ export default class ModelBuilder {
 		fileTree.z = -z / scale;
 		fileTree.scale = 1 / scale;
 
+		camera.position.x = ((camera.position.x - fx) / fs) * fileTree.scale + fileTree.x;
+		camera.position.y = ((camera.position.y - fy) / fs) * fileTree.scale + fileTree.y;
+		camera.position.z = ((camera.position.z - fz) / fs) * fileTree.scale + fileTree.z;
+		camera.targetPosition.x =
+			((camera.targetPosition.x - fx) / fs) * fileTree.scale + fileTree.x;
+		camera.targetPosition.y =
+			((camera.targetPosition.y - fy) / fs) * fileTree.scale + fileTree.y;
+		camera.targetPosition.z =
+			((camera.targetPosition.z - fz) / fs) * fileTree.scale + fileTree.z;
+		camera.near = (camera.near / fs) * fileTree.scale;
+		camera.far = (camera.far / fs) * fileTree.scale;
+
+		camera.updateProjectionMatrix();
+		camera.updateWorldMatrix(true, true);
+		mesh.updateMatrixWorld(true);
+
 		fileTree.index = undefined;
 		fileTree.vertexIndex = 0;
 		fileTree.textVertexIndex = 0;
@@ -91,7 +120,6 @@ export default class ModelBuilder {
 			fileIndex,
 			labelGeometries,
 			fsEntryIndex,
-			meshIndex,
 			zoomedInPath,
 			navigationTarget,
 			smallestCovering,
@@ -113,56 +141,107 @@ export default class ModelBuilder {
 		let j = 0;
 		for (let i = 0; i < labelGeometries.length; i++) {
 			const c = labelGeometries[i];
-			const fsEntry = c.fsEntry;
-			const xScale = c.xScale;
-			const positionX = fsEntry.x + fsEntry.scale * (fsEntry.entries ? 0 : 0.02);
-			const positionY = fsEntry.y + fsEntry.scale * (fsEntry.entries ? 1.02 : 0.02);
-			const positionZ = fsEntry.z;
-			const scale = xScale * fsEntry.scale * 0.00436;
-			const arr = c.position;
-			for (let k = 0; k < arr.length; k += 4) {
-				labelVerts[j + k] = arr[k] * scale + positionX;
-				labelVerts[j + k + 1] = arr[k + 1] * scale + positionY;
-				labelVerts[j + k + 2] = arr[k + 2] * scale + positionZ;
-				labelVerts[j + k + 3] = arr[k + 3];
-			}
 			labelUVs.set(c.uv, j / 2);
-			j += c.position.length;
+			const fsEntry = c.fsEntry;
+			const positionX =
+				fsEntry.x + fsEntry.scale * (fsEntry.entries !== undefined ? 0 : 0.02);
+			const positionY =
+				fsEntry.y + fsEntry.scale * (fsEntry.entries !== undefined ? 1.02 : 0.02);
+			const positionZ = fsEntry.z;
+			const scale = c.xScale * fsEntry.scale * 0.00436;
+			const arr = c.position;
+			for (let k = 0; k < arr.length && j + 4 < labelVerts.length; k += 4) {
+				labelVerts[j++] = arr[k + 0] * scale + positionX;
+				labelVerts[j++] = arr[k + 1] * scale + positionY;
+				labelVerts[j++] = arr[k + 2] * scale + positionZ;
+				labelVerts[j++] = arr[k + 3];
+			}
 		}
-
-		camera.position.x = ((camera.position.x - fx) / fs) * fileTree.scale + fileTree.x;
-		camera.position.y = ((camera.position.y - fy) / fs) * fileTree.scale + fileTree.y;
-		camera.position.z = ((camera.position.z - fz) / fs) * fileTree.scale + fileTree.z;
-		camera.targetPosition.x =
-			((camera.targetPosition.x - fx) / fs) * fileTree.scale + fileTree.x;
-		camera.targetPosition.y =
-			((camera.targetPosition.y - fy) / fs) * fileTree.scale + fileTree.y;
-		camera.targetPosition.z =
-			((camera.targetPosition.z - fz) / fs) * fileTree.scale + fileTree.z;
-		camera.near = (camera.near / fs) * fileTree.scale;
-		camera.far = (camera.far / fs) * fileTree.scale;
 
 		this.smallestCovering = smallestCovering;
 
 		const vertexCount = fileIndex * 12;
 		const textVertexCount = textVertCount / 4;
 
+		const boundingSphere = new THREE.Sphere();
+		const boundingBox = new THREE.Box3();
+
+		this.computeBounds(boundingBox, boundingSphere, verts, 3);
+
 		return {
 			verts,
 			colorVerts,
 			labelVerts,
 			labelUVs,
+
+			vertexCount,
+			textVertexCount,
+
+			boundingBox,
+			boundingSphere,
+
 			fileIndex,
 			fsEntryIndex,
-			meshIndex,
+
 			zoomedInPath,
 			navigationTarget,
 			smallestCovering,
+
 			entriesToFetch,
 			visibleFiles,
-			vertexCount,
-			textVertexCount,
 		};
+	}
+
+	bounds3(positions: Float32Array, itemSize: number, box: { min: number[]; max: number[] }) {
+		let minX = positions[0];
+		let minY = positions[1];
+		let minZ = positions[2];
+		let maxX = positions[0];
+		let maxY = positions[1];
+		let maxZ = positions[2];
+
+		for (let i = 0, l = positions.length; i < l; i += itemSize) {
+			var x = positions[i + 0];
+			var y = positions[i + 1];
+			var z = positions[i + 2];
+			if (x < minX) minX = x;
+			else if (x > maxX) maxX = x;
+			if (y < minY) minY = y;
+			else if (y > maxY) maxY = y;
+			if (z < minZ) minZ = z;
+			else if (z > maxZ) maxZ = z;
+		}
+
+		box.min[0] = minX;
+		box.min[1] = minY;
+		box.min[2] = minZ;
+		box.max[0] = maxX;
+		box.max[1] = maxY;
+		box.max[2] = maxZ;
+	}
+
+	computeBounds(
+		boundingBox: THREE.Box3,
+		boundingSphere: THREE.Sphere,
+		positions: Float32Array,
+		itemSize: number
+	) {
+		const box = { min: [0, 0, 0], max: [0, 0, 0] };
+		this.bounds3(positions, itemSize, box);
+
+		const width = box.max[0] - box.min[0];
+		const height = box.max[1] - box.min[1];
+		const depth = box.max[2] - box.min[2];
+		const length = Math.sqrt(width * width + height * height + depth * depth);
+		boundingSphere.center.set(
+			box.min[0] + width / 2,
+			box.min[1] + height / 2,
+			box.min[2] + depth / 2
+		);
+		boundingSphere.radius = length / 2;
+
+		boundingBox.min.set(box.min[0], box.min[1], box.min[2]);
+		boundingBox.max.set(box.max[0], box.max[1], box.max[2]);
 	}
 
 	cmpFSEntryDistanceFromCenter(
@@ -186,7 +265,6 @@ export default class ModelBuilder {
 		fileIndex: number;
 		labelGeometries: ExtendedSDFText[];
 		fsEntryIndex: FSEntry[];
-		meshIndex: Map<FSEntry, number>;
 		zoomedInPath: string;
 		navigationTarget: string;
 		smallestCovering: FSEntry;
@@ -199,7 +277,6 @@ export default class ModelBuilder {
 		};
 		const labelGeometries: ExtendedSDFText[] = [];
 		const fsEntryIndex: FSEntry[] = [];
-		const meshIndex: Map<FSEntry, number> = new Map();
 		const vertexIndices = { vertexIndex: 0, textVertexIndex: 0 };
 
 		let zoomedInPath = '';
@@ -214,28 +291,23 @@ export default class ModelBuilder {
 		const stack = [fileTree];
 		const entriesToFetch = [];
 		const visibleFiles = [];
-		let skipped = 0;
+		const viewWidth = window.innerWidth;
 		while (stack.length > 0) {
 			const tree = stack.pop();
-			if (!tree) break;
+			if (!tree || !tree.entries) break;
 			fileIndex = this.layoutDir(
 				tree,
 				fileIndex,
 				geo,
 				labelGeometries,
 				fsEntryIndex,
-				meshIndex,
 				vertexIndices
 			);
-			if (fileIndex > 10000) break;
-			for (let name in tree.entries) {
-				const fsEntry = tree.entries[name];
-
+			if (fileIndex > 5000) break;
+			for (let fsEntry of tree.entries.values()) {
 				const bbox = Geometry.getFSEntryBBox(fsEntry, mesh, camera);
-				const pxWidth = bbox.width * window.innerWidth * 0.5;
-				const isSmall = pxWidth < (fsEntry.entries ? 15 : 150);
-
-				if (!bbox.onScreen) skipped++;
+				const pxWidth = bbox.width * viewWidth * 0.5;
+				const isSmall = pxWidth < (fsEntry.entries ? 50 : 150);
 
 				// Skip entries that are outside frustum or too small.
 				if (!bbox.onScreen || isSmall) continue;
@@ -270,7 +342,6 @@ export default class ModelBuilder {
 				}
 			}
 		}
-		// console.log(skipped, fileIndex);
 		entriesToFetch.sort(this.cmpFSEntryDistanceFromCenter);
 		return {
 			verts: geo.verts,
@@ -278,7 +349,6 @@ export default class ModelBuilder {
 			fileIndex,
 			labelGeometries,
 			fsEntryIndex,
-			meshIndex,
 			zoomedInPath,
 			navigationTarget,
 			smallestCovering,
@@ -293,21 +363,21 @@ export default class ModelBuilder {
 		geo: { verts: Float32Array; colorVerts: Float32Array },
 		labelGeometries: ExtendedSDFText[],
 		index: FSEntry[],
-		meshIndex: Map<FSEntry, number>,
 		vertexIndices: { vertexIndex: number; textVertexIndex: number }
 	) {
-		var dirs = [];
-		var files = [];
-		var dotDirs = [];
-		var dotFiles = [];
-		for (let i in fileTree.entries) {
-			const obj = fileTree.entries[i];
-			if (obj.entries === null) {
-				if (obj.name.startsWith('.') && false) dotFiles.push(obj);
-				else files.push(obj);
-			} else {
-				if (obj.name.startsWith('.') && false) dotDirs.push(obj);
-				else dirs.push(obj);
+		const dirs = [];
+		const files = [];
+		// var dotDirs = [];
+		// var dotFiles = [];
+		if (fileTree.entries) {
+			for (let fsEntry of fileTree.entries.values()) {
+				if (fsEntry.entries === undefined) {
+					// if (fsEntry.name.startsWith('.') && false) dotFiles.push(fsEntry);
+					files.push(fsEntry);
+				} else {
+					// if (fsEntry.name.startsWith('.') && false) dotDirs.push(fsEntry);
+					dirs.push(fsEntry);
+				}
 			}
 		}
 
@@ -321,14 +391,17 @@ export default class ModelBuilder {
 		const fileXOff = dirs.length === 0 ? 0 : 0;
 		let filesPerRow = dirs.length === 0 ? 2 : 2;
 
+		const yDirOff = (1 - dirScale) * fileTree.scale;
+		const dirScale2 = dirScale * fileTree.scale;
+
 		const dirSquareSide = Math.ceil(
 			Math.sqrt(Math.ceil(dirScale * (dirs.length + (files.length > 0 ? 1 : 0))))
 		);
 		let fileSquareSide = Math.ceil(Math.sqrt(Math.ceil(files.length / filesPerRow)));
 
-		var maxX = 0,
+		let maxX = 0,
 			maxY = 0;
-		var filesBox = { x: fileTree.x, y: fileTree.y, z: fileTree.z, scale: fileTree.scale };
+		let filesBox = { x: fileTree.x, y: fileTree.y, z: fileTree.z, scale: fileTree.scale };
 		outer: for (let x = 0; x < dirSquareSide; x++) {
 			for (let y = 0; y < dirSquareSide / dirScale; y++) {
 				const off = x * Math.ceil(dirSquareSide / dirScale) + y;
@@ -346,12 +419,9 @@ export default class ModelBuilder {
 							const subX = xOff + 0.0 / dirSquareSide;
 							const subY = yOff + 0.0 / dirSquareSide;
 							fileTree.filesBox = filesBox = {
-								x: fileTree.x + fileTree.scale * subX * dirScale,
-								y:
-									fileTree.y +
-									fileTree.scale * subY * dirScale +
-									(1 - dirScale) * fileTree.scale,
-								scale: 2 * fileTree.scale * (0.8 / dirSquareSide) * dirScale,
+								x: fileTree.x + subX * dirScale2,
+								y: fileTree.y + subY * dirScale2 + yDirOff,
+								scale: 2 * (0.8 / dirSquareSide) * dirScale2,
 								z: fileTree.z,
 							};
 						} else if (dirs.length !== dirSquareSide * dirSquareSide - 1) {
@@ -366,12 +436,9 @@ export default class ModelBuilder {
 							const subX = xOff + 0.1 / dirSquareSide;
 							const subY = yOff + 0.125 / dirSquareSide;
 							fileTree.filesBox = filesBox = {
-								x: fileTree.x + fileTree.scale * subX * dirScale,
-								y:
-									fileTree.y +
-									fileTree.scale * subY * dirScale +
-									(1 - dirScale) * fileTree.scale,
-								scale: 2 * fileTree.scale * (0.9 / dirSquareSide) * dirScale,
+								x: fileTree.x + subX * dirScale2,
+								y: fileTree.y + subY * dirScale2 + yDirOff,
+								scale: 2 * (0.9 / dirSquareSide) * dirScale2,
 								z: fileTree.z,
 							};
 						} else {
@@ -380,12 +447,9 @@ export default class ModelBuilder {
 							const subX = xOff + 0.1 / dirSquareSide;
 							const subY = yOff + 0.125 / dirSquareSide;
 							fileTree.filesBox = filesBox = {
-								x: fileTree.x + fileTree.scale * subX * dirScale,
-								y:
-									fileTree.y +
-									fileTree.scale * subY * dirScale +
-									(1 - dirScale) * fileTree.scale,
-								scale: fileTree.scale * (0.8 / dirSquareSide) * dirScale,
+								x: fileTree.x + subX * dirScale2,
+								y: fileTree.y + subY * dirScale2 + yDirOff,
+								scale: (0.8 / dirSquareSide) * dirScale2,
 								z: fileTree.z,
 							};
 						}
@@ -397,23 +461,19 @@ export default class ModelBuilder {
 				const yOff = 1 - (0.5 * y + 1) * (1 / dirSquareSide);
 				const xOff = 0.9 * x * (1 / dirSquareSide);
 				const dir = dirs[off];
-				if (meshIndex.has(dir) && meshIndex.get(dir) !== -1) continue;
 				const subX = xOff + 0.1 / dirSquareSide;
 				const subY = yOff + 0.125 / dirSquareSide;
-				dir.building = true;
-				dir.x = fileTree.x + fileTree.scale * subX * dirScale;
-				dir.y =
-					fileTree.y + fileTree.scale * subY * dirScale + (1 - dirScale) * fileTree.scale;
-				dir.scale = fileTree.scale * (0.8 / dirSquareSide) * dirScale;
+				dir.x = fileTree.x + subX * dirScale2;
+				dir.y = fileTree.y + yDirOff + subY * dirScale2;
+				dir.scale = (0.8 / dirSquareSide) * dirScale2;
 				dir.z = fileTree.z + dir.scale * 0.2;
 				dir.index = fileIndex;
 				fileIndex++;
 				dir.vertexIndex = vertexIndices.vertexIndex;
-				dir.textVertexIndex = vertexIndices.textVertexIndex;
 				dir.parent = fileTree;
 				index[dir.index] = dir;
-				meshIndex.set(dir, dir.index);
-				var dirColor = dir.color || Colors.getDirectoryColor(dir);
+				const dirColor = dir.color || Colors.getDirectoryColor(dir);
+				dir.color = dirColor;
 				this.ensureSpaceForEntry(geo, vertexIndices);
 				Geometry.setColor(geo.colorVerts, dir.index, dirColor);
 				vertexIndices.vertexIndex = Geometry.makeQuad(
@@ -434,6 +494,9 @@ export default class ModelBuilder {
 			}
 		}
 
+		const filesScale2 = filesBox.scale * filesScale;
+		const filesYOff = filesBox.scale * (1 - filesScale);
+
 		maxX = 0;
 		maxY = 0;
 		outer: for (let x = 0; x < fileSquareSide * filesPerRow; x++) {
@@ -450,21 +513,17 @@ export default class ModelBuilder {
 				const subY = yOff + 0.05 / fileSquareSide;
 
 				const file = files[off];
-				if (meshIndex.has(file) && meshIndex.get(file) !== -1) continue;
 				const fileColor = file.color || Colors.getFileColor(file);
-				file.x = filesBox.x + filesBox.scale * subX * filesScale;
-				file.y =
-					filesBox.y +
-					filesBox.scale * subY * filesScale +
-					filesBox.scale * (1 - filesScale);
-				file.scale = filesBox.scale * (0.9 / fileSquareSide) * filesScale;
+				file.color = fileColor;
+				file.x = filesBox.x + subX * filesScale2;
+				file.y = filesBox.y + filesYOff + subY * filesScale2;
+				file.scale = (0.9 / fileSquareSide) * filesScale2;
 				file.z = filesBox.z + file.scale * 0.2;
 				file.index = fileIndex;
 				file.vertexIndex = vertexIndices.vertexIndex;
 				file.lastIndex = fileIndex;
 				file.parent = fileTree;
 				index[file.index] = file;
-				meshIndex.set(file, file.index);
 				this.ensureSpaceForEntry(geo, vertexIndices);
 				Geometry.setColor(geo.colorVerts, file.index, fileColor);
 				vertexIndices.vertexIndex = Geometry.makeQuad(
@@ -482,7 +541,6 @@ export default class ModelBuilder {
 					vertexIndices.textVertexIndex,
 					1
 				);
-				file.lastVertexIndex = vertexIndices.vertexIndex;
 				fileIndex++;
 			}
 		}
@@ -513,7 +571,7 @@ export default class ModelBuilder {
 		textVertexIndex: number,
 		xScale: number = 1
 	) {
-		if (!fsEntry.labelGeometry) {
+		if (fsEntry.labelGeometry === SDFText.mock) {
 			const textGeometry = Text.createTextArrays({
 				text: fsEntry.title,
 				font: Text.font,
@@ -537,15 +595,11 @@ export default class ModelBuilder {
 			fsEntry.labelGeometry = textGeometry;
 		}
 
-		fsEntry.textVertexIndex = textVertexIndex;
-		fsEntry.lastTextVertexIndex = textVertexIndex + fsEntry.labelGeometry.position.length / 4;
-		labelGeometries.push(fsEntry.labelGeometry);
+		const textGeometry = fsEntry.labelGeometry;
+		labelGeometries.push(textGeometry);
 
-		return fsEntry.lastTextVertexIndex;
+		return textVertexIndex + textGeometry.position.length / 4;
 	}
 }
 
-interface ExtendedSDFText extends SDFText {
-	xScale: number;
-	fsEntry: FSEntry;
-}
+Comlink.expose(ModelBuilder);
