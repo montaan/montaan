@@ -22,7 +22,12 @@
     [] Loading trees takes forever and too many requests
     [] Move tree rendering to lib
     [] Move repo management to MontaanUserRepos
+    [] Sort repos
     [] Move tree rebuild into a worker
+    [] Optimize React prop flow (only take in absolutely necessary props)
+        [] Search
+        [] CommitInfo
+        [] CommitControls
     [x] Optimize the text layout library
     [x] Optimize layoutDir
     [x] Move visibility checking to tree builder
@@ -43,6 +48,7 @@
 
 # KEY FEATURES
 
+    [] Re-enable CommitControls
     [] Thumbnail mip pyramid server
         [] Copy from Muryu?
     [] Custom layouts

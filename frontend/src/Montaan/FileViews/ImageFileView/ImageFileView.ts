@@ -43,12 +43,17 @@ export default class ImageFileView extends FileView {
 		this.loadListeners.splice(0);
 	}
 
-	load(src: string) {
+	async load(arrayBufferPromise: Promise<ArrayBuffer | undefined>) {
+		const buf = await arrayBufferPromise;
+		if (buf === undefined) return;
+		const blob = new Blob([buf]);
+		const url = URL.createObjectURL(blob);
 		var img = new Image();
 		img.crossOrigin = 'anonymous';
-		img.src = src;
+		img.src = url;
 		const obj = this.mesh;
 		img.onload = () => {
+			URL.revokeObjectURL(url);
 			if (obj.parent) {
 				var maxD = Math.max(img.width, img.height);
 				obj.scale.x *= img.width / maxD;

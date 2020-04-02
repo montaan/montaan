@@ -334,3 +334,13 @@ export async function readDir(tree: FSEntry, path: string): Promise<void> {
 		}
 	}
 }
+
+export async function readFile(tree: FSEntry, path: string): Promise<ArrayBuffer | undefined> {
+	const fs = getFilesystemForPath(tree, path);
+	if (fs) {
+		const { filesystem, relativePath } = fs;
+		if (filesystem.filesystem) {
+			return filesystem.filesystem.readFile(relativePath);
+		}
+	}
+}

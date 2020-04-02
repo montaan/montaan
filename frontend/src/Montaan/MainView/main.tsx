@@ -5,6 +5,7 @@ import {
 	getNearestFSEntryForURL,
 	FSEntry,
 	ExtendedFSEntry,
+	readFile,
 } from '../lib/filesystem';
 import Colors from '../lib/Colors';
 import Text from '../lib/Text';
@@ -333,7 +334,7 @@ export class Tabletree {
 	}
 
 	showFileTree(tree: FileTree, force: boolean = false) {
-		if (this.treeBuildInProgress || this.treeVersion === this.treeBuildVersion || force) {
+		if ((this.treeBuildInProgress || this.treeVersion === this.treeBuildVersion) && !force) {
 			return;
 		}
 		this.treeBuildInProgress = true;
@@ -400,11 +401,11 @@ export class Tabletree {
 		this.textGeometry.drawRange.count = textVertexCount;
 		this.model.geometry.boundingBox = boundingBox;
 		this.model.geometry.boundingSphere = boundingSphere;
-		const currentlyVisible = new Set();
+		const currentlyVisible = new Set<string>();
 		visibleFiles.forEach((fsEntry) => {
-			// const path = getFullPath(fsEntry);
-			// this.addFileView(this.visibleFiles, path, fsEntry);
-			currentlyVisible.add(fsEntry);
+			const path = getFullPath(fsEntry);
+			this.addFileView(this.visibleFiles, path, fsEntry);
+			currentlyVisible.add(path);
 		});
 		this.visibleFiles.children.forEach((child) => {
 			const fileView = child as FileView;
@@ -473,7 +474,7 @@ export class Tabletree {
 	}
 
 	addFileView(visibleFiles: VisibleFiles, fullPath: string, fsEntry: FSEntry) {
-		if (visibleFiles.visibleSet.has(fullPath)) return;
+		if (visibleFiles.visibleSet.has(fullPath) || !this.fileTree) return;
 		const view = Colors.imageRE.test(fullPath) ? ImageFileView : TextFileView;
 		fsEntry.contentObject = new view(
 			fsEntry,
@@ -490,7 +491,7 @@ export class Tabletree {
 				delete fsEntry.navigationCoords;
 			}
 		});
-		fsEntry.contentObject.load(this.api.server + '/repo/file' + fullPath);
+		fsEntry.contentObject.load(readFile(this.fileTree, fullPath));
 
 		visibleFiles.visibleSet.set(fullPath, fsEntry.contentObject);
 		visibleFiles.add(fsEntry.contentObject);
@@ -542,6 +543,7 @@ export class Tabletree {
 	async goToFSEntryCoords(fsEntry: FSEntry, coords: number[], model = this.model) {
 		const { scene, camera } = this;
 		scene.updateMatrixWorld();
+		this.goToFSEntry(fsEntry, model);
 		const res = fsEntry.contentObject && (await fsEntry.contentObject.goToCoords(coords));
 		if (!res) {
 			fsEntry.navigationCoords = { coords };
@@ -984,7 +986,7 @@ export class Tabletree {
 	render() {
 		const { scene, camera, renderer } = this;
 
-		if (this.tree) this.showFileTree(this.tree);
+		if (this.tree) this.showFileTree(this.tree, true);
 		this.linksModel.updateLinks(this.currentFrame);
 
 		const d = this.getCameraDistanceToModel();

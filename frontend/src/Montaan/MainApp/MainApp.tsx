@@ -26,12 +26,16 @@ import { QFrameAPI } from '../../lib/api';
 import { FSEntry, createFSTree } from '../lib/filesystem';
 import WorkQueue from '../lib/WorkQueue';
 
-import MontaanGitFilesystem from '../lib/filesystems/MontaanGitFilesystem';
+import {
+	MontaanGitFilesystem,
+	MontaanGitBranchFilesystem,
+} from '../lib/filesystems/MontaanGitFilesystem';
 import MontaanUserReposFilesystem, {
 	RepoInfo,
 } from '../lib/filesystems/MontaanUserReposFilesystem';
 
 registerFileSystem('montaanGit', MontaanGitFilesystem);
+registerFileSystem('montaanGitBranch', MontaanGitBranchFilesystem);
 registerFileSystem('montaanUserRepos', MontaanUserReposFilesystem);
 
 export interface MainAppProps extends RouteComponentProps {

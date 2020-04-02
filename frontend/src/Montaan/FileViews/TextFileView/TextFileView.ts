@@ -264,14 +264,9 @@ export default class TextFileView extends FileView {
 		return contents;
 	}
 
-	async load(src: string) {
-		let responseBuffer;
-		try {
-			responseBuffer = await (await fetch(src)).arrayBuffer();
-		} catch (e) {
-			console.error(e);
-			return;
-		}
+	async load(arrayBufferPromise: Promise<ArrayBuffer | undefined>) {
+		const responseBuffer = await arrayBufferPromise;
+		if (responseBuffer === undefined) return;
 		if (responseBuffer.byteLength > this.MAX_SIZE || !this.parent) return;
 
 		const u8 = new Uint8Array(responseBuffer);

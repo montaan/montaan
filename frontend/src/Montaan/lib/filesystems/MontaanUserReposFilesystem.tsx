@@ -31,10 +31,16 @@ export default class MontaanUserReposFilesystem extends Filesystem {
 
 	async readDir(path: string): Promise<FSEntry | null> {
 		const tree = createFSTree('', '');
-		(await this.api.get('/repo/list')).forEach((repo: RepoInfo) => {
+		const repos = await this.api.get('/repo/list');
+		repos.sort((a: RepoInfo, b: RepoInfo) => {
+			let cmp = a.owner.localeCompare(b.owner);
+			if (cmp === 0) cmp = a.name.localeCompare(b.name);
+			return cmp;
+		});
+		repos.forEach((repo: RepoInfo) => {
 			const fsEntry = mount(
 				tree,
-				`montaanGit:///${repo.owner}/${repo.name}/HEAD`,
+				`montaanGit:///${repo.owner}/${repo.name}`,
 				`/${repo.name}`,
 				this.api
 			);

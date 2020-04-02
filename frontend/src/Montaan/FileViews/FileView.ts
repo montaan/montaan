@@ -84,7 +84,7 @@ export default class FileView extends THREE.Object3D {
 		return undefined;
 	}
 
-	load(url: string): void {}
+	load(arrayBufferPromise: Promise<ArrayBuffer | undefined>): void {}
 
 	ontick(t: number, dt: number): void {}
 }

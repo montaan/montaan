@@ -11,10 +11,10 @@ import TourSelector from '../../TourSelector';
 import Player from '../../Player';
 import CommitControls from '../../CommitControls';
 import CommitInfo from '../../CommitInfo';
-import { getFullPath } from '../filesystem/filesystem';
+import { getFullPath, createFSTree, mount } from '../filesystem/filesystem';
 import Search from '../../Search';
 
-export default class MontaanGitFilesystem extends Filesystem {
+export class MontaanGitBranchFilesystem extends Filesystem {
 	repo: string;
 	ref: string;
 	commitData?: CommitData;
@@ -26,8 +26,8 @@ export default class MontaanGitFilesystem extends Filesystem {
 	constructor(url: string, api: QFrameAPI, mountPoint: FSEntry) {
 		super(url, api, mountPoint);
 		const urlSegments = this.url.pathname.replace(/^\/+/, '').split('/');
-		this.repo = urlSegments.slice(0, -1).join('/');
-		this.ref = urlSegments[urlSegments.length - 1];
+		this.repo = urlSegments.slice(0, 2).join('/');
+		this.ref = urlSegments.slice(2).join('/');
 	}
 
 	getUIComponents(state: FSState): React.ReactElement {
@@ -106,11 +106,17 @@ export default class MontaanGitFilesystem extends Filesystem {
 	}
 
 	async readData() {
-		const commitObj = (await this.api.getType(
-			'/repo/fs/' + this.repo + '/log.json',
-			{},
-			'json'
-		)) as RawCommitData;
+		const commitObj = // await this.api.postType(
+			// '/repo/log',
+			// { repo: this.repo, ref: this.ref },
+			// {},
+			// 'json'
+			// )
+			(await this.api.getType(
+				'/repo/fs/' + this.repo + '/log.json',
+				{},
+				'json'
+			)) as RawCommitData;
 		this.commitData = parseCommits(commitObj);
 		try {
 			const deps = (await this.api.getType(
@@ -166,6 +172,66 @@ export default class MontaanGitFilesystem extends Filesystem {
 			{},
 			'arrayBuffer'
 		);
+	}
+
+	async writeFile(path: string, contents: ArrayBuffer): Promise<boolean> {
+		throw new NotImplementedError("montaanGit doesn't support writes");
+	}
+
+	async rm(path: string): Promise<boolean> {
+		throw new NotImplementedError("montaanGit doesn't support writes");
+	}
+
+	async rmdir(path: string): Promise<boolean> {
+		throw new NotImplementedError("montaanGit doesn't support writes");
+	}
+}
+export class MontaanGitFilesystem extends Filesystem {
+	repo: string;
+	commitData?: CommitData;
+	dependencies?: TreeLink[];
+	dependencySrcIndex?: Map<TreeLinkKey, TreeLink[]>;
+	dependencyDstIndex?: Map<TreeLinkKey, TreeLink[]>;
+	fetchingCommits = false;
+
+	constructor(url: string, api: QFrameAPI, mountPoint: FSEntry) {
+		super(url, api, mountPoint);
+		this.repo = this.url.pathname.replace(/^\/+/, '');
+	}
+
+	async readDir(path: string): Promise<FSEntry | null> {
+		if (path !== '')
+			throw new Error(
+				'montaanGit only has a root directory, tried to readDir ' + JSON.stringify(path)
+			);
+		const tree = createFSTree('', '');
+		const branches: string[] = await this.api.post('/repo/branch', { repo: this.repo });
+		branches.sort();
+		console.log(branches);
+		branches.forEach((branch: string) => {
+			const pathSegments = branch.split('/');
+			let dir = tree;
+			for (let i = 0; i < pathSegments.length - 1; i++) {
+				const pathSegment = pathSegments[i];
+				if (!dir.entries!.has(pathSegment)) {
+					dir.entries!.set(pathSegment, createFSTree(pathSegment, ''));
+				}
+				dir = dir.entries!.get(pathSegment)!;
+				dir.fetched = true;
+			}
+			const fsEntry = mount(
+				tree,
+				`montaanGitBranch:///${this.repo}/${branch}`,
+				`/${branch}`,
+				this.api
+			);
+			fsEntry.data = branch;
+		});
+		return tree;
+	}
+
+	async readFile(path: string): Promise<ArrayBuffer> {
+		throw new NotImplementedError("montaanGit doesn't support readFile");
 	}
 
 	async writeFile(path: string, contents: ArrayBuffer): Promise<boolean> {

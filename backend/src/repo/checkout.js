@@ -2,11 +2,10 @@ const { Path, Exec, assertRepoDir } = require('./lib');
 
 module.exports = async function(req, res) {
 	var [error, { repo, path, hash }] = assertShape(
-		{ repo: isString, path: isString, hash: isString },
+		{ repo: isString, path: isString, hash: isRegExp(/^[a-zA-Z0-9._/-]+$/) },
 		await bodyAsJson(req)
 	);
 	if (error) return error;
-	if (!/^[a-f0-9A-Z]+$/.test(hash)) return '400: Malformed hash';
 	var [error, { filePath }] = assertRepoDir(Path.join(repo, 'repo'));
 	if (error) return error;
 	await new Promise((resolve, reject) => {
@@ -16,7 +15,7 @@ module.exports = async function(req, res) {
 			stderr
 		) {
 			if (error) reject(error);
-			res.writeHeader(200, { 'Content-Type': 'text/plain' });
+			res.writeHeader(200, { 'Content-Type': 'application/octet-stream' });
 			await res.end(stdout || '');
 			resolve();
 		});

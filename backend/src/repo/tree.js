@@ -36,11 +36,15 @@ const listTree = async (repoPath, hash, path, maxCount = 10000) => {
 
 module.exports = async function(req, res) {
 	var [error, { repo, hash, paths, recursive }] = assertShape(
-		{ repo: isString, hash: isString, paths: isArray(isString), recursive: isBoolean },
+		{
+			repo: isString,
+			hash: isRegExp(/^[a-zA-Z0-9._/-]+$/),
+			paths: isArray(isString),
+			recursive: isBoolean,
+		},
 		await bodyAsJson(req)
 	);
 	if (error) return error;
-	if (!/^[a-zA-Z0-9\-\_]+$/.test(hash)) return '400: Malformed hash';
 	var [error, { filePath }] = assertRepoDir(Path.join(repo, 'repo'));
 	if (error) return error;
 	await new Promise(async (resolve, reject) => {
