@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { FSEntry, createFSTree } from './filesystem';
+import { FSEntry, FSDirEntry } from './filesystem';
 import { FileTree } from '../MainApp';
 var slash = '/'.charCodeAt(0);
 
@@ -101,14 +101,9 @@ var utils = {
 				branch.entries = new Map<string, FSEntry>();
 			}
 			if (!branch.entries.has(segment)) {
-				branch.entries.set(segment, {
-					...createFSTree(segment, ''),
-					name: segment,
-					title: segment,
-					entries: new Map<string, FSEntry>(),
-					index: undefined,
-					size: 0,
-				});
+				const fsEntry = new FSDirEntry(segment);
+				fsEntry.parent = branch;
+				branch.entries.set(segment, fsEntry);
 				addCount++;
 			}
 			branch = branch.entries.get(segment)!; // We set entries#segment to a value above.
@@ -118,14 +113,10 @@ var utils = {
 		}
 		if (!branch.entries.has(segments[i])) {
 			branch.size++;
-			branch.entries.set(segments[i], {
-				...createFSTree(segments[i], ''),
-				name: segments[i],
-				title: segments[i],
-				entries: dir ? new Map<string, FSEntry>() : undefined,
-				index: undefined,
-				parent: branch,
-			});
+			const fsEntry = new FSEntry(segments[i]);
+			fsEntry.entries = dir ? new Map<string, FSEntry>() : undefined;
+			fsEntry.parent = branch;
+			branch.entries.set(segments[i], fsEntry);
 			addCount++;
 		}
 		branch = branch.entries.get(segments[i])!; // We set entries#segment to a value above.
@@ -186,7 +177,7 @@ var utils = {
 		var gitStyle = /^\d{6} (blob|tree) [a-f0-9]{40}\t[^\u0000]+\u0000/.test(fileString);
 		var fileTree, fileCount;
 		if (!targetTree) {
-			fileTree = createFSTree('', '');
+			fileTree = new FSDirEntry();
 			fileCount = 0;
 		} else {
 			fileTree = targetTree.tree;
@@ -226,10 +217,9 @@ var utils = {
 		targetTree?: FileTree
 	) {
 		const sep = 0;
-		// eslint-disable-next-line
 		var fileTree, fileCount;
 		if (!targetTree) {
-			fileTree = createFSTree('', '');
+			fileTree = new FSDirEntry();
 			fileCount = 0;
 		} else {
 			fileTree = targetTree.tree;
@@ -284,7 +274,8 @@ var utils = {
 			userName = repoMatch[1];
 			repoName = repoMatch[1] + '/' + repoMatch[2];
 		} else {
-			return createFSTree('', '');
+			const fsEntry = new FSDirEntry();
+			return fsEntry;
 		}
 		var paths = githubResult.tree.map(function(file: { path: string; type: string }) {
 			return '/' + repoName + '/' + file.path + (file.type === 'tree' ? '/' : '');

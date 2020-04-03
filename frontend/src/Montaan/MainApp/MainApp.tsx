@@ -15,27 +15,24 @@ import { authorCmp, Commit } from '../lib/parse-diff';
 import {
 	getPathEntry,
 	getFullPath,
-	mount,
 	readDir,
 	registerFileSystem,
 	getAllFilesystemsForPath,
+	mountURL,
+	FSDirEntry,
 } from '../lib/filesystem';
 
 import styles from './MainApp.module.scss';
 import { QFrameAPI } from '../../lib/api';
-import { FSEntry, createFSTree } from '../lib/filesystem';
+import { FSEntry } from '../lib/filesystem';
 import WorkQueue from '../lib/WorkQueue';
 
-import {
-	MontaanGitFilesystem,
-	MontaanGitBranchFilesystem,
-} from '../lib/filesystems/MontaanGitFilesystem';
+import { MontaanGitFilesystem } from '../lib/filesystems/MontaanGitFilesystem';
 import MontaanUserReposFilesystem, {
 	RepoInfo,
 } from '../lib/filesystems/MontaanUserReposFilesystem';
 
 registerFileSystem('montaanGit', MontaanGitFilesystem);
-registerFileSystem('montaanGitBranch', MontaanGitBranchFilesystem);
 registerFileSystem('montaanUserRepos', MontaanUserReposFilesystem);
 
 export interface MainAppProps extends RouteComponentProps {
@@ -76,7 +73,7 @@ UserInfo.mock = new UserInfo('foo');
 
 export interface FileTree {
 	count: number;
-	tree: FSEntry;
+	tree: FSDirEntry;
 }
 
 export interface GoToTarget {
@@ -215,7 +212,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		super(props);
 		this.state = {
 			...this.emptyState,
-			fileTree: { count: 0, tree: createFSTree('', '') },
+			fileTree: { count: 0, tree: new FSDirEntry() },
 			repos: [],
 			navUrl: '',
 			ref: 'HEAD',
@@ -227,7 +224,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		if (this.props.userInfo) {
 			const tree = this.state.fileTree.tree;
 			const user = this.props.userInfo.name;
-			mount(tree, `montaanUserRepos:///${user}`, `/${user}`, this.props.api);
+			mountURL(tree, `montaanUserRepos:///${user}`, `/${user}`, this.props.api);
 		}
 	}
 
@@ -243,7 +240,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		const user = this.props.userInfo.name;
 
 		if (!tree.entries.has(user)) {
-			mount(tree, `montaanUserRepos:///${user}`, `/${user}`, this.props.api);
+			mountURL(tree, `montaanUserRepos:///${user}`, `/${user}`, this.props.api);
 		}
 
 		await this.requestDirs([`/${user}`], []);
@@ -302,7 +299,6 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 			dropEntries.forEach((fsEntry) => {
 				fsEntry.entries = new Map();
 				fsEntry.fetched = false;
-				fsEntry.building = false;
 			});
 		}
 		if (paths.length > 0) {

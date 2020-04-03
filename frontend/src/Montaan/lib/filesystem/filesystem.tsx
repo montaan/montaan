@@ -5,52 +5,60 @@ import { SDFText } from '../third_party/three-bmfont-text-modified';
 
 export const EmptyLabelGeometry = SDFText;
 
-export interface FSEntry {
-	labelGeometry: SDFText;
-	distanceFromCenter: number;
-	mode: any;
-	type: any;
-	hash: any;
+export class FSEntry {
+	labelGeometry: SDFText = SDFText.mock;
+	distanceFromCenter: number = 0;
+	mode: string = '';
+	type: string = '';
+	hash: string = '';
 	name: string;
 	title: string;
 	entries?: Map<string, FSEntry>;
 	parent?: FSEntry;
 	filesystem?: IFilesystem;
-	size: number;
+	size: number = 0;
 
-	fetched?: boolean | number;
-	building?: boolean;
+	fetched?: boolean = false;
 
-	x: number;
-	y: number;
-	z: number;
-	scale: number;
+	x: number = 0;
+	y: number = 0;
+	z: number = 0;
+	scale: number = 1;
 
-	filesBox: {};
+	filesBox: {} = {};
 	color?: number[];
 
-	data: any;
+	data?: any;
 
 	contentObject?: FileView;
 
 	index?: number;
-	vertexIndex: number;
-	textVertexIndex: number;
+	vertexIndex: number = -1;
+	textVertexIndex: number = -1;
 
-	lastIndex: number;
-	lastVertexIndex: number;
-	lastTextVertexIndex: number;
+	lastIndex: number = -1;
+	lastVertexIndex: number = -1;
+	lastTextVertexIndex: number = -1;
 
 	navigationCoords?: { coords?: number[]; search?: string };
-	lineCount: number;
+	lineCount: number = 0;
 
 	action?: string;
+
+	constructor(name: string = '') {
+		this.name = name;
+		this.title = name;
+	}
+}
+
+export class FSDirEntry extends FSEntry {
+	entries?: Map<string, FSEntry> = new Map<string, FSEntry>();
 }
 
 export class NotImplementedError extends Error {}
 
 export interface IFilesystem {
-	mountPoint: FSEntry;
+	mountPoint?: FSEntry;
 	readDir(path: string): Promise<FSEntry | null>;
 	readFile(path: string): Promise<ArrayBuffer>;
 	writeFile(path: string, contents: ArrayBuffer): Promise<boolean>;
@@ -65,6 +73,7 @@ type Constructor<T> = {
 
 export class Namespace implements IFilesystem {
 	mountPoint: FSEntry;
+
 	constructor(mountPoint: FSEntry) {
 		this.mountPoint = mountPoint;
 	}
@@ -105,19 +114,19 @@ export class Namespace implements IFilesystem {
 }
 
 export class Filesystem implements IFilesystem {
-	url: URL;
-	api: QFrameAPI;
-	mountPoint: FSEntry;
+	options: any;
+	mountPoint?: FSEntry;
+	gid: string;
 
-	constructor(url: string, api: QFrameAPI, fsEntry: FSEntry) {
-		this.url = new URL(url);
-		this.api = api;
-		this.mountPoint = fsEntry;
+	static gid: number = 0;
+
+	constructor(options: any) {
+		this.options = options;
+		this.gid = (Filesystem.gid++).toString();
 	}
 
 	getUIComponents(state: any): React.ReactElement {
-		const path = getFullPath(this.mountPoint);
-		return <div key={path}></div>;
+		return <div key={this.gid}></div>;
 	}
 
 	async readDir(path: string): Promise<FSEntry | null> {
@@ -151,51 +160,32 @@ export function getFSType(url: string) {
 	return url.split(':')[0];
 }
 
-export function createFSTree(name: string, url: string, fsType?: string, api?: QFrameAPI): FSEntry {
-	const fs = fsType && RegisteredFileSystems.get(fsType);
-	const fsEntry: FSEntry = {
-		name,
-		title: name,
-		entries: new Map(),
-		fetched: false,
-		filesystem: undefined,
-		size: 0,
-		scale: 0,
-		mode: '',
-		type: '',
-		hash: '',
-
-		x: 0,
-		y: 0,
-		z: 0,
-		distanceFromCenter: 1e9,
-
-		navigationCoords: undefined,
-		lineCount: 0,
-
-		filesBox: {},
-		lastIndex: -1,
-		lastVertexIndex: -1,
-		lastTextVertexIndex: -1,
-		textVertexIndex: -1,
-		vertexIndex: -1,
-
-		data: undefined,
-		labelGeometry: SDFText.mock,
-	};
-	if (fs) fsEntry.filesystem = new fs(url, api, fsEntry);
-	return fsEntry;
+export function mountURL(fileTree: FSEntry, url: string, mountPoint: string, api: QFrameAPI) {
+	const fsType = getFSType(url);
+	const filesystem = RegisteredFileSystems.get(fsType);
+	if (!filesystem) throw new Error("Couldn't find a registered filesystem for URL: " + url);
+	const fs = new filesystem({ url, api });
+	return mount(fileTree, mountPoint, fs);
 }
 
-export function mount(fileTree: FSEntry, url: string, mountPoint: string, api: QFrameAPI) {
-	const fsType = getFSType(url);
+export function mount(fileTree: FSEntry, mountPoint: string, filesystem: Filesystem | undefined) {
 	const cleanedMountPoint = mountPoint.replace(/\/+$/, '');
 	const mountPointSegments = cleanedMountPoint.split('/');
 	const fsEntry = getPathEntry(fileTree, mountPointSegments.slice(0, -1).join('/'));
-	if (!fsEntry) throw new Error('fileTree does not contain path');
+	if (!fsEntry)
+		throw new Error(
+			'fileTree does not contain path: ' + mountPointSegments.slice(0, -1).join('/')
+		);
 	const name = mountPointSegments[mountPointSegments.length - 1];
-	if (!fsEntry.entries) throw new Error('mountPoint is not a directory');
-	const fs = createFSTree(name, url, fsType, api);
+	if (!fsEntry.entries)
+		throw new Error(
+			'mountPoint is not a directory: ' + mountPointSegments.slice(0, -1).join('/')
+		);
+	const fs = new FSDirEntry(name);
+	if (filesystem) {
+		fs.filesystem = filesystem;
+		filesystem.mountPoint = fs;
+	}
 	fs.parent = fsEntry;
 	fsEntry.entries.set(name, fs);
 	return fs;

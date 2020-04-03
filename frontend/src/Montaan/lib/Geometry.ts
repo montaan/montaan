@@ -147,7 +147,7 @@ export default {
 		const maxX = Math.max(a.x, b.x, c.x, d.x);
 		const minY = Math.min(a.y, b.y, c.y, d.y);
 		const maxY = Math.max(a.y, b.y, c.y, d.y);
-		return {
+		const bbox = {
 			minX,
 			minY,
 			maxX,
@@ -160,45 +160,37 @@ export default {
 			c,
 			d,
 		};
+		return bbox;
 	},
 
 	bboxAtFrustumCenter: function(bbox: BBox, model: THREE.Mesh, camera: THREE.Camera) {
-		const { a, b, c, d } = bbox;
-		const minX = Math.min(a.x, b.x, c.x, d.x);
-		const maxX = Math.max(a.x, b.x, c.x, d.x);
-		const minY = Math.min(a.y, b.y, c.y, d.y);
-		const maxY = Math.max(a.y, b.y, c.y, d.y);
-		return maxX > 0 && minX < 0 && maxY > 0 && minY < 0;
+		return bbox.maxX > 0 && bbox.minX < 0 && bbox.maxY > 0 && bbox.minY < 0;
 	},
 
 	bboxDistanceToFrustumCenter: function(bbox: BBox, model: THREE.Mesh, camera: THREE.Camera) {
-		const { a, b, c, d } = bbox;
-		const avgX = (a.x + b.x + c.x + d.x) / 4;
-		const avgY = (a.y + b.y + c.y + d.y) / 4;
-		return Math.sqrt(avgX * avgX + avgY * avgY);
+		const avgX = (bbox.minX + bbox.maxX) / 2;
+		const avgY = (bbox.minY + bbox.maxY) / 2;
+		const d = Math.sqrt(avgX * avgX + avgY * avgY);
+		return d;
 	},
 
 	bboxInsideFrustum: function(bbox: BBox, model: THREE.Mesh, camera: THREE.Camera) {
-		const { a, b, c, d } = bbox;
-		const minX = Math.min(a.x, b.x, c.x, d.x);
-		const maxX = Math.max(a.x, b.x, c.x, d.x);
-		const minY = Math.min(a.y, b.y, c.y, d.y);
-		const maxY = Math.max(a.y, b.y, c.y, d.y);
-		return maxX > -1 && minX < 1 && maxY > -1 && minY < 1;
+		return bbox.maxX > -1 && bbox.minX < 1 && bbox.maxY > -1 && bbox.minY < 1;
 	},
 
 	bboxCoversFrustum: function(bbox: BBox, model: THREE.Mesh, camera: THREE.Camera) {
-		const { a, b, c, d, minX, maxX, minY, maxY } = bbox;
+		// const { a, b, c, d, minX, maxX, minY, maxY } = bbox;
 		// Bounding box covers frustum
-		if (!(maxX > 1 && minX < -1 && maxY > 1 && minY < -1)) return false;
-		// All the four corners of the frustum are inside the quad a, b, c, d.
-		const points = [a, b, c, d];
-		return (
-			this.pointInsidePolygon(-1, -1, points) &&
-			this.pointInsidePolygon(1, -1, points) &&
-			this.pointInsidePolygon(-1, 1, points) &&
-			this.pointInsidePolygon(1, 1, points)
-		);
+		return bbox.maxX > 1 && bbox.minX < -1 && bbox.maxY > 1 && bbox.minY < -1;
+		// if (!(maxX > 1 && minX < -1 && maxY > 1 && minY < -1)) return false;
+		// // All the four corners of the frustum are inside the quad a, b, c, d.
+		// const points = [a, b, c, d];
+		// return (
+		// 	this.pointInsidePolygon(-1, -1, points) &&
+		// 	this.pointInsidePolygon(1, -1, points) &&
+		// 	this.pointInsidePolygon(-1, 1, points) &&
+		// 	this.pointInsidePolygon(1, 1, points)
+		// );
 	},
 
 	pointInsidePolygon: function(x: number, y: number, points: { y: number; x: number }[]) {

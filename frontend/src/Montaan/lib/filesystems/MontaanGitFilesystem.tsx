@@ -11,7 +11,7 @@ import TourSelector from '../../TourSelector';
 import Player from '../../Player';
 import CommitControls from '../../CommitControls';
 import CommitInfo from '../../CommitInfo';
-import { getFullPath, createFSTree, mount } from '../filesystem/filesystem';
+import { getFullPath, mount, FSDirEntry } from '../filesystem/filesystem';
 import Search from '../../Search';
 
 export class MontaanGitBranchFilesystem extends Filesystem {
@@ -23,25 +23,28 @@ export class MontaanGitBranchFilesystem extends Filesystem {
 	dependencyDstIndex?: Map<TreeLinkKey, TreeLink[]>;
 	fetchingCommits = false;
 
-	constructor(url: string, api: QFrameAPI, mountPoint: FSEntry) {
-		super(url, api, mountPoint);
-		const urlSegments = this.url.pathname.replace(/^\/+/, '').split('/');
-		this.repo = urlSegments.slice(0, 2).join('/');
-		this.ref = urlSegments.slice(2).join('/');
+	options: { repo: string; branch: string; api: QFrameAPI };
+
+	constructor(options: { repo: string; branch: string; api: QFrameAPI }) {
+		super(options);
+		this.options = options;
+		this.repo = options.repo;
+		this.ref = options.branch;
 	}
 
 	getUIComponents(state: FSState): React.ReactElement {
-		// if (!this.commitData && !this.fetchingCommits) {
-		// 	this.fetchingCommits = true;
-		// 	this.readData().then((d) => {
-		// 		this.fetchingCommits = false;
-		// 		state.setCommitData(this.commitData);
-		// 		state.setDependencies(this.dependencies || []);
-		// 	});
-		// } else if (state.commitData !== this.commitData) {
-		// 	state.setCommitData(this.commitData);
-		// 	state.setDependencies(this.dependencies || []);
-		// }
+		if (!this.commitData && !this.fetchingCommits) {
+			this.fetchingCommits = true;
+			this.readData().then((d) => {
+				this.fetchingCommits = false;
+				state.setCommitData(this.commitData);
+				state.setDependencies(this.dependencies || []);
+			});
+		} else if (state.commitData !== this.commitData) {
+			state.setCommitData(this.commitData);
+			state.setDependencies(this.dependencies || []);
+		}
+		if (!this.mountPoint) return super.getUIComponents(state);
 		const path = getFullPath(this.mountPoint);
 		const repoPrefix = this.repo;
 		return (
@@ -60,13 +63,13 @@ export class MontaanGitBranchFilesystem extends Filesystem {
 					path={path}
 					repoPrefix={repoPrefix}
 					fileTree={this.mountPoint}
-					api={this.api}
+					api={this.options.api}
 				/>
 				<Player
 					repoPrefix={repoPrefix}
 					fileTree={state.fileTree}
 					navigationTarget={state.navigationTarget}
-					api={this.api}
+					api={this.options.api}
 				/>
 				<CommitControls
 					activeCommitData={state.activeCommitData}
@@ -112,14 +115,14 @@ export class MontaanGitBranchFilesystem extends Filesystem {
 			// {},
 			// 'json'
 			// )
-			(await this.api.getType(
+			(await this.options.api.getType(
 				'/repo/fs/' + this.repo + '/log.json',
 				{},
 				'json'
 			)) as RawCommitData;
 		this.commitData = parseCommits(commitObj);
 		try {
-			const deps = (await this.api.getType(
+			const deps = (await this.options.api.getType(
 				'/repo/fs/' + this.repo + '/deps.json',
 				{},
 				'json'
@@ -155,7 +158,7 @@ export class MontaanGitBranchFilesystem extends Filesystem {
 		if (reqPath === '') reqPath = '.';
 		if (reqPath[0] === '/') reqPath = '.' + reqPath;
 		reqPath += '/';
-		const pathBuf: ArrayBuffer = await this.api.postType(
+		const pathBuf: ArrayBuffer = await this.options.api.postType(
 			'/repo/tree',
 			{ repo: this.repo, paths: [reqPath], hash: this.ref, recursive: false },
 			{},
@@ -166,7 +169,7 @@ export class MontaanGitBranchFilesystem extends Filesystem {
 	}
 
 	async readFile(path: string) {
-		return this.api.postType(
+		return this.options.api.postType(
 			'/repo/checkout',
 			{ repo: this.repo, path: path.replace(/^\//, ''), hash: this.ref },
 			{},
@@ -192,41 +195,46 @@ export class MontaanGitFilesystem extends Filesystem {
 	dependencies?: TreeLink[];
 	dependencySrcIndex?: Map<TreeLinkKey, TreeLink[]>;
 	dependencyDstIndex?: Map<TreeLinkKey, TreeLink[]>;
-	fetchingCommits = false;
+	fetchingBranches = true;
 
-	constructor(url: string, api: QFrameAPI, mountPoint: FSEntry) {
-		super(url, api, mountPoint);
-		this.repo = this.url.pathname.replace(/^\/+/, '');
+	options: { url: string; api: QFrameAPI };
+
+	constructor(options: { url: string; api: QFrameAPI }) {
+		super(options);
+		this.options = options;
+		this.repo = new URL(this.options.url).pathname.replace(/^\/+/, '');
 	}
 
-	async readDir(path: string): Promise<FSEntry | null> {
-		if (path !== '')
-			throw new Error(
-				'montaanGit only has a root directory, tried to readDir ' + JSON.stringify(path)
-			);
-		const tree = createFSTree('', '');
-		const branches: string[] = await this.api.post('/repo/branch', { repo: this.repo });
+	async readDir(path: string): Promise<FSDirEntry | null> {
+		if (path !== '') return null;
+		const tree = new FSDirEntry();
+		const branches: string[] = await this.options.api.post('/repo/branch', { repo: this.repo });
 		branches.sort();
-		console.log(branches);
 		branches.forEach((branch: string) => {
 			const pathSegments = branch.split('/');
 			let dir = tree;
 			for (let i = 0; i < pathSegments.length - 1; i++) {
 				const pathSegment = pathSegments[i];
 				if (!dir.entries!.has(pathSegment)) {
-					dir.entries!.set(pathSegment, createFSTree(pathSegment, ''));
+					const fsEntry = new FSDirEntry(pathSegment);
+					fsEntry.parent = dir;
+					dir.entries!.set(pathSegment, fsEntry);
 				}
 				dir = dir.entries!.get(pathSegment)!;
 				dir.fetched = true;
 			}
 			const fsEntry = mount(
 				tree,
-				`montaanGitBranch:///${this.repo}/${branch}`,
 				`/${branch}`,
-				this.api
+				new MontaanGitBranchFilesystem({
+					repo: this.repo,
+					branch: branch,
+					api: this.options.api,
+				})
 			);
 			fsEntry.data = branch;
 		});
+		this.fetchingBranches = false;
 		return tree;
 	}
 

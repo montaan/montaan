@@ -19,7 +19,12 @@ module.exports = async function(req, res) {
 			if (error) reject(error);
 			const lines = stdout.split('\n');
 			lines.pop();
-			const cleanedUpLines = lines.map((l) => l.slice(2).replace(/ -> .*/, ''));
+			const cleanedUpLines = lines.map((l) =>
+				l
+					.slice(2)
+					.replace(/ -> .*/, '')
+					.replace(/^remotes\//, '')
+			);
 			await res.json(cleanedUpLines);
 			resolve();
 		});

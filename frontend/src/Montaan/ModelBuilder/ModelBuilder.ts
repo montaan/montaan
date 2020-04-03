@@ -167,7 +167,7 @@ export default class ModelBuilder {
 		const boundingSphere = new THREE.Sphere();
 		const boundingBox = new THREE.Box3();
 
-		this.computeBounds(boundingBox, boundingSphere, verts, 3);
+		this.computeBounds(boundingBox, boundingSphere, verts, vertexCount, 3);
 
 		return {
 			verts,
@@ -193,7 +193,12 @@ export default class ModelBuilder {
 		};
 	}
 
-	bounds3(positions: Float32Array, itemSize: number, box: { min: number[]; max: number[] }) {
+	bounds3(
+		positions: Float32Array,
+		itemCount: number,
+		itemSize: number,
+		box: { min: number[]; max: number[] }
+	) {
 		let minX = positions[0];
 		let minY = positions[1];
 		let minZ = positions[2];
@@ -201,7 +206,11 @@ export default class ModelBuilder {
 		let maxY = positions[1];
 		let maxZ = positions[2];
 
-		for (let i = 0, l = positions.length; i < l; i += itemSize) {
+		for (
+			let i = 0, l = Math.min(itemCount * itemSize, positions.length);
+			i < l;
+			i += itemSize
+		) {
 			var x = positions[i + 0];
 			var y = positions[i + 1];
 			var z = positions[i + 2];
@@ -225,10 +234,11 @@ export default class ModelBuilder {
 		boundingBox: THREE.Box3,
 		boundingSphere: THREE.Sphere,
 		positions: Float32Array,
+		itemCount: number,
 		itemSize: number
 	) {
 		const box = { min: [0, 0, 0], max: [0, 0, 0] };
-		this.bounds3(positions, itemSize, box);
+		this.bounds3(positions, itemCount, itemSize, box);
 
 		const width = box.max[0] - box.min[0];
 		const height = box.max[1] - box.min[1];
@@ -304,13 +314,20 @@ export default class ModelBuilder {
 		}
 
 		const stack = [fileTree];
+		let stackPointer = 0;
+		let stackEndPointer = 1;
 		const entriesToFetch = [];
 		const visibleFiles = [];
 		const viewWidth = window.innerWidth;
-		while (stack.length > 0) {
-			const tree = stack.pop();
-			if (!tree || !tree.entries) break;
+		let centerEntry = fileTree;
+		while (stackPointer < stack.length) {
+			const tree = stack[stackPointer++];
+			if (!tree || !tree.entries) continue;
+			const treeInNavTargetPath = tree === navTargetPath[navTargetPath.length - 1];
+			if (fileIndex > 5000 && !treeInNavTargetPath && tree !== centerEntry) continue;
 			fileIndex = this.layoutDir(
+				camera,
+				mesh,
 				tree,
 				fileIndex,
 				geo,
@@ -318,24 +335,22 @@ export default class ModelBuilder {
 				fsEntryIndex,
 				vertexIndices
 			);
-			const treeInNavTargetPath = tree === navTargetPath[navTargetPath.length - 1];
 			if (treeInNavTargetPath) navTargetPath.pop();
-			if (fileIndex > 5000 && !treeInNavTargetPath) break;
 			for (let fsEntry of tree.entries.values()) {
 				const fsEntryInNavTargetPath = fsEntry === navTargetPath[navTargetPath.length - 1];
 
 				const bbox = Geometry.getFSEntryBBox(fsEntry, mesh, camera);
 				const pxWidth = bbox.width * viewWidth * 0.5;
-				const isSmall = pxWidth < (fsEntry.entries ? 50 : 150);
+				const isSmall = pxWidth < (fsEntry.entries ? 5 : 150);
 
 				// Skip entries that are outside frustum or too small, and aren't on the nav target path.
 				if (!fsEntryInNavTargetPath && (!bbox.onScreen || isSmall)) continue;
 
 				// Directory
 				if (fsEntry.entries) {
-					stack.push(fsEntry); // Descend into directories.
+					stack[stackEndPointer++] = fsEntry; // Descend into directories.
 					// Fetch directories that haven't been fetched yet.
-					if ((fsEntryInNavTargetPath || pxWidth > 30) && !fsEntry.fetched) {
+					if ((fsEntryInNavTargetPath || pxWidth > 15) && !fsEntry.fetched) {
 						fsEntry.distanceFromCenter = Geometry.bboxDistanceToFrustumCenter(
 							bbox,
 							mesh,
@@ -354,14 +369,15 @@ export default class ModelBuilder {
 					if (Geometry.bboxCoversFrustum(bbox, mesh, camera)) {
 						zoomedInPath += '/' + fsEntry.name;
 						navigationTarget += '/' + fsEntry.name;
+						centerEntry = fsEntry;
 						smallestCovering = fsEntry;
 					} else if (Geometry.bboxAtFrustumCenter(bbox, mesh, camera)) {
 						navigationTarget += '/' + fsEntry.name;
+						centerEntry = fsEntry;
 					}
 				}
 			}
 		}
-		entriesToFetch.sort(this.cmpFSEntryDistanceFromCenter);
 		return {
 			verts: geo.verts,
 			colorVerts: geo.colorVerts,
@@ -377,6 +393,8 @@ export default class ModelBuilder {
 	}
 
 	layoutDir(
+		camera: NavCamera,
+		mesh: THREE.Mesh,
 		fileTree: FSEntry,
 		fileIndex: number,
 		geo: { verts: Float32Array; colorVerts: Float32Array },
@@ -477,15 +495,17 @@ export default class ModelBuilder {
 				}
 				maxX = Math.max(x, maxX);
 				maxY = Math.max(y, maxY);
+				const dir = dirs[off];
 				const yOff = 1 - (0.5 * y + 1) * (1 / dirSquareSide);
 				const xOff = 0.9 * x * (1 / dirSquareSide);
-				const dir = dirs[off];
 				const subX = xOff + 0.1 / dirSquareSide;
 				const subY = yOff + 0.125 / dirSquareSide;
 				dir.x = fileTree.x + subX * dirScale2;
 				dir.y = fileTree.y + yDirOff + subY * dirScale2;
 				dir.scale = (0.8 / dirSquareSide) * dirScale2;
 				dir.z = fileTree.z + dir.scale * 0.2;
+				const bbox = Geometry.getFSEntryBBox(dir, mesh, camera);
+				if (!bbox.onScreen) continue;
 				dir.index = fileIndex;
 				fileIndex++;
 				dir.vertexIndex = vertexIndices.vertexIndex;
@@ -526,18 +546,20 @@ export default class ModelBuilder {
 				}
 				maxX = Math.max(x, maxX);
 				maxY = Math.max(y, maxY);
+				const file = files[off];
 				const yOff = 1 - (y + 1) * (1 / fileSquareSide);
 				const xOff = fileXOff + x * (1 / fileSquareSide);
 				const subX = xOff + 0.05 / fileSquareSide;
 				const subY = yOff + 0.05 / fileSquareSide;
 
-				const file = files[off];
 				const fileColor = file.color || Colors.getFileColor(file);
 				file.color = fileColor;
 				file.x = filesBox.x + subX * filesScale2;
 				file.y = filesBox.y + filesYOff + subY * filesScale2;
 				file.scale = (0.9 / fileSquareSide) * filesScale2;
 				file.z = filesBox.z + file.scale * 0.2;
+				const bbox = Geometry.getFSEntryBBox(file, mesh, camera);
+				if (!bbox.onScreen) continue;
 				file.index = fileIndex;
 				file.vertexIndex = vertexIndices.vertexIndex;
 				file.lastIndex = fileIndex;

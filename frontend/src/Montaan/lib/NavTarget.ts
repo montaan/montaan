@@ -1,7 +1,7 @@
-import { FSEntry, createFSTree } from './filesystem';
+import { FSEntry } from './filesystem';
 
 export default class NavTarget {
-	static mock: NavTarget = new NavTarget(createFSTree('', ''), [], '');
+	static mock: NavTarget = new NavTarget(new FSEntry(), [], '');
 
 	fsEntry: FSEntry;
 	coords: number[];

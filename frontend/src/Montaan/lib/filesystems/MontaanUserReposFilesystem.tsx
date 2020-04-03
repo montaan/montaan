@@ -1,4 +1,4 @@
-import { Filesystem, FSEntry, createFSTree, mount, NotImplementedError } from '../filesystem';
+import { Filesystem, FSDirEntry, NotImplementedError, mountURL } from '../filesystem';
 // import React from 'react';
 
 import QFrameAPI from '../../../lib/api';
@@ -24,25 +24,25 @@ export class RepoInfo {
 export default class MontaanUserReposFilesystem extends Filesystem {
 	name: string;
 
-	constructor(url: string, api: QFrameAPI, mountPoint: FSEntry) {
-		super(url, api, mountPoint);
-		this.name = this.url.pathname.replace(/^\/+/, '');
+	constructor(options: { url: string; api: QFrameAPI }) {
+		super(options);
+		this.name = new URL(this.options.url).pathname.replace(/^\/+/, '');
 	}
 
-	async readDir(path: string): Promise<FSEntry | null> {
-		const tree = createFSTree('', '');
-		const repos = await this.api.get('/repo/list');
+	async readDir(path: string): Promise<FSDirEntry | null> {
+		const tree = new FSDirEntry();
+		const repos = await this.options.api.get('/repo/list');
 		repos.sort((a: RepoInfo, b: RepoInfo) => {
 			let cmp = a.owner.localeCompare(b.owner);
 			if (cmp === 0) cmp = a.name.localeCompare(b.name);
 			return cmp;
 		});
 		repos.forEach((repo: RepoInfo) => {
-			const fsEntry = mount(
+			const fsEntry = mountURL(
 				tree,
 				`montaanGit:///${repo.owner}/${repo.name}`,
 				`/${repo.name}`,
-				this.api
+				this.options.api
 			);
 			fsEntry.data = repo;
 		});
