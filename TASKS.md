@@ -22,20 +22,21 @@
     [] Loading trees takes forever and too many requests
     [] Move tree rendering to lib
     [] Move repo management to MontaanUserRepos
-    [] Sort repos
     [] Move tree rebuild into a worker
+        [] Serialize FSEntry tree into a buffer
     [] Optimize React prop flow (only take in absolutely necessary props)
         [] Search
         [] CommitInfo
         [] CommitControls
-    [x] Optimize the text layout library
-    [x] Optimize layoutDir
-    [x] Move visibility checking to tree builder
-    [x] Tree rebuilds have files missing
 
 # Release checklist
 
     [] Clean well-documented path to create a new component & integrate it
+        [] Write tour about creating component
+            [] Creating a filesystem
+            [] Creating filesystem components
+            [] yarn makeComponent
+            [] yarn updateComponent
     [] Solid repo import path
         [] Import Github repo
         [] In-progress spinner
@@ -414,6 +415,11 @@
     [x] MainApp is too large
         [x] Move commits to MontaanGit
         [x] Move widget loading to FSOverlays
+    [x] Sort repos
+    [x] Optimize the text layout library
+    [x] Optimize layoutDir
+    [x] Move visibility checking to tree builder
+    [x] Tree rebuilds have files missing
 
 # Ideas
 
