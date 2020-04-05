@@ -21,7 +21,7 @@
 
     [] Loading trees takes forever and too many requests
     [] Move tree rendering to lib
-    [] Move repo management to MontaanUserRepos
+    [x] Move repo management to MontaanUserRepos
     [] Move tree rebuild into a worker
         [] Serialize FSEntry tree into a buffer
     [] Optimize React prop flow (only take in absolutely necessary props)

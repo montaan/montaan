@@ -26,6 +26,7 @@ export class RepoInfo {
 
 export default class MontaanUserReposFilesystem extends Filesystem {
 	name: string;
+	repoCache: RepoInfo[] = [];
 
 	constructor(options: { url: string; api: QFrameAPI }) {
 		super(options);
@@ -40,6 +41,7 @@ export default class MontaanUserReposFilesystem extends Filesystem {
 			if (cmp === 0) cmp = a.name.localeCompare(b.name);
 			return cmp;
 		});
+		this.repoCache = [];
 		repos.forEach((repo: RepoInfo) => {
 			const fsEntry = mountURL(
 				tree,
@@ -48,6 +50,7 @@ export default class MontaanUserReposFilesystem extends Filesystem {
 				this.options.api
 			);
 			fsEntry.data = repo;
+			this.repoCache.push(repo);
 		});
 		return tree;
 	}
@@ -55,16 +58,10 @@ export default class MontaanUserReposFilesystem extends Filesystem {
 	getUIComponents(state: FSState): React.ReactElement {
 		if (!this.mountPoint) return super.getUIComponents(state);
 		const path = getFullPath(this.mountPoint);
-		const repos: RepoInfo[] = [];
-		if (this.mountPoint.isDirectory) {
-			for (let fsEntry of this.mountPoint.entries.values()) {
-				repos.push(fsEntry.data as RepoInfo);
-			}
-		}
 		return (
 			<div key={path}>
 				<RepoSelector
-					repos={repos}
+					repos={this.repoCache}
 					createRepo={state.createRepo}
 					renameRepo={state.renameRepo}
 				/>

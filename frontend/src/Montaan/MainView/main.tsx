@@ -924,8 +924,8 @@ export class Tabletree {
 		else return 1;
 	}
 
-	getCameraDistanceToModel() {
-		if (true || this.cachedDistanceFrame !== this.currentFrame) {
+	getCameraDistanceToModel(force: boolean = false) {
+		if (force || this.cachedDistanceFrame !== this.currentFrame) {
 			this.cachedDistanceFrame = this.currentFrame;
 			if (!this.model.geometry.boundingBox) {
 				this.cachedDistance = this.camera.position.distanceTo(this.model.position);
@@ -999,7 +999,8 @@ export class Tabletree {
 		this.linksModel.updateLinks(this.currentFrame);
 		this.changed = false;
 
-		const d = this.getCameraDistanceToModel();
+		this.currentFrame++;
+		const d = this.getCameraDistanceToModel(true);
 		camera.near = 0.01 * d;
 		camera.far = 10 * d;
 		camera.updateProjectionMatrix();
@@ -1009,7 +1010,6 @@ export class Tabletree {
 		(scene as any).tick(t, t - this.lastFrameTime);
 		this.lastFrameTime = t;
 		renderer.render(scene, camera);
-		this.currentFrame++;
 	}
 
 	tick = () => {
