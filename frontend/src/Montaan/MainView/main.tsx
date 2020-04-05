@@ -393,10 +393,10 @@ export class Tabletree {
 			this.model.add(textMesh);
 			this.model.add(this.visibleFiles);
 		}
-		this.updateAttribute(this.model.geometry, 'position', verts, 3);
-		this.updateAttribute(this.model.geometry, 'color', colorVerts, 3);
-		this.updateAttribute(this.textGeometry, 'position', labelVerts, 4);
-		this.updateAttribute(this.textGeometry, 'uv', labelUVs, 2);
+		this.updateAttribute(this.model.geometry, 'position', verts, 3, vertexCount);
+		this.updateAttribute(this.model.geometry, 'color', colorVerts, 3, vertexCount);
+		this.updateAttribute(this.textGeometry, 'position', labelVerts, 4, textVertexCount);
+		this.updateAttribute(this.textGeometry, 'uv', labelUVs, 2, textVertexCount);
 		this.model.geometry.drawRange.count = vertexCount;
 		this.textGeometry.drawRange.count = textVertexCount;
 		this.model.geometry.boundingBox = boundingBox;
@@ -445,7 +445,8 @@ export class Tabletree {
 		geo: THREE.BufferGeometry,
 		attributeName: string,
 		array: Float32Array,
-		itemSize: number
+		itemSize: number,
+		itemCount: number
 	): void {
 		let attribute = geo.getAttribute(attributeName) as THREE.BufferAttribute;
 		if (!attribute || attribute.array !== array) {
@@ -453,6 +454,7 @@ export class Tabletree {
 			attribute.setUsage(THREE.DynamicDrawUsage);
 			geo.setAttribute(attributeName, attribute);
 		} else {
+			attribute.updateRange.count = itemCount * itemSize;
 			attribute.needsUpdate = true;
 		}
 	}
@@ -988,6 +990,7 @@ export class Tabletree {
 
 		if (this.tree) this.showFileTree(this.tree, true);
 		this.linksModel.updateLinks(this.currentFrame);
+		this.changed = false;
 
 		const d = this.getCameraDistanceToModel();
 		camera.near = 0.01 * d;

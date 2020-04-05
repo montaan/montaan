@@ -25,6 +25,7 @@ import Colors from '../lib/Colors';
 import { SDFText } from '../lib/third_party/three-bmfont-text-modified';
 
 import * as Comlink from 'comlink';
+import BinaryHeap from '../../lib/BinaryHeap';
 
 interface ExtendedSDFText extends SDFText {
 	xScale: number;
@@ -128,36 +129,8 @@ export default class ModelBuilder {
 			visibleFiles,
 		} = this.createFileTreeQuads(fileTree, 0, camera, mesh, navUrl);
 
-		let textVertCount = 0;
-		for (let i = 0; i < labelGeometries.length; i++) {
-			const c = labelGeometries[i];
-			textVertCount += c.position.length;
-		}
-		if (this._labelVerts.length < textVertCount) {
-			this._labelVerts = new Float32Array(textVertCount * 2);
-			this._labelUVs = new Float32Array(textVertCount);
-		}
-		const labelVerts = this._labelVerts;
-		const labelUVs = this._labelUVs;
-		let j = 0;
-		for (let i = 0; i < labelGeometries.length; i++) {
-			const c = labelGeometries[i];
-			labelUVs.set(c.uv, j / 2);
-			const fsEntry = c.fsEntry;
-			const positionX =
-				fsEntry.x + fsEntry.scale * (fsEntry.entries !== undefined ? 0 : 0.02);
-			const positionY =
-				fsEntry.y + fsEntry.scale * (fsEntry.entries !== undefined ? 1.02 : 0.02);
-			const positionZ = fsEntry.z;
-			const scale = c.xScale * fsEntry.scale * 0.00436;
-			const arr = c.position;
-			for (let k = 0; k < arr.length && j + 4 < labelVerts.length; k += 4) {
-				labelVerts[j++] = arr[k + 0] * scale + positionX;
-				labelVerts[j++] = arr[k + 1] * scale + positionY;
-				labelVerts[j++] = arr[k + 2] * scale + positionZ;
-				labelVerts[j++] = arr[k + 3];
-			}
-		}
+		const textVertCount = this.ensureLabelGeometryAllocation(labelGeometries);
+		this.fillLabelGeometry(labelGeometries);
 
 		this.smallestCovering = smallestCovering;
 
@@ -172,8 +145,8 @@ export default class ModelBuilder {
 		return {
 			verts,
 			colorVerts,
-			labelVerts,
-			labelUVs,
+			labelVerts: this._labelVerts,
+			labelUVs: this._labelUVs,
 
 			vertexCount,
 			textVertexCount,
@@ -191,6 +164,43 @@ export default class ModelBuilder {
 			entriesToFetch,
 			visibleFiles,
 		};
+	}
+
+	ensureLabelGeometryAllocation(labelGeometries: ExtendedSDFText[]): number {
+		let textVertCount = 0;
+		for (let i = 0; i < labelGeometries.length; i++) {
+			const c = labelGeometries[i];
+			textVertCount += c.position.length;
+		}
+		if (this._labelVerts.length < textVertCount) {
+			this._labelVerts = new Float32Array(textVertCount * 2);
+			this._labelUVs = new Float32Array(textVertCount);
+		}
+		return textVertCount;
+	}
+
+	fillLabelGeometry(labelGeometries: ExtendedSDFText[]): void {
+		const labelVerts = this._labelVerts;
+		const labelUVs = this._labelUVs;
+		for (let i = 0, vertCount = 0, uvCount = 0; i < labelGeometries.length; i++) {
+			const c = labelGeometries[i];
+			labelUVs.set(c.uv, uvCount);
+			uvCount += c.uv.length;
+			const fsEntry = c.fsEntry;
+			const positionX =
+				fsEntry.x + fsEntry.scale * (fsEntry.entries !== undefined ? 0 : 0.02);
+			const positionY =
+				fsEntry.y + fsEntry.scale * (fsEntry.entries !== undefined ? 1.02 : 0.02);
+			const positionZ = fsEntry.z;
+			const scale = c.xScale * fsEntry.scale * 0.00436;
+			const arr = c.position;
+			for (let k = 0; k + 3 < arr.length && vertCount + 3 < labelVerts.length; k += 4) {
+				labelVerts[vertCount++] = arr[k + 0] * scale + positionX;
+				labelVerts[vertCount++] = arr[k + 1] * scale + positionY;
+				labelVerts[vertCount++] = arr[k + 2] * scale + positionZ;
+				labelVerts[vertCount++] = arr[k + 3] * 1 + 0;
+			}
+		}
 	}
 
 	bounds3(
@@ -300,7 +310,7 @@ export default class ModelBuilder {
 		// - finds the covering fsEntry
 		// - finds the currently zoomed-in path and breadcrumb path
 
-		const navTargetPath = [];
+		const navTargetPath: FSEntry[] = [];
 		if (navUrl) {
 			const nearestFSEntryToNavUrl = getNearestFSEntryForURL(fileTree, navUrl);
 			if (nearestFSEntryToNavUrl) {
@@ -313,21 +323,22 @@ export default class ModelBuilder {
 			}
 		}
 
-		const stack = [fileTree];
-		let stackPointer = 0;
-		let stackEndPointer = 1;
-		const entriesToFetch = [];
+		const buildQueue = new BinaryHeap<FSEntry>();
+		buildQueue.add(fileTree, 0);
+		const entriesToFetchQueue = new BinaryHeap<FSEntry>();
 		const visibleFiles = [];
 		const viewWidth = window.innerWidth;
 		let centerEntry = fileTree;
-		while (stackPointer < stack.length) {
-			const tree = stack[stackPointer++];
+		let nextTarget: FSEntry = navTargetPath.pop() ?? fileTree;
+		while (buildQueue.size > 0) {
+			const tree = buildQueue.take();
 			if (!tree || !tree.entries) continue;
-			const treeInNavTargetPath = tree === navTargetPath[navTargetPath.length - 1];
-			if (fileIndex > 5000 && !treeInNavTargetPath && tree !== centerEntry) continue;
+			const treeInNavTargetPath = tree === nextTarget;
+			if (fileIndex > 10000 && !treeInNavTargetPath && tree !== centerEntry) continue;
 			fileIndex = this.layoutDir(
 				camera,
 				mesh,
+				4 / viewWidth,
 				tree,
 				fileIndex,
 				geo,
@@ -335,28 +346,32 @@ export default class ModelBuilder {
 				fsEntryIndex,
 				vertexIndices
 			);
-			if (treeInNavTargetPath) navTargetPath.pop();
+			if (treeInNavTargetPath && navTargetPath.length > 0) {
+				nextTarget = navTargetPath.pop()!;
+			}
+
 			for (let fsEntry of tree.entries.values()) {
-				const fsEntryInNavTargetPath = fsEntry === navTargetPath[navTargetPath.length - 1];
+				const fsEntryInNavTargetPath = fsEntry === nextTarget;
 
 				const bbox = Geometry.getFSEntryBBox(fsEntry, mesh, camera);
 				const pxWidth = bbox.width * viewWidth * 0.5;
-				const isSmall = pxWidth < (fsEntry.entries ? 5 : 150);
+				const isSmall = pxWidth < (fsEntry.entries ? 15 : 150);
+				fsEntry.distanceFromCenter = Geometry.bboxDistanceToFrustumCenter(
+					bbox,
+					mesh,
+					camera
+				);
 
 				// Skip entries that are outside frustum or too small, and aren't on the nav target path.
 				if (!fsEntryInNavTargetPath && (!bbox.onScreen || isSmall)) continue;
 
 				// Directory
 				if (fsEntry.entries) {
-					stack[stackEndPointer++] = fsEntry; // Descend into directories.
+					// Descend into directories.
+					buildQueue.add(fsEntry, fsEntry.distanceFromCenter);
 					// Fetch directories that haven't been fetched yet.
 					if ((fsEntryInNavTargetPath || pxWidth > 15) && !fsEntry.fetched) {
-						fsEntry.distanceFromCenter = Geometry.bboxDistanceToFrustumCenter(
-							bbox,
-							mesh,
-							camera
-						);
-						entriesToFetch.push(fsEntry);
+						entriesToFetchQueue.add(fsEntry, fsEntry.distanceFromCenter);
 					}
 				} else {
 					// File that's large on screen, let's add a file view if needed.
@@ -377,7 +392,9 @@ export default class ModelBuilder {
 					}
 				}
 			}
+			// Sort the subdirectories to prioritize model creation at center of screen.
 		}
+		const entriesToFetch = entriesToFetchQueue.heapValues;
 		return {
 			verts: geo.verts,
 			colorVerts: geo.colorVerts,
@@ -395,6 +412,7 @@ export default class ModelBuilder {
 	layoutDir(
 		camera: NavCamera,
 		mesh: THREE.Mesh,
+		minWidth: number,
 		fileTree: FSEntry,
 		fileIndex: number,
 		geo: { verts: Float32Array; colorVerts: Float32Array },
@@ -505,7 +523,7 @@ export default class ModelBuilder {
 				dir.scale = (0.8 / dirSquareSide) * dirScale2;
 				dir.z = fileTree.z + dir.scale * 0.2;
 				const bbox = Geometry.getFSEntryBBox(dir, mesh, camera);
-				if (!bbox.onScreen) continue;
+				if (!bbox.onScreen || bbox.width < minWidth) continue;
 				dir.index = fileIndex;
 				fileIndex++;
 				dir.vertexIndex = vertexIndices.vertexIndex;
@@ -524,12 +542,14 @@ export default class ModelBuilder {
 					dir.scale * 0.5,
 					dir.z
 				);
-				vertexIndices.textVertexIndex = this.createTextForEntry(
-					dir,
-					labelGeometries,
-					vertexIndices.textVertexIndex,
-					0.65
-				);
+				if (bbox.width > minWidth * 10) {
+					vertexIndices.textVertexIndex = this.createTextForEntry(
+						dir,
+						labelGeometries,
+						vertexIndices.textVertexIndex,
+						0.65
+					);
+				}
 			}
 		}
 
@@ -559,7 +579,7 @@ export default class ModelBuilder {
 				file.scale = (0.9 / fileSquareSide) * filesScale2;
 				file.z = filesBox.z + file.scale * 0.2;
 				const bbox = Geometry.getFSEntryBBox(file, mesh, camera);
-				if (!bbox.onScreen) continue;
+				if (!bbox.onScreen || bbox.width < minWidth) continue;
 				file.index = fileIndex;
 				file.vertexIndex = vertexIndices.vertexIndex;
 				file.lastIndex = fileIndex;
@@ -576,12 +596,14 @@ export default class ModelBuilder {
 					file.scale,
 					file.z
 				);
-				vertexIndices.textVertexIndex = this.createTextForEntry(
-					file,
-					labelGeometries,
-					vertexIndices.textVertexIndex,
-					1
-				);
+				if (bbox.width > minWidth * 10) {
+					vertexIndices.textVertexIndex = this.createTextForEntry(
+						file,
+						labelGeometries,
+						vertexIndices.textVertexIndex,
+						1
+					);
+				}
 				fileIndex++;
 			}
 		}

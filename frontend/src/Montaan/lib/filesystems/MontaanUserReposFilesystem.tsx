@@ -1,7 +1,10 @@
 import { Filesystem, FSDirEntry, NotImplementedError, mountURL } from '../filesystem';
-// import React from 'react';
+import React from 'react';
 
 import QFrameAPI from '../../../lib/api';
+import { getFullPath } from '../filesystem/filesystem';
+import { FSState } from '../../MainApp';
+import RepoSelector from '../../RepoSelector';
 
 export class RepoInfo {
 	static mock: RepoInfo = new RepoInfo('my-repo', [['master', 1234]], 'url', 'bob', false);
@@ -47,6 +50,26 @@ export default class MontaanUserReposFilesystem extends Filesystem {
 			fsEntry.data = repo;
 		});
 		return tree;
+	}
+
+	getUIComponents(state: FSState): React.ReactElement {
+		if (!this.mountPoint) return super.getUIComponents(state);
+		const path = getFullPath(this.mountPoint);
+		const repos: RepoInfo[] = [];
+		if (this.mountPoint.entries !== undefined) {
+			for (let fsEntry of this.mountPoint.entries.values()) {
+				repos.push(fsEntry.data as RepoInfo);
+			}
+		}
+		return (
+			<div key={path}>
+				<RepoSelector
+					repos={repos}
+					createRepo={state.createRepo}
+					renameRepo={state.renameRepo}
+				/>
+			</div>
+		);
 	}
 
 	async readFile(path: string): Promise<ArrayBuffer> {

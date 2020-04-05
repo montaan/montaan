@@ -7,7 +7,6 @@ import { Helmet } from 'react-helmet';
 import MainView from '../MainView';
 
 import Breadcrumb from '../Breadcrumb';
-import RepoSelector from '../RepoSelector';
 
 import utils from '../lib/utils';
 import { CommitData } from '../lib/parse_commits';
@@ -123,11 +122,9 @@ interface MainAppState {
 	dependencies: TreeLink[];
 	dependencySrcIndex: TreeLinkIndex;
 	dependencyDstIndex: TreeLinkIndex;
-	repos: RepoInfo[];
 	repoError: any;
 	commitData?: CommitData;
 	navUrl: string;
-	ref: string;
 	searchHover?: any;
 	treeLoaded: boolean;
 	fileTreeUpdated: number;
@@ -149,6 +146,8 @@ export interface FSState extends MainAppState {
 	updateSearchLines: () => void;
 	setSearchHover: (el: HTMLElement, url: string) => void;
 	clearSearchHover: (el: HTMLElement) => void;
+	createRepo: (name: string, url?: string) => Promise<RepoInfo>;
+	renameRepo: (repo: RepoInfo, newName: string) => Promise<void>;
 }
 
 declare global {
@@ -213,9 +212,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		this.state = {
 			...this.emptyState,
 			fileTree: { count: 0, tree: new FSDirEntry() },
-			repos: [],
 			navUrl: '',
-			ref: 'HEAD',
 			commitsVisible: false,
 		};
 		this.repoTimeout = 0;
@@ -233,7 +230,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 	}
 
 	async updateUserRepos(userInfo: UserInfo) {
-		if (!userInfo) return this.setState({ repos: [] });
+		if (!userInfo) return;
 		const tree = this.state.fileTree.tree;
 		if (!tree.entries) return;
 
@@ -243,12 +240,6 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 			mountURL(tree, `montaanUserRepos:///${user}`, `/${user}`, this.props.api);
 		}
 
-		await this.requestDirs([`/${user}`], []);
-		if (!tree.entries.has(user)) return;
-		const repoEntries = tree.entries.get(user)!.entries;
-		if (!repoEntries) return;
-		const repos = [];
-		for (let repo of repoEntries.values()) repos.push(repo.data);
 		await this.assertPathLoaded(this.props.location.pathname);
 
 		this.setState({
@@ -256,7 +247,6 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 				this.props.location.pathname +
 				this.props.location.search +
 				this.props.location.hash,
-			repos,
 			fileTreeUpdated: this.state.fileTreeUpdated + 1,
 		});
 	}
@@ -612,14 +602,14 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		return true;
 	}
 
-	createRepo = async (name: string, url?: string) => {
+	createRepo = async (name: string, url?: string): Promise<RepoInfo> => {
 		if (!url) url = undefined;
 		const repo = await this.props.api.post('/repo/create', { name, url });
 		this.updateUserRepos(this.props.userInfo);
 		return repo as RepoInfo;
 	};
 
-	renameRepo = async (repo: RepoInfo, newName: string) => {
+	renameRepo = async (repo: RepoInfo, newName: string): Promise<void> => {
 		const res = await this.props.api.post('/repo/rename', { name: repo.name, newName });
 		if (res === 'OK') {
 			this.updateUserRepos(this.props.userInfo);
@@ -701,6 +691,9 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 			updateSearchLines: this.updateSearchLines,
 			setSearchHover: this.setSearchHover,
 			clearSearchHover: this.clearSearchHover,
+
+			createRepo: this.createRepo,
+			renameRepo: this.renameRepo,
 		};
 		this.getPathFilesystems().forEach((fsEntry) => {
 			fsComponents.push(fsEntry.filesystem!.getUIComponents(fsState));
@@ -722,12 +715,6 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 				{fullscreenSupported && <div id="fullscreen" onClick={this.fullscreenOnClick} />}
 
 				{this.state.repoError && <div id="repoError">{this.state.repoError}</div>}
-
-				<RepoSelector
-					repos={this.state.repos}
-					createRepo={this.createRepo}
-					renameRepo={this.renameRepo}
-				/>
 
 				<Breadcrumb
 					navigationTarget={this.state.navigationTarget}
