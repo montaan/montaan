@@ -232,7 +232,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 	async updateUserRepos(userInfo: UserInfo) {
 		if (!userInfo) return;
 		const tree = this.state.fileTree.tree;
-		if (!tree.entries) return;
+		if (!tree.isDirectory) return;
 
 		const user = this.props.userInfo.name;
 
@@ -254,7 +254,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 	async assertPathLoaded(path: string) {
 		const prefixes = this.getPathPrefixes(path).filter((p) => {
 			const entry = getPathEntry(this.state.fileTree.tree, p);
-			return !entry || (entry.entries && !entry.fetched);
+			return !entry || (entry.isDirectory && !entry.fetched);
 		});
 		LoadDirWorkQueueLocked = true;
 		for (let i = 0; i < prefixes.length; i++) {
@@ -489,7 +489,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 				hitType: this.getHitType(rawQueryRE, filename, undefined),
 			});
 		}
-		if (fileTree.entries) {
+		if (fileTree.isDirectory) {
 			for (let fsEntry of fileTree.entries.values()) {
 				this.searchTree(query, fsEntry, results, rawQueryRE);
 			}

@@ -56,7 +56,7 @@ export default class MontaanUserReposFilesystem extends Filesystem {
 		if (!this.mountPoint) return super.getUIComponents(state);
 		const path = getFullPath(this.mountPoint);
 		const repos: RepoInfo[] = [];
-		if (this.mountPoint.entries !== undefined) {
+		if (this.mountPoint.isDirectory) {
 			for (let fsEntry of this.mountPoint.entries.values()) {
 				repos.push(fsEntry.data as RepoInfo);
 			}

@@ -85,41 +85,37 @@ var utils = {
 		hash: any,
 		size: string
 	) {
-		var dir = false;
-		if (path.charCodeAt(path.length - 1) === slash) {
-			dir = true;
-		}
-		var segments = path.split('/');
-		if (dir) {
-			segments.pop();
-		}
-		var branch: FSEntry = tree;
-		var addCount = 0;
-		for (var i = 0; i < segments.length - 1; i++) {
-			var segment = segments[i];
-			if (branch.entries === undefined) {
-				branch.entries = new Map<string, FSEntry>();
-			}
-			if (!branch.entries.has(segment)) {
-				const fsEntry = new FSDirEntry(segment);
+		const isDir: boolean = path.charCodeAt(path.length - 1) === slash;
+		const segments = path.split('/');
+		if (isDir) segments.pop();
+		if (segments.length === 0)
+			throw new Error('Tried to add empty path: ' + JSON.stringify(path));
+		let branch: FSEntry = tree;
+		let addCount = 0;
+		for (let i = 0; i < segments.length - 1; i++) {
+			const segment = segments[i];
+			branch.isDirectory = true;
+			let fsEntry = branch.entries.get(segment);
+			if (!fsEntry) {
+				fsEntry = new FSDirEntry(segment);
 				fsEntry.parent = branch;
 				branch.entries.set(segment, fsEntry);
 				addCount++;
 			}
-			branch = branch.entries.get(segment)!; // We set entries#segment to a value above.
+			branch = fsEntry;
 		}
-		if (branch.entries === undefined) {
-			branch.entries = new Map<string, FSEntry>();
-		}
-		if (!branch.entries.has(segments[i])) {
+		const segment = segments[segments.length - 1];
+		branch.isDirectory = true;
+		let fsEntry = branch.entries.get(segment);
+		if (!fsEntry) {
 			branch.size++;
-			const fsEntry = new FSEntry(segments[i]);
-			fsEntry.entries = dir ? new Map<string, FSEntry>() : undefined;
+			fsEntry = new FSEntry(segment);
+			fsEntry.isDirectory = isDir;
 			fsEntry.parent = branch;
-			branch.entries.set(segments[i], fsEntry);
+			branch.entries.set(segment, fsEntry);
 			addCount++;
 		}
-		branch = branch.entries.get(segments[i])!; // We set entries#segment to a value above.
+		branch = fsEntry;
 		branch.mode = mode;
 		branch.type = type;
 		branch.hash = hash;
@@ -140,7 +136,7 @@ var utils = {
 	) {
 		var path = fullPath;
 		callback(fsEntry, path);
-		if (fsEntry.entries) {
+		if (fsEntry.isDirectory) {
 			var dirName = path + '/';
 			for (let name of fsEntry.entries.keys()) {
 				this.traverseFSEntry(fsEntry.entries.get(name)!, callback, dirName + name);

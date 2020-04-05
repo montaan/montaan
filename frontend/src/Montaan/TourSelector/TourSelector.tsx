@@ -17,6 +17,7 @@ import { FSEntry } from '../lib/filesystem';
 
 export interface TourSelectorProps extends RouteComponentProps {
 	fileTree: FSEntry;
+	fileTreeUpdated: number;
 	api: QFrameAPI;
 	repoPrefix: string;
 	path: string;
@@ -27,18 +28,19 @@ const EMPTY_TOUR: TourRef = { name: '', path: '' };
 type TourContent = { name: string; markdown: string };
 const EMPTY_TOUR_CONTENT: TourContent = { name: '', markdown: '' };
 
-const TourSelector = ({ path, fileTree, api, repoPrefix }: TourSelectorProps) => {
+const TourSelector = ({ path, fileTree, api, repoPrefix, fileTreeUpdated }: TourSelectorProps) => {
 	const [currentTour, setCurrentTour] = useState(EMPTY_TOUR);
 	const [search, setSearch] = useState('');
 	const [tourContent, setTourContent] = useState(EMPTY_TOUR_CONTENT);
 
 	const toursInTree: TourRef[] = useMemo(() => {
+		// eslint-disable-next-line
+		const version = fileTreeUpdated;
 		const foundTours = [] as string[];
 		utils.traverseFSEntry(
 			fileTree,
 			(fsEntry: FSEntry, path: string) => {
-				if (fsEntry.entries === undefined && fsEntry.title === '.tour.md')
-					foundTours.push(path);
+				if (!fsEntry.isDirectory && fsEntry.title === '.tour.md') foundTours.push(path);
 			},
 			''
 		);
@@ -50,7 +52,7 @@ const TourSelector = ({ path, fileTree, api, repoPrefix }: TourSelectorProps) =>
 			const name = (rawName ? rawName[0].toUpperCase() + rawName.slice(1) : 'Main') + ' tour';
 			return { path, name };
 		});
-	}, [fileTree]);
+	}, [fileTree, fileTreeUpdated]);
 	const tours = useMemo(() => toursInTree.filter((t) => t.name.includes(search)), [
 		toursInTree,
 		search,

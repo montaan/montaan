@@ -7,19 +7,19 @@ export interface IBufferGeometryWithFileCount extends THREE.BufferGeometry {
 	maxFileCount: number;
 }
 
-export type BBox = {
-	minX: number;
-	minY: number;
-	maxX: number;
-	maxY: number;
-	width: number;
-	height: number;
-	onScreen: boolean;
-	a: THREE.Vector3;
-	b: THREE.Vector3;
-	c: THREE.Vector3;
-	d: THREE.Vector3;
-};
+export class BBox {
+	minX: number = 0;
+	minY: number = 0;
+	maxX: number = 0;
+	maxY: number = 0;
+	width: number = 0;
+	height: number = 0;
+	onScreen: boolean = false;
+	a: THREE.Vector3 = new THREE.Vector3();
+	b: THREE.Vector3 = new THREE.Vector3();
+	c: THREE.Vector3 = new THREE.Vector3();
+	d: THREE.Vector3 = new THREE.Vector3();
+}
 
 export default {
 	quadCount: 2,
@@ -97,7 +97,12 @@ export default {
 	qTmp8: new THREE.Vector3(),
 	mTmp4: new THREE.Matrix4(),
 
-	getQuadBBox: function(quadIndex: number, model: THREE.Mesh, camera: THREE.Camera): BBox {
+	getQuadBBox: function(
+		quadIndex: number,
+		model: THREE.Mesh,
+		camera: THREE.Camera,
+		bbox: BBox = new BBox()
+	): BBox {
 		const vertexOff = quadIndex * 6 * this.quadCount;
 		const a = this.qTmp1;
 		const b = this.qTmp2;
@@ -111,19 +116,18 @@ export default {
 		const maxX = Math.max(a.x, b.x, c.x, d.x);
 		const minY = Math.min(a.y, b.y, c.y, d.y);
 		const maxY = Math.max(a.y, b.y, c.y, d.y);
-		return {
-			minX,
-			minY,
-			maxX,
-			maxY,
-			width: maxX - minX,
-			height: maxY - minY,
-			onScreen: maxX > -1 && minX < 1 && maxY > -1 && minY < 1,
-			a,
-			b,
-			c,
-			d,
-		};
+		bbox.minX = minX;
+		bbox.minY = minY;
+		bbox.maxX = maxX;
+		bbox.maxY = maxY;
+		bbox.width = maxX - minX;
+		bbox.height = maxY - minY;
+		bbox.onScreen = maxX > -1 && minX < 1 && maxY > -1 && minY < 1;
+		bbox.a.copy(a);
+		bbox.b.copy(b);
+		bbox.c.copy(c);
+		bbox.d.copy(d);
+		return bbox;
 	},
 
 	getFSEntryBBox: function(fsEntry: FSEntry, model: THREE.Mesh, camera: THREE.Camera): BBox {
@@ -132,9 +136,9 @@ export default {
 		const c = this.qTmp3;
 		const d = this.qTmp4;
 		const xOff = 0;
-		const yOff = fsEntry.scale * (fsEntry.entries ? 0.5 : 0);
-		const xScale = fsEntry.scale * (fsEntry.entries ? 1 : 1);
-		const yScale = fsEntry.scale * (fsEntry.entries ? 0.7 : 1);
+		const yOff = fsEntry.scale * (fsEntry.isDirectory ? 0.5 : 0);
+		const xScale = fsEntry.scale * (fsEntry.isDirectory ? 1 : 1);
+		const yScale = fsEntry.scale * (fsEntry.isDirectory ? 0.7 : 1);
 		a.set(fsEntry.x + xOff, fsEntry.y + yOff, fsEntry.z);
 		b.set(fsEntry.x + xOff + xScale, fsEntry.y + yOff, fsEntry.z);
 		c.set(fsEntry.x + xOff + xScale, fsEntry.y + yOff + yScale, fsEntry.z);
@@ -147,19 +151,18 @@ export default {
 		const maxX = Math.max(a.x, b.x, c.x, d.x);
 		const minY = Math.min(a.y, b.y, c.y, d.y);
 		const maxY = Math.max(a.y, b.y, c.y, d.y);
-		const bbox = {
-			minX,
-			minY,
-			maxX,
-			maxY,
-			width: maxX - minX,
-			height: maxY - minY,
-			onScreen: maxX > -1 && minX < 1 && maxY > -1 && minY < 1,
-			a,
-			b,
-			c,
-			d,
-		};
+		const bbox = fsEntry.bbox;
+		bbox.minX = minX;
+		bbox.minY = minY;
+		bbox.maxX = maxX;
+		bbox.maxY = maxY;
+		bbox.width = maxX - minX;
+		bbox.height = maxY - minY;
+		bbox.onScreen = maxX > -1 && minX < 1 && maxY > -1 && minY < 1;
+		bbox.a.copy(a);
+		bbox.b.copy(b);
+		bbox.c.copy(c);
+		bbox.d.copy(d);
 		return bbox;
 	},
 

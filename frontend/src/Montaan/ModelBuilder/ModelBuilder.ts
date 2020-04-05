@@ -187,10 +187,8 @@ export default class ModelBuilder {
 			labelUVs.set(c.uv, uvCount);
 			uvCount += c.uv.length;
 			const fsEntry = c.fsEntry;
-			const positionX =
-				fsEntry.x + fsEntry.scale * (fsEntry.entries !== undefined ? 0 : 0.02);
-			const positionY =
-				fsEntry.y + fsEntry.scale * (fsEntry.entries !== undefined ? 1.02 : 0.02);
+			const positionX = fsEntry.x + fsEntry.scale * (fsEntry.isDirectory ? 0 : 0.02);
+			const positionY = fsEntry.y + fsEntry.scale * (fsEntry.isDirectory ? 1.02 : 0.02);
 			const positionZ = fsEntry.z;
 			const scale = c.xScale * fsEntry.scale * 0.00436;
 			const arr = c.position;
@@ -269,10 +267,12 @@ export default class ModelBuilder {
 		a: { scale: number; distanceFromCenter: number },
 		b: { scale: number; distanceFromCenter: number }
 	) {
-		return (
-			(b.scale - a.scale) / (b.scale + a.scale) +
-			0.1 * (a.distanceFromCenter - b.distanceFromCenter)
-		);
+		if (b.scale + a.scale === 0) return 0;
+		let distanceMetric = a.distanceFromCenter - b.distanceFromCenter;
+		if (distanceMetric !== 0) {
+			distanceMetric /= (distanceMetric < 0 ? -1 : 1) * distanceMetric;
+		}
+		return (b.scale - a.scale) / (b.scale + a.scale) + 0.1 * distanceMetric;
 	}
 
 	createFileTreeQuads(
@@ -323,18 +323,18 @@ export default class ModelBuilder {
 			}
 		}
 
-		const buildQueue = new BinaryHeap<FSEntry>();
-		buildQueue.add(fileTree, 0);
-		const entriesToFetchQueue = new BinaryHeap<FSEntry>();
+		const buildQueue = new BinaryHeap<FSEntry>(this.cmpFSEntryDistanceFromCenter);
+		buildQueue.add(fileTree);
+		const entriesToFetchQueue = new BinaryHeap<FSEntry>(this.cmpFSEntryDistanceFromCenter);
 		const visibleFiles = [];
 		const viewWidth = window.innerWidth;
 		let centerEntry = fileTree;
 		let nextTarget: FSEntry = navTargetPath.pop() ?? fileTree;
 		while (buildQueue.size > 0) {
 			const tree = buildQueue.take();
-			if (!tree || !tree.entries) continue;
+			if (!tree || !tree.isDirectory) continue;
 			const treeInNavTargetPath = tree === nextTarget;
-			if (fileIndex > 10000 && !treeInNavTargetPath && tree !== centerEntry) continue;
+			if (fileIndex > 2500 && !treeInNavTargetPath && tree !== centerEntry) continue;
 			fileIndex = this.layoutDir(
 				camera,
 				mesh,
@@ -353,9 +353,9 @@ export default class ModelBuilder {
 			for (let fsEntry of tree.entries.values()) {
 				const fsEntryInNavTargetPath = fsEntry === nextTarget;
 
-				const bbox = Geometry.getFSEntryBBox(fsEntry, mesh, camera);
+				const bbox = fsEntry.bbox;
 				const pxWidth = bbox.width * viewWidth * 0.5;
-				const isSmall = pxWidth < (fsEntry.entries ? 15 : 150);
+				const isSmall = pxWidth < (fsEntry.isDirectory ? 15 : 150);
 				fsEntry.distanceFromCenter = Geometry.bboxDistanceToFrustumCenter(
 					bbox,
 					mesh,
@@ -366,12 +366,12 @@ export default class ModelBuilder {
 				if (!fsEntryInNavTargetPath && (!bbox.onScreen || isSmall)) continue;
 
 				// Directory
-				if (fsEntry.entries) {
+				if (fsEntry.isDirectory) {
 					// Descend into directories.
-					buildQueue.add(fsEntry, fsEntry.distanceFromCenter);
+					buildQueue.add(fsEntry);
 					// Fetch directories that haven't been fetched yet.
 					if ((fsEntryInNavTargetPath || pxWidth > 15) && !fsEntry.fetched) {
-						entriesToFetchQueue.add(fsEntry, fsEntry.distanceFromCenter);
+						entriesToFetchQueue.add(fsEntry);
 					}
 				} else {
 					// File that's large on screen, let's add a file view if needed.
@@ -424,14 +424,14 @@ export default class ModelBuilder {
 		const files = [];
 		// var dotDirs = [];
 		// var dotFiles = [];
-		if (fileTree.entries) {
+		if (fileTree.isDirectory) {
 			for (let fsEntry of fileTree.entries.values()) {
-				if (fsEntry.entries === undefined) {
-					// if (fsEntry.name.startsWith('.') && false) dotFiles.push(fsEntry);
-					files.push(fsEntry);
-				} else {
+				if (fsEntry.isDirectory) {
 					// if (fsEntry.name.startsWith('.') && false) dotDirs.push(fsEntry);
 					dirs.push(fsEntry);
+				} else {
+					// if (fsEntry.name.startsWith('.') && false) dotFiles.push(fsEntry);
+					files.push(fsEntry);
 				}
 			}
 		}
@@ -542,7 +542,7 @@ export default class ModelBuilder {
 					dir.scale * 0.5,
 					dir.z
 				);
-				if (bbox.width > minWidth * 10) {
+				if (bbox.width > minWidth * dir.title.length * 0.25) {
 					vertexIndices.textVertexIndex = this.createTextForEntry(
 						dir,
 						labelGeometries,
@@ -596,7 +596,7 @@ export default class ModelBuilder {
 					file.scale,
 					file.z
 				);
-				if (bbox.width > minWidth * 10) {
+				if (bbox.width > minWidth * file.title.length * 0.25) {
 					vertexIndices.textVertexIndex = this.createTextForEntry(
 						file,
 						labelGeometries,
@@ -645,7 +645,7 @@ export default class ModelBuilder {
 
 			const textScaleW =
 				220 / (textGeometry.layout.width > 220 ? textGeometry.layout.width : 220);
-			const textScaleH = (fsEntry.entries ? 30 : 50) / textGeometry.layout.height;
+			const textScaleH = (fsEntry.isDirectory ? 30 : 50) / textGeometry.layout.height;
 
 			const textScale = textScaleW > textScaleH ? textScaleH : textScaleW;
 			const arr = textGeometry.position;

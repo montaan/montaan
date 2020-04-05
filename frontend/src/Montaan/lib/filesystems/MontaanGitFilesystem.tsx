@@ -63,15 +63,17 @@ export class MontaanGitBranchFilesystem extends Filesystem {
 					path={path}
 					repoPrefix={repoPrefix}
 					fileTree={this.mountPoint}
+					fileTreeUpdated={state.fileTreeUpdated}
 					api={this.options.api}
 				/>
 				<Player
 					repoPrefix={repoPrefix}
 					fileTree={state.fileTree}
+					fileTreeUpdated={state.fileTreeUpdated}
 					navigationTarget={state.navigationTarget}
 					api={this.options.api}
 				/>
-				<CommitControls
+				{/* <CommitControls
 					activeCommitData={state.activeCommitData}
 					commitData={state.commitData}
 					navigationTarget={state.navigationTarget}
@@ -82,7 +84,7 @@ export class MontaanGitBranchFilesystem extends Filesystem {
 					addLinks={state.addLinks}
 					setLinks={state.setLinks}
 					links={state.links}
-				/>
+				/> */}
 				<CommitInfo
 					activeCommitData={state.activeCommitData}
 					commitData={state.commitData}
@@ -215,12 +217,13 @@ export class MontaanGitFilesystem extends Filesystem {
 			let dir = tree;
 			for (let i = 0; i < pathSegments.length - 1; i++) {
 				const pathSegment = pathSegments[i];
-				if (!dir.entries!.has(pathSegment)) {
-					const fsEntry = new FSDirEntry(pathSegment);
+				let fsEntry = dir.entries.get(pathSegment);
+				if (!fsEntry) {
+					fsEntry = new FSDirEntry(pathSegment);
 					fsEntry.parent = dir;
-					dir.entries!.set(pathSegment, fsEntry);
+					dir.entries.set(pathSegment, fsEntry);
 				}
-				dir = dir.entries!.get(pathSegment)!;
+				dir = fsEntry;
 				dir.fetched = true;
 			}
 			const fsEntry = mount(

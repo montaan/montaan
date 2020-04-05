@@ -170,6 +170,8 @@ export class Tabletree {
 
 	treeVersion: number = 0;
 	treeBuildVersion: number = -1;
+	cachedDistanceFrame: number = -1;
+	cachedDistance: number = 2;
 
 	constructor() {
 		this.treeUpdateQueue = new WorkQueue();
@@ -533,9 +535,9 @@ export class Tabletree {
 		const { scene, camera } = this;
 		scene.updateMatrixWorld();
 		var fsPoint = new THREE.Vector3(
-			fsEntry.x + fsEntry.scale * (fsEntry.entries ? 0.5 : 0.5),
-			fsEntry.y + fsEntry.scale * (fsEntry.entries ? 0.75 : 0.5),
-			fsEntry.z + fsEntry.scale * (fsEntry.entries ? 3 : 5)
+			fsEntry.x + fsEntry.scale * (fsEntry.isDirectory ? 0.5 : 0.5),
+			fsEntry.y + fsEntry.scale * (fsEntry.isDirectory ? 0.75 : 0.5),
+			fsEntry.z + fsEntry.scale * (fsEntry.isDirectory ? 3 : 5)
 		);
 		fsPoint.applyMatrix4(model.matrixWorld);
 		camera.targetPosition.copy(fsPoint);
@@ -721,8 +723,8 @@ export class Tabletree {
 						{
 							if (!self.fileTree) return;
 							const fsEntry = getPathEntry(self.fileTree, self.breadcrumbPath || '');
-							if (fsEntry && fsEntry.parent && fsEntry.parent.entries) {
-								const files = Object.values(fsEntry.parent.entries).sort(
+							if (fsEntry && fsEntry.parent && fsEntry.parent.isDirectory) {
+								const files = Array.from(fsEntry.parent.entries.values()).sort(
 									self.fsEntryCmp
 								);
 								const fn = files[files.indexOf(fsEntry) - 1];
@@ -734,8 +736,8 @@ export class Tabletree {
 						{
 							if (!self.fileTree) return;
 							const fsEntry = getPathEntry(self.fileTree, self.breadcrumbPath || '');
-							if (fsEntry && fsEntry.parent && fsEntry.parent.entries) {
-								const files = Object.values(fsEntry.parent.entries).sort(
+							if (fsEntry && fsEntry.parent && fsEntry.parent.isDirectory) {
+								const files = Array.from(fsEntry.parent.entries.values()).sort(
 									self.fsEntryCmp
 								);
 								const fn = files[files.indexOf(fsEntry) + 1];
@@ -916,26 +918,31 @@ export class Tabletree {
 
 	// Used to navigate between entries
 	fsEntryCmp(a: FSEntry, b: FSEntry) {
-		if (!!a.entries === !!b.entries) return a.title < b.title ? -1 : a.title > b.title ? 1 : 0;
-		else if (a.entries) return -1;
+		if (a.isDirectory === b.isDirectory)
+			return a.title < b.title ? -1 : a.title > b.title ? 1 : 0;
+		else if (a.isDirectory) return -1;
 		else return 1;
 	}
 
 	getCameraDistanceToModel() {
-		if (!this.model.geometry.boundingBox) {
-			return this.camera.position.distanceTo(this.model.position);
+		if (true || this.cachedDistanceFrame !== this.currentFrame) {
+			this.cachedDistanceFrame = this.currentFrame;
+			if (!this.model.geometry.boundingBox) {
+				this.cachedDistance = this.camera.position.distanceTo(this.model.position);
+			}
+			const intersections = utils.findIntersectionsUnderEvent(
+				{
+					clientX: window.innerWidth / 2,
+					clientY: window.innerHeight / 2,
+					target: this.renderer.domElement,
+				},
+				this.camera,
+				[this.model]
+			);
+			if (intersections[0]) this.cachedDistance = intersections[0].distance;
+			else this.cachedDistance = this.camera.position.distanceTo(this.model.position);
 		}
-		const intersections = utils.findIntersectionsUnderEvent(
-			{
-				clientX: window.innerWidth / 2,
-				clientY: window.innerHeight / 2,
-				target: this.renderer.domElement,
-			},
-			this.camera,
-			[this.model]
-		);
-		if (intersections[0]) return intersections[0].distance;
-		else return this.camera.position.distanceTo(this.model.position);
+		return this.cachedDistance;
 	}
 
 	zoomCamera(zf: number, cx: number, cy: number) {

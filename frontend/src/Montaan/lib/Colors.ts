@@ -212,7 +212,7 @@ const Colors = {
 	},
 
 	getColor: function(fsEntry: FSEntry) {
-		if (fsEntry.entries !== undefined) {
+		if (fsEntry.isDirectory) {
 			return this.getDirectoryColor(fsEntry);
 		}
 		return this.getFileColor(fsEntry);

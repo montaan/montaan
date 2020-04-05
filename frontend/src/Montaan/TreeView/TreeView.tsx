@@ -141,7 +141,7 @@ const dummy = new THREE.Object3D();
 function updateTree(
 	fMesh: any,
 	dMesh: any,
-	tree: any,
+	tree: FSEntry,
 	idx: any,
 	ps: number,
 	px: number,
@@ -151,29 +151,31 @@ function updateTree(
 	dummy.position.set(px, py, pz);
 	dummy.scale.set(ps, ps, ps);
 	dummy.updateMatrix();
-	if (tree.entries) {
+	if (tree.isDirectory) {
 		// And apply the matrix to the instanced item
 		dMesh.setMatrixAt(idx.dir, dummy.matrix);
 		dMesh.fsEntries[idx.dir] = tree;
-		tree.instanceId = idx.dir;
+		tree.index = idx.dir;
 		idx.dir++;
-		const keys = Object.keys(tree.entries);
+		const keys = Array.from(tree.entries.keys());
 		const side = Math.ceil(Math.pow(keys.length, 1 / 2));
 		const invSide = 1 / side;
 		const s = ps * (0.8 / side);
 		keys.forEach((n, i) => {
+			const fsEntry = tree.entries.get(n);
+			if (!fsEntry) return;
 			const zr = 0; //(index * invSide * invSide) | 0;
 			const yr = ((i - zr * side * side) * invSide) | 0;
 			const xr = i - (zr * side * side + yr * side);
 			const x = px + ps * (xr + 0.1) * invSide;
 			const y = py + ps * (yr + 0.1) * invSide;
 			const z = pz;
-			updateTree(fMesh, dMesh, tree.entries[n], idx, s, x, y, z + ps * 0.1);
+			updateTree(fMesh, dMesh, fsEntry, idx, s, x, y, z + ps * 0.1);
 		});
 	} else {
 		fMesh.setMatrixAt(idx.file, dummy.matrix);
 		fMesh.fsEntries[idx.file] = tree;
-		tree.instanceId = idx.file;
+		tree.index = idx.file;
 		idx.file++;
 	}
 }
@@ -298,7 +300,7 @@ function TreeContainerInstanceArrays({
 			var obj = stack.pop() as any;
 			for (var name of obj.entries.keys()) {
 				var o = obj.entries[name];
-				const mesh = o.entries ? dMesh : fMesh;
+				const mesh = o.isDir ? dMesh : fMesh;
 				mesh.getMatrixAt(o.instanceId, m);
 				if (!Geometry.matrixInsideFrustum(m, mesh.modelViewMatrix, camera)) {
 					continue;

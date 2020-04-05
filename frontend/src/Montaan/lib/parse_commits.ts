@@ -151,7 +151,7 @@ export function parseCommits(commitData: RawCommitData): CommitData {
 	// for (var i of commitsRoot.entries.get('Commits').entries.keys()) {
 	//     var commitFSEntry = commitsRoot.entries.Commits.entries[i];
 	//     utils.traverseFSEntry(commitFSEntry, function(fsEntry, fullPath) {
-	//         if (/^\/Commits\/.{40}\/Files\//.test(fullPath) && fsEntry.entries === undefined) {
+	//         if (/^\/Commits\/.{40}\/Files\//.test(fullPath) && !fsEntry.isDir) {
 	//             var sha = fullPath.substring(9, 49);
 	//             var path = fullPath.substring(55);
 	//             var filePath = repoPrefix + path;

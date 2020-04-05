@@ -136,6 +136,7 @@ const PlayerCard = ({ url }: { url: string }) => {
 
 export interface PlayerProps extends RouteComponentProps {
 	fileTree: FileTree;
+	fileTreeUpdated: number;
 	navigationTarget: string;
 	api: QFrameAPI;
 	repoPrefix: string;
@@ -146,16 +147,17 @@ const EMPTY_PLAYLIST: PlaylistRef = { name: '', path: '' };
 type PlaylistContent = { name: string; url: string };
 const EMPTY_PLAYLIST_CONTENT: PlaylistContent = { name: '', url: '' };
 
-const Player = ({ fileTree, navigationTarget, api }: PlayerProps) => {
+const Player = ({ fileTree, navigationTarget, api, fileTreeUpdated }: PlayerProps) => {
 	const [currentPlaylist, setCurrentPlaylist] = useState(EMPTY_PLAYLIST);
 	const [search, setSearch] = useState('');
 	const [playlistContent, setPlaylistContent] = useState(EMPTY_PLAYLIST_CONTENT);
 
 	const playlistsInTree: PlaylistRef[] = useMemo(() => {
+		// eslint-disable-next-line
+		const version = fileTreeUpdated;
 		const foundPlaylists = [] as string[];
 		utils.traverseTree(fileTree, (fsEntry: FSEntry, path: string) => {
-			if (fsEntry.entries === undefined && fsEntry.title === '.playlist')
-				foundPlaylists.push(path);
+			if (!fsEntry.isDirectory && fsEntry.title === '.playlist') foundPlaylists.push(path);
 		});
 		return foundPlaylists.sort().map((path) => {
 			const rawName = path
@@ -166,7 +168,7 @@ const Player = ({ fileTree, navigationTarget, api }: PlayerProps) => {
 				(rawName ? rawName[0].toUpperCase() + rawName.slice(1) : 'Main') + ' playlist';
 			return { path, name };
 		});
-	}, [fileTree]);
+	}, [fileTree, fileTreeUpdated]);
 	const playlists = useMemo(() => playlistsInTree.filter((t) => t.name.includes(search)), [
 		playlistsInTree,
 		search,
