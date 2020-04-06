@@ -134,14 +134,47 @@ var utils = {
 		callback: (fsEntry: FSEntry, path: string) => void,
 		fullPath: string
 	) {
-		var path = fullPath;
+		const path = fullPath;
 		callback(fsEntry, path);
 		if (fsEntry.isDirectory) {
-			var dirName = path + '/';
-			for (let name of fsEntry.entries.keys()) {
-				this.traverseFSEntry(fsEntry.entries.get(name)!, callback, dirName + name);
+			const dirName = path + '/';
+			for (const name of fsEntry.entries.keys()) {
+				const entry = fsEntry.entries.get(name)!;
+				this.traverseFSEntry(entry, callback, dirName + name);
 			}
 		}
+	},
+
+	inTree: function(tree: FSEntry, fsEntry: FSEntry): boolean {
+		let entry: FSEntry | undefined = fsEntry;
+		while (entry) {
+			if (entry === tree) return true;
+			entry = entry.parent;
+		}
+		return false;
+	},
+
+	findFiles: function(fsEntry: FSEntry, name: string): FSEntry[] {
+		let nameIndex;
+		let entry: FSEntry | undefined = fsEntry;
+		while (entry && !nameIndex) {
+			nameIndex = entry.nameIndex;
+			entry = entry.parent;
+		}
+		if (nameIndex) {
+			const entries = nameIndex.get(name) || [];
+			return entries.filter((entry) => this.inTree(fsEntry, entry));
+		}
+		const stack = [fsEntry];
+		const results: FSEntry[] = [];
+		while (stack.length > 0) {
+			const entry = stack.pop()!;
+			if (entry.name === name) results.push(entry);
+			for (let e of entry.entries.values()) {
+				stack.push(e);
+			}
+		}
+		return results;
 	},
 
 	parseFileList: function(

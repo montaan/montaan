@@ -289,32 +289,33 @@ export default class TextFileView extends FileView {
 				mode: 'pre',
 			});
 			let material: THREE.RawShaderMaterial;
-			if (result.language) {
-				const { nodeStyles, palette, lineCount } = this.parsePrettyPrintResult(result);
-				const verts = geometry.getAttribute('position').array as Float32Array;
-				for (let i = 0, off = 3; i < nodeStyles.length; i++) {
-					const t = nodeStyles[i];
-					for (let j = 0; j < t.text.length; j++) {
-						const c = t.text.charCodeAt(j);
-						if (c === 10 || c === 32 || c === 9 || c === 13) continue;
-						for (let k = 0; k < 6; k++) {
-							if (t.italic) {
-								verts[off - 3] += (k <= 3 && k !== 0 ? -1 : 1) * 2.5;
-							}
-							verts[off] = t.color + 256 * t.bold;
-							off += 4;
-						}
-					}
-				}
-				material = Text.makeTextMaterial(palette);
-				this.lineCount = lineCount;
-			} else {
-				let lineCount = 0;
-				for (let i = 0; i < contents.length; i++)
-					if (contents.charCodeAt(i) === 10) lineCount++;
-				material = Text.makeTextMaterial();
-				this.lineCount = lineCount;
+			// if (result.language) {
+			// 	const { nodeStyles, palette, lineCount } = this.parsePrettyPrintResult(result);
+			// 	const verts = geometry.getAttribute('position').array as Float32Array;
+			// 	for (let i = 0, off = 3; i < nodeStyles.length; i++) {
+			// 		const t = nodeStyles[i];
+			// 		for (let j = 0; j < t.text.length; j++) {
+			// 			const c = t.text.charCodeAt(j);
+			// 			if (c === 10 || c === 32 || c === 9 || c === 13) continue;
+			// 			for (let k = 0; k < 6; k++) {
+			// 				if (t.italic) {
+			// 					verts[off - 3] += (k <= 3 && k !== 0 ? -1 : 1) * 2.5;
+			// 				}
+			// 				verts[off] = t.color + 256 * t.bold;
+			// 				off += 4;
+			// 			}
+			// 		}
+			// 	}
+			// 	material = Text.makeTextMaterial(palette);
+			// 	this.lineCount = lineCount;
+			// } else {
+			let lineCount = 0;
+			for (let i = 0; i < contents.length; i++) {
+				if (contents.charCodeAt(i) === 10) lineCount++;
 			}
+			material = Text.makeTextMaterial();
+			this.lineCount = lineCount;
+			// }
 
 			this.textMesh = new SDFTextMesh();
 			this.textMesh.geometry = geometry;

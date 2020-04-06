@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import { SearchResult, TreeLink } from '../MainApp';
+import { FSEntry } from '../lib/filesystem';
+import { ParseTargetSignature } from '../MainView/main';
 
 export default class SearchLandmarks {
 	searchLine: THREE.LineSegments;
@@ -9,10 +11,15 @@ export default class SearchLandmarks {
 	previousSearchResults: SearchResult[] = [];
 	searchLis: HTMLElement[] = [];
 	screenPointToWorldPoint: (x: number, y: number) => THREE.Vector3;
+	parseTarget: ParseTargetSignature;
 
 	// Search result connection lines ////////////////////////////////////////////////////////////////////////////////
 
-	constructor(screenPointToWorldPoint: (x: number, y: number) => THREE.Vector3) {
+	constructor(
+		screenPointToWorldPoint: (x: number, y: number) => THREE.Vector3,
+		parseTarget: ParseTargetSignature
+	) {
+		this.parseTarget = parseTarget;
 		this.screenPointToWorldPoint = screenPointToWorldPoint;
 		this.model = new THREE.Object3D();
 
@@ -41,22 +48,7 @@ export default class SearchLandmarks {
 		this.model.add(searchLine);
 	}
 
-	addScreenLine(
-		geo: THREE.BufferGeometry,
-		fsEntry: {
-			x: number | undefined;
-			y: number | undefined;
-			z: number | undefined;
-			scale: number;
-			textHeight: number;
-			textXZero: number | undefined;
-			textYZero: number;
-		},
-		bbox: { bottom: number; top: number; left: any } | null,
-		index: number,
-		line: number,
-		lineCount: number
-	) {
+	addScreenLine(geo: THREE.BufferGeometry, fsEntry: FSEntry, index: number, line: number) {
 		var a = new THREE.Vector3(fsEntry.x, fsEntry.y, fsEntry.z);
 		a.applyMatrix4(this.model.matrixWorld);
 		var b = a,
@@ -66,34 +58,20 @@ export default class SearchLandmarks {
 		var av = new THREE.Vector3(a.x + 0.05 * fsEntry.scale, a.y + 0.05 * fsEntry.scale, a.z);
 
 		var off = index * 4;
-		if (!bbox || bbox.bottom < 0 || bbox.top > window.innerHeight) {
-			bv = new THREE.Vector3(
-				b.x - fsEntry.scale * 0.5 - 0.02,
-				av.y + 0.05 * fsEntry.scale + 0.01 * 3.15,
-				av.z - fsEntry.scale * 0.5
-			);
-			aUp = new THREE.Vector3(
-				av.x - fsEntry.scale * 0.075,
-				av.y + 0.05 * fsEntry.scale,
-				av.z
-			);
-		} else {
-			b = this.screenPointToWorldPoint(bbox.left, bbox.top + 24);
-			bv = new THREE.Vector3(b.x, b.y, b.z);
-			aUp = new THREE.Vector3(av.x, av.y, av.z);
-			if (line > 0 && fsEntry.textHeight) {
-				const textYOff = ((line + 0.5) / lineCount) * fsEntry.textHeight;
-				const textLinePos = new THREE.Vector3(
-					fsEntry.textXZero,
-					fsEntry.textYZero - textYOff,
-					fsEntry.z
-				);
-				textLinePos.applyMatrix4(this.model.matrixWorld);
-				aUp = av = textLinePos;
-			}
+		bv = new THREE.Vector3(
+			b.x - fsEntry.scale * 0.5 - 0.02,
+			av.y + 0.05 * fsEntry.scale + 0.01 * 3.15,
+			av.z - fsEntry.scale * 0.5
+		);
+		aUp = new THREE.Vector3(av.x - fsEntry.scale * 0.075, av.y + 0.05 * fsEntry.scale, av.z);
+		if (line > 0 && fsEntry.contentObject) {
+			const lineBBox = fsEntry.contentObject.getHighlightRegion([line]);
+			lineBBox.topLeft.y = (lineBBox.topLeft.y + lineBBox.bottomLeft.y) * 0.5;
+			aUp = av = lineBBox.topLeft;
 		}
 
-		const verts = geo.getAttribute('position').array as Float32Array;
+		const attr = geo.getAttribute('position') as THREE.BufferAttribute;
+		const verts = attr.array as Float32Array;
 		off *= 3;
 		var v;
 		v = av;
@@ -112,47 +90,39 @@ export default class SearchLandmarks {
 		verts[off++] = v.x;
 		verts[off++] = v.y;
 		verts[off++] = v.z;
-		(geo.getAttribute('position') as THREE.BufferAttribute).needsUpdate = true;
+		attr.needsUpdate = true;
+		attr.updateRange.count = (index + 1) * 4 * 3;
+		geo.drawRange.count = (index + 1) * 4;
 	}
 
 	updateSearchLines() {
-		var needsUpdate = false;
 		if (this.searchResults !== this.previousSearchResults) {
 			this.clearSearchLine();
 			this.previousSearchResults = this.searchResults;
-			needsUpdate = true;
 			this.searchLis = [].slice.call(document.body.querySelectorAll('#searchResults > li'));
 		}
 		const lis = this.searchLis;
-		var verts = (this.searchLine.geometry as THREE.BufferGeometry).getAttribute('position')
+		const verts = (this.searchLine.geometry as THREE.BufferGeometry).getAttribute('position')
 			.array;
-		if (needsUpdate && lis.length <= verts.length / 3 / 4) {
-			for (var i = 0, l = lis.length; i < l; i++) {
-				var li = lis[i] as any;
-				this.addScreenLine(
-					this.searchLine.geometry as THREE.BufferGeometry,
-					li.result.fsEntry,
-					null,
-					i,
-					li.result.line,
-					li.result.fsEntry.lineCount
-				);
+		if (lis.length <= verts.length / 3 / 4) {
+			for (let i = 0, geoIndex = 0, l = lis.length; i < l; i++) {
+				const li = lis[i] as any;
+				const result = li.result as SearchResult;
+				const entry = this.parseTarget(result.filename);
+				if (entry) {
+					this.addScreenLine(
+						this.searchLine.geometry as THREE.BufferGeometry,
+						entry.fsEntry,
+						geoIndex,
+						result.line
+					);
+					geoIndex++;
+				}
 			}
 		}
 	}
 
 	clearSearchLine() {
-		var verts = (this.searchLine.geometry as THREE.BufferGeometry).getAttribute('position')
-			.array as Float32Array;
-		for (
-			var i = this.searchResults.length * 4 * 3;
-			i < this.previousSearchResults.length * 4 * 3;
-			i++
-		) {
-			verts[i] = 0;
-		}
-		((this.searchLine.geometry as THREE.BufferGeometry).getAttribute(
-			'position'
-		) as THREE.BufferAttribute).needsUpdate = true;
+		(this.searchLine.geometry as THREE.BufferGeometry).drawRange.count = 0;
 	}
 }

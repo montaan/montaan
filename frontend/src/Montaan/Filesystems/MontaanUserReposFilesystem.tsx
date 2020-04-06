@@ -1,10 +1,15 @@
-import { Filesystem, FSDirEntry, NotImplementedError, mountURL } from '../filesystem';
+import {
+	Filesystem,
+	FSDirEntry,
+	NotImplementedError,
+	mountURL,
+	getFullPath,
+} from '../lib/filesystem';
 import React from 'react';
 
-import QFrameAPI from '../../../lib/api';
-import { getFullPath } from '../filesystem/filesystem';
-import { FSState } from '../../MainApp';
-import RepoSelector from '../../RepoSelector';
+import QFrameAPI from '../../lib/api';
+import { FSState } from '../MainApp';
+import RepoSelector from '../RepoSelector';
 
 export class RepoInfo {
 	static mock: RepoInfo = new RepoInfo('my-repo', [['master', 1234]], 'url', 'bob', false);
@@ -27,6 +32,9 @@ export class RepoInfo {
 export default class MontaanUserReposFilesystem extends Filesystem {
 	name: string;
 	repoCache: RepoInfo[] = [];
+	cacheVersion: number = 0;
+	componentVersion: number = -1;
+	cachedComponent: React.ReactElement = (<div key="MontaanUserReposFilesystem" />);
 
 	constructor(options: { url: string; api: QFrameAPI }) {
 		super(options);
@@ -42,6 +50,7 @@ export default class MontaanUserReposFilesystem extends Filesystem {
 			return cmp;
 		});
 		this.repoCache = [];
+		this.cacheVersion++;
 		repos.forEach((repo: RepoInfo) => {
 			const fsEntry = mountURL(
 				tree,
@@ -58,15 +67,19 @@ export default class MontaanUserReposFilesystem extends Filesystem {
 	getUIComponents(state: FSState): React.ReactElement {
 		if (!this.mountPoint) return super.getUIComponents(state);
 		const path = getFullPath(this.mountPoint);
-		return (
-			<div key={path}>
-				<RepoSelector
-					repos={this.repoCache}
-					createRepo={state.createRepo}
-					renameRepo={state.renameRepo}
-				/>
-			</div>
-		);
+		if (this.componentVersion !== this.cacheVersion) {
+			this.cachedComponent = (
+				<div key={path}>
+					<RepoSelector
+						repos={this.repoCache}
+						createRepo={state.createRepo}
+						renameRepo={state.renameRepo}
+					/>
+				</div>
+			);
+			this.componentVersion = this.cacheVersion;
+		}
+		return this.cachedComponent;
 	}
 
 	async readFile(path: string): Promise<ArrayBuffer> {

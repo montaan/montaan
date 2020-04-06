@@ -11,10 +11,9 @@ import { faTimes } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 import styles from './Player.module.scss';
-import { FileTree } from '../MainApp';
 import QFrameAPI from '../../lib/api';
 import utils from '../lib/utils';
-import { FSEntry } from '../lib/filesystem';
+import { FSEntry, getFullPath } from '../lib/filesystem';
 
 let iframeID = 0;
 
@@ -135,7 +134,7 @@ const PlayerCard = ({ url }: { url: string }) => {
 };
 
 export interface PlayerProps extends RouteComponentProps {
-	fileTree: FileTree;
+	fileTree: FSEntry;
 	fileTreeUpdated: number;
 	navigationTarget: string;
 	api: QFrameAPI;
@@ -155,10 +154,7 @@ const Player = ({ fileTree, navigationTarget, api, fileTreeUpdated }: PlayerProp
 	const playlistsInTree: PlaylistRef[] = useMemo(() => {
 		// eslint-disable-next-line
 		const version = fileTreeUpdated;
-		const foundPlaylists = [] as string[];
-		utils.traverseTree(fileTree, (fsEntry: FSEntry, path: string) => {
-			if (!fsEntry.isDirectory && fsEntry.title === '.playlist') foundPlaylists.push(path);
-		});
+		const foundPlaylists = utils.findFiles(fileTree, '.playlist').map(getFullPath);
 		return foundPlaylists.sort().map((path) => {
 			const rawName = path
 				.split('/')

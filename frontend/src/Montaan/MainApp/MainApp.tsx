@@ -26,10 +26,8 @@ import { QFrameAPI } from '../../lib/api';
 import { FSEntry } from '../lib/filesystem';
 import WorkQueue from '../lib/WorkQueue';
 
-import { MontaanGitFilesystem } from '../lib/filesystems/MontaanGitFilesystem';
-import MontaanUserReposFilesystem, {
-	RepoInfo,
-} from '../lib/filesystems/MontaanUserReposFilesystem';
+import { MontaanGitFilesystem } from '../Filesystems/MontaanGitFilesystem';
+import MontaanUserReposFilesystem, { RepoInfo } from '../Filesystems/MontaanUserReposFilesystem';
 
 registerFileSystem('montaanGit', MontaanGitFilesystem);
 registerFileSystem('montaanUserRepos', MontaanUserReposFilesystem);
@@ -142,12 +140,14 @@ export interface FSState extends MainAppState {
 	setCommitsVisible: (commitsVisible: boolean) => void;
 	setLinks: (links: TreeLink[]) => void;
 	addLinks: (links: TreeLink[]) => void;
-	setSearchQuery: (repo: string, query: string) => void;
+	setSearchQuery: (repo: string, branch: string, query: string) => void;
 	updateSearchLines: () => void;
 	setSearchHover: (el: HTMLElement, url: string) => void;
 	clearSearchHover: (el: HTMLElement) => void;
 	createRepo: (name: string, url?: string) => Promise<RepoInfo>;
 	renameRepo: (repo: RepoInfo, newName: string) => Promise<void>;
+	addTreeListener: (pattern: RegExp, callback: (fsEntry: FSEntry) => void) => void;
+	removeTreeListener: (pattern: RegExp, callback: (fsEntry: FSEntry) => void) => void;
 }
 
 declare global {
@@ -215,6 +215,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 			navUrl: '',
 			commitsVisible: false,
 		};
+		this.state.fileTree.tree.nameIndex = new Map();
 		this.repoTimeout = 0;
 		this.commitIndex = 0;
 		this.animatedFiles = 0;
@@ -279,11 +280,29 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		return prefixes;
 	}
 
+	treeListeners: Map<RegExp, ((fsEntry: FSEntry) => void)[]> = new Map();
+
+	addTreeListener = (pattern: RegExp, callback: (fsEntry: FSEntry) => void) => {
+		if (!this.treeListeners.has(pattern)) {
+			this.treeListeners.set(pattern, []);
+		}
+		const listeners = this.treeListeners.get(pattern)!;
+		listeners.push(callback);
+	};
+
+	removeTreeListener = (pattern: RegExp, callback: (fsEntry: FSEntry) => void) => {
+		if (!this.treeListeners.has(pattern)) return;
+		const listeners = this.treeListeners.get(pattern)!;
+		const idx = listeners.indexOf(callback);
+		listeners.splice(idx, 1);
+		if (listeners.length === 0) this.treeListeners.delete(pattern);
+	};
+
 	processDirRequest = async ({ tree, paths, dropEntries }: LoadDirWorkItem) => {
-		let files;
+		let dirs;
 		let fileTreeDrop = tree;
 		if (paths.length > 0) {
-			files = readDirs(tree.tree, paths);
+			dirs = readDirs(tree.tree, paths);
 		}
 		if (dropEntries.length > 0) {
 			dropEntries.forEach((fsEntry) => {
@@ -292,14 +311,30 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 			});
 		}
 		if (paths.length > 0) {
-			await files;
+			await dirs;
 			paths.forEach((p) => {
 				const entry = getPathEntry(fileTreeDrop.tree, p);
-				if (entry) entry.fetched = true;
+				if (entry) {
+					entry.fetched = true;
+					utils.traverseFSEntry(
+						entry,
+						(fsEntry: FSEntry, path: string) => {
+							if (tree.tree.nameIndex) {
+								let idx = tree.tree.nameIndex.get(fsEntry.name);
+								if (!idx) {
+									idx = [];
+									tree.tree.nameIndex.set(fsEntry.name, idx);
+								}
+								idx.push(fsEntry);
+							}
+						},
+						''
+					);
+				}
 			});
 		}
 		fileTreeDrop.count = 0;
-		utils.traverseTree(fileTreeDrop, () => fileTreeDrop.count++);
+		// utils.traverseTree(fileTreeDrop, () => fileTreeDrop.count++);
 		// console.log(fileTreeDrop);
 		this.setState({ fileTreeUpdated: this.state.fileTreeUpdated + 1 });
 	};
@@ -344,9 +379,9 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		this.setActiveCommits(this.filterCommits(repo, commitFilter));
 	};
 
-	setSearchQuery = (repo: string, searchQuery: string) => {
+	setSearchQuery = (repo: string, branch: string, searchQuery: string) => {
 		this.setState({ searchQuery });
-		this.searchString(repo, searchQuery);
+		this.searchString(repo, branch, searchQuery);
 	};
 
 	setNavigationTarget = (navigationTarget: string) => {
@@ -511,7 +546,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		return HitType.USE;
 	}
 
-	async search(repo: string, query: RegExp[], rawQuery: string) {
+	async search(repo: string, branch: string, query: RegExp[], rawQuery: string) {
 		clearTimeout(searchResultsTimeout);
 		var searchResults = [];
 		if (rawQuery.length > 2) {
@@ -534,7 +569,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 						const [_, filename, lineStr, snippet] = lineNumberMatch;
 						const line = parseInt(lineStr);
 						const hitType = this.getHitType(rawQueryRE, filename, snippet);
-						const fullPath = '/' + repo + '/' + filename;
+						const fullPath = '/' + repo + '/' + branch + '/' + filename;
 						return {
 							filename: fullPath,
 							line,
@@ -556,7 +591,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		this.setState({ searchResults });
 	}
 
-	searchString(repo: string, searchQuery: string) {
+	searchString(repo: string, branch: string, searchQuery: string) {
 		this.clearSearchHover(this.state.searchHover);
 		if (searchQuery === '') {
 			this.setState({ searchResults: [] });
@@ -565,7 +600,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 			try {
 				re[0] = new RegExp(searchQuery, 'i');
 			} catch (e) {}
-			this.search(repo, re, searchQuery);
+			this.search(repo, branch, re, searchQuery);
 		}
 	}
 
@@ -694,6 +729,8 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 
 			createRepo: this.createRepo,
 			renameRepo: this.renameRepo,
+			addTreeListener: this.addTreeListener,
+			removeTreeListener: this.removeTreeListener,
 		};
 		this.getPathFilesystems().forEach((fsEntry) => {
 			fsComponents.push(fsEntry.filesystem!.getUIComponents(fsState));

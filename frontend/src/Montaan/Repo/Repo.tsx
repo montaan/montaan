@@ -5,7 +5,7 @@ import { withRouter, RouteComponentProps } from 'react-router-dom';
 
 import styles from './Repo.module.scss';
 import Form from 'react-bootstrap/Form';
-import { RepoInfo } from '../lib/filesystems/MontaanUserReposFilesystem';
+import { RepoInfo } from '../Filesystems/MontaanUserReposFilesystem';
 
 export interface RepoProps extends RouteComponentProps {
 	repo: RepoInfo;

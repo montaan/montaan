@@ -449,107 +449,118 @@ export default class ModelBuilder {
 		const yDirOff = (1 - dirScale) * fileTree.scale;
 		const dirScale2 = dirScale * fileTree.scale;
 
+		let dirsLength = 0;
+		dirs.forEach((d) => (dirsLength += d.relativeScale < 0 ? 1 : 0));
+
 		const dirSquareSide = Math.ceil(
-			Math.sqrt(Math.ceil(dirScale * (dirs.length + (files.length > 0 ? 1 : 0))))
+			Math.sqrt(Math.ceil(dirScale * (dirsLength + (files.length > 0 ? 1 : 0))))
 		);
 		let fileSquareSide = Math.ceil(Math.sqrt(Math.ceil(files.length / filesPerRow)));
 
 		let maxX = 0,
 			maxY = 0;
 		let filesBox = { x: fileTree.x, y: fileTree.y, z: fileTree.z, scale: fileTree.scale };
-		outer: for (let x = 0; x < dirSquareSide; x++) {
-			for (let y = 0; y < dirSquareSide / dirScale; y++) {
-				const off = x * Math.ceil(dirSquareSide / dirScale) + y;
-				if (off >= dirs.length) {
-					if (dirs.length > 0) {
-						if (dirs.length <= 2) {
-							x = 1;
-							y = 1;
-							filesPerRow = 1;
-							fileSquareSide = Math.ceil(
-								Math.sqrt(Math.ceil(files.length / filesPerRow))
-							);
-							const yOff = 1 - (0.675 * y + 1) * (1 / dirSquareSide);
-							const xOff = 1.0 * x * (1 / dirSquareSide);
-							const subX = xOff + 0.0 / dirSquareSide;
-							const subY = yOff + 0.0 / dirSquareSide;
-							fileTree.filesBox = filesBox = {
-								x: fileTree.x + subX * dirScale2,
-								y: fileTree.y + subY * dirScale2 + yDirOff,
-								scale: 2 * (0.8 / dirSquareSide) * dirScale2,
-								z: fileTree.z,
-							};
-						} else if (dirs.length !== dirSquareSide * dirSquareSide - 1) {
-							y = x === dirSquareSide - 1 ? y + 2 : 2;
-							x = dirSquareSide - 1;
-							filesPerRow = 1;
-							fileSquareSide = Math.ceil(
-								Math.sqrt(Math.ceil(files.length / filesPerRow))
-							);
-							const yOff = 1 - (0.5 * y + 1) * (1 / dirSquareSide);
-							const xOff = 0.9 * x * (1 / dirSquareSide);
-							const subX = xOff + 0.1 / dirSquareSide;
-							const subY = yOff + 0.125 / dirSquareSide;
-							fileTree.filesBox = filesBox = {
-								x: fileTree.x + subX * dirScale2,
-								y: fileTree.y + subY * dirScale2 + yDirOff,
-								scale: 2 * (0.9 / dirSquareSide) * dirScale2,
-								z: fileTree.z,
-							};
-						} else {
-							const yOff = 1 - (0.5 * y + 1) * (1 / dirSquareSide);
-							const xOff = 0.9 * x * (1 / dirSquareSide);
-							const subX = xOff + 0.1 / dirSquareSide;
-							const subY = yOff + 0.125 / dirSquareSide;
-							fileTree.filesBox = filesBox = {
-								x: fileTree.x + subX * dirScale2,
-								y: fileTree.y + subY * dirScale2 + yDirOff,
-								scale: (0.8 / dirSquareSide) * dirScale2,
-								z: fileTree.z,
-							};
-						}
+		for (let off = 0, len = dirs.length + (files.length > 0 ? 1 : 0); off < len; off++) {
+			const h = Math.ceil(dirSquareSide / dirScale);
+			let x = Math.floor(off / h);
+			let y = off - x * h;
+			if (off >= dirs.length) {
+				if (dirs.length > 0) {
+					if (dirs.length <= 2) {
+						x = 1;
+						y = 1;
+						filesPerRow = 1;
+						fileSquareSide = Math.ceil(
+							Math.sqrt(Math.ceil(files.length / filesPerRow))
+						);
+						const yOff = 1 - (0.675 * y + 1) * (1 / dirSquareSide);
+						const xOff = 1.0 * x * (1 / dirSquareSide);
+						const subX = xOff + 0.0 / dirSquareSide;
+						const subY = yOff + 0.0 / dirSquareSide;
+						fileTree.filesBox = filesBox = {
+							x: fileTree.x + subX * dirScale2,
+							y: fileTree.y + subY * dirScale2 + yDirOff,
+							scale: 2 * (0.8 / dirSquareSide) * dirScale2,
+							z: fileTree.z,
+						};
+					} else if (dirs.length !== dirSquareSide * dirSquareSide - 1) {
+						y = x === dirSquareSide - 1 ? y + 2 : 2;
+						x = dirSquareSide - 1;
+						filesPerRow = 1;
+						fileSquareSide = Math.ceil(
+							Math.sqrt(Math.ceil(files.length / filesPerRow))
+						);
+						const yOff = 1 - (0.5 * y + 1) * (1 / dirSquareSide);
+						const xOff = 0.9 * x * (1 / dirSquareSide);
+						const subX = xOff + 0.1 / dirSquareSide;
+						const subY = yOff + 0.125 / dirSquareSide;
+						fileTree.filesBox = filesBox = {
+							x: fileTree.x + subX * dirScale2,
+							y: fileTree.y + subY * dirScale2 + yDirOff,
+							scale: 2 * (0.9 / dirSquareSide) * dirScale2,
+							z: fileTree.z,
+						};
+					} else {
+						const yOff = 1 - (0.5 * y + 1) * (1 / dirSquareSide);
+						const xOff = 0.9 * x * (1 / dirSquareSide);
+						const subX = xOff + 0.1 / dirSquareSide;
+						const subY = yOff + 0.125 / dirSquareSide;
+						fileTree.filesBox = filesBox = {
+							x: fileTree.x + subX * dirScale2,
+							y: fileTree.y + subY * dirScale2 + yDirOff,
+							scale: (0.8 / dirSquareSide) * dirScale2,
+							z: fileTree.z,
+						};
 					}
-					break outer;
 				}
-				maxX = Math.max(x, maxX);
-				maxY = Math.max(y, maxY);
-				const dir = dirs[off];
-				const yOff = 1 - (0.5 * y + 1) * (1 / dirSquareSide);
-				const xOff = 0.9 * x * (1 / dirSquareSide);
-				const subX = xOff + 0.1 / dirSquareSide;
-				const subY = yOff + 0.125 / dirSquareSide;
+				break;
+			}
+			maxX = Math.max(x, maxX);
+			maxY = Math.max(y, maxY);
+			const dir = dirs[off];
+			const yOff = 1 - (0.5 * y + 1) * (1 / dirSquareSide);
+			const xOff = 0.9 * x * (1 / dirSquareSide);
+			const subX = xOff + 0.1 / dirSquareSide;
+			const subY = yOff + 0.125 / dirSquareSide;
+			if (dir.relativeScale > 0) {
+				dir.x = fileTree.x + dir.rx * fileTree.scale;
+				dir.y = fileTree.y + dir.ry * fileTree.scale;
+				dir.scale = fileTree.scale * dir.relativeScale;
+				dir.z = fileTree.z + dir.rz * fileTree.scale + dir.scale * 0.2;
+				console.log(dir.x, dir.y, dir.z, dir.scale);
+			} else {
 				dir.x = fileTree.x + subX * dirScale2;
 				dir.y = fileTree.y + yDirOff + subY * dirScale2;
 				dir.scale = (0.8 / dirSquareSide) * dirScale2;
 				dir.z = fileTree.z + dir.scale * 0.2;
-				const bbox = Geometry.getFSEntryBBox(dir, mesh, camera);
-				if (!bbox.onScreen || bbox.width < minWidth) continue;
-				dir.index = fileIndex;
-				fileIndex++;
-				dir.vertexIndex = vertexIndices.vertexIndex;
-				dir.parent = fileTree;
-				index[dir.index] = dir;
-				const dirColor = dir.color || Colors.getDirectoryColor(dir);
-				dir.color = dirColor;
-				this.ensureSpaceForEntry(geo, vertexIndices);
-				Geometry.setColor(geo.colorVerts, dir.index, dirColor);
-				vertexIndices.vertexIndex = Geometry.makeQuad(
-					geo.verts,
-					dir.index,
-					dir.x,
-					dir.y + 0.5 * dir.scale,
-					dir.scale,
-					dir.scale * 0.5,
-					dir.z
+			}
+			const bbox = Geometry.getFSEntryBBox(dir, mesh, camera);
+			if (!bbox.onScreen || bbox.width < minWidth) continue;
+			dir.index = fileIndex;
+			fileIndex++;
+			dir.vertexIndex = vertexIndices.vertexIndex;
+			dir.parent = fileTree;
+			index[dir.index] = dir;
+			const dirColor = dir.color || Colors.getDirectoryColor(dir);
+			dir.color = dirColor;
+			this.ensureSpaceForEntry(geo, vertexIndices);
+			Geometry.setColor(geo.colorVerts, dir.index, dirColor);
+			vertexIndices.vertexIndex = Geometry.makeQuad(
+				geo.verts,
+				dir.index,
+				dir.x,
+				dir.y + 0.5 * dir.scale,
+				dir.scale,
+				dir.scale * 0.5,
+				dir.z
+			);
+			if (bbox.width > minWidth * dir.title.length * 0.25) {
+				vertexIndices.textVertexIndex = this.createTextForEntry(
+					dir,
+					labelGeometries,
+					vertexIndices.textVertexIndex,
+					0.65
 				);
-				if (bbox.width > minWidth * dir.title.length * 0.25) {
-					vertexIndices.textVertexIndex = this.createTextForEntry(
-						dir,
-						labelGeometries,
-						vertexIndices.textVertexIndex,
-						0.65
-					);
-				}
 			}
 		}
 

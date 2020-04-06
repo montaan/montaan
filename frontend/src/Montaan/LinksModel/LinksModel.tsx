@@ -10,13 +10,16 @@ export default class LinksModel {
 	lineGeo: THREE.BufferGeometry;
 	screenPointToWorldPoint: (x: number, y: number) => THREE.Vector3;
 	parseTarget: ParseTargetSignature;
+	requestFrame: () => void;
 
 	constructor(
 		screenPointToWorldPoint: (x: number, y: number) => THREE.Vector3,
-		parseTarget: ParseTargetSignature
+		parseTarget: ParseTargetSignature,
+		requestFrame: () => void
 	) {
 		this.screenPointToWorldPoint = screenPointToWorldPoint;
 		this.parseTarget = parseTarget;
+		this.requestFrame = requestFrame;
 
 		this.lineGeo = new THREE.BufferGeometry();
 		this.lineGeo.setAttribute(
@@ -238,6 +241,7 @@ export default class LinksModel {
 			}
 			(geo.getAttribute('position') as THREE.BufferAttribute).needsUpdate = true;
 			(geo.getAttribute('color') as THREE.BufferAttribute).needsUpdate = true;
+			this.requestFrame();
 		}
 	}
 

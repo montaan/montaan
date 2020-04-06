@@ -14,7 +14,7 @@ import FormGroupTextInput from '../../lib/FormGroupTextInput';
 
 import styles from './RepoSelector.module.scss';
 import Repo from '../Repo';
-import { RepoInfo } from '../lib/filesystems/MontaanUserReposFilesystem';
+import { RepoInfo } from '../Filesystems/MontaanUserReposFilesystem';
 
 const schema = yup.object({
 	name: yup.string().nullable(),

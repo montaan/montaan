@@ -13,7 +13,7 @@ import Tour from '../Tour';
 import utils from '../lib/utils';
 import { faTimes } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { FSEntry } from '../lib/filesystem';
+import { FSEntry, getFullPath } from '../lib/filesystem';
 
 export interface TourSelectorProps extends RouteComponentProps {
 	fileTree: FSEntry;
@@ -36,14 +36,7 @@ const TourSelector = ({ path, fileTree, api, repoPrefix, fileTreeUpdated }: Tour
 	const toursInTree: TourRef[] = useMemo(() => {
 		// eslint-disable-next-line
 		const version = fileTreeUpdated;
-		const foundTours = [] as string[];
-		utils.traverseFSEntry(
-			fileTree,
-			(fsEntry: FSEntry, path: string) => {
-				if (!fsEntry.isDirectory && fsEntry.title === '.tour.md') foundTours.push(path);
-			},
-			''
-		);
+		const foundTours = utils.findFiles(fileTree, '.tour.md').map(getFullPath);
 		return foundTours.sort().map((path) => {
 			const rawName = path
 				.split('/')

@@ -8,7 +8,7 @@ import styles from './Search.module.scss';
 import { SearchResult } from '../MainApp';
 
 export interface SearchProps extends RouteComponentProps {
-	setSearchQuery: (repo: string, query: string) => void;
+	setSearchQuery: (repo: string, branch: string, query: string) => void;
 	setSearchHover: (li: any, url: string) => void;
 	clearSearchHover: (li: any) => void;
 	repoPrefix: string;
@@ -16,6 +16,7 @@ export interface SearchProps extends RouteComponentProps {
 	searchQuery: string;
 	searchResults: SearchResult[];
 	updateSearchLines: () => void;
+	branch: string;
 }
 
 type HitTypes = { [index: number]: boolean };
@@ -62,7 +63,7 @@ class Search extends React.Component<SearchProps, SearchState> {
 	}
 
 	searchOnInput = (ev: { target: { value: any } }) =>
-		this.props.setSearchQuery(this.props.repoPrefix, ev.target.value);
+		this.props.setSearchQuery(this.props.repoPrefix, this.props.branch, ev.target.value);
 
 	createResultLink(result: {
 		line: number;

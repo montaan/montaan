@@ -27,6 +27,11 @@ export class FSEntry {
 	z: number = 0;
 	scale: number = 1;
 
+	rx: number = 0;
+	ry: number = 0;
+	rz: number = 0;
+	relativeScale: number = -1;
+
 	filesBox: {} = {};
 	color?: number[];
 
@@ -47,6 +52,7 @@ export class FSEntry {
 
 	action?: string;
 	bbox: BBox = new BBox();
+	nameIndex?: Map<string, FSEntry[]>;
 
 	constructor(name: string = '') {
 		this.name = name;

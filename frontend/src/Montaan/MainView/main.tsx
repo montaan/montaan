@@ -185,11 +185,15 @@ export class Tabletree {
 			}
 		}
 		this.setupScene(); // Renderer, scene and camera setup.
-		this.searchLandmarks = new SearchLandmarks(this.screenPointToWorldPoint);
+		this.searchLandmarks = new SearchLandmarks(this.screenPointToWorldPoint, this.parseTarget);
 		this.scene.add(this.searchLandmarks.model);
 		this.highlightedLines = new HighlightedLines();
 		this.scene.add(this.highlightedLines.model);
-		this.linksModel = new LinksModel(this.screenPointToWorldPoint, this.parseTarget);
+		this.linksModel = new LinksModel(
+			this.screenPointToWorldPoint,
+			this.parseTarget,
+			this.requestFrame
+		);
 		this.scene.add(this.linksModel.model);
 		this.setupEventListeners(); // UI event listeners
 		this.changed = true;
@@ -996,6 +1000,7 @@ export class Tabletree {
 		const { scene, camera, renderer } = this;
 
 		if (this.tree) this.showFileTree(this.tree, true);
+		this.searchLandmarks.updateSearchLines();
 		this.linksModel.updateLinks(this.currentFrame);
 		this.changed = false;
 

@@ -1,18 +1,25 @@
-import { Filesystem, FSEntry, getPathEntry, NotImplementedError } from '../filesystem';
+import {
+	Filesystem,
+	FSEntry,
+	getPathEntry,
+	NotImplementedError,
+	getFullPath,
+	mount,
+	FSDirEntry,
+} from '../lib/filesystem';
 import React from 'react';
 
-import QFrameAPI from '../../../lib/api';
+import QFrameAPI from '../../lib/api';
 
-import utils from '../utils';
-import { RawCommitData, parseCommits, CommitData } from '../parse_commits';
-import { TreeLink, TreeLinkKey, FSState } from '../../MainApp';
+import utils from '../lib/utils';
+import { RawCommitData, parseCommits, CommitData } from '../lib/parse_commits';
+import { TreeLink, TreeLinkKey, FSState } from '../MainApp';
 import * as THREE from 'three';
-import TourSelector from '../../TourSelector';
-import Player from '../../Player';
-import CommitControls from '../../CommitControls';
-import CommitInfo from '../../CommitInfo';
-import { getFullPath, mount, FSDirEntry } from '../filesystem/filesystem';
-import Search from '../../Search';
+import TourSelector from '../TourSelector';
+import Player from '../Player';
+// import CommitControls from '../../CommitControls';
+import CommitInfo from '../CommitInfo';
+import Search from '../Search';
 
 export class MontaanGitBranchFilesystem extends Filesystem {
 	repo: string;
@@ -58,6 +65,7 @@ export class MontaanGitBranchFilesystem extends Filesystem {
 					setSearchHover={state.setSearchHover}
 					clearSearchHover={state.clearSearchHover}
 					repoPrefix={repoPrefix}
+					branch={this.ref}
 				/>
 				<TourSelector
 					path={path}
@@ -68,7 +76,7 @@ export class MontaanGitBranchFilesystem extends Filesystem {
 				/>
 				<Player
 					repoPrefix={repoPrefix}
-					fileTree={state.fileTree}
+					fileTree={this.mountPoint}
 					fileTreeUpdated={state.fileTreeUpdated}
 					navigationTarget={state.navigationTarget}
 					api={this.options.api}
@@ -239,6 +247,12 @@ export class MontaanGitFilesystem extends Filesystem {
 				if (!fsEntry) {
 					fsEntry = new FSDirEntry(pathSegment);
 					fsEntry.parent = dir;
+					if (i === 0) {
+						fsEntry.relativeScale = 0.06;
+						fsEntry.rx = 0.93;
+						fsEntry.ry = 0.873;
+						fsEntry.rz = 0;
+					}
 					dir.entries.set(pathSegment, fsEntry);
 				}
 				dir = fsEntry;
