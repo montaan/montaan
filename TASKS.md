@@ -19,15 +19,9 @@
 
 # FIX
 
-    [] Loading trees takes forever and too many requests
-    [] Move tree rendering to lib
-    [x] Move repo management to MontaanUserRepos
-    [] Move tree rebuild into a worker
-        [] Serialize FSEntry tree into a buffer
-    [] Optimize React prop flow (only take in absolutely necessary props)
-        [] Search
-        [] CommitInfo
-        [] CommitControls
+    [] Search highlighting
+    [] Navigation to unseen parts
+    [] Zoom to file often fails (camera goes wonky)
 
 # Release checklist
 
@@ -49,7 +43,6 @@
 
 # KEY FEATURES
 
-    [] Re-enable CommitControls
     [] Thumbnail mip pyramid server
         [] Copy from Muryu?
     [] Custom layouts
@@ -132,6 +125,12 @@
     [] Fetch configurable level deep
     [] Server approximates what's visible and sends that in one go
     [] Instanced rendering of all models
+    [] Move tree rebuild into a worker
+        [] Serialize FSEntry tree into a buffer
+    [] Optimize React prop flow (only take in absolutely necessary props)
+        [] Search
+        [] CommitInfo
+        [] CommitControls
 
 ## Website engine
 
@@ -420,6 +419,8 @@
     [x] Optimize layoutDir
     [x] Move visibility checking to tree builder
     [x] Tree rebuilds have files missing
+    [x] Loading trees takes forever and too many requests
+    [x] Move repo management to MontaanUserRepos
 
 # Ideas
 
