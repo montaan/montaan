@@ -14,7 +14,7 @@ import { authorCmp, Commit } from '../lib/parse-diff';
 import {
 	getPathEntry,
 	getFullPath,
-	readDir,
+	readDirs,
 	registerFileSystem,
 	getAllFilesystemsForPath,
 	mountURL,
@@ -283,7 +283,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		let files;
 		let fileTreeDrop = tree;
 		if (paths.length > 0) {
-			files = Promise.all(paths.map((p) => readDir(tree.tree, p)));
+			files = readDirs(tree.tree, paths);
 		}
 		if (dropEntries.length > 0) {
 			dropEntries.forEach((fsEntry) => {
@@ -308,7 +308,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		if (LoadDirWorkQueueLocked) return;
 		LoadDirWorkQueue.clear();
 		if (paths.length === 0 && dropEntries.length === 0) return;
-		const n = 5;
+		const n = 8;
 		for (let i = 0; i < paths.length; i += n) {
 			LoadDirWorkQueue.push(this.processDirRequest, {
 				tree: this.state.fileTree,

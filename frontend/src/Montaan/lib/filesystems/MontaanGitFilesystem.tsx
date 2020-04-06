@@ -170,6 +170,24 @@ export class MontaanGitBranchFilesystem extends Filesystem {
 		return getPathEntry(tree.tree, path) || tree.tree;
 	}
 
+	async readDirs(dirtyPaths: string[]): Promise<(FSEntry | null)[]> {
+		const paths = dirtyPaths.map((path) => {
+			let reqPath = path;
+			if (reqPath === '') reqPath = '.';
+			if (reqPath[0] === '/') reqPath = '.' + reqPath;
+			reqPath += '/';
+			return reqPath;
+		});
+		const pathBuf: ArrayBuffer = await this.options.api.postType(
+			'/repo/tree',
+			{ repo: this.repo, paths, hash: this.ref, recursive: false },
+			{},
+			'arrayBuffer'
+		);
+		const tree = utils.parseFileList_(pathBuf, true, '');
+		return dirtyPaths.map((path) => getPathEntry(tree.tree, path) || tree.tree);
+	}
+
 	async readFile(path: string) {
 		return this.options.api.postType(
 			'/repo/checkout',

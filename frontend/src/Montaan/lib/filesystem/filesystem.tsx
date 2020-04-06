@@ -63,6 +63,7 @@ export class NotImplementedError extends Error {}
 export interface IFilesystem {
 	mountPoint?: FSEntry;
 	readDir(path: string): Promise<FSEntry | null>;
+	readDirs(paths: string[]): Promise<(FSEntry | null)[]>;
 	readFile(path: string): Promise<ArrayBuffer>;
 	writeFile(path: string, contents: ArrayBuffer): Promise<boolean>;
 	rm(path: string): Promise<boolean>;
@@ -95,6 +96,24 @@ export class Namespace implements IFilesystem {
 	async readDir(path: string) {
 		const { relativePath, filesystem } = this.findFilesystemForPath(path);
 		return filesystem.readDir(relativePath);
+	}
+
+	async readDirs(paths: string[]) {
+		const filesystems = new Map<IFilesystem, string[]>();
+		paths.forEach((path) => {
+			const { relativePath, filesystem } = this.findFilesystemForPath(path);
+			let fs = filesystems.get(filesystem);
+			if (!fs) {
+				fs = [];
+				filesystems.set(filesystem, fs);
+			}
+			fs.push(relativePath);
+		});
+		const promises = [];
+		for (let fs of filesystems.entries()) {
+			promises.push(fs[0].readDirs(fs[1]));
+		}
+		return (await Promise.all(promises)).flat();
 	}
 
 	async readFile(path: string) {
@@ -134,6 +153,10 @@ export class Filesystem implements IFilesystem {
 
 	async readDir(path: string): Promise<FSEntry | null> {
 		throw new NotImplementedError("Filesystem doesn't support reads");
+	}
+	async readDirs(paths: string[]): Promise<(FSEntry | null)[]> {
+		const promises = paths.map((path) => this.readDir(path));
+		return Promise.all(promises);
 	}
 	async readFile(path: string): Promise<ArrayBuffer> {
 		throw new NotImplementedError("Filesystem doesn't support reads");
@@ -305,26 +328,69 @@ export async function readDir(tree: FSEntry, path: string): Promise<void> {
 		const { filesystem, relativePath } = fs;
 		if (filesystem.filesystem) {
 			const dir = await filesystem.filesystem.readDir(relativePath);
-			const targetDir = getPathEntry(filesystem, relativePath);
-			// if (targetDir && targetDir.name === 'backend') debugger;
-			if (!dir || !targetDir || !targetDir.isDirectory || !dir.isDirectory) return;
-			for (let i of dir.entries.keys()) {
-				const fsEntry = dir.entries.get(i);
-				if (!targetDir.entries.get(i) && fsEntry) {
-					targetDir.entries.set(i, fsEntry);
-					fsEntry.parent = targetDir;
-				}
-			}
-			const deletions = [];
-			for (let i of targetDir.entries.keys()) {
-				if (!dir.entries.has(i)) {
-					deletions.push(i);
-				}
-			}
-			for (let i = 0; i < deletions.length; i++) {
-				targetDir.entries.delete(deletions[i]);
-			}
+			if (dir) applyDir(filesystem, dir, relativePath);
 		}
+	}
+}
+
+export async function readDirs(tree: FSEntry, paths: string[]): Promise<void> {
+	const filesystems = new Map<FSEntry, { path: string; relativePath: string }[]>();
+	const pathEntries = new Map<string, FSEntry | null>();
+	paths.forEach((path) => {
+		const fsPath = getFilesystemForPath(tree, path);
+		if (!fsPath) return null;
+		const { filesystem, relativePath } = fsPath;
+		let fs = filesystems.get(filesystem);
+		if (!fs) {
+			fs = [];
+			filesystems.set(filesystem, fs);
+		}
+		fs.push({ path, relativePath });
+		pathEntries.set(path, null);
+	});
+	const promises: Promise<void>[] = [];
+	Array.from(filesystems.entries()).forEach((entry) => {
+		const fsEntry = entry[0];
+		const pathObjects = entry[1];
+		if (fsEntry.filesystem) {
+			const relativePaths: string[] = [];
+			const paths: string[] = [];
+			pathObjects.forEach(({ path, relativePath }) => {
+				paths.push(path);
+				relativePaths.push(relativePath);
+			});
+			promises.push(
+				fsEntry.filesystem.readDirs(relativePaths).then((entries) =>
+					entries.forEach((dir, i) => {
+						if (dir) applyDir(fsEntry, dir, relativePaths[i]);
+					})
+				)
+			);
+		}
+	});
+	await Promise.all(promises);
+}
+
+function applyDir(tree: FSEntry, dir: FSEntry, relativePath: string) {
+	const targetDir = getPathEntry(tree, relativePath);
+	// if (targetDir && targetDir.name === 'backend') debugger;
+	if (!targetDir || !targetDir.isDirectory) return;
+	dir.isDirectory = true;
+	for (let i of dir.entries.keys()) {
+		const fsEntry = dir.entries.get(i);
+		if (!targetDir.entries.get(i) && fsEntry) {
+			targetDir.entries.set(i, fsEntry);
+			fsEntry.parent = targetDir;
+		}
+	}
+	const deletions = [];
+	for (let i of targetDir.entries.keys()) {
+		if (!dir.entries.has(i)) {
+			deletions.push(i);
+		}
+	}
+	for (let i = 0; i < deletions.length; i++) {
+		targetDir.entries.delete(deletions[i]);
 	}
 }
 
