@@ -1,4 +1,4 @@
-const { Exec, repoDataShape } = require('./lib');
+const { Exec, repoDataShape, escapeArg } = require('./lib');
 
 module.exports = async function(req, res) {
 	var [error, { user_id }] = await guardPostWithSession(req);
@@ -26,10 +26,18 @@ module.exports = async function(req, res) {
 		const userName = dbRes.rows[0].name;
 		if (url)
 			Exec(
-				`${process.cwd()}/bin/process_tree '${url}' '${userName}/${name}' 2>&1`,
+				`${escapeArg(process.cwd())}/bin/process_tree ${escapeArg(url)} ${escapeArg(
+					userName
+				)}/${escapeArg(name)} 2>&1`,
 				repoCreated
 			);
-		else Exec(`${process.cwd()}/bin/process_tree '${userName}/${name}' 2>&1`, repoCreated);
+		else
+			Exec(
+				`${escapeArg(process.cwd())}/bin/process_tree ${escapeArg(userName)}/${escapeArg(
+					name
+				)} 2>&1`,
+				repoCreated
+			);
 	} catch (err) {
 		console.error('repos/create', err);
 	}

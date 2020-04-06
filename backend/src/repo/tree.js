@@ -1,9 +1,11 @@
-const { Path, Exec, assertRepoDir } = require('./lib');
+const { Path, Exec, assertRepoDir, escapeArg } = require('./lib');
 
 const listDir = (repoPath, hash, path) => {
 	return new Promise((resolve, reject) => {
 		Exec(
-			`cd ${repoPath} && git ls-tree --full-tree -l -z ${hash} ${path}`,
+			`cd ${escapeArg(repoPath)} && git ls-tree --full-tree -l -z ${escapeArg(
+				hash
+			)} ${escapeArg(path)}`,
 			{ maxBuffer: 100000000 },
 			(error, stdout, stderr) => {
 				if (error) reject(error);
@@ -50,9 +52,9 @@ module.exports = async function(req, res) {
 	await new Promise(async (resolve, reject) => {
 		// if (recursive) {
 		Exec(
-			`cd ${filePath} && git ls-tree --full-tree -l ${
+			`cd ${escapeArg(filePath)} && git ls-tree --full-tree -l ${
 				recursive ? '-r' : ''
-			} -z ${hash} ${paths.join(' ')}`,
+			} -z ${escapeArg(hash)} ${paths.map((path) => escapeArg(path)).join(' ')}`,
 			{ maxBuffer: 100000000 },
 			async function(error, stdout, stderr) {
 				if (error) reject(error);

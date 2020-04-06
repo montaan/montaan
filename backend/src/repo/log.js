@@ -1,4 +1,4 @@
-const { Path, Exec, assertRepoDir } = require('./lib');
+const { Path, Exec, assertRepoDir, escapeArg } = require('./lib');
 
 module.exports = async function(req, res) {
 	var [error, { repo, branch, start, count }] = assertShape(
@@ -15,7 +15,7 @@ module.exports = async function(req, res) {
 	if (error) return error;
 	await new Promise(async (resolve, reject) => {
 		Exec(
-			`cd ${filePath} && git log ${branch} | head -n 1000`,
+			`cd ${escapeArg(filePath)} && git log ${escapeArg(branch)} | head -n 1000`,
 			{ maxBuffer: 100000000 },
 			async function(error, stdout, stderr) {
 				if (error) reject(error);

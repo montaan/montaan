@@ -31,6 +31,10 @@ function assertRepoDir(fsPath) {
 	return [null, { filePath, stat }];
 }
 
+function escapeArg(arg) {
+	return `'${arg.replace(/'/g, "'\\''")}'`;
+}
+
 module.exports = {
 	FS,
 	Path,
@@ -41,4 +45,5 @@ module.exports = {
 	repoDataShape,
 	assertRepoFile,
 	assertRepoDir,
+	escapeArg,
 };

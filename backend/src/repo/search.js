@@ -1,4 +1,4 @@
-const { Path, Exec, assertRepoFile } = require('./lib');
+const { Path, Exec, assertRepoFile, escapeArg } = require('./lib');
 
 module.exports = async function(req, res) {
 	var [error, { repo, query }] = assertShape(
@@ -10,7 +10,9 @@ module.exports = async function(req, res) {
 	if (error) return error;
 	await new Promise((resolve, reject) => {
 		Exec(
-			`CSEARCHINDEX='${filePath}' $HOME/go/bin/csearch -i -n '${query}' | sed -E 's:^.+/repo/::'`,
+			`CSEARCHINDEX=${escapeArg(filePath)} $HOME/go/bin/csearch -i -n ${escapeArg(
+				query
+			)} | sed -E 's:^.+/repo/::'`,
 			async function(error, stdout, stderr) {
 				res.writeHeader(200, { 'Content-Type': 'text/plain' });
 				await res.end(stdout || '');

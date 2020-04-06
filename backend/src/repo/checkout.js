@@ -1,4 +1,4 @@
-const { Path, Exec, assertRepoDir } = require('./lib');
+const { Path, Exec, assertRepoDir, escapeArg } = require('./lib');
 
 module.exports = async function(req, res) {
 	var [error, { repo, path, hash }] = assertShape(
@@ -9,15 +9,15 @@ module.exports = async function(req, res) {
 	var [error, { filePath }] = assertRepoDir(Path.join(repo, 'repo'));
 	if (error) return error;
 	await new Promise((resolve, reject) => {
-		Exec(`cd ${filePath} && git show ${hash}:${path}`, { maxBuffer: 100000000 }, async function(
-			error,
-			stdout,
-			stderr
-		) {
-			if (error) reject(error);
-			res.writeHeader(200, { 'Content-Type': 'application/octet-stream' });
-			await res.end(stdout || '');
-			resolve();
-		});
+		Exec(
+			`cd ${escapeArg(filePath)} && git show ${escapeArg(hash)}:${escapeArg(path)}`,
+			{ maxBuffer: 100000000 },
+			async function(error, stdout, stderr) {
+				if (error) reject(error);
+				res.writeHeader(200, { 'Content-Type': 'application/octet-stream' });
+				await res.end(stdout || '');
+				resolve();
+			}
+		);
 	});
 };
