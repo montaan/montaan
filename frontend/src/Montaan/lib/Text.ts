@@ -3,7 +3,7 @@ import SDFShader from './third_party/three-bmfont-text-modified/shaders/msdf';
 import Colors from './Colors';
 import * as THREE from 'three';
 import {
-	Font,
+	BMFont,
 	LayoutOptionsWithoutFont,
 	LayoutOptions,
 } from './third_party/layout-bmfont-text-modified';
@@ -17,7 +17,7 @@ export class SDFTextMesh extends THREE.Mesh {
 }
 
 export default {
-	font: undefined as Font | undefined,
+	font: undefined as BMFont | undefined,
 	fontTexture: undefined as THREE.Texture | undefined,
 	textMaterial: emptyMaterial,
 

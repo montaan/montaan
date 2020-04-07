@@ -26,7 +26,7 @@ export type Kerning = {
 	second: number;
 };
 
-export type Font = {
+export type BMFont = {
 	chars: Glyph[];
 	glyphs: Map<number, Glyph>;
 	kernings?: Map<number, Map<number, number>>;
@@ -55,7 +55,7 @@ export enum Align {
 }
 
 export interface LayoutOptionsWithoutFont {
-	font?: Font;
+	font?: BMFont;
 	align?: Align;
 	measure?: (text: string, start: number, end: number, width: number) => Metrics;
 	tabSize?: number;
@@ -70,7 +70,7 @@ export interface LayoutOptionsWithoutFont {
 }
 
 export interface LayoutOptions extends LayoutOptionsWithoutFont {
-	font: Font;
+	font: BMFont;
 }
 
 export class LayoutGlyph {
@@ -105,7 +105,7 @@ export class TextLayout {
 
 	static mock: TextLayout = {
 		glyphs: [] as LayoutGlyph[],
-		options: { text: '', font: ({} as unknown) as Font },
+		options: { text: '', font: ({} as unknown) as BMFont },
 		width: 0,
 		height: 0,
 		descender: 0,
@@ -213,7 +213,7 @@ export class TextLayout {
 		this.linesTotal = lines.length;
 	}
 
-	setupFallbackGlyphs(font: Font) {
+	setupFallbackGlyphs(font: BMFont) {
 		//These are fallbacks, when the font doesn't include
 		//' ' or '\t' glyphs
 
@@ -317,7 +317,7 @@ export class TextLayout {
 	};
 }
 
-function getXHeight(font: Font): number {
+function getXHeight(font: BMFont): number {
 	for (var i = 0; i < X_HEIGHTS.length; i++) {
 		var id = X_HEIGHTS[i].charCodeAt(0);
 		const glyph = font.glyphs.get(id);
@@ -326,7 +326,7 @@ function getXHeight(font: Font): number {
 	return 0;
 }
 
-function getMGlyph(font: Font): Glyph | null {
+function getMGlyph(font: BMFont): Glyph | null {
 	for (var i = 0; i < M_WIDTHS.length; i++) {
 		var id = M_WIDTHS[i].charCodeAt(0);
 		const glyph = font.glyphs.get(id);
@@ -335,7 +335,7 @@ function getMGlyph(font: Font): Glyph | null {
 	return null;
 }
 
-function getCapHeight(font: Font): number {
+function getCapHeight(font: BMFont): number {
 	for (var i = 0; i < CAP_HEIGHTS.length; i++) {
 		const id = CAP_HEIGHTS[i].charCodeAt(0);
 		const glyph = font.glyphs.get(id);
@@ -344,7 +344,7 @@ function getCapHeight(font: Font): number {
 	return 0;
 }
 
-function getKerning(font: Font, left: number, right: number): number {
+function getKerning(font: BMFont, left: number, right: number): number {
 	if (!font.kernings || font.kernings.size === 0) return 0;
 	const kernings = font.kernings.get(left);
 	if (!kernings) return 0;

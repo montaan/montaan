@@ -1,5 +1,4 @@
 import './main.css';
-import './railscasts.min.css';
 import './ColorsDark.css';
 
 import * as THREE from 'three';

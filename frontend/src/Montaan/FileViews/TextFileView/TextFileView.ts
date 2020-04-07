@@ -1,4 +1,3 @@
-import prettyPrintWorker from '../../lib/pretty-print';
 import * as THREE from 'three';
 import { FSEntry } from '../../lib/filesystem';
 import QFrameAPI from '../../../lib/api';
@@ -8,7 +7,9 @@ import { BBox } from '../../lib/Geometry';
 import NavTarget from '../../lib/NavTarget';
 import FileView, { ContentBBox, EmptyContentBBox } from '../FileView';
 import { BufferGeometry } from 'three';
-import { SDFTextGeometry, SDFText } from '../../lib/third_party/three-bmfont-text-modified';
+import { SDFTextGeometry } from '../../lib/third_party/three-bmfont-text-modified';
+
+import PrettyPrinter from '../../lib/pretty-print';
 
 export default class TextFileView extends FileView {
 	MAX_SIZE = 1e5;
@@ -271,79 +272,66 @@ export default class TextFileView extends FileView {
 
 		const fsEntry = this.fsEntry;
 
-		prettyPrintWorker.prettyPrint(
+		const { verts, uvs, palette, lineCount, sdfText } = await PrettyPrinter.prettyPrint(
 			contents,
-			fsEntry.name,
-			({
-				verts,
-				uvs,
-				palette,
-				lineCount,
-				sdfText,
-			}: {
-				verts: Float32Array;
-				uvs: Float32Array;
-				palette: THREE.Vector3[] | undefined;
-				lineCount: number;
-				sdfText: SDFText;
-			}) => {
-				if (!this.parent) return;
-
-				const material = Text.makeTextMaterial(palette);
-				const geometry = new BufferGeometry() as SDFTextGeometry;
-				geometry.setAttribute('position', new THREE.BufferAttribute(verts, 4));
-				geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
-				geometry.sdfText = sdfText;
-				this.lineCount = lineCount;
-				this.textMesh = new SDFTextMesh();
-				this.textMesh.geometry = geometry;
-				this.textMesh.material = material;
-				this.add(this.textMesh);
-
-				this.visible = true;
-				material.uniforms.opacity.value = 0;
-				this.ontick = function(t, dt) {
-					if (this.fullyVisible) return;
-					material.uniforms.opacity.value += dt / 1000 / 0.5;
-					if (material.uniforms.opacity.value > 1) {
-						material.uniforms.opacity.value = 1;
-						this.fullyVisible = true;
-					}
-					this.requestFrame();
-				};
-
-				var textScale = Math.min(
-					1 / (geometry.sdfText.layout.width + 60),
-					1 / ((geometry.sdfText.layout.height + 30) / 0.75)
-				);
-				var vAspect = Math.min(
-					1,
-					(geometry.sdfText.layout.height + 30) /
-						0.75 /
-						((geometry.sdfText.layout.width + 60) / 1)
-				);
-				material.depthTest = false;
-
-				this.position.set(fsEntry.x, fsEntry.y, fsEntry.z);
-				this.scale.set(fsEntry.scale, fsEntry.scale, fsEntry.scale);
-
-				this.textMesh.scale.multiplyScalar(textScale);
-				this.textMesh.scale.y *= -1;
-				this.fsEntry = fsEntry;
-				this.textMesh.position.x += textScale * 30;
-				this.textMesh.position.y -= textScale * 7.5;
-				this.textMesh.position.y += 0.25 + 0.75 * (1 - vAspect);
-
-				this.textScale = textScale;
-				this.textX = Math.min(40 * 30 + 60, geometry.sdfText.layout.width + 60) * 0.5;
-				this.textYZero = 0.75;
-				this.textY = 0.75 - textScale * 7.5;
-				this.textWidth = geometry.sdfText.layout.width;
-				this.textHeight = geometry.sdfText.layout.height;
-
-				this.loaded();
-				this.requestFrame();
-			}
+			fsEntry.name
 		);
+
+		if (!this.parent) return;
+
+		const material = Text.makeTextMaterial(palette);
+		const geometry = new BufferGeometry() as SDFTextGeometry;
+		geometry.setAttribute('position', new THREE.BufferAttribute(verts, 4));
+		geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
+		geometry.sdfText = sdfText;
+		this.lineCount = lineCount;
+		this.textMesh = new SDFTextMesh();
+		this.textMesh.geometry = geometry;
+		this.textMesh.material = material;
+		this.add(this.textMesh);
+
+		this.visible = true;
+		material.uniforms.opacity.value = 0;
+		this.ontick = function(t, dt) {
+			if (this.fullyVisible) return;
+			material.uniforms.opacity.value += dt / 1000 / 0.5;
+			if (material.uniforms.opacity.value > 1) {
+				material.uniforms.opacity.value = 1;
+				this.fullyVisible = true;
+			}
+			this.requestFrame();
+		};
+
+		var textScale = Math.min(
+			1 / (geometry.sdfText.layout.width + 60),
+			1 / ((geometry.sdfText.layout.height + 30) / 0.75)
+		);
+		var vAspect = Math.min(
+			1,
+			(geometry.sdfText.layout.height + 30) /
+				0.75 /
+				((geometry.sdfText.layout.width + 60) / 1)
+		);
+		material.depthTest = false;
+
+		this.position.set(fsEntry.x, fsEntry.y, fsEntry.z);
+		this.scale.set(fsEntry.scale, fsEntry.scale, fsEntry.scale);
+
+		this.textMesh.scale.multiplyScalar(textScale);
+		this.textMesh.scale.y *= -1;
+		this.fsEntry = fsEntry;
+		this.textMesh.position.x += textScale * 30;
+		this.textMesh.position.y -= textScale * 7.5;
+		this.textMesh.position.y += 0.25 + 0.75 * (1 - vAspect);
+
+		this.textScale = textScale;
+		this.textX = Math.min(40 * 30 + 60, geometry.sdfText.layout.width + 60) * 0.5;
+		this.textYZero = 0.75;
+		this.textY = 0.75 - textScale * 7.5;
+		this.textWidth = geometry.sdfText.layout.width;
+		this.textHeight = geometry.sdfText.layout.height;
+
+		this.loaded();
+		this.requestFrame();
 	}
 }

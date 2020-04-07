@@ -1,4 +1,4 @@
-const { override } = require('customize-cra');
+const { override, addWebpackModuleRule } = require('customize-cra');
 // const { addReactRefresh } = require('customize-cra-react-refresh');
 
 const addWebpackNodeConfig = (nodeConfig) => (config) => {
@@ -7,6 +7,13 @@ const addWebpackNodeConfig = (nodeConfig) => (config) => {
 };
 
 module.exports = override(
+	(config) => ({
+		...config,
+		output: {
+			...config.output,
+			globalObject: 'this',
+		},
+	}),
 	addWebpackNodeConfig({
 		__filename: true,
 		__dirname: true,
