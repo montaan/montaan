@@ -22,7 +22,11 @@ export class SDFTextGeometry extends THREE.BufferGeometry {
 		if (!options.noBounds) this.computeBounds();
 	}
 
-	bounds3(positions: Float32Array, itemSize: number, box: { min: number[]; max: number[] }) {
+	private bounds3(
+		positions: Float32Array,
+		itemSize: number,
+		box: { min: number[]; max: number[] }
+	) {
 		box.min[0] = positions[0];
 		box.min[1] = positions[1];
 		box.min[2] = positions[2];
@@ -43,7 +47,7 @@ export class SDFTextGeometry extends THREE.BufferGeometry {
 		}
 	}
 
-	computeBounds() {
+	private computeBounds() {
 		this.boundingBox = new THREE.Box3();
 		this.boundingSphere = new THREE.Sphere();
 

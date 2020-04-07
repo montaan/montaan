@@ -527,7 +527,6 @@ export default class ModelBuilder {
 				dir.y = fileTree.y + dir.ry * fileTree.scale;
 				dir.scale = fileTree.scale * dir.relativeScale;
 				dir.z = fileTree.z + dir.rz * fileTree.scale + dir.scale * 0.2;
-				console.log(dir.x, dir.y, dir.z, dir.scale);
 			} else {
 				dir.x = fileTree.x + subX * dirScale2;
 				dir.y = fileTree.y + yDirOff + subY * dirScale2;

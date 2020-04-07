@@ -7,19 +7,8 @@ import Text, { SDFTextMesh } from '../../lib/Text';
 import { BBox } from '../../lib/Geometry';
 import NavTarget from '../../lib/NavTarget';
 import FileView, { ContentBBox, EmptyContentBBox } from '../FileView';
-
-type PrettyPrintResult = {
-	language: string;
-	value: string;
-};
-
-type NodeStyle = {
-	color: number;
-	bold: 0 | 1;
-	italic: 0 | 1;
-	underline: 0 | 1;
-	text: string;
-};
+import { BufferGeometry } from 'three';
+import { SDFTextGeometry, SDFText } from '../../lib/third_party/three-bmfont-text-modified';
 
 export default class TextFileView extends FileView {
 	MAX_SIZE = 1e5;
@@ -282,194 +271,79 @@ export default class TextFileView extends FileView {
 
 		const fsEntry = this.fsEntry;
 
-		prettyPrintWorker.prettyPrint(contents, fsEntry.name, (result: PrettyPrintResult) => {
-			if (!this.parent) return;
-			const geometry = Text.createText({
-				text: contents,
-				mode: 'pre',
-			});
-			let material: THREE.RawShaderMaterial;
-			// if (result.language) {
-			// 	const { nodeStyles, palette, lineCount } = this.parsePrettyPrintResult(result);
-			// 	const verts = geometry.getAttribute('position').array as Float32Array;
-			// 	for (let i = 0, off = 3; i < nodeStyles.length; i++) {
-			// 		const t = nodeStyles[i];
-			// 		for (let j = 0; j < t.text.length; j++) {
-			// 			const c = t.text.charCodeAt(j);
-			// 			if (c === 10 || c === 32 || c === 9 || c === 13) continue;
-			// 			for (let k = 0; k < 6; k++) {
-			// 				if (t.italic) {
-			// 					verts[off - 3] += (k <= 3 && k !== 0 ? -1 : 1) * 2.5;
-			// 				}
-			// 				verts[off] = t.color + 256 * t.bold;
-			// 				off += 4;
-			// 			}
-			// 		}
-			// 	}
-			// 	material = Text.makeTextMaterial(palette);
-			// 	this.lineCount = lineCount;
-			// } else {
-			let lineCount = 0;
-			for (let i = 0; i < contents.length; i++) {
-				if (contents.charCodeAt(i) === 10) lineCount++;
-			}
-			material = Text.makeTextMaterial();
-			this.lineCount = lineCount;
-			// }
+		prettyPrintWorker.prettyPrint(
+			contents,
+			fsEntry.name,
+			({
+				verts,
+				uvs,
+				palette,
+				lineCount,
+				sdfText,
+			}: {
+				verts: Float32Array;
+				uvs: Float32Array;
+				palette: THREE.Vector3[] | undefined;
+				lineCount: number;
+				sdfText: SDFText;
+			}) => {
+				if (!this.parent) return;
 
-			this.textMesh = new SDFTextMesh();
-			this.textMesh.geometry = geometry;
-			this.textMesh.material = material;
-			this.add(this.textMesh);
+				const material = Text.makeTextMaterial(palette);
+				const geometry = new BufferGeometry() as SDFTextGeometry;
+				geometry.setAttribute('position', new THREE.BufferAttribute(verts, 4));
+				geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
+				geometry.sdfText = sdfText;
+				this.lineCount = lineCount;
+				this.textMesh = new SDFTextMesh();
+				this.textMesh.geometry = geometry;
+				this.textMesh.material = material;
+				this.add(this.textMesh);
 
-			this.visible = true;
-			material.uniforms.opacity.value = 0;
-			this.ontick = function(t, dt) {
-				if (this.fullyVisible) return;
-				material.uniforms.opacity.value += dt / 1000 / 0.5;
-				if (material.uniforms.opacity.value > 1) {
-					material.uniforms.opacity.value = 1;
-					this.fullyVisible = true;
-				}
+				this.visible = true;
+				material.uniforms.opacity.value = 0;
+				this.ontick = function(t, dt) {
+					if (this.fullyVisible) return;
+					material.uniforms.opacity.value += dt / 1000 / 0.5;
+					if (material.uniforms.opacity.value > 1) {
+						material.uniforms.opacity.value = 1;
+						this.fullyVisible = true;
+					}
+					this.requestFrame();
+				};
+
+				var textScale = Math.min(
+					1 / (geometry.sdfText.layout.width + 60),
+					1 / ((geometry.sdfText.layout.height + 30) / 0.75)
+				);
+				var vAspect = Math.min(
+					1,
+					(geometry.sdfText.layout.height + 30) /
+						0.75 /
+						((geometry.sdfText.layout.width + 60) / 1)
+				);
+				material.depthTest = false;
+
+				this.position.set(fsEntry.x, fsEntry.y, fsEntry.z);
+				this.scale.set(fsEntry.scale, fsEntry.scale, fsEntry.scale);
+
+				this.textMesh.scale.multiplyScalar(textScale);
+				this.textMesh.scale.y *= -1;
+				this.fsEntry = fsEntry;
+				this.textMesh.position.x += textScale * 30;
+				this.textMesh.position.y -= textScale * 7.5;
+				this.textMesh.position.y += 0.25 + 0.75 * (1 - vAspect);
+
+				this.textScale = textScale;
+				this.textX = Math.min(40 * 30 + 60, geometry.sdfText.layout.width + 60) * 0.5;
+				this.textYZero = 0.75;
+				this.textY = 0.75 - textScale * 7.5;
+				this.textWidth = geometry.sdfText.layout.width;
+				this.textHeight = geometry.sdfText.layout.height;
+
+				this.loaded();
 				this.requestFrame();
-			};
-
-			var textScale = Math.min(
-				1 / (geometry.sdfText.layout.width + 60),
-				1 / ((geometry.sdfText.layout.height + 30) / 0.75)
-			);
-			var vAspect = Math.min(
-				1,
-				(geometry.sdfText.layout.height + 30) /
-					0.75 /
-					((geometry.sdfText.layout.width + 60) / 1)
-			);
-			material.depthTest = false;
-
-			this.position.set(fsEntry.x, fsEntry.y, fsEntry.z);
-			this.scale.set(fsEntry.scale, fsEntry.scale, fsEntry.scale);
-
-			this.textMesh.scale.multiplyScalar(textScale);
-			this.textMesh.scale.y *= -1;
-			this.fsEntry = fsEntry;
-			this.textMesh.position.x += textScale * 30;
-			this.textMesh.position.y -= textScale * 7.5;
-			this.textMesh.position.y += 0.25 + 0.75 * (1 - vAspect);
-
-			this.textScale = textScale;
-			this.textX = Math.min(40 * 30 + 60, geometry.sdfText.layout.width + 60) * 0.5;
-			this.textYZero = 0.75;
-			this.textY = 0.75 - textScale * 7.5;
-			this.textWidth = geometry.sdfText.layout.width;
-			this.textHeight = geometry.sdfText.layout.height;
-
-			this.loaded();
-			this.requestFrame();
-		});
-	}
-
-	fillElement(html: string, element: HTMLElement) {
-		let i = 0,
-			start = 0,
-			spanStack = [],
-			stackLen = 0,
-			prefix = '',
-			tagStart = 0,
-			inTag = false,
-			closeSpan = false,
-			lines = 0,
-			totalLines = 1,
-			chars = 0;
-		const lt = '<'.charCodeAt(0);
-		const gt = '>'.charCodeAt(0);
-		const slash = '/'.charCodeAt(0);
-		for (; i < html.length; i++) {
-			var ch = html.charCodeAt(i);
-			chars++;
-			if (ch === 10) {
-				lines++;
-				totalLines++;
-			} else if (ch === lt) {
-				tagStart = i;
-				closeSpan = false;
-				inTag = true;
-			} else if (i - 1 === tagStart && ch === slash) {
-				closeSpan = true;
-				stackLen -= 2;
-			} else if (!closeSpan && ch === gt) {
-				inTag = false;
-				spanStack[stackLen++] = tagStart;
-				spanStack[stackLen++] = i + 1;
 			}
-			if (!inTag && (lines > 100 || chars > 3000)) {
-				const str = html.substring(start, i + 1);
-				const d = document.createElement('template');
-				d.innerHTML = prefix + str;
-				prefix = '';
-				for (let k = 0; k < stackLen; k += 2) {
-					prefix += html.substring(spanStack[k], spanStack[k + 1]);
-				}
-				element.appendChild(d.content);
-				lines = 0;
-				chars = 0;
-				start = i + 1;
-			}
-		}
-		if (start < i) {
-			const str = html.substring(start);
-			const d = document.createElement('template');
-			d.innerHTML = prefix + str;
-			element.appendChild(d.content);
-		}
-		return totalLines;
-	}
-
-	collectNodeStyles(
-		doc: HTMLElement,
-		nodeStyles: NodeStyle[],
-		palette: THREE.Vector3[],
-		paletteIndex: { [color: string]: number }
-	) {
-		const style = getComputedStyle(doc);
-		const colorString = style.color || 'inherit';
-		if (!paletteIndex[colorString]) {
-			paletteIndex[colorString] = palette.length;
-			var c = new THREE.Color(colorString);
-			palette.push(new THREE.Vector3(c.r, c.g, c.b));
-		}
-		const color = paletteIndex[colorString];
-		const bold = style.fontWeight !== 'normal' ? 1 : 0;
-		const italic = style.fontStyle === 'italic' ? 1 : 0;
-		const underline = style.textDecoration === 'underline' ? 1 : 0;
-		for (var i = 0; i < doc.childNodes.length; i++) {
-			const cc = doc.childNodes[i] as HTMLElement;
-			if (cc.tagName) {
-				this.collectNodeStyles(cc, nodeStyles, palette, paletteIndex);
-			} else {
-				nodeStyles.push({
-					color: color,
-					bold: bold,
-					italic: italic,
-					underline: underline,
-					text: cc.textContent || '',
-				});
-			}
-		}
-	}
-
-	parsePrettyPrintResult(result: PrettyPrintResult) {
-		const doc = document.createElement('pre');
-		doc.className = 'hljs ' + result.language;
-		doc.style.display = 'none';
-		document.body.appendChild(doc);
-
-		const lineCount = this.fillElement(result.value, doc);
-
-		const paletteIndex = {};
-		const palette: THREE.Vector3[] = [];
-		const nodeStyles: NodeStyle[] = [];
-		this.collectNodeStyles(doc, nodeStyles, palette, paletteIndex);
-		document.body.removeChild(doc);
-		return { nodeStyles, palette, lineCount };
+		);
 	}
 }
