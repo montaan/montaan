@@ -10,8 +10,10 @@ module.exports = async function(req, res) {
 	if (error) return error;
 	await new Promise((resolve, reject) => {
 		Exec(
-			`cd ${escapeArg(filePath)} && git show ${escapeArg(hash)}:${escapeArg(path)}`,
-			{ maxBuffer: 100000000 },
+			`cd ${escapeArg(filePath)} && git show --raw --binary --no-textconv ${escapeArg(
+				hash
+			)}:${escapeArg(path)}`,
+			{ maxBuffer: 100000000, encoding: 'buffer' },
 			async function(error, stdout, stderr) {
 				if (error) reject(error);
 				res.writeHeader(200, { 'Content-Type': 'application/octet-stream' });
