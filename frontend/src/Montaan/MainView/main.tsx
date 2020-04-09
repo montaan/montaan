@@ -422,10 +422,7 @@ export class Tabletree {
 		for (let path of this.visibleFiles.visibleSet.keys()) {
 			if (!currentlyVisible.has(path)) {
 				const fileView = this.visibleFiles.visibleSet.get(path);
-				if (fileView) {
-					this.visibleFiles.remove(fileView);
-					fileView.dispose();
-				}
+				if (fileView) fileView.dispose();
 				this.visibleFiles.visibleSet.delete(path);
 			}
 		}

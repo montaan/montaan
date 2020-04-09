@@ -216,7 +216,6 @@
 ## Visuals
 
     [] Sub-pixel AA & hinting for fonts https://github.com/astiopin/webgl_fonts/issues/7
-    [] Fade out text before hiding it
     [] Sparkling precious particle diamonds like on Precious Nature map
     [] Design that makes you feel awesome
 
@@ -271,6 +270,7 @@
 ## Visuals
 
     [x] Output a 3D model for rendering with a path tracer
+    [x] Fade out text before hiding it
 
 ## Backend
 

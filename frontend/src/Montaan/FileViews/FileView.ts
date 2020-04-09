@@ -57,6 +57,8 @@ export default class FileView extends THREE.Object3D {
 
 	dispose() {
 		this.loadListeners.splice(0);
+		this.parent?.remove(this);
+		this.requestFrame();
 	}
 
 	async goToCoords(coords: number[]): Promise<THREE.Vector3 | undefined> {

@@ -35,12 +35,27 @@ export default class TextFileView extends FileView {
 	}
 
 	dispose() {
-		if (this.textMesh) {
-			this.textMesh.geometry.dispose();
-			this.remove(this.textMesh);
-			this.textMesh = undefined;
-		}
 		this.loadListeners.splice(0);
+		this.ontick = function(t, dt) {
+			if (this.textMesh) {
+				this.textMesh.material.uniforms.opacity.value -= dt / 1000 / 0.25;
+				if (this.textMesh.material.uniforms.opacity.value < 0) {
+					this.textMesh.material.uniforms.opacity.value = 0;
+					this.textMesh.geometry.dispose();
+					this.remove(this.textMesh);
+					this.textMesh = undefined;
+					this.parent?.remove(this);
+				}
+				this.requestFrame();
+			} else {
+				this.parent?.remove(this);
+			}
+			this.requestFrame();
+		};
+		if (!this.textMesh) {
+			this.parent?.remove(this);
+		}
+		this.requestFrame();
 	}
 
 	async goToCoords(coords: number[]): Promise<THREE.Vector3 | undefined> {
@@ -207,11 +222,10 @@ export default class TextFileView extends FileView {
 		this.visible = true;
 		material.uniforms.opacity.value = 0;
 		this.ontick = function(t, dt) {
-			if (this.fullyVisible) return;
 			material.uniforms.opacity.value += dt / 1000 / 0.5;
 			if (material.uniforms.opacity.value > 1) {
 				material.uniforms.opacity.value = 1;
-				this.fullyVisible = true;
+				delete this.ontick;
 			}
 			this.requestFrame();
 		};
