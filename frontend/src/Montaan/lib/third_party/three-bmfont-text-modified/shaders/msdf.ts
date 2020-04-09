@@ -115,7 +115,7 @@ export default function createMSDFShader(opt: MSDFShaderOptions) {
 			'    }',
 
 			// '    float maxD = max(dFdx(vUv.x), dFdy(vUv.y));',
-			// '    valpha *= smoothstep(0.07, 0.01, maxD);', // Fade out small text (= when UV derivative gets big)
+			// '    valpha *= smoothstep(0.02, 0.004, maxD);', // Fade out small text (= when UV derivative gets big)
 
 			'  #else',
 			'    valpha *= AA_SIZE*AA_SIZE;',
