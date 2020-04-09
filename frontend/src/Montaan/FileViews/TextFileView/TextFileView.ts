@@ -12,7 +12,7 @@ import { SDFTextGeometry } from '../../lib/third_party/three-bmfont-text-modifie
 import PrettyPrinter from '../../lib/pretty-print';
 
 export default class TextFileView extends FileView {
-	MAX_SIZE = 1e5;
+	MAX_SIZE = 3e5;
 	fullyVisible: boolean = false;
 	textMesh?: SDFTextMesh;
 	textScale: number = 0;
@@ -178,102 +178,16 @@ export default class TextFileView extends FileView {
 
 	ontick(t: number, dt: number): void {}
 
-	static hex: string[] = (() => {
-		const hex = [];
-		for (let i = 0; i < 256; i++) hex[i] = (i < 16 ? ' 0' : ' ') + i.toString(16);
-		return hex;
-	})();
-
-	static pad: string[] = [
-		'         ',
-		'        ',
-		'       ',
-		'      ',
-		'     ',
-		'    ',
-		'   ',
-		'  ',
-		' ',
-		'',
-	];
-
-	static hexDump(u8: Uint8Array): string {
-		if (u8.byteLength > 1e4) return '';
-		const pad = TextFileView.pad;
-		const hex = TextFileView.hex;
-		let accumulator = ['HEXDUMP'];
-		for (let i = 0; i < u8.length; i++) {
-			if (i % 64 === 0) accumulator.push(`\n${pad[Math.log10(i) | 0]}${i} `);
-			accumulator.push(hex[u8[i]]);
-		}
-		return accumulator.join('');
-	}
-
-	static wordWrap(contents: string, filename: string): string {
-		const wordWrapWidth = /\.(md|txt)$/i.test(filename) ? 120 : undefined;
-		if (wordWrapWidth) {
-			contents = contents
-				.split('\n')
-				.map((l) => {
-					if (l.length > 120) {
-						const spaces = (l.match(/^\s{0,120}/) || [''])[0];
-						const cropSpaces = spaces.slice(0, Math.min(spaces.length, 40));
-						const rest = l.slice(spaces.length);
-						const words = rest.split(' ');
-						const lineBreakLength = 120 - cropSpaces.length;
-						let lineLength = spaces.length;
-						let s = spaces;
-						const lineBreak = '\n' + cropSpaces;
-						var re = new RegExp('.{1,' + lineBreakLength + '}', 'g');
-						for (let i = 0; i < words.length; i++) {
-							const w = words[i];
-							if (lineLength + w.length >= lineBreakLength) {
-								if (w.length >= lineBreakLength) {
-									const prefix = w.substring(0, lineBreakLength - lineLength);
-									s += prefix + lineBreak;
-									const suffix = w.substring(lineBreakLength - lineLength);
-									const bits = suffix.match(re) || [''];
-									s += bits.slice(0, -1).join(lineBreak) + lineBreak;
-									s += bits[bits.length - 1] + ' ';
-									lineLength = bits[bits.length - 1].length + 1;
-								} else {
-									s += lineBreak + w + ' ';
-									lineLength = w.length + 1;
-								}
-							} else {
-								s += w + ' ';
-								lineLength += w.length + 1;
-							}
-						}
-						return s;
-					}
-					return l;
-				})
-				.join('\n');
-		}
-		return contents;
-	}
-
 	async load(arrayBufferPromise: Promise<ArrayBuffer | undefined>) {
 		const responseBuffer = await arrayBufferPromise;
 		if (responseBuffer === undefined) return;
-		if (responseBuffer.byteLength > this.MAX_SIZE || !this.parent) return;
-
-		const u8 = new Uint8Array(responseBuffer);
-		const isBinary = u8.slice(0, 4096).some((x) => x < 9);
-		const contents = isBinary
-			? TextFileView.hexDump(u8)
-			: TextFileView.wordWrap(
-					new TextDecoder().decode(responseBuffer).replace(/\r/g, ''),
-					this.fsEntry.name
-			  );
-
-		if (contents.length === 0) return;
+		if (!this.parent) return;
+		if (responseBuffer.byteLength > this.MAX_SIZE || responseBuffer.byteLength === 0) return;
 
 		const fsEntry = this.fsEntry;
 
 		const { verts, uvs, palette, lineCount, sdfText } = await PrettyPrinter.prettyPrint(
-			contents,
+			responseBuffer,
 			fsEntry.name
 		);
 

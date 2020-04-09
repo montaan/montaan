@@ -20,14 +20,23 @@ export type PrettyPrintGeometry = {
 };
 
 export class PrettyPrinter {
+	font?: BMFont;
 	constructor() {}
 
-	prettyPrint(
-		font: BMFont,
-		text: string,
-		filename: string,
-		mimeType?: string
-	): PrettyPrintGeometry {
+	setFont(font: BMFont) {
+		this.font = font;
+	}
+
+	prettyPrint(buffer: ArrayBuffer, filename: string, mimeType?: string): PrettyPrintGeometry {
+		if (!this.font) throw new Error('Font not set');
+
+		const u8 = new Uint8Array(buffer);
+		const isBinary = u8.slice(0, 4096).some((x) => x < 9);
+		const text = isBinary
+			? PrettyPrinter.hexDump(u8)
+			: PrettyPrinter.wordWrap(new TextDecoder().decode(buffer).replace(/\r/g, ''), filename);
+
+		const font = this.font;
 		let ext = filename;
 		if (filename.indexOf('.') !== -1) {
 			const exts = filename.split('.');
@@ -45,7 +54,83 @@ export class PrettyPrinter {
 			result = { value: text, language: undefined };
 		}
 		const geo = this.createPrettyPrintGeometry(font, text, result);
-		return geo;
+		return Comlink.transfer(geo, [geo.verts.buffer, geo.uvs.buffer]);
+	}
+
+	static hex: string[] = (() => {
+		const hex = [];
+		for (let i = 0; i < 256; i++) hex[i] = (i < 16 ? ' 0' : ' ') + i.toString(16);
+		return hex;
+	})();
+
+	static pad: string[] = [
+		'         ',
+		'        ',
+		'       ',
+		'      ',
+		'     ',
+		'    ',
+		'   ',
+		'  ',
+		' ',
+		'',
+	];
+
+	static hexDump(u8: Uint8Array): string {
+		if (u8.byteLength > 1e4) return '';
+		const pad = PrettyPrinter.pad;
+		const hex = PrettyPrinter.hex;
+		let accumulator = ['HEXDUMP'];
+		for (let i = 0; i < u8.length; i++) {
+			if (i % 64 === 0) accumulator.push(`\n${pad[Math.log10(i) | 0]}${i} `);
+			accumulator.push(hex[u8[i]]);
+		}
+		return accumulator.join('');
+	}
+
+	static wordWrap(contents: string, filename: string): string {
+		const wordWrapWidth = /\.(md|txt)$/i.test(filename) ? 120 : undefined;
+		if (wordWrapWidth) {
+			contents = contents
+				.split('\n')
+				.map((l) => {
+					if (l.length > 120) {
+						const spaces = (l.match(/^\s{0,120}/) || [''])[0];
+						const cropSpaces = spaces.slice(0, Math.min(spaces.length, 40));
+						const rest = l.slice(spaces.length);
+						const words = rest.split(' ');
+						const lineBreakLength = 120 - cropSpaces.length;
+						let lineLength = spaces.length;
+						let s = spaces;
+						const lineBreak = '\n' + cropSpaces;
+						var re = new RegExp('.{1,' + lineBreakLength + '}', 'g');
+						for (let i = 0; i < words.length; i++) {
+							const w = words[i];
+							if (lineLength + w.length >= lineBreakLength) {
+								if (w.length >= lineBreakLength) {
+									const prefix = w.substring(0, lineBreakLength - lineLength);
+									s += prefix + lineBreak;
+									const suffix = w.substring(lineBreakLength - lineLength);
+									const bits = suffix.match(re) || [''];
+									s += bits.slice(0, -1).join(lineBreak) + lineBreak;
+									s += bits[bits.length - 1] + ' ';
+									lineLength = bits[bits.length - 1].length + 1;
+								} else {
+									s += lineBreak + w + ' ';
+									lineLength = w.length + 1;
+								}
+							} else {
+								s += w + ' ';
+								lineLength += w.length + 1;
+							}
+						}
+						return s;
+					}
+					return l;
+				})
+				.join('\n');
+		}
+		return contents;
 	}
 
 	createPrettyPrintGeometry(
@@ -118,11 +203,12 @@ export class PrettyPrinter {
 			}
 		}
 		const sdfText = geometry.sdfText;
-		delete sdfText.layout.options.font;
-		delete sdfText.layout.options.measure;
+		delete sdfText.layout.options;
 		delete sdfText.layout.computeMetrics;
 		delete sdfText.position;
 		delete sdfText.uv;
+		delete sdfText.layout.glyphs;
+		delete sdfText.visibleGlyphs;
 		return {
 			verts: geometry.getAttribute('position').array as Float32Array,
 			uvs: geometry.getAttribute('uv').array as Float32Array,
