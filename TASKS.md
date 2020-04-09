@@ -22,6 +22,7 @@
     [] Search highlighting
     [] Navigation to unseen parts
     [] Zoom to file often fails (camera goes wonky)
+    [] Add visible link endpoints to fetchList and preserveSet
 
 # Release checklist
 
@@ -37,9 +38,6 @@
         [] Import local repo
     [] Repo auto-pull & update
     [] Tests pass
-    [x] Search works
-    [x] Commit history works
-    [x] Solid file tree rebuilds (no missing files)
 
 # KEY FEATURES
 
@@ -118,6 +116,9 @@
 
 ## Performance
 
+    [] Far-future expires-headers for files & dirs
+        [] readDirs & files based on object hash instead of branch name (foo/master/bar.txt can change, foo/8f8a54e3d1a99 can't)
+    [] Generate files.txt for branches but split it into 1000-dir subtree chunks (BFS up to 1000 dirs, then BFS each dangling subtree up to 1000 dirs, recurse)
     [] Optimize lines
         [] Limit to ~10k lines in view
         [] Stratified random sampling
@@ -125,6 +126,10 @@
     [] Fetch configurable level deep
     [] Server approximates what's visible and sends that in one go
     [] Instanced rendering of all models
+    [] Limit number of glyphs on the screen
+    [] Cache zoomed out view into a impostor
+        -> No real limit to number of zoomed-out glyphs
+        -> See patterns even in tiny dirs
     [] Move tree rebuild into a worker
         [] Serialize FSEntry tree into a buffer
     [] Optimize React prop flow (only take in absolutely necessary props)
@@ -381,6 +386,7 @@
 
     [x] Pipeline text model creation to avoid frame stutter (probably coming from shader compile / geometry creation)
     [z] Handle a million commits somehow
+    [x] Text view generation fully in worker
 
 ## Layout
 
@@ -389,6 +395,9 @@
 
 ## FIX
 
+    [x] Search works
+    [x] Commit history works
+    [x] Solid file tree rebuilds (no missing files)
     [x] Fix click navigation
         (use px coords everywhere)
     [x] Fix page <title>
