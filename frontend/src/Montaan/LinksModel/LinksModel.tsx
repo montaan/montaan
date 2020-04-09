@@ -34,7 +34,7 @@ export default class LinksModel {
 			this.lineGeo,
 			new THREE.LineBasicMaterial({
 				color: new THREE.Color(1.0, 1.0, 1.0),
-				opacity: 1,
+				opacity: 0.2,
 				transparent: true,
 				depthWrite: false,
 				depthTest: false,
@@ -51,7 +51,7 @@ export default class LinksModel {
 
 	updateLinks(currentFrame: number) {
 		if (this.linksUpdatedOn !== currentFrame) {
-			this.setLinks(this.links, true);
+			this.setLinks(this.links);
 			this.linksUpdatedOn = currentFrame;
 		}
 	}
@@ -128,10 +128,10 @@ export default class LinksModel {
 		const lineA = coordsA ? coordsA[0] : 0;
 		const lineB = coordsB ? coordsB[0] : 0;
 
-		var av = new THREE.Vector3(a.x, a.y, a.z);
+		var av = new THREE.Vector3(a.x, a.y + a.scale * (a.isDirectory ? 0.5 : 0), a.z);
 		av.applyMatrix4(modelA.matrixWorld);
 
-		var bv = new THREE.Vector3(b.x, b.y + b.scale, b.z);
+		var bv = new THREE.Vector3(b.x, b.y + b.scale * (b.isDirectory ? 0.5 : 1), b.z);
 		bv.applyMatrix4(modelB.matrixWorld);
 
 		if (lineA > 0 && entryA.contentObject) {
@@ -147,7 +147,9 @@ export default class LinksModel {
 
 		var aUp = new THREE.Vector3(
 			a.x + (a.x < b.x ? 1 : -1) * 0.1 * entryA.scale,
-			a.y + (0.1 + 0.01 * (entryB.size % 10)) * entryA.scale,
+			a.y +
+				(0.1 + 0.01 * (entryB.size % 10)) * entryA.scale +
+				a.scale * (a.isDirectory ? 0.5 : 0),
 			Math.max(a.z, b.z) + 1 * entryA.scale
 		);
 		aUp.applyMatrix4(modelA.matrixWorld);
@@ -160,20 +162,16 @@ export default class LinksModel {
 		this.setLine(geo, index, av, aUp, aUp, bUp, bUp, bv, color);
 	}
 
+	emptyVector: THREE.Vector3 = new THREE.Vector3();
 	clearLine(geo: THREE.BufferGeometry, index: number) {
-		const v = new THREE.Vector3();
+		const v = this.emptyVector;
 		this.setLine(geo, index, v, v, v, v, v, v, undefined);
 	}
 
-	setLinks(links: TreeLink[], updateOnlyElements = false) {
+	setLinks(links: TreeLink[]) {
 		if (this.lineGeo) {
 			const geo = this.lineGeo;
-			const verts = geo.getAttribute('position').array as Float32Array;
-
-			for (let i = links.length; i < this.links.length; i++) {
-				let j = i * 6 * 3;
-				for (let k = 0; k < 18; k++) verts[j + k] = -100;
-			}
+			geo.drawRange.count = links.length * 6;
 			this.links = links;
 			for (let i = 0; i < links.length; i++) {
 				const l = links[i];
@@ -217,7 +215,7 @@ export default class LinksModel {
 						dst.point,
 						bbox
 					);
-				} else if (!updateOnlyElements) {
+				} else {
 					const src = this.parseTarget(l.src as string | FSEntry, l.srcPoint);
 					const dst = this.parseTarget(l.dst as string | FSEntry, l.dstPoint);
 					if (!dst || !src) {
@@ -239,8 +237,12 @@ export default class LinksModel {
 					);
 				}
 			}
-			(geo.getAttribute('position') as THREE.BufferAttribute).needsUpdate = true;
-			(geo.getAttribute('color') as THREE.BufferAttribute).needsUpdate = true;
+			const posAttr = geo.getAttribute('position') as THREE.BufferAttribute;
+			const colorAttr = geo.getAttribute('color') as THREE.BufferAttribute;
+			posAttr.needsUpdate = true;
+			posAttr.updateRange.count = links.length * 6 * 3;
+			colorAttr.needsUpdate = true;
+			colorAttr.updateRange.count = links.length * 6 * 3;
 			this.requestFrame();
 		}
 	}

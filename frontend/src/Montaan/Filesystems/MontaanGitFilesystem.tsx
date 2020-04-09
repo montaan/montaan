@@ -40,17 +40,19 @@ export class MontaanGitBranchFilesystem extends Filesystem {
 	}
 
 	getUIComponents(state: FSState): React.ReactElement {
-		// if (!this.commitData && !this.fetchingCommits) {
-		// 	this.fetchingCommits = true;
-		// 	this.readData().then((d) => {
-		// 		this.fetchingCommits = false;
-		// 		state.setCommitData(this.commitData);
-		// 		state.setDependencies(this.dependencies || []);
-		// 	});
-		// } else if (state.commitData !== this.commitData) {
-		// 	state.setCommitData(this.commitData);
-		// 	state.setDependencies(this.dependencies || []);
-		// }
+		if (!this.commitData && !this.fetchingCommits) {
+			this.fetchingCommits = true;
+			this.readData().then((d) => {
+				this.fetchingCommits = false;
+				state.setCommitData(this.commitData);
+				state.setDependencies(this.dependencies || []);
+				state.setLinks(this.dependencies || []);
+			});
+		} else if (state.commitData !== this.commitData) {
+			state.setCommitData(this.commitData);
+			state.setDependencies(this.dependencies || []);
+			state.setLinks(this.dependencies || []);
+		}
 		if (!this.mountPoint) return super.getUIComponents(state);
 		const path = getFullPath(this.mountPoint);
 		const repoPrefix = this.repo;
@@ -139,10 +141,12 @@ export class MontaanGitBranchFilesystem extends Filesystem {
 			)) as { modules: { source: string; dependencies: { resolved: string }[] }[] };
 			const links: TreeLink[] = [];
 			deps.modules.forEach(({ source, dependencies }, i) => {
-				const src = '/' + this.repo + '/' + source;
+				if (source.startsWith('../')) return;
+				const src = '/' + this.repo + '/' + this.ref + '/' + source;
 				const color = new THREE.Color().setHSL((i / 7) % 1, 0.5, 0.6);
 				dependencies.forEach(({ resolved }) => {
-					const dst = '/' + this.repo + '/' + resolved;
+					if (resolved.startsWith('../')) return;
+					const dst = '/' + this.repo + '/' + this.ref + '/' + resolved;
 					links.push({ src, dst, color });
 				});
 			});

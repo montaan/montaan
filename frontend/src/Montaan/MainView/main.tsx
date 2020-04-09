@@ -528,7 +528,36 @@ export class Tabletree {
 	parseTarget = (dst: string | FSEntry, dstPoint: any): ExtendedFSEntry | undefined => {
 		if (!this.fileTree) return undefined;
 		if (typeof dst === 'string') {
-			return getNearestFSEntryForURL(this.fileTree, dst);
+			let nearest = getNearestFSEntryForURL(this.fileTree, dst);
+			if (nearest && nearest.fsEntry) {
+				if (nearest.fsEntry.fetched) {
+					const prefix = getFullPath(nearest.fsEntry);
+					const suffix = dst.slice(prefix.length + 1);
+					if (
+						suffix.length > 0 &&
+						!nearest.fsEntry.entries.has(suffix.slice(0, suffix.indexOf('/')))
+					) {
+						return undefined;
+					}
+				}
+				let fsEntry: FSEntry | undefined = nearest.fsEntry;
+				while (fsEntry) {
+					if (
+						fsEntry.index !== undefined &&
+						fsEntry.index < this.fsIndex.length &&
+						this.fsIndex[fsEntry.index] === fsEntry
+					) {
+						break;
+					}
+					fsEntry = fsEntry.parent;
+				}
+				if (!fsEntry) return undefined;
+				if (nearest.fsEntry !== fsEntry) {
+					nearest.fsEntry = fsEntry;
+					nearest.point = undefined;
+				}
+				return nearest;
+			}
 		} else {
 			return { fsEntry: dst, point: dstPoint };
 		}
