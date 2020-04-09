@@ -11,12 +11,27 @@ export interface CommitData {
 	commits: Commit[];
 	commitIndex: CommitIndex;
 	authors: AuthorIndex;
+	commitCount: number;
 }
 
 export interface RawCommitData {
 	commits: any[][];
 	authors: string[];
 	files: string[];
+	commitCount: number;
+}
+
+export type RawCommitList = any[][];
+
+export interface CommitMetadata {
+	authors: string[];
+	files: string[];
+	commitCount: number;
+	indexes: {
+		authorFiles: { [index: number]: number[] };
+		authorCommits: { [index: number]: number[] };
+		dateCommits: { [year: number]: { [month: number]: { [day: number]: number[] } } };
+	};
 }
 
 export function parseCommits(commitData: RawCommitData): CommitData {
@@ -166,5 +181,5 @@ export function parseCommits(commitData: RawCommitData): CommitData {
 	// }
 	// var touchedFiles = Object.keys(touchedFilesIndex).sort().map(k => touchedFilesIndex[k]);
 
-	return { commits, commitIndex, authors };
+	return { commits, commitIndex, authors, commitCount: commitData.commitCount };
 }

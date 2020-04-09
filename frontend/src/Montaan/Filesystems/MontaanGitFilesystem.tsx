@@ -12,7 +12,13 @@ import React from 'react';
 import QFrameAPI from '../../lib/api';
 
 import utils from '../lib/utils';
-import { RawCommitData, parseCommits, CommitData } from '../lib/parse_commits';
+import {
+	RawCommitData,
+	parseCommits,
+	CommitData,
+	RawCommitList,
+	CommitMetadata,
+} from '../lib/parse_commits';
 import { TreeLink, TreeLinkKey, FSState } from '../MainApp';
 import * as THREE from 'three';
 import TourSelector from '../TourSelector';
@@ -121,6 +127,15 @@ export class MontaanGitBranchFilesystem extends Filesystem {
 	}
 
 	async readData() {
+		// const commitMetadataObj = (await this.options.api.getType(
+		// 		'/repo/fs/' + this.repo + '/log_meta.json',
+		// 		{},
+		// 		'json'
+		// 	)) as CommitMetadata;
+		// this.commitData = parseCommits({
+		// 	commits: commitObj,
+		// 	...commitMetadataObj,
+		// } as RawCommitData);
 		const commitObj = // await this.api.postType(
 			// '/repo/log',
 			// { repo: this.repo, ref: this.ref },
