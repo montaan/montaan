@@ -85,6 +85,7 @@ export default class TextFileView extends FileView {
 		}
 		let textX = 18 * 80;
 		const targetPoint = new THREE.Vector3(textX, textYOff, 10000);
+		this.updateWorldMatrix(true, true);
 		targetPoint.applyMatrix4(this.textMesh.matrixWorld);
 		return targetPoint;
 	}
@@ -107,7 +108,7 @@ export default class TextFileView extends FileView {
 	getHighlightRegion(coords: number[]): ContentBBox {
 		if (!this.textMesh) return EmptyContentBBox;
 		const line = coords[0];
-		let textYOff = -(this.lineCount - line) * 44 + 16;
+		let textYOff = -(this.lineCount - line + 1) * 44 + 16;
 		const m = this.textMesh.matrixWorld;
 		const topLeft = new THREE.Vector3(0, textYOff - 44, 0).applyMatrix4(m);
 		const topRight = new THREE.Vector3(this.textWidth, textYOff - 44, 0).applyMatrix4(m);

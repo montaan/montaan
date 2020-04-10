@@ -154,11 +154,13 @@ const Player = ({ fileTree, navigationTarget, api, fileTreeUpdated }: PlayerProp
 	const playlistsInTree: PlaylistRef[] = useMemo(() => {
 		// eslint-disable-next-line
 		const version = fileTreeUpdated;
+		const fileTreePath = getFullPath(fileTree);
 		const foundPlaylists = utils.findFiles(fileTree, '.playlist').map(getFullPath);
-		return foundPlaylists.sort().map((path) => {
+		return foundPlaylists.sort().map((fullPath) => {
+			const path = fullPath.slice(fileTreePath.length);
 			const rawName = path
 				.split('/')
-				.slice(3, -1)
+				.slice(1, -1)
 				.join('/');
 			const name =
 				(rawName ? rawName[0].toUpperCase() + rawName.slice(1) : 'Main') + ' playlist';
@@ -172,11 +174,15 @@ const Player = ({ fileTree, navigationTarget, api, fileTreeUpdated }: PlayerProp
 
 	useEffect(() => {
 		if (!currentPlaylist.path) setPlaylistContent(EMPTY_PLAYLIST_CONTENT);
-		else
-			api.getType('/repo/file' + currentPlaylist.path, {}, 'text').then((url) =>
-				setPlaylistContent({ name: currentPlaylist.name, url })
+		else {
+			fileTree.filesystem!.readFile(currentPlaylist.path).then((ab) =>
+				setPlaylistContent({
+					name: currentPlaylist.name,
+					url: new TextDecoder().decode(ab),
+				})
 			);
-	}, [currentPlaylist, api, setPlaylistContent]);
+		}
+	}, [currentPlaylist, api, setPlaylistContent, fileTree]);
 
 	const onPlaylistSelect = useCallback(
 		(eventKey: string, event: any) =>

@@ -17,7 +17,7 @@
 
 import Text from '../lib/Text';
 import { FileTree } from '../MainApp';
-import { FSEntry, getNearestFSEntryForURL } from '../lib/filesystem';
+import { FSEntry } from '../lib/filesystem';
 import * as THREE from 'three';
 import Geometry from '../lib/Geometry';
 import { NavCamera } from '../MainView/main';
@@ -43,7 +43,7 @@ export default class ModelBuilder {
 		tree: FileTree,
 		camera: NavCamera,
 		mesh: THREE.Mesh,
-		navUrl?: string
+		forceLoads: Set<FSEntry>
 	): {
 		verts: Float32Array;
 		colorVerts: Float32Array;
@@ -127,7 +127,7 @@ export default class ModelBuilder {
 			smallestCovering,
 			entriesToFetch,
 			visibleFiles,
-		} = this.createFileTreeQuads(fileTree, 0, camera, mesh, navUrl);
+		} = this.createFileTreeQuads(fileTree, 0, camera, mesh, forceLoads);
 
 		const textVertCount = this.ensureLabelGeometryAllocation(labelGeometries);
 		this.fillLabelGeometry(labelGeometries);
@@ -280,7 +280,7 @@ export default class ModelBuilder {
 		fileIndex: number,
 		camera: NavCamera,
 		mesh: THREE.Mesh,
-		navUrl?: string
+		forceLoads: Set<FSEntry>
 	): {
 		verts: Float32Array;
 		colorVerts: Float32Array;
@@ -310,32 +310,19 @@ export default class ModelBuilder {
 		// - finds the covering fsEntry
 		// - finds the currently zoomed-in path and breadcrumb path
 
-		const navTargetPath: FSEntry[] = [];
-		if (navUrl) {
-			const nearestFSEntryToNavUrl = getNearestFSEntryForURL(fileTree, navUrl);
-			if (nearestFSEntryToNavUrl) {
-				let entry = nearestFSEntryToNavUrl.fsEntry;
-				while (entry.parent) {
-					navTargetPath.push(entry);
-					entry = entry.parent;
-				}
-				navTargetPath.push(entry);
-			}
-		}
-
 		const buildQueue = new BinaryHeap<FSEntry>(this.cmpFSEntryDistanceFromCenter);
 		buildQueue.add(fileTree);
 		const entriesToFetchQueue = new BinaryHeap<FSEntry>(this.cmpFSEntryDistanceFromCenter);
 		const visibleFiles = [];
 		const viewWidth = window.innerWidth;
 		let centerEntry = fileTree;
-		let nextTarget: FSEntry = navTargetPath.pop() ?? fileTree;
 		while (buildQueue.size > 0) {
 			const tree = buildQueue.take();
 			if (!tree || !tree.isDirectory) continue;
-			const treeInNavTargetPath = tree === nextTarget;
-			if (fileIndex > 2500 && !treeInNavTargetPath && tree !== centerEntry) continue;
+			const forceLoadTree = forceLoads.has(tree);
+			if (fileIndex > 2500 && !forceLoadTree && tree !== centerEntry) continue;
 			fileIndex = this.layoutDir(
+				forceLoads,
 				camera,
 				mesh,
 				4 / viewWidth,
@@ -346,12 +333,9 @@ export default class ModelBuilder {
 				fsEntryIndex,
 				vertexIndices
 			);
-			if (treeInNavTargetPath && navTargetPath.length > 0) {
-				nextTarget = navTargetPath.pop()!;
-			}
 
 			for (let fsEntry of tree.entries.values()) {
-				const fsEntryInNavTargetPath = fsEntry === nextTarget;
+				const forceLoadFSEntry = forceLoads.has(fsEntry);
 
 				const bbox = fsEntry.bbox;
 				const pxWidth = bbox.width * viewWidth * 0.5;
@@ -363,17 +347,17 @@ export default class ModelBuilder {
 				);
 
 				// Skip entries that are outside frustum or too small, and aren't on the nav target path.
-				if (!fsEntryInNavTargetPath && (!bbox.onScreen || isSmall)) continue;
+				if (!forceLoadFSEntry && (!bbox.onScreen || isSmall)) continue;
 
 				// Directory
 				if (fsEntry.isDirectory) {
 					// Descend into directories.
 					buildQueue.add(fsEntry);
 					// Fetch directories that haven't been fetched yet.
-					if ((fsEntryInNavTargetPath || pxWidth > 15) && !fsEntry.fetched) {
+					if ((forceLoadFSEntry || pxWidth > 15) && !fsEntry.fetched) {
 						entriesToFetchQueue.add(fsEntry);
 					}
-				} else {
+				} else if (!isSmall) {
 					// File that's large on screen, let's add a file view if needed.
 					visibleFiles.push(fsEntry);
 				}
@@ -410,6 +394,7 @@ export default class ModelBuilder {
 	}
 
 	layoutDir(
+		forceLoads: Set<FSEntry>,
 		camera: NavCamera,
 		mesh: THREE.Mesh,
 		minWidth: number,
@@ -534,7 +519,7 @@ export default class ModelBuilder {
 				dir.z = fileTree.z + dir.scale * 0.2;
 			}
 			const bbox = Geometry.getFSEntryBBox(dir, mesh, camera);
-			if (!bbox.onScreen || bbox.width < minWidth) continue;
+			if (!forceLoads.has(dir) && (!bbox.onScreen || bbox.width < minWidth)) continue;
 			dir.index = fileIndex;
 			fileIndex++;
 			dir.vertexIndex = vertexIndices.vertexIndex;
@@ -589,7 +574,7 @@ export default class ModelBuilder {
 				file.scale = (0.9 / fileSquareSide) * filesScale2;
 				file.z = filesBox.z + file.scale * 0.2;
 				const bbox = Geometry.getFSEntryBBox(file, mesh, camera);
-				if (!bbox.onScreen || bbox.width < minWidth) continue;
+				if (!forceLoads.has(file) && (!bbox.onScreen || bbox.width < minWidth)) continue;
 				file.index = fileIndex;
 				file.vertexIndex = vertexIndices.vertexIndex;
 				file.lastIndex = fileIndex;

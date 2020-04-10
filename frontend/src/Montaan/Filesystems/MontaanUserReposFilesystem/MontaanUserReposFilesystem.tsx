@@ -4,12 +4,12 @@ import {
 	NotImplementedError,
 	mountURL,
 	getFullPath,
-} from '../lib/filesystem';
+} from '../../lib/filesystem';
 import React from 'react';
 
-import QFrameAPI from '../../lib/api';
-import { FSState } from '../MainApp';
-import RepoSelector from '../RepoSelector';
+import QFrameAPI from '../../../lib/api';
+import { FSState } from '../../MainApp';
+import RepoSelector from '../../RepoSelector';
 
 export class RepoInfo {
 	static mock: RepoInfo = new RepoInfo('my-repo', [['master', 1234]], 'url', 'bob', false);
@@ -29,7 +29,7 @@ export class RepoInfo {
 	}
 }
 
-export default class MontaanUserReposFilesystem extends Filesystem {
+export class MontaanUserReposFilesystem extends Filesystem {
 	name: string;
 	repoCache: RepoInfo[] = [];
 	cacheVersion: number = 0;

@@ -90,7 +90,7 @@ export class PrettyPrinter {
 
 	static wordWrap(contents: string, filename: string): string {
 		const wordWrapWidth = /\.(md|txt)$/i.test(filename) ? 120 : undefined;
-		if (wordWrapWidth) {
+		if (false && wordWrapWidth) {
 			contents = contents
 				.split('\n')
 				.map((l) => {

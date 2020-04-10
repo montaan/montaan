@@ -49,31 +49,34 @@ export default class SearchLandmarks {
 	}
 
 	addScreenLine(geo: THREE.BufferGeometry, fsEntry: FSEntry, index: number, line: number) {
-		var a = new THREE.Vector3(fsEntry.x, fsEntry.y, fsEntry.z);
+		const a = new THREE.Vector3(fsEntry.x, fsEntry.y, fsEntry.z);
 		a.applyMatrix4(this.model.matrixWorld);
-		var b = a,
-			bv,
-			aUp;
+		let av, aUp;
 
-		var av = new THREE.Vector3(a.x + 0.05 * fsEntry.scale, a.y + 0.05 * fsEntry.scale, a.z);
-
-		var off = index * 4;
-		bv = new THREE.Vector3(
-			b.x - fsEntry.scale * 0.5 - 0.02,
-			av.y + 0.05 * fsEntry.scale + 0.01 * 3.15,
-			av.z - fsEntry.scale * 0.5
-		);
-		aUp = new THREE.Vector3(av.x - fsEntry.scale * 0.075, av.y + 0.05 * fsEntry.scale, av.z);
 		if (line > 0 && fsEntry.contentObject) {
 			const lineBBox = fsEntry.contentObject.getHighlightRegion([line]);
 			lineBBox.topLeft.y = (lineBBox.topLeft.y + lineBBox.bottomLeft.y) * 0.5;
 			aUp = av = lineBBox.topLeft;
+		} else {
+			av = new THREE.Vector3(a.x, a.y + (fsEntry.isDirectory ? 0.5 : 0) * fsEntry.scale, a.z);
+			aUp = new THREE.Vector3(
+				av.x - fsEntry.scale * 0.075,
+				av.y + 0.05 * fsEntry.scale,
+				av.z
+			);
 		}
 
+		const bv = new THREE.Vector3(
+			a.x - fsEntry.scale * 0.5 - 0.02,
+			av.y + 0.01 * 3.15,
+			av.z - fsEntry.scale * 0.5
+		);
+
+		let off = index * 4;
 		const attr = geo.getAttribute('position') as THREE.BufferAttribute;
 		const verts = attr.array as Float32Array;
 		off *= 3;
-		var v;
+		let v;
 		v = av;
 		verts[off++] = v.x;
 		verts[off++] = v.y;

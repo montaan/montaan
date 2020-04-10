@@ -1,17 +1,15 @@
-# components/CommitInfo
+# Montaan/CommitInfo
 
-The CommitInfo component is an X for Y.
+The CommitInfo component is a panel with a list of commits and authors for git repositories.
 
-The CommitInfo component is used by Z.
+The CommitInfo component is used by MontaanGitFilesystem.
 
 The primary reviewer for CommitInfo is Ilmari Heikkinen <hei@heichen.hk>.
 
 ## Usage
 
 ```jsx
-<CommitInfo
-    propA={}
-/>
+<CommitInfo propA={} />
 ```
 
 ## Props
@@ -28,18 +26,17 @@ Example of using the stylesheet:
 
 ```css
 .CommitInfo {
-    display: inline-block;
+	display: inline-block;
 
-    :global(.hidden) {
-        display: block;
-        opacity: 0.1;
-    }
+	:global(.hidden) {
+		display: block;
+		opacity: 0.1;
+	}
 }
 
 .title {
-    color: red;
+	color: red;
 }
-
 ```
 
 ```jsx
@@ -68,4 +65,3 @@ render() {
 ## Authors
 
 Ilmari Heikkinen <hei@heichen.hk>
-

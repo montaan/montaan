@@ -27,7 +27,7 @@ import { FSEntry } from '../lib/filesystem';
 import WorkQueue from '../lib/WorkQueue';
 
 import { MontaanGitFilesystem } from '../Filesystems/MontaanGitFilesystem';
-import MontaanUserReposFilesystem, { RepoInfo } from '../Filesystems/MontaanUserReposFilesystem';
+import { MontaanUserReposFilesystem, RepoInfo } from '../Filesystems/MontaanUserReposFilesystem';
 
 registerFileSystem('montaanGit', MontaanGitFilesystem);
 registerFileSystem('montaanUserRepos', MontaanUserReposFilesystem);
@@ -325,7 +325,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 									idx = [];
 									tree.tree.nameIndex.set(fsEntry.name, idx);
 								}
-								idx.push(fsEntry);
+								if (!idx.includes(fsEntry)) idx.push(fsEntry);
 							}
 						},
 						''
@@ -691,7 +691,9 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		let target: HTMLElement | null = ev.target as HTMLElement;
 		while (target) {
 			if (target.dataset.filename) {
-				this.props.history.push('/ilmari/montaan/' + target.dataset['filename'] + '#0');
+				this.props.history.push(
+					'/ilmari/montaan/master/' + target.dataset['filename'] + '#0'
+				);
 				ev.preventDefault();
 				return;
 			}

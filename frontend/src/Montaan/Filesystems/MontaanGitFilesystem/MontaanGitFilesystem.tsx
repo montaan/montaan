@@ -6,26 +6,20 @@ import {
 	getFullPath,
 	mount,
 	FSDirEntry,
-} from '../lib/filesystem';
+} from '../../lib/filesystem';
 import React from 'react';
 
-import QFrameAPI from '../../lib/api';
+import QFrameAPI from '../../../lib/api';
 
-import utils from '../lib/utils';
-import {
-	RawCommitData,
-	parseCommits,
-	CommitData,
-	RawCommitList,
-	CommitMetadata,
-} from '../lib/parse_commits';
-import { TreeLink, TreeLinkKey, FSState } from '../MainApp';
+import utils from '../../lib/utils';
+import { RawCommitData, parseCommits, CommitData } from '../../lib/parse_commits';
+import { TreeLink, TreeLinkKey, FSState } from '../../MainApp';
 import * as THREE from 'three';
-import TourSelector from '../TourSelector';
-import Player from '../Player';
+import TourSelector from '../../TourSelector';
+import Player from '../../Player';
 // import CommitControls from '../../CommitControls';
-import CommitInfo from '../CommitInfo';
-import Search from '../Search';
+import CommitInfo from '../../CommitInfo';
+import Search from '../../Search';
 
 export class MontaanGitBranchFilesystem extends Filesystem {
 	repo: string;

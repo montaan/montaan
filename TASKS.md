@@ -19,10 +19,10 @@
 
 # FIX
 
-    [] Search highlighting
-    [] Navigation to unseen parts
-    [] Zoom to file often fails (camera goes wonky)
-    [] Add visible link endpoints to fetchList and preserveSet
+    [] Search results visibility
+    [] CommitInfo commits crop to view
+    [] Breadcrumbs go crazy
+    [] Sometimes highlighted lines don't highlight (when doing search with file in view and loaded :?)
 
 # Release checklist
 
@@ -172,6 +172,9 @@
 
 ## Backend
 
+    [] Convert backend to TypeScript
+        [] Share type definitions with frontend
+        [] Statically typed API
     [] Public/private repos
     [] Public repo list
     [] Better non-logged-in experience
@@ -430,6 +433,11 @@
     [x] Tree rebuilds have files missing
     [x] Loading trees takes forever and too many requests
     [x] Move repo management to MontaanUserRepos
+    [x] Add visible link endpoints to fetchList and preserveSet
+    [x] Zoom to file#0 as navUrl fails 100% of the time.
+    [x] Zoom to file often fails (camera goes wonky)
+    [x] Navigation to unseen parts
+    [x] Search highlighting update on every frame
 
 # Ideas
 

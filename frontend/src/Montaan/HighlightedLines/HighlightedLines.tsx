@@ -2,7 +2,6 @@ import * as THREE from 'three';
 import { FSEntry, getFSEntryForURL } from '../lib/filesystem';
 import { SearchResult } from '../MainApp';
 import Geometry from '../lib/Geometry';
-import Colors from '../lib/Colors';
 
 export default class HighlightedLines {
 	highlightedResults: SearchResult[] = [];
@@ -93,19 +92,6 @@ export default class HighlightedLines {
 	}
 
 	highlightResults(tree: FSEntry, results: SearchResult[], ca: THREE.BufferAttribute) {
-		this.highlightedResults.forEach((highlighted, i) => {
-			const res = getFSEntryForURL(tree, highlighted.filename);
-			if (!res) return;
-			const fsEntry = res.fsEntry;
-			if (fsEntry.index === undefined) return;
-			Geometry.setColor(
-				ca.array as Float32Array,
-				fsEntry.index,
-				fsEntry.isDirectory
-					? Colors.getDirectoryColor(fsEntry)
-					: Colors.getFileColor(fsEntry)
-			);
-		});
 		this.clearSearchHighlights();
 		for (var i = 0; i < results.length; i++) {
 			const res = getFSEntryForURL(tree, results[i].filename);
@@ -122,7 +108,6 @@ export default class HighlightedLines {
 				this.addHighlightedLine(fsEntry, results[i].line);
 			}
 		}
-		this.highlightedResults = results;
 		ca.needsUpdate = true;
 	}
 }

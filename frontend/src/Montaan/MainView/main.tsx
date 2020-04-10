@@ -22,7 +22,7 @@ import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter';
 import * as THREE from 'three';
 import loadFont from 'load-bmfont';
 import WorkQueue from '../lib/WorkQueue';
-import ModelBuilder from '../ModelBuilder/ModelBuilder';
+import ModelBuilder from '../ModelBuilder';
 import NavTarget from '../lib/NavTarget';
 import { FileTree, SearchResult } from '../MainApp';
 import QFrameAPI from '../../lib/api';
@@ -162,7 +162,7 @@ export class Tabletree {
 	onElectron: boolean = false;
 	frameLoopPaused: boolean = false;
 	frameRequested: boolean = true;
-	_changed: boolean = true;
+	changed: boolean = true;
 	started: boolean = false;
 	highlightedLines: HighlightedLines;
 	searchLandmarks: SearchLandmarks;
@@ -196,7 +196,7 @@ export class Tabletree {
 		);
 		this.scene.add(this.linksModel.model);
 		this.setupEventListeners(); // UI event listeners
-		this.changed = true;
+		this.requestFrame();
 	}
 
 	init(api: QFrameAPI, history: RouteComponentProps['history']) {
@@ -322,7 +322,7 @@ export class Tabletree {
 			this.scene.updateWorldMatrix(true, true);
 			if (this.navUrl) this.goToURL(this.navUrl);
 		}
-		this.changed = true;
+		this.requestFrame();
 	};
 
 	async setFileTree(fileTree: FileTree) {
@@ -339,15 +339,47 @@ export class Tabletree {
 		}
 	}
 
+	addPathSegmentsToSet(set: Set<FSEntry>, fsEntry: FSEntry) {
+		let entry = fsEntry;
+		while (entry.parent) {
+			set.add(entry);
+			entry = entry.parent;
+		}
+		set.add(entry);
+	}
+
 	showFileTree(tree: FileTree, force: boolean = false) {
 		if ((this.treeBuildInProgress || this.treeVersion === this.treeBuildVersion) && !force) {
 			return;
 		}
 		this.treeBuildInProgress = true;
 		this.treeBuildVersion = this.treeVersion;
+
+		const forceLoads = new Set<FSEntry>();
+
+		let nearestFSEntryToNavUrl = undefined;
+
+		if (this.navUrl) {
+			nearestFSEntryToNavUrl = getNearestFSEntryForURL(tree.tree, this.navUrl);
+			if (nearestFSEntryToNavUrl)
+				this.addPathSegmentsToSet(forceLoads, nearestFSEntryToNavUrl.fsEntry);
+		}
+		for (let i = 0; i < this.linksModel.links.length; i++) {
+			const link = this.linksModel.links[i];
+			if (!(link.src instanceof Element)) {
+				const entry = this.parseTarget(link.src, link.srcPoint);
+				if (entry) this.addPathSegmentsToSet(forceLoads, entry.fsEntry);
+			}
+			if (!(link.dst instanceof Element)) {
+				const entry = this.parseTarget(link.dst, link.dstPoint);
+				if (entry) this.addPathSegmentsToSet(forceLoads, entry.fsEntry);
+			}
+		}
+
 		// Can't use worker because tree can't be serialized for passing to a worker.
 		// Tree should be in an ArrayBuffer that we get from MainApp worker / whoever is doing tree building.
 		// Then we'd pass the ArrayBuffer to ModelBuilder, and get back models and instructions for tweaking camera.
+
 		const {
 			verts,
 			colorVerts,
@@ -364,7 +396,7 @@ export class Tabletree {
 			textVertexCount,
 			boundingBox,
 			boundingSphere,
-		} = this.modelBuilder.buildModel(tree, this.camera, this.model, this.navUrl);
+		} = this.modelBuilder.buildModel(tree, this.camera, this.model, forceLoads);
 		this.zoomedInPath = zoomedInPath;
 		this.fsIndex = fsEntryIndex;
 		this.smallestCovering = smallestCovering;
@@ -408,6 +440,9 @@ export class Tabletree {
 		this.model.geometry.boundingBox = boundingBox;
 		this.model.geometry.boundingSphere = boundingSphere;
 		const currentlyVisible = new Set<string>();
+		if (nearestFSEntryToNavUrl && !nearestFSEntryToNavUrl.fsEntry.isDirectory) {
+			visibleFiles.push(nearestFSEntryToNavUrl.fsEntry);
+		}
 		visibleFiles.forEach((fsEntry) => {
 			const path = getFullPath(fsEntry);
 			this.addFileView(this.visibleFiles, path, fsEntry);
@@ -439,7 +474,7 @@ export class Tabletree {
 
 		this.scene.add(this.model);
 		this.scene.updateWorldMatrix(true, true);
-		this.changed = true;
+		this.requestFrame();
 		this.treeBuildInProgress = false;
 		this.viewRootUpdated = false;
 	}
@@ -571,7 +606,7 @@ export class Tabletree {
 		);
 		fsPoint.applyMatrix4(model.matrixWorld);
 		camera.targetPosition.copy(fsPoint);
-		this.changed = true;
+		this.requestFrame();
 	};
 
 	async goToFSEntryCoords(fsEntry: FSEntry, coords: number[], model = this.model) {
@@ -585,7 +620,7 @@ export class Tabletree {
 		}
 		const targetPoint = res;
 		camera.targetPosition.copy(targetPoint);
-		this.changed = true;
+		this.requestFrame();
 	}
 
 	async goToFSEntryAtSearch(fsEntry: FSEntry, search: string, model = this.model) {
@@ -598,7 +633,7 @@ export class Tabletree {
 		}
 		const targetPoint = res;
 		camera.targetPosition.copy(targetPoint);
-		this.changed = true;
+		this.requestFrame();
 	}
 
 	// URL Handling ////////////////////////////////////////////////////////////////////////////////
@@ -828,7 +863,7 @@ export class Tabletree {
 				camera.targetPosition.z += -d + d * zf;
 				camera.near *= zf;
 				camera.far *= zf;
-				self.changed = true;
+				self.requestFrame();
 			}
 		};
 
@@ -847,7 +882,7 @@ export class Tabletree {
 			clientY: number;
 		}) {
 			if (down) {
-				self.changed = true;
+				self.requestFrame();
 				if (ev.preventDefault) ev.preventDefault();
 				var dx = ev.clientX - previousX;
 				var dy = ev.clientY - previousY;
@@ -910,7 +945,7 @@ export class Tabletree {
 				if (wheelFreePan || xMove) camera.position.x += factor * ev.deltaX;
 				if (wheelFreePan || yMove) camera.position.y -= factor * ev.deltaY;
 				camera.targetPosition.copy(camera.position);
-				self.changed = true;
+				self.requestFrame();
 			}
 		};
 
@@ -988,7 +1023,7 @@ export class Tabletree {
 		camera.targetPosition.copy(camera.position);
 		camera.updateProjectionMatrix();
 		this.scene.updateWorldMatrix(true, true);
-		this.changed = true;
+		this.requestFrame();
 	}
 
 	zoomToEntry(ev: any) {
@@ -1006,7 +1041,7 @@ export class Tabletree {
 				);
 			if (this.history) this.history.push(this.getURLForFSEntry(fsEntry, coords));
 			this.highlighted = fsEntry;
-			this.changed = true;
+			this.requestFrame();
 		}
 	}
 
@@ -1028,6 +1063,15 @@ export class Tabletree {
 		if (this.tree) this.showFileTree(this.tree, true);
 		this.searchLandmarks.updateSearchLines();
 		this.linksModel.updateLinks(this.currentFrame);
+		if (this.fileTree) {
+			this.highlightedLines.highlightResults(
+				this.fileTree,
+				this.searchResults,
+				(this.model.geometry as THREE.BufferGeometry).getAttribute(
+					'color'
+				) as THREE.BufferAttribute
+			);
+		}
 		this.changed = false;
 
 		this.currentFrame++;
@@ -1088,7 +1132,7 @@ export class Tabletree {
 			if (Math.abs(camera.fov - camera.targetFOV) < camera.targetFOV / 1000) {
 				camera.fov = camera.targetFOV;
 			}
-			this.changed = true;
+			this.requestFrame();
 			this.animating = true;
 		} else {
 			this.animating = false;
@@ -1124,20 +1168,11 @@ export class Tabletree {
 		}
 		this.renderer.domElement.style.width = window.innerWidth + 'px';
 		this.renderer.domElement.style.height = window.innerHeight + 'px';
-		this.changed = true;
-	}
-
-	get changed() {
-		return this._changed;
-	}
-
-	set changed(v) {
-		this._changed = v;
-		if (v) this.requestFrame();
+		this.requestFrame();
 	}
 
 	requestFrame = () => {
-		this._changed = true;
+		this.changed = true;
 		if (!this.frameRequested) {
 			this.frameRequested = true;
 			window.requestAnimationFrame(this.tick);

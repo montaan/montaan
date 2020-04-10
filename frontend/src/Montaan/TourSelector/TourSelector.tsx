@@ -36,8 +36,10 @@ const TourSelector = ({ path, fileTree, api, repoPrefix, fileTreeUpdated }: Tour
 	const toursInTree: TourRef[] = useMemo(() => {
 		// eslint-disable-next-line
 		const version = fileTreeUpdated;
+		const fileTreePath = getFullPath(fileTree);
 		const foundTours = utils.findFiles(fileTree, '.tour.md').map(getFullPath);
-		return foundTours.sort().map((path) => {
+		return foundTours.sort().map((fullPath) => {
+			const path = fullPath.slice(fileTreePath.length);
 			const rawName = path
 				.split('/')
 				.slice(1, -1)
@@ -53,11 +55,12 @@ const TourSelector = ({ path, fileTree, api, repoPrefix, fileTreeUpdated }: Tour
 
 	useEffect(() => {
 		if (!currentTour.path) setTourContent(EMPTY_TOUR_CONTENT);
-		else
+		else {
 			fileTree.filesystem!.readFile(currentTour.path).then((ab) => {
 				const markdown = new TextDecoder().decode(ab);
 				setTourContent({ name: currentTour.name, markdown });
 			});
+		}
 	}, [currentTour, api, setTourContent, fileTree]);
 
 	const onTourSelect = useCallback(
