@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { SDFTextGeometry, SDFText } from './third_party/three-bmfont-text-modified';
-import { BMFont } from './third_party/layout-bmfont-text-modified';
+import { SDFTextGeometry, SDFText } from '../lib/third_party/three-bmfont-text-modified';
+import { BMFont } from '../lib/third_party/layout-bmfont-text-modified';
 import Style, { NodeStyle } from './railscasts';
 import he from 'he';
 import hljs from 'highlight.js';
@@ -38,22 +38,22 @@ export class PrettyPrinter {
 		const font = this.font;
 		let ext = filename;
 		if (filename.indexOf('.') !== -1) {
-			const exts = filename.split('.');
-			ext = exts[exts.length - 1];
+			const extensions = filename.split('.');
+			ext = extensions[extensions.length - 1];
 		}
 		const language = hljs.getLanguage(ext);
 		let result: PrettyPrintResult;
 		if (language) {
-			const ppResult = hljs.highlight(ext, text, true);
+			const highlightResult = hljs.highlight(ext, text, true);
 			result = {
-				value: ppResult.value,
-				language: language.aliases ? language.aliases[0] : ppResult.language || ext,
+				value: highlightResult.value,
+				language: language.aliases ? language.aliases[0] : highlightResult.language || ext,
 			};
 		} else {
 			result = { value: text, language: undefined };
 		}
-		const geo = this.createPrettyPrintGeometry(font, text, result);
-		return Comlink.transfer(geo, [geo.verts.buffer, geo.uvs.buffer]);
+		const geometry = this.createPrettyPrintGeometry(font, text, result);
+		return Comlink.transfer(geometry, [geometry.verts.buffer, geometry.uvs.buffer]);
 	}
 
 	static hex: string[] = (() => {

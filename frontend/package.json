@@ -84,7 +84,7 @@
 	},
 	"jest": {
 		"moduleNameMapper": {
-			"\\.worker$": "<rootDir>/__mocks__/workerMock.ts"
+			"^worker-loader!": "<rootDir>/__mocks__/workerMock.ts"
 		}
 	},
 	"lint-staged": {

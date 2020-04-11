@@ -1,11 +1,11 @@
 import * as Comlink from 'comlink';
-import { PrettyPrintGeometry } from './pretty-print.worker';
-import Text from './Text';
+import { PrettyPrintGeometry } from './PrettyPrinter.worker';
+import Text from '../lib/Text';
 import * as THREE from 'three';
 
 /* eslint-disable import/no-webpack-loader-syntax */
-import PrettyPrintWorker from 'worker-loader!./pretty-print.worker';
-import { PrettyPrinter as PrettyPrinterInline } from './pretty-print.worker';
+import PrettyPrintWorker from 'worker-loader!./PrettyPrinter.worker';
+import { PrettyPrinter as PrettyPrinterInline } from './PrettyPrinter.worker';
 
 export class PrettyPrinter {
 	workers: any[] = [];

@@ -9,7 +9,7 @@ import FileView, { ContentBBox, EmptyContentBBox } from '../FileView';
 import { BufferGeometry } from 'three';
 import { SDFTextGeometry } from '../../lib/third_party/three-bmfont-text-modified';
 
-import PrettyPrinter from '../../lib/pretty-print';
+import PrettyPrinter from '../../PrettyPrinter/PrettyPrinter';
 
 export default class TextFileView extends FileView {
 	MAX_SIZE = 3e5;
