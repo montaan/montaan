@@ -21,7 +21,6 @@ export type PrettyPrintGeometry = {
 
 export class PrettyPrinter {
 	font?: BMFont;
-	constructor() {}
 
 	setFont(font: BMFont) {
 		this.font = font;

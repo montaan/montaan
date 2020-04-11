@@ -18,7 +18,7 @@ import ImageFileView from '../FileViews/ImageFileView/ImageFileView';
 import fontDescription from './assets/fnt/Inconsolata-Regular.fnt';
 import fontSDF from './assets/fnt/Inconsolata-Regular.png';
 
-import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter';
+// import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter';
 import * as THREE from 'three';
 import loadFont from 'load-bmfont';
 import WorkQueue from '../lib/WorkQueue';
@@ -36,44 +36,44 @@ import FileView from '../FileViews/FileView';
 // /* eslint-disable import/no-webpack-loader-syntax */
 // import ModelBuilderWorker from 'worker-loader!../ModelBuilder/ModelBuilder';
 
-function save(blob: Blob, filename: string) {
-	const link = document.createElement('a');
-	link.href = URL.createObjectURL(blob);
-	link.download = filename;
-	link.click();
+// function save(blob: Blob, filename: string) {
+// 	const link = document.createElement('a');
+// 	link.href = URL.createObjectURL(blob);
+// 	link.download = filename;
+// 	link.click();
 
-	// URL.revokeObjectURL( url ); breaks Firefox...
-}
+// 	// URL.revokeObjectURL( url ); breaks Firefox...
+// }
 
-function saveString(text: string, filename: string) {
-	save(new Blob([text], { type: 'text/plain' }), filename);
-}
+// function saveString(text: string, filename: string) {
+// 	save(new Blob([text], { type: 'text/plain' }), filename);
+// }
 
-function saveArrayBuffer(buffer: ArrayBuffer, filename: string) {
-	save(new Blob([buffer], { type: 'application/octet-stream' }), filename);
-}
+// function saveArrayBuffer(buffer: ArrayBuffer, filename: string) {
+// 	save(new Blob([buffer], { type: 'application/octet-stream' }), filename);
+// }
 
-function exportGLTF(input: THREE.Object3D) {
-	var gltfExporter = new GLTFExporter();
+// function exportGLTF(input: THREE.Object3D) {
+// 	var gltfExporter = new GLTFExporter();
 
-	var options = {
-		onlyVisible: false,
-		truncateDrawRange: false,
-		binary: true,
-	};
-	gltfExporter.parse(
-		input,
-		function(result) {
-			if (result instanceof ArrayBuffer) {
-				saveArrayBuffer(result, 'scene.glb');
-			} else {
-				var output = JSON.stringify(result, null, 2);
-				saveString(output, 'scene.gltf');
-			}
-		},
-		options
-	);
-}
+// 	var options = {
+// 		onlyVisible: false,
+// 		truncateDrawRange: false,
+// 		binary: true,
+// 	};
+// 	gltfExporter.parse(
+// 		input,
+// 		function(result) {
+// 			if (result instanceof ArrayBuffer) {
+// 				saveArrayBuffer(result, 'scene.glb');
+// 			} else {
+// 				var output = JSON.stringify(result, null, 2);
+// 				saveString(output, 'scene.gltf');
+// 			}
+// 		},
+// 		options
+// 	);
+// }
 
 (THREE.Object3D as any).prototype.tick = function(t: any, dt: any) {
 	if (this.ontick) this.ontick(t, dt);
@@ -137,7 +137,7 @@ export class Tabletree {
 	_fileTree?: FileTree;
 	lastFrameTime: number = 0;
 	previousFrameTime: number = 0;
-	renderer: THREE.WebGLRenderer = new THREE.WebGLRenderer();
+	renderer: THREE.WebGLRenderer;
 	scene: THREE.Scene = new THREE.Scene();
 	camera: NavCamera = new NavCamera();
 	visibleFiles: VisibleFiles = new VisibleFiles();
@@ -174,6 +174,16 @@ export class Tabletree {
 	cachedDistance: number = 2;
 
 	constructor() {
+		try {
+			this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+		} catch (e) {
+			this.renderer = ({
+				domElement: document.createElement('div'),
+				setPixelRatio: function(r: number) {},
+				setClearColor: function() {},
+				setSize: function() {},
+			} as unknown) as THREE.WebGLRenderer;
+		}
 		this.treeUpdateQueue = new WorkQueue();
 		this.animating = false;
 		this.currentFrame = 0;
@@ -201,31 +211,35 @@ export class Tabletree {
 
 	init(api: QFrameAPI, history: RouteComponentProps['history']) {
 		if (this.api !== QFrameAPI.mock) {
-			console.error('ALREADY INITIALIZED');
+			console.error(
+				'main.tsx: Tabletree init called more than once. How about you fix this?'
+			);
 			return;
 		}
 		this.api = api;
 		this.history = history;
 		var fontTex: THREE.Texture, fontDesc: any;
-		new THREE.TextureLoader().load(fontSDF, (tex) => {
-			fontTex = tex;
-			if (fontDesc && fontTex) this.start(fontDesc, fontTex);
-		});
-		loadFont(fontDescription, (err: any, font: any) => {
-			if (err) throw err;
-			font.glyphs = new Map();
-			font.chars.forEach((c: any) => font.glyphs.set(c.id, c));
-			if (font.kernings) {
-				const kerningArray = font.kernings;
-				font.kernings = new Map();
-				kerningArray.forEach((k: any) => {
-					if (!font.kernings.has(k.left)) font.kernings.set(k.left, new Map());
-					font.kernings.get(k.left).set(k.right, k.width);
-				});
-			}
-			fontDesc = font;
-			if (fontDesc && fontTex) this.start(fontDesc, fontTex);
-		});
+		if (this.renderer.domElement.tagName === 'CANVAS') {
+			new THREE.TextureLoader().load(fontSDF, (tex) => {
+				fontTex = tex;
+				if (fontDesc && fontTex) this.start(fontDesc, fontTex);
+			});
+			loadFont(fontDescription, (err: any, font: any) => {
+				if (err) throw err;
+				font.glyphs = new Map();
+				font.chars.forEach((c: any) => font.glyphs.set(c.id, c));
+				if (font.kernings) {
+					const kerningArray = font.kernings;
+					font.kernings = new Map();
+					kerningArray.forEach((k: any) => {
+						if (!font.kernings.has(k.left)) font.kernings.set(k.left, new Map());
+						font.kernings.get(k.left).set(k.right, k.width);
+					});
+				}
+				fontDesc = font;
+				if (fontDesc && fontTex) this.start(fontDesc, fontTex);
+			});
+		}
 	}
 
 	async start(font: any, fontTexture: THREE.Texture) {
@@ -246,17 +260,16 @@ export class Tabletree {
 	// Setup scene ////////////////////////////////////////////////////////////////////////////////
 
 	setupScene() {
-		var renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
-		renderer.domElement.dataset.filename = 'frontend/' + __filename.replace(/\\/g, '/');
-		renderer.domElement.id = 'renderCanvas';
-		renderer.setPixelRatio(window.devicePixelRatio || 1);
-		renderer.setClearColor(Colors.backgroundColor, 1);
-		document.body.appendChild(renderer.domElement);
+		this.renderer.domElement.dataset.filename = 'frontend/' + __filename.replace(/\\/g, '/');
+		this.renderer.domElement.id = 'renderCanvas';
+		this.renderer.setPixelRatio(window.devicePixelRatio || 1);
+		this.renderer.setClearColor(Colors.backgroundColor, 1);
+		document.body.appendChild(this.renderer.domElement);
 
-		var scene = new THREE.Scene();
-		(window as any).scene3 = scene;
-		(window as any).GLTFExporter = GLTFExporter;
-		(window as any).exportGLTF = exportGLTF;
+		const scene = new THREE.Scene();
+		// (window as any).scene3 = scene;
+		// (window as any).GLTFExporter = GLTFExporter;
+		// (window as any).exportGLTF = exportGLTF;
 
 		const camera = new NavCamera(15, window.innerWidth / window.innerHeight, 0.5, 15);
 
@@ -266,13 +279,12 @@ export class Tabletree {
 
 		scene.add(camera);
 
-		this.renderer = renderer;
 		this.scene = scene;
 		this.camera = camera;
 
 		this.visibleFiles = new VisibleFiles();
 
-		var screenPlane = new THREE.Mesh(
+		const screenPlane = new THREE.Mesh(
 			new THREE.PlaneBufferGeometry(2000, 2000),
 			new THREE.MeshBasicMaterial({ color: 0xff00ff })
 		);

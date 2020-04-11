@@ -5,6 +5,7 @@ import * as THREE from 'three';
 
 /* eslint-disable import/no-webpack-loader-syntax */
 import PrettyPrintWorker from 'worker-loader!./pretty-print.worker';
+import { PrettyPrinter as PrettyPrinterInline } from './pretty-print.worker';
 
 export class PrettyPrinter {
 	workers: any[] = [];

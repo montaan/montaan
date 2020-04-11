@@ -3,7 +3,7 @@
 import React from 'react';
 import { BrowserRouter as Router } from 'react-router-dom';
 import { render } from '@testing-library/react';
-import { RepoInfo } from '../RepoSelector';
+import { RepoInfo } from '../Filesystems/MontaanUserReposFilesystem';
 import Repo from './';
 
 import styles from './Repo.module.scss';

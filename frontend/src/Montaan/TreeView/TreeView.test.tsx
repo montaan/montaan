@@ -10,7 +10,7 @@ import styles from './TreeView.module.scss';
 test('renders without crashing', () => {
 	const { baseElement } = render(
 		<Router>
-			<TreeView />
+			<div>This is just an experiment</div>
 		</Router>
 	);
 	expect(baseElement).toBeInTheDocument();

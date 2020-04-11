@@ -6,14 +6,17 @@ import { render } from '@testing-library/react';
 import Player from './';
 
 import styles from './Player.module.scss';
+import QFrameAPI from '../../lib/api';
+import { FSEntry } from '../lib/filesystem';
 
 test('renders without crashing', () => {
 	const { baseElement } = render(
 		<Router>
 			<Player
-				fileTree={{} as any}
+				fileTree={new FSEntry()}
+				fileTreeUpdated={1}
 				navigationTarget="foo/bar/baz"
-				api={{} as any}
+				api={QFrameAPI.mock}
 				repoPrefix="foo/bar"
 			/>
 		</Router>

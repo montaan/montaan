@@ -81,6 +81,11 @@
 			"pre-commit": "lint-staged"
 		}
 	},
+	"jest": {
+		"moduleNameMapper": {
+			"\\.worker$": "<rootDir>/__mocks__/workerMock.ts"
+		}
+	},
 	"lint-staged": {
 		"src/**/*.{js,jsx,ts,tsx,json}": [
 			"eslint --fix"

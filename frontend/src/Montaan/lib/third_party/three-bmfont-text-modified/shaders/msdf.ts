@@ -13,18 +13,18 @@ export interface MSDFShaderOptions {
 	depthWrite?: boolean;
 	opacity?: number;
 	alphaTest?: number;
-	precision?: 'highp' | 'mediump' | 'lowp' | null;
+	precision?: 'highp' | 'mediump' | 'lowp';
 	negate?: boolean;
 }
 
 export default function createMSDFShader(opt: MSDFShaderOptions) {
 	opt = opt || {};
-	var opacity = typeof opt.opacity === 'number' ? opt.opacity : 1;
-	var alphaTest = typeof opt.alphaTest === 'number' ? opt.alphaTest : 0.0001;
-	var precision = opt.precision || 'highp';
+	var opacity = opt.opacity ?? 1;
+	var alphaTest = opt.alphaTest ?? 0.0001;
+	var precision = opt.precision ?? 'highp';
 	var color = opt.color;
 	var map = opt.map;
-	var negate = typeof opt.negate === 'boolean' ? opt.negate : false;
+	var negate = opt.negate ?? false;
 	var palette = opt.palette;
 	var maxPaletteLength = Math.max(palette ? palette.length : 1, 8);
 
