@@ -67,6 +67,7 @@
 		"imagemin": "gulp imagemin",
 		"test": "react-app-rewired test --env=jsdom",
 		"eject": "react-scripts eject",
+		"type-test": "watch \"yarn tsc --noEmit --p tsconfig.json\" src",
 		"ts-node": "node_modules/.bin/ts-node -O '{\"module\": \"commonjs\"}'",
 		"makeComponent": "yarn ts-node bin/makeComponent.ts"
 	},
