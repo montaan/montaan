@@ -111,7 +111,7 @@
 		"@types/mustache": "^4.0.0",
 		"customize-cra": "^0.9.1",
 		"customize-cra-react-refresh": "^1.0.1",
-		"husky": ">=4",
+		"husky": "^4.2.5",
 		"lint-staged": ">=10",
 		"mustache": "^4.0.0",
 		"nodemon": "^2.0.2",
