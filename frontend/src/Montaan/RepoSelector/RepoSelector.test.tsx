@@ -19,6 +19,7 @@ it('renders without crashing', () => {
 						processing: false,
 					},
 				]}
+				renameRepo={(() => {}) as any}
 				createRepo={async (name: string, url?: string) =>
 					new Promise((r) =>
 						r({

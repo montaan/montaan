@@ -10,7 +10,7 @@ import styles from './Introduction.module.scss';
 test('renders without crashing', () => {
 	const { baseElement } = render(
 		<Router>
-			<Introduction userInfo={{}} />
+			<Introduction userInfo={{ name: 'Jaakko' }} />
 		</Router>
 	);
 	expect(baseElement).toBeInTheDocument();

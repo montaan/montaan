@@ -10,7 +10,11 @@ import styles from './Tour.module.scss';
 test('renders without crashing', () => {
 	const { baseElement } = render(
 		<Router>
-			<Tour tourMarkdown="### Foo\n\nStep 1nn### Bar\n\nStep 2\n" repoPrefix="foo/bar" />
+			<Tour
+				name={'Main tour'}
+				tourMarkdown="### Foo\n\nStep 1nn### Bar\n\nStep 2\n"
+				repoPrefix="foo/bar"
+			/>
 		</Router>
 	);
 	expect(baseElement).toBeInTheDocument();

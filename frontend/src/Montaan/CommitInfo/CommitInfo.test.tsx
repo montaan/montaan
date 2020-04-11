@@ -7,19 +7,28 @@ import CommitInfo from './';
 import styles from './CommitInfo.module.scss';
 
 test('renders without crashing', () => {
-	const { baseElement } = render(<CommitInfo 
-		loadFileDiff={(() => {}) as any}
-		loadFile={(() => {}) as any}
-		commitFilter={{}}
-		setCommitFilter={(() => {}) as any}
-		navigationTarget={''}
-		repoPrefix={''}
-		closeFile={() => {}}
-		loadDiff={(() => {}) as any}
-		activeCommitData={{authors: [], authorCommitCounts: {}, commits: []}}
-		commitData={{commits: [], commitIndex: {}}}
-		fileContents={null}
-		showFileCommitsClick={(() => {}) as any}
-	/>);
+	const { baseElement } = render(
+		<CommitInfo
+			searchQuery={''}
+			diffsLoaded={0}
+			addLinks={(() => {}) as any}
+			setLinks={(() => {}) as any}
+			links={[]}
+			commitsVisible={true}
+			setCommitsVisible={(() => {}) as any}
+			path={'/'}
+			loadFileDiff={(() => {}) as any}
+			loadFile={(() => {}) as any}
+			commitFilter={{}}
+			setCommitFilter={(() => {}) as any}
+			navigationTarget={''}
+			repoPrefix={''}
+			closeFile={() => {}}
+			loadDiff={(() => {}) as any}
+			activeCommitData={{ files: [], authors: [], authorCommitCounts: {}, commits: [] }}
+			commitData={{ authors: {}, commitCount: 0, commits: [], commitIndex: {} }}
+			fileContents={undefined}
+		/>
+	);
 	expect(baseElement).toBeInTheDocument();
 });
