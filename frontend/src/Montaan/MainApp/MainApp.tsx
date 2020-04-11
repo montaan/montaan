@@ -758,6 +758,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 				<Breadcrumb
 					navigationTarget={this.state.navigationTarget}
 					fileTree={this.state.fileTree}
+					fileTreeUpdated={this.state.fileTreeUpdated}
 				/>
 				{fsComponents}
 				<MainView

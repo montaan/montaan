@@ -399,8 +399,7 @@ export class Tabletree {
 			labelUVs,
 			fileIndex,
 			fsEntryIndex,
-			zoomedInPath,
-			navigationTarget,
+			centerEntry,
 			smallestCovering,
 			entriesToFetch,
 			visibleFiles,
@@ -409,13 +408,13 @@ export class Tabletree {
 			boundingBox,
 			boundingSphere,
 		} = this.modelBuilder.buildModel(tree, this.camera, this.model, forceLoads);
-		this.zoomedInPath = zoomedInPath;
+		this.zoomedInPath = getFullPath(smallestCovering);
 		this.fsIndex = fsEntryIndex;
 		this.smallestCovering = smallestCovering;
 		if (entriesToFetch.length > 0) {
 			this.requestDirs(entriesToFetch.map(getFullPath), []);
 		}
-		this.setNavigationTarget(navigationTarget);
+		this.setNavigationTarget(getFullPath(centerEntry));
 		if (!this.model.geometry.attributes.position) {
 			this.model.material = new THREE.MeshBasicMaterial({
 				color: 0xffffff,

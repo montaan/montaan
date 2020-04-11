@@ -1,58 +1,79 @@
 // src/Montaan/Breadcrumb/Breadcrumb.tsx
 
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { withRouter, Link, RouteComponentProps } from 'react-router-dom';
 
 import styles from './Breadcrumb.module.scss';
 import { getSiblings } from '../lib/filesystem';
+import { FileTree } from '../MainApp';
+
+const filename = 'frontend/' + __filename.replace(/\\/g, '/');
 
 const BreadcrumbSegment = ({
 	path,
 	segment,
 	fileTree,
+	fileTreeUpdated,
 }: {
 	path: string;
 	segment: string;
-	fileTree: any;
+	fileTree: FileTree;
+	fileTreeUpdated: number;
 }) => {
 	const [open, setOpen] = useState(false);
+	const onMouseEnter = useCallback(() => setOpen(true), [setOpen]);
+	const onMouseLeave = useCallback(() => setOpen(false), [setOpen]);
+	const siblingLinks = useMemo(
+		() => (
+			<ul>
+				{getSiblings(fileTree.tree, path).map(
+					(siblingPath) =>
+						siblingPath !== path && (
+							<li key={siblingPath}>
+								<Link to={siblingPath}>{siblingPath.split('/').pop()}</Link>
+							</li>
+						)
+				)}
+			</ul>
+		),
+		[fileTree, fileTreeUpdated, path, segment]
+	);
 	return (
-		<li onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)} data-filename={'frontend/' + __filename.replace(/\\/g, '/')} >
+		<li onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave} data-filename={filename}>
 			<Link to={path}>{segment}</Link>
-			{open && (
-				<ul>
-					{getSiblings(fileTree.tree, path).map(
-						(siblingPath) =>
-							siblingPath !== path && (
-								<li key={siblingPath}>
-									<Link to={siblingPath}>{siblingPath.split('/').pop()}</Link>
-								</li>
-							)
-					)}
-				</ul>
-			)}
+			{open && siblingLinks}
 		</li>
 	);
 };
 
 export interface BreadcrumbProps extends RouteComponentProps {
 	navigationTarget: string;
-	fileTree: any;
+	fileTree: FileTree;
+	fileTreeUpdated: number;
 }
 
-const Breadcrumb = ({ navigationTarget, fileTree }: BreadcrumbProps) => {
-	const segments = navigationTarget.split('/').slice(1);
-	// var siblings = getSiblings(fileTree, path);
-	let path = '';
-	let paths = segments.map((segment) => {
-		path += '/' + segment;
-		return { segment, path };
-	});
+const Breadcrumb = ({ navigationTarget, fileTree, fileTreeUpdated }: BreadcrumbProps) => {
+	const segments = useMemo(() => {
+		const version = fileTreeUpdated;
+		const pathSegments = navigationTarget.split('/').slice(1);
+		let path = '';
+		let paths = pathSegments.map((segment) => {
+			path += '/' + segment;
+			return { segment, path };
+		});
+		return paths.map(({ segment, path }) => (
+			<BreadcrumbSegment
+				key={path}
+				path={path}
+				segment={segment}
+				fileTree={fileTree}
+				fileTreeUpdated={fileTreeUpdated}
+			/>
+		));
+	}, [fileTree, fileTreeUpdated, navigationTarget]);
 	return (
-		<ul className={styles.Breadcrumb}>
-			{paths.map(({ segment, path }) => (
-				<BreadcrumbSegment key={path} path={path} segment={segment} fileTree={fileTree} />
-			))}
+		<ul className={styles.Breadcrumb} data-filename={filename}>
+			{segments}
 		</ul>
 	);
 };

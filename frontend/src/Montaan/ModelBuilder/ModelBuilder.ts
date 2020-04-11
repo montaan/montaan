@@ -59,8 +59,7 @@ export default class ModelBuilder {
 		fileIndex: number;
 		fsEntryIndex: FSEntry[];
 
-		zoomedInPath: string;
-		navigationTarget: string;
+		centerEntry: FSEntry;
 		smallestCovering: FSEntry;
 
 		entriesToFetch: FSEntry[];
@@ -122,8 +121,7 @@ export default class ModelBuilder {
 			fileIndex,
 			labelGeometries,
 			fsEntryIndex,
-			zoomedInPath,
-			navigationTarget,
+			centerEntry,
 			smallestCovering,
 			entriesToFetch,
 			visibleFiles,
@@ -157,8 +155,7 @@ export default class ModelBuilder {
 			fileIndex,
 			fsEntryIndex,
 
-			zoomedInPath,
-			navigationTarget,
+			centerEntry,
 			smallestCovering,
 
 			entriesToFetch,
@@ -287,8 +284,7 @@ export default class ModelBuilder {
 		fileIndex: number;
 		labelGeometries: ExtendedSDFText[];
 		fsEntryIndex: FSEntry[];
-		zoomedInPath: string;
-		navigationTarget: string;
+		centerEntry: FSEntry;
 		smallestCovering: FSEntry;
 		entriesToFetch: FSEntry[];
 		visibleFiles: FSEntry[];
@@ -301,8 +297,6 @@ export default class ModelBuilder {
 		const fsEntryIndex: FSEntry[] = [];
 		const vertexIndices = { vertexIndex: 0, textVertexIndex: 0 };
 
-		let zoomedInPath = '';
-		let navigationTarget = '';
 		let smallestCovering = fileTree;
 
 		// Breadth-first traversal of mesh.fileTree
@@ -366,12 +360,9 @@ export default class ModelBuilder {
 				// Update navigation target and smallest covering fsEntry (and its path).
 				if (bbox.width > 1) {
 					if (Geometry.bboxCoversFrustum(bbox, mesh, camera)) {
-						zoomedInPath += '/' + fsEntry.name;
-						navigationTarget += '/' + fsEntry.name;
 						centerEntry = fsEntry;
 						smallestCovering = fsEntry;
 					} else if (Geometry.bboxAtFrustumCenter(bbox, mesh, camera)) {
-						navigationTarget += '/' + fsEntry.name;
 						centerEntry = fsEntry;
 					}
 				}
@@ -385,8 +376,7 @@ export default class ModelBuilder {
 			fileIndex,
 			labelGeometries,
 			fsEntryIndex,
-			zoomedInPath,
-			navigationTarget,
+			centerEntry,
 			smallestCovering,
 			entriesToFetch,
 			visibleFiles,

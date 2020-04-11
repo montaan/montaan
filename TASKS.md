@@ -21,7 +21,6 @@
 
     [] Search results visibility
     [] CommitInfo commits crop to view
-    [] Breadcrumbs go crazy
     [] Sometimes highlighted lines don't highlight (when doing search with file in view and loaded :?)
 
 # Release checklist
@@ -37,7 +36,7 @@
         [] In-progress spinner
         [] Import local repo
     [] Repo auto-pull & update
-    [] Tests pass
+    [x] Tests pass
 
 # KEY FEATURES
 
@@ -438,6 +437,7 @@
     [x] Zoom to file often fails (camera goes wonky)
     [x] Navigation to unseen parts
     [x] Search highlighting update on every frame
+    [x] Breadcrumbs go crazy
 
 # Ideas
 
