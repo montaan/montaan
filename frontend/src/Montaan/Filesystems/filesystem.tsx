@@ -239,6 +239,26 @@ export function getPathEntry(fileTree: FSEntry, path: string): FSEntry | null {
 	return branch;
 }
 
+export function getOrCreateDir(tree: FSDirEntry, name: string): FSDirEntry {
+	const entry = tree.entries.get(name);
+	if (entry) return entry;
+	return createDir(tree, name);
+}
+
+export function createDir(tree: FSDirEntry, name: string): FSDirEntry {
+	const entry = new FSDirEntry(name);
+	tree.entries.set(name, entry);
+	entry.parent = tree;
+	return entry;
+}
+
+export function createFile(tree: FSDirEntry, name: string): FSEntry {
+	const entry = new FSEntry(name);
+	tree.entries.set(name, entry);
+	entry.parent = tree;
+	return entry;
+}
+
 export function getNearestPathEntry(fileTree: FSEntry, path: string): FSEntry | null {
 	path = path.replace(/\/+$/, '');
 	var segments = path.split('/');
