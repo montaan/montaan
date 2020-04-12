@@ -19,9 +19,6 @@
 
 # FIX
 
-    [] Search results visibility
-    [] CommitInfo commits crop to view
-    [] CommitInfo diffs crop to view
     [] Sometimes highlighted lines don't highlight (when doing search with file in view and loaded :?)
 
 # Release checklist
@@ -439,6 +436,9 @@
     [x] Search highlighting update on every frame
     [x] Breadcrumbs go crazy
     [x] Tests pass
+    [x] Search results visibility
+    [x] CommitInfo commits crop to view
+    [x] CommitInfo diffs crop to view
 
 # Ideas
 
