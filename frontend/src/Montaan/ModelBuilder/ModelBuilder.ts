@@ -358,7 +358,7 @@ export default class ModelBuilder {
 
 				// Large items
 				// Update navigation target and smallest covering fsEntry (and its path).
-				if (bbox.width > 1) {
+				if (bbox.width > 0.8) {
 					if (Geometry.bboxCoversFrustum(bbox, mesh, camera)) {
 						centerEntry = fsEntry;
 						smallestCovering = fsEntry;

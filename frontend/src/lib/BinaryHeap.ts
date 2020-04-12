@@ -69,7 +69,7 @@ export default class BinaryHeap<T> {
 			const parent = this.heapValues[parentN];
 			// If the parent has a lesser score, things are in order and we
 			// are done.
-			if (this.compare(element, parent) > 0) break;
+			if (this.compare(element, parent) >= 0) break;
 
 			// Otherwise, swap the parent with the current element and
 			// continue.

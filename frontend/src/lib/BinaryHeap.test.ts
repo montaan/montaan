@@ -16,20 +16,6 @@ test('Heap ordering property', () => {
 	);
 });
 
-test('Heap stable ordering', () => {
-	fc.assert(
-		fc.property(fc.array(fc.integer()), (numbers) => {
-			numbers.sort((a, b) => a - b);
-			const array = numbers.map((x) => ({ x }));
-			const heap = new BinaryHeap((a: { x: number }, b: { x: number }) => a.x - b.x);
-			array.forEach((e) => heap.add(e));
-			const result = [];
-			while (heap.size > 0) result.push(heap.take());
-			return result.every((e, i) => e === array[i]);
-		})
-	);
-});
-
 test('Heap sundry tests', () => {
 	expect(new BinaryHeap((a: number, b: number) => a - b).take()).toEqual(undefined);
 	fc.assert(
@@ -52,13 +38,9 @@ test('Heap heapValues equals heap.take()', () => {
 			const heap = new BinaryHeap((a: { x: number }, b: { x: number }) => a.x - b.x);
 			array.forEach((e) => heap.add(e));
 			const heapValues = heap.heapValues.slice();
-			const result = [];
-			while (heap.size > 0) result.push(heap.take());
-			return deepEqual(
-				heapValues,
-				result,
-				'Heap heapValues equals to taking all heap values.'
-			);
+			const result: { x: number }[] = [];
+			while (heap.size > 0) result.push(heap.take()!);
+			return heapValues.every((e, i) => e.x === result[i].x);
 		})
 	);
 });
