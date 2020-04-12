@@ -1,7 +1,7 @@
 import * as THREE from 'three';
-import { FSEntry, getFSEntryForURL } from '../lib/filesystem';
+import { FSEntry, getFSEntryForURL } from '../Filesystems';
 import { SearchResult } from '../MainApp';
-import Geometry from '../lib/Geometry';
+import Geometry from '../Geometry/Geometry';
 
 export default class HighlightedLines {
 	highlightedResults: SearchResult[] = [];

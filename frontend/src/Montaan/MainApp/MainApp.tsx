@@ -8,9 +8,9 @@ import MainView from '../MainView';
 
 import Breadcrumb from '../Breadcrumb';
 
-import utils from '../lib/utils';
-import { CommitData } from '../lib/parse_commits';
-import { authorCmp, Commit } from '../lib/parse-diff';
+import utils from '../Utils/utils';
+import { CommitData } from '../CommitParser/parse_commits';
+import { authorCmp, Commit } from '../CommitParser/parse-diff';
 import {
 	getPathEntry,
 	getFullPath,
@@ -19,12 +19,12 @@ import {
 	getAllFilesystemsForPath,
 	mountURL,
 	FSDirEntry,
-} from '../lib/filesystem';
+} from '../Filesystems';
 
 import styles from './MainApp.module.scss';
 import { QFrameAPI } from '../../lib/api';
-import { FSEntry } from '../lib/filesystem';
-import WorkQueue from '../lib/WorkQueue';
+import { FSEntry } from '../Filesystems';
+import WorkQueue from '../../lib/WorkQueue';
 
 import { MontaanGitFilesystem } from '../Filesystems/MontaanGitFilesystem';
 import { MontaanUserReposFilesystem, RepoInfo } from '../Filesystems/MontaanUserReposFilesystem';
@@ -80,10 +80,10 @@ export interface GoToTarget {
 }
 
 export interface FileContents {
-	content: string;
+	content: ArrayBuffer;
 	path: string;
 	hash: string;
-	original?: string;
+	original?: ArrayBuffer;
 }
 
 export interface CommitFilter {

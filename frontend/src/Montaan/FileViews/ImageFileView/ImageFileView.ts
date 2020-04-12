@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { FSEntry } from '../../lib/filesystem';
+import { FSEntry } from '../../Filesystems';
 import QFrameAPI from '../../../lib/api';
 import FileView from '../FileView';
 

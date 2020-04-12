@@ -14,11 +14,11 @@ import styles from './TreeView.module.scss';
 
 import QFrameAPI from '../../lib/api';
 import { FileTree, SearchResult, ActiveCommitData, TreeLink } from '../MainApp';
-import { CommitData } from '../lib/parse_commits';
-import utils from '../lib/utils';
-import Geometry from '../lib/Geometry';
-import { getFullPath, FSEntry } from '../lib/filesystem';
-import Colors from '../lib/Colors';
+import { CommitData } from '../CommitParser/parse_commits';
+import utils from '../Utils/utils';
+import Geometry from '../Geometry/Geometry';
+import { getFullPath, FSEntry } from '../Filesystems';
+import Colors from '../Colors/Colors';
 
 export interface TreeViewProps extends RouteComponentProps {
 	api: QFrameAPI;

@@ -1,8 +1,8 @@
-export function authorCmp(a:string, b:string):number {
+export function authorCmp(a: string, b: string): number {
 	return a.localeCompare(b);
 }
 
-export function span(className:string = '', content:string = ''):HTMLElement {
+export function span(className: string = '', content: string = ''): HTMLElement {
 	var el = document.createElement('span');
 	el.className = className;
 	el.textContent = content;
@@ -34,7 +34,7 @@ interface DiffChangeSet {
 	changes: DiffChange[];
 }
 
-export function parseDiff(diff:string):DiffChangeSet[] {
+export function parseDiff(diff: string): DiffChangeSet[] {
 	/*
     1. It is preceded with a "git diff" header that looks like this:
 
@@ -75,18 +75,34 @@ export function parseDiff(diff:string):DiffChangeSet[] {
     */
 	const lines = diff.split('\n');
 	const changes = [];
-	var currentChange:DiffChangeSet = { cmd: '', similarity: '', newMode: '', index: '', srcPath: '', dstPath: '', changes: [] };
-	var pos:DiffPosition|null = null;
-	var parsePos = function(posMatch:RegExpMatchArray, line:string) {
+	var currentChange: DiffChangeSet = {
+		cmd: '',
+		similarity: '',
+		newMode: '',
+		index: '',
+		srcPath: '',
+		dstPath: '',
+		changes: [],
+	};
+	var pos: DiffPosition | null = null;
+	var parsePos = function(posMatch: RegExpMatchArray, line: string) {
 		if (!posMatch) console.log(line, lines);
 		pos = {
 			previous: { line: parseInt(posMatch[1]), lineCount: parseInt(posMatch[3]) },
-			current: { line: parseInt(posMatch[4]), lineCount: parseInt(posMatch[6]) }
+			current: { line: parseInt(posMatch[4]), lineCount: parseInt(posMatch[6]) },
 		};
 		currentChange.changes.push({ pos, lines: [line.substring(posMatch[0].length)] });
 	};
-	var parseCmd = function(line:string) {
-		currentChange = { cmd: '', similarity: '', newMode: '', index: '', srcPath: '', dstPath: '', changes: [] };
+	var parseCmd = function(line: string) {
+		currentChange = {
+			cmd: '',
+			similarity: '',
+			newMode: '',
+			index: '',
+			srcPath: '',
+			dstPath: '',
+			changes: [],
+		};
 		pos = null;
 		currentChange.cmd = line;
 	};
@@ -114,22 +130,30 @@ export function parseDiff(diff:string):DiffChangeSet[] {
 	return changes;
 }
 
-interface ShowFileHandler { (sha:string, previousSha:string, path:string, el:FileToggleElement) : void; }
+interface ShowFileHandler {
+	(sha: string, previousSha: string, path: string, el: FileToggleElement): void;
+}
 
 interface FileToggleElement extends HTMLElement {
 	sha: string;
 	previousSha: string;
 	path: string;
 	showFile: ShowFileHandler;
-	onmousedown(this:GlobalEventHandlers, ev:MouseEvent):any;
+	onmousedown(this: GlobalEventHandlers, ev: MouseEvent): any;
 }
 
-function showFileToggleOnClick(this:FileToggleElement, ev:MouseEvent) {
+function showFileToggleOnClick(this: FileToggleElement, ev: MouseEvent) {
 	ev.preventDefault();
 	this.showFile(this.sha, this.previousSha, this.path, this);
 }
 
-export function formatDiff(sha:string, diff:string, trackedPaths:string[], previousSha:string, showFile:ShowFileHandler) {
+export function formatDiff(
+	sha: string,
+	diff: string,
+	trackedPaths: string[],
+	previousSha: string,
+	showFile: ShowFileHandler
+) {
 	const container = span();
 	const changes = parseDiff(diff);
 	changes.forEach((change) => {
@@ -165,7 +189,9 @@ export function formatDiff(sha:string, diff:string, trackedPaths:string[], previ
 	return container;
 }
 
-export interface CalendarMouseEventHandler{ (this:GlobalEventHandlers, ev:MouseEvent):any }
+export interface CalendarMouseEventHandler {
+	(this: GlobalEventHandlers, ev: MouseEvent): any;
+}
 
 export interface CalendarElement extends HTMLElement {
 	authors: AuthorIndex;
@@ -189,12 +215,17 @@ export interface Commit {
 }
 
 interface AuthorIndex {
-	[propType:string]:boolean;
+	[propType: string]: boolean;
 }
 
-export function createCalendar(commits:Commit[], yearOnClick:CalendarMouseEventHandler, monthOnClick:CalendarMouseEventHandler, dayOnClick:CalendarMouseEventHandler) {
-	var createYear = function(year:number) {
-		const el = document.createElement('div') as unknown as CalendarElement;
+export function createCalendar(
+	commits: Commit[],
+	yearOnClick: CalendarMouseEventHandler,
+	monthOnClick: CalendarMouseEventHandler,
+	dayOnClick: CalendarMouseEventHandler
+) {
+	var createYear = function(year: number) {
+		const el = (document.createElement('div') as unknown) as CalendarElement;
 		el.className = 'calendar-year';
 		el.authors = {};
 		el.dataset.year = year.toString();
@@ -202,7 +233,7 @@ export function createCalendar(commits:Commit[], yearOnClick:CalendarMouseEventH
 		el.authorCount = 0;
 		el.onclick = yearOnClick;
 		for (var i = 0; i < 12; i++) {
-			var monthEl = span('calendar-month') as unknown as CalendarElement;
+			var monthEl = (span('calendar-month') as unknown) as CalendarElement;
 			monthEl.authors = {};
 			monthEl.dataset.month = (i + 1).toString();
 			monthEl.commitCount = 0;
@@ -214,7 +245,7 @@ export function createCalendar(commits:Commit[], yearOnClick:CalendarMouseEventH
 				var date = new Date(Date.parse(dateString));
 				if (date.getUTCMonth() === i) {
 					var day = date.getUTCDay();
-					var dayEl = span('calendar-day') as unknown as CalendarElement;
+					var dayEl = (span('calendar-day') as unknown) as CalendarElement;
 					dayEl.authors = {};
 					dayEl.onclick = dayOnClick;
 					dayEl.dataset.date = (j + 1).toString();
@@ -233,7 +264,7 @@ export function createCalendar(commits:Commit[], yearOnClick:CalendarMouseEventH
 	};
 	const el = document.createElement('div');
 	el.className = 'calendar';
-	var years:{[propName:number]:CalendarElement} = {};
+	var years: { [propName: number]: CalendarElement } = {};
 	var yearsArr = [];
 	for (var i = 0; i < commits.length; i++) {
 		const c = commits[i];
@@ -242,9 +273,9 @@ export function createCalendar(commits:Commit[], yearOnClick:CalendarMouseEventH
 			console.log(c);
 			continue;
 		}
-		const year:number = d.getUTCFullYear();
-		const month:number = d.getUTCMonth();
-		const date:number = d.getUTCDate();
+		const year: number = d.getUTCFullYear();
+		const month: number = d.getUTCMonth();
+		const date: number = d.getUTCDate();
 		if (!years[year]) {
 			years[year] = createYear(year);
 			yearsArr.push(year);
@@ -271,7 +302,7 @@ export function createCalendar(commits:Commit[], yearOnClick:CalendarMouseEventH
 	yearsArr
 		.sort((a, b) => b - a)
 		.forEach((year) => {
-			years[year].querySelectorAll('span').forEach(el => {
+			years[year].querySelectorAll('span').forEach((el) => {
 				const cel = el as CalendarElement;
 				cel.dataset.commitCount = cel.commitCount.toString();
 				cel.dataset.authorCount = cel.authorCount.toString();

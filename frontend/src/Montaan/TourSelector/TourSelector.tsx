@@ -10,10 +10,10 @@ import DropdownButton from 'react-bootstrap/DropdownButton';
 import Form from 'react-bootstrap/Form';
 import Button from 'react-bootstrap/Button';
 import Tour from '../Tour';
-import utils from '../lib/utils';
+import utils from '../Utils/utils';
 import { faTimes } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { FSEntry, getFullPath } from '../lib/filesystem';
+import { FSEntry, getFullPath } from '../Filesystems';
 
 export interface TourSelectorProps extends RouteComponentProps {
 	fileTree: FSEntry;

@@ -1,8 +1,8 @@
-import { FSEntry } from '../lib/filesystem';
+import { FSEntry } from '../Filesystems';
 import QFrameAPI from '../../lib/api';
 import * as THREE from 'three';
-import { BBox } from '../lib/Geometry';
-import NavTarget from '../lib/NavTarget';
+import { BBox } from '../Geometry/Geometry';
+import NavTarget from '../NavTarget/NavTarget';
 
 export class ContentBBox {
 	topLeft: THREE.Vector3;

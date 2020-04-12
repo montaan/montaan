@@ -1,4 +1,4 @@
-import { FSEntry } from './filesystem';
+import { FSEntry } from '../Filesystems';
 
 export default class NavTarget {
 	static mock: NavTarget = new NavTarget(new FSEntry(), [], '');

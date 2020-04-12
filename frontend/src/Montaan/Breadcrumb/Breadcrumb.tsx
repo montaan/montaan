@@ -4,7 +4,7 @@ import React, { useState, useCallback, useMemo } from 'react';
 import { withRouter, Link, RouteComponentProps } from 'react-router-dom';
 
 import styles from './Breadcrumb.module.scss';
-import { getSiblings } from '../lib/filesystem';
+import { getSiblings } from '../Filesystems';
 import { FileTree } from '../MainApp';
 
 const filename = 'frontend/' + __filename.replace(/\\/g, '/');
@@ -36,7 +36,7 @@ const BreadcrumbSegment = ({
 				)}
 			</ul>
 		),
-		[fileTree, fileTreeUpdated, path, segment]
+		[fileTree, path]
 	);
 	return (
 		<li onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave} data-filename={filename}>

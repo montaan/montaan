@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { FSEntry, FSDirEntry } from './filesystem';
+import { FSEntry, FSDirEntry } from '../Filesystems';
 import { FileTree } from '../MainApp';
 var slash = '/'.charCodeAt(0);
 

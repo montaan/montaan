@@ -7,7 +7,7 @@ import Player from './';
 
 import styles from './Player.module.scss';
 import QFrameAPI from '../../lib/api';
-import { FSEntry } from '../lib/filesystem';
+import { FSEntry } from '../Filesystems';
 
 test('renders without crashing', () => {
 	const { baseElement } = render(

@@ -4,7 +4,7 @@ import { render } from '@testing-library/react';
 import React from 'react';
 import { BrowserRouter as Router } from 'react-router-dom';
 import Breadcrumb from './';
-import { FSDirEntry } from '../lib/filesystem';
+import { FSDirEntry } from '../Filesystems';
 
 test('renders without crashing', () => {
 	const { baseElement } = render(

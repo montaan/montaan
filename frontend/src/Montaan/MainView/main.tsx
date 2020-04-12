@@ -6,11 +6,11 @@ import {
 	FSEntry,
 	ExtendedFSEntry,
 	readFile,
-} from '../lib/filesystem';
-import Colors from '../lib/Colors';
-import Text from '../lib/Text';
-import utils from '../lib/utils';
-import Geometry from '../lib/Geometry';
+} from '../Filesystems';
+import Colors from '../Colors/Colors';
+import Text from '../Text/Text';
+import utils from '../Utils/utils';
+import Geometry from '../Geometry/Geometry';
 
 import TextFileView from '../FileViews/TextFileView/TextFileView';
 import ImageFileView from '../FileViews/ImageFileView/ImageFileView';
@@ -21,9 +21,9 @@ import fontSDF from './assets/fnt/Inconsolata-Regular.png';
 // import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter';
 import * as THREE from 'three';
 import loadFont from 'load-bmfont';
-import WorkQueue from '../lib/WorkQueue';
+import WorkQueue from '../../lib/WorkQueue';
 import ModelBuilder from '../ModelBuilder';
-import NavTarget from '../lib/NavTarget';
+import NavTarget from '../NavTarget/NavTarget';
 import { FileTree, SearchResult } from '../MainApp';
 import QFrameAPI from '../../lib/api';
 import HighlightedLines from '../HighlightedLines/HighlightedLines';

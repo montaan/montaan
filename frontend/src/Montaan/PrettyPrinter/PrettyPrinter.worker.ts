@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { SDFTextGeometry, SDFText } from '../lib/third_party/three-bmfont-text-modified';
-import { BMFont } from '../lib/third_party/layout-bmfont-text-modified';
+import { SDFTextGeometry, SDFText } from '../Text/third_party/three-bmfont-text-modified';
+import { BMFont } from '../Text/third_party/layout-bmfont-text-modified';
 import Style, { NodeStyle } from './railscasts';
 import he from 'he';
 import hljs from 'highlight.js';

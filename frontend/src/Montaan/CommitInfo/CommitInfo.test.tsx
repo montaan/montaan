@@ -22,7 +22,8 @@ test('renders without crashing', () => {
 			commitFilter={{}}
 			setCommitFilter={(() => {}) as any}
 			navigationTarget={''}
-			repoPrefix={''}
+			repoPrefix={'bar/baz'}
+			branch="foo"
 			closeFile={() => {}}
 			loadDiff={(() => {}) as any}
 			activeCommitData={{ files: [], authors: [], authorCommitCounts: {}, commits: [] }}

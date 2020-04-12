@@ -1,5 +1,5 @@
-import utils from './utils';
-import { FSEntry } from './filesystem';
+import utils from '../Utils/utils';
+import { FSEntry } from '../Filesystems';
 
 import * as THREE from 'three';
 

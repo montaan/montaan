@@ -23,7 +23,7 @@ export class RepoInfo {
 	}
 }
 
-export class MontaanUserReposFilesystem extends Filesystem {
+export default class MontaanUserReposFilesystem extends Filesystem {
 	name: string;
 	repoCache: RepoInfo[] = [];
 	cacheVersion: number = 0;

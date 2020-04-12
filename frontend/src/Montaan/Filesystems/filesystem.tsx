@@ -1,8 +1,8 @@
-import QFrameAPI from '../../../lib/api';
+import QFrameAPI from '../../lib/api';
 import React from 'react';
-import FileView from '../../FileViews/FileView';
-import { SDFText } from '../third_party/three-bmfont-text-modified';
-import { BBox } from '../Geometry';
+import FileView from '../FileViews/FileView';
+import { SDFText } from '../Text/third_party/three-bmfont-text-modified';
+import { BBox } from '../Geometry/Geometry';
 
 export const EmptyLabelGeometry = SDFText;
 

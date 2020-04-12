@@ -12,8 +12,8 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 import styles from './Player.module.scss';
 import QFrameAPI from '../../lib/api';
-import utils from '../lib/utils';
-import { FSEntry, getFullPath } from '../lib/filesystem';
+import utils from '../Utils/utils';
+import { FSEntry, getFullPath } from '../Filesystems';
 
 let iframeID = 0;
 

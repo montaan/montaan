@@ -7,4 +7,4 @@ coverage
 templates
 src/sw-epilog.js
 *.min.*
-src/lib/third_party
+src/Montaan/*/third_party

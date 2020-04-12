@@ -12,7 +12,13 @@ import React from 'react';
 import QFrameAPI from '../../../lib/api';
 
 import utils from '../../Utils/utils';
-import { RawCommitData, parseCommits, CommitData } from '../../CommitParser/parse_commits';
+import {
+	RawCommitData,
+	parseCommits,
+	CommitData,
+	RawCommitList,
+	CommitMetadata,
+} from '../../CommitParser/parse_commits';
 import { TreeLink, TreeLinkKey, FSState } from '../../MainApp';
 import * as THREE from 'three';
 import TourSelector from '../../TourSelector';

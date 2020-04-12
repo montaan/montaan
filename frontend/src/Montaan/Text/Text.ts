@@ -1,6 +1,6 @@
 import createText, { SDFTextGeometry, SDFText } from './third_party/three-bmfont-text-modified';
 import SDFShader from './third_party/three-bmfont-text-modified/shaders/msdf';
-import Colors from './Colors';
+import Colors from '../Colors/Colors';
 import * as THREE from 'three';
 import {
 	BMFont,

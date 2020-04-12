@@ -1,4 +1,4 @@
-import { FSEntry } from '../lib/filesystem';
+import { FSEntry } from '../Filesystems';
 import { TreeLink } from '../MainApp';
 import * as THREE from 'three';
 import { ParseTargetSignature } from '../MainView/main';

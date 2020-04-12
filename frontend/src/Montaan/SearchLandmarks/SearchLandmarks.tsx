@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { SearchResult, TreeLink } from '../MainApp';
-import { FSEntry } from '../lib/filesystem';
+import { FSEntry } from '../Filesystems';
 import { ParseTargetSignature } from '../MainView/main';
 
 export default class SearchLandmarks {

@@ -15,14 +15,14 @@
  * time, the previous frame's model is used.
  */
 
-import Text from '../lib/Text';
+import Text from '../Text/Text';
 import { FileTree } from '../MainApp';
-import { FSEntry } from '../lib/filesystem';
+import { FSEntry } from '../Filesystems';
 import * as THREE from 'three';
-import Geometry from '../lib/Geometry';
+import Geometry from '../Geometry/Geometry';
 import { NavCamera } from '../MainView/main';
-import Colors from '../lib/Colors';
-import { SDFText } from '../lib/third_party/three-bmfont-text-modified';
+import Colors from '../Colors/Colors';
+import { SDFText } from '../Text/third_party/three-bmfont-text-modified';
 
 import * as Comlink from 'comlink';
 import BinaryHeap from '../../lib/BinaryHeap';

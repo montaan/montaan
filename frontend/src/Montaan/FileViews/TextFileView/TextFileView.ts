@@ -1,13 +1,13 @@
 import * as THREE from 'three';
-import { FSEntry } from '../../lib/filesystem';
+import { FSEntry } from '../../Filesystems';
 import QFrameAPI from '../../../lib/api';
 
-import Text, { SDFTextMesh } from '../../lib/Text';
-import { BBox } from '../../lib/Geometry';
-import NavTarget from '../../lib/NavTarget';
+import Text, { SDFTextMesh } from '../../Text/Text';
+import { BBox } from '../../Geometry/Geometry';
+import NavTarget from '../../NavTarget/NavTarget';
 import FileView, { ContentBBox, EmptyContentBBox } from '../FileView';
 import { BufferGeometry } from 'three';
-import { SDFTextGeometry } from '../../lib/third_party/three-bmfont-text-modified';
+import { SDFTextGeometry } from '../../Text/third_party/three-bmfont-text-modified';
 
 import PrettyPrinter from '../../PrettyPrinter/PrettyPrinter';
 

@@ -1,8 +1,8 @@
-import './main.css';
-import './ColorsDark.css';
+import './css/main.css';
+import './css/ColorsDark.css';
 
 import * as THREE from 'three';
-import { FSEntry } from './filesystem';
+import { FSEntry } from '../Filesystems';
 
 type ColorArray = number[];
 

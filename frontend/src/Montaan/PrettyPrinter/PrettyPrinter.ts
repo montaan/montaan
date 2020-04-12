@@ -1,6 +1,6 @@
 import * as Comlink from 'comlink';
 import { PrettyPrintGeometry } from './PrettyPrinter.worker';
-import Text from '../lib/Text';
+import Text from '../Text/Text';
 import * as THREE from 'three';
 
 /* eslint-disable import/no-webpack-loader-syntax */

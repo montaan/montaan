@@ -9,7 +9,7 @@ import {
 	CalendarElement,
 	Commit,
 	CommitFile,
-} from '../lib/parse-diff';
+} from '../CommitParser/parse-diff';
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
 import Editor, { DiffEditor, monaco, Monaco } from '@monaco-editor/react';
@@ -19,7 +19,7 @@ import { editor } from 'monaco-editor';
 
 import styles from './CommitInfo.module.scss';
 import { TreeLink, CommitFilter, FileContents, ActiveCommitData } from '../MainApp';
-import { CommitData } from '../lib/parse_commits';
+import { CommitData } from '../CommitParser/parse_commits';
 
 monaco.config({
 	urls: {
@@ -57,6 +57,7 @@ export interface CommitInfoProps {
 
 	navigationTarget: string;
 	repoPrefix: string;
+	branch: string;
 
 	closeFile(): void;
 	loadDiff(repo: string, commit: Commit): Promise<void>;
@@ -106,12 +107,15 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 
 	setDateFilter(date: string) {
 		if (this.props.commitFilter.date === date)
-			this.props.setCommitFilter(this.props.repoPrefix, {
+			this.props.setCommitFilter(this.props.repoPrefix + '/' + this.props.branch, {
 				...this.props.commitFilter,
 				date: undefined,
 			});
 		else
-			this.props.setCommitFilter(this.props.repoPrefix, { ...this.props.commitFilter, date });
+			this.props.setCommitFilter(this.props.repoPrefix + '/' + this.props.branch, {
+				...this.props.commitFilter,
+				date,
+			});
 	}
 
 	onYearClick: CalendarMouseEventHandler = (ev) => {
@@ -199,7 +203,9 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 		};
 
 		const trackedPaths = [
-			this.props.navigationTarget.substring(this.props.repoPrefix.length + 1),
+			this.props.navigationTarget.slice(
+				this.props.repoPrefix.length + this.props.branch.length + 2
+			),
 		];
 		const trackedIndex: { [propType: string]: boolean } = {};
 		trackedIndex[this.props.navigationTarget] = true;
@@ -264,7 +270,7 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 					return;
 				}
 				while (diffView.firstChild) diffView.removeChild(diffView.firstChild);
-				if (c.diff == null) await this.props.loadDiff(this.props.repoPrefix, c);
+				if (c.diff === undefined) await this.props.loadDiff(this.props.repoPrefix, c);
 				diffView.classList.remove(styles['expanded-diffs']);
 				diffView.classList.add(styles['expanded']);
 				const diffSpan = span(styles['commit-diff']);
@@ -344,12 +350,12 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 			div.onmousedown = (ev) => {
 				ev.preventDefault();
 				if (this.props.commitFilter.author === author)
-					this.props.setCommitFilter(this.props.repoPrefix, {
+					this.props.setCommitFilter(this.props.repoPrefix + '/' + this.props.branch, {
 						...this.props.commitFilter,
 						author: undefined,
 					});
 				else
-					this.props.setCommitFilter(this.props.repoPrefix, {
+					this.props.setCommitFilter(this.props.repoPrefix + '/' + this.props.branch, {
 						...this.props.commitFilter,
 						author,
 					});
@@ -411,24 +417,31 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 		if (nextProps.fileContents !== this.props.fileContents && nextProps.fileContents) {
 			if (nextState.diffEditor && nextProps.fileContents.original) {
 				const model = nextState.diffEditor.getModel();
-				model.original.setValue(nextProps.fileContents.original);
-				model.modified.setValue(nextProps.fileContents.content);
+				model.original.setValue(this.arrayBufferToString(nextProps.fileContents.original));
+				model.modified.setValue(this.arrayBufferToString(nextProps.fileContents.content));
 			} else if (nextState.editor && nextProps.fileContents.content) {
-				nextState.editor.getModel().setValue(nextProps.fileContents.content);
+				nextState.editor
+					.getModel()
+					.setValue(this.arrayBufferToString(nextProps.fileContents.content));
 			}
 		}
 		return true;
 	}
 
+	arrayBufferToString(buffer: ArrayBuffer | undefined): string {
+		if (buffer === undefined) return '';
+		return new TextDecoder().decode(buffer);
+	}
+
 	handleDiffEditorDidMount = (_: any, _editor: any, diffEditor: any) => {
 		if (!this.props.fileContents) return;
 		const original = window.monaco.editor.createModel(
-			this.props.fileContents.original || '',
+			this.arrayBufferToString(this.props.fileContents.original),
 			undefined,
 			window.monaco.Uri.file('a/' + this.props.fileContents.path)
 		);
 		const modified = window.monaco.editor.createModel(
-			this.props.fileContents.content,
+			this.arrayBufferToString(this.props.fileContents.content),
 			undefined,
 			window.monaco.Uri.file('b/' + this.props.fileContents.path)
 		);
@@ -444,7 +457,7 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 	handleEditorDidMount = (_: any, editor: any) => {
 		if (!this.props.fileContents) return;
 		const model = window.monaco.editor.createModel(
-			this.props.fileContents.content,
+			this.arrayBufferToString(this.props.fileContents.content),
 			undefined,
 			window.monaco.Uri.file(this.props.fileContents.path)
 		);
@@ -462,7 +475,7 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 
 		this.searchTimeout = setTimeout(
 			(() =>
-				this.props.setCommitFilter(this.props.repoPrefix, {
+				this.props.setCommitFilter(this.props.repoPrefix + '/' + this.props.branch, {
 					...this.state.commitFilter,
 					authorSearch,
 				})) as TimerHandler,
@@ -475,7 +488,7 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 		clearTimeout(this.searchTimeout);
 		this.searchTimeout = setTimeout(
 			(() =>
-				this.props.setCommitFilter(this.props.repoPrefix, {
+				this.props.setCommitFilter(this.props.repoPrefix + '/' + this.props.branch, {
 					...this.state.commitFilter,
 					search,
 				})) as TimerHandler,
@@ -491,7 +504,9 @@ export class CommitInfo extends React.Component<CommitInfoProps, CommitInfoState
 
 	onShowFileCommits = (event: React.MouseEvent<HTMLButtonElement, MouseEvent>): void => {
 		this.props.setCommitsVisible(true);
-		this.props.setCommitFilter(this.props.repoPrefix, {});
+		this.props.setCommitFilter(this.props.repoPrefix + '/' + this.props.branch, {
+			path: this.props.navigationTarget,
+		});
 	};
 
 	getFileCommits(path: string, hash: string): { path: string; commit: Commit }[] {
