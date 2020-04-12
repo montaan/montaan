@@ -23,8 +23,10 @@ const BreadcrumbSegment = ({
 	const [open, setOpen] = useState(false);
 	const onMouseEnter = useCallback(() => setOpen(true), [setOpen]);
 	const onMouseLeave = useCallback(() => setOpen(false), [setOpen]);
-	const siblingLinks = useMemo(
-		() => (
+	const siblingLinks = useMemo(() => {
+		// eslint-disable-next-line
+		const version = fileTreeUpdated;
+		return (
 			<ul>
 				{getSiblings(fileTree.tree, path).map(
 					(siblingPath) =>
@@ -35,9 +37,8 @@ const BreadcrumbSegment = ({
 						)
 				)}
 			</ul>
-		),
-		[fileTree, path]
-	);
+		);
+	}, [fileTree, fileTreeUpdated, path]);
 	return (
 		<li onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave} data-filename={filename}>
 			<Link to={path}>{segment}</Link>
@@ -54,6 +55,7 @@ export interface BreadcrumbProps extends RouteComponentProps {
 
 const Breadcrumb = ({ navigationTarget, fileTree, fileTreeUpdated }: BreadcrumbProps) => {
 	const segments = useMemo(() => {
+		// eslint-disable-next-line
 		const version = fileTreeUpdated;
 		const pathSegments = navigationTarget.split('/').slice(1);
 		let path = '';
