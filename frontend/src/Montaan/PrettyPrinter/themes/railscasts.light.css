@@ -1,52 +1,45 @@
-.hljs
-{
-	display:block;
+.hljs {
+	display: block;
 
-	overflow-x:auto;
+	overflow-x: auto;
 
-	padding:0.5em;
+	padding: 0.5em;
 
-	background:#ffffff;
-	color:#1f1e1e;
+	background: #ffffff;
+	color: #1f1e1e;
 }
 
 .hljs-comment,
-.hljs-quote
-{
-	color:#66543a;
-	font-style:italic;
+.hljs-quote {
+	color: #66543a;
+	font-style: italic;
 }
 
 .hljs-keyword,
-.hljs-selector-tag
-{
-	font-weight:bold;
-	color:#6b4733;
+.hljs-selector-tag {
+	font-weight: bold;
+	color: #6b4733;
 }
 
 .hljs-string,
 .hljs-number,
 .hljs-regexp,
 .hljs-variable,
-.hljs-template-variable
-{
-	color:#3f472b;
+.hljs-template-variable {
+	color: #3f472b;
 }
 
-.hljs-subst
-{
-	color:#375536;
+.hljs-subst {
+	color: #375536;
 }
 
 .hljs-tag,
-.hljs-name
-{
-	color:#554b37;
+.hljs-name {
+	color: #554b37;
 }
 
-.hljs-type
-{
-	color:#663a35;
+.hljs-type {
+	color: #663a35;
 }
 
 .hljs-symbol,
@@ -54,70 +47,57 @@
 .hljs-built_in,
 .hljs-builtin-name,
 .hljs-attr,
-.hljs-link
-{
-	color:#445663;
+.hljs-link {
+	color: #445663;
 }
 
-.hljs-params
-{
-	color:#515179;
+.hljs-params {
+	color: #515179;
 }
 
-.hljs-attribute
-{
-	color:#7a6134;
+.hljs-attribute {
+	color: #7a6134;
 }
 
-.hljs-meta
-{
-	color:#4a304d;
+.hljs-meta {
+	color: #4a304d;
 }
 
 .hljs-title,
-.hljs-section
-{
-	color:#584019;
+.hljs-section {
+	color: #584019;
 }
 
-.hljs-addition
-{
-	background-color:#bfecbd;
-	color:#413d3a;
-	display:inline-block;
-	width:100%;
+.hljs-addition {
+	background-color: #bfecbd;
+	color: #413d3a;
+	display: inline-block;
+	width: 100%;
 }
 
-.hljs-deletion
-{
-	background-color:rgb(240, 194, 194);
-	color:#4d433a;
-	display:inline-block;
-	width:100%;
+.hljs-deletion {
+	background-color: rgb(240, 194, 194);
+	color: #4d433a;
+	display: inline-block;
+	width: 100%;
 }
 
-.hljs-selector-class
-{
-	color:#3d2f1f;
+.hljs-selector-class {
+	color: #3d2f1f;
 }
 
-.hljs-selector-id
-{
-	color:#273346;
+.hljs-selector-id {
+	color: #273346;
 }
 
-.hljs-emphasis
-{
-	font-style:italic;
+.hljs-emphasis {
+	font-style: italic;
 }
 
-.hljs-strong
-{
-	font-weight:bold;
+.hljs-strong {
+	font-weight: bold;
 }
 
-.hljs-link
-{
-	text-decoration:underline;
+.hljs-link {
+	text-decoration: underline;
 }
-
