@@ -491,8 +491,8 @@
     [] Use spirv-wasm to write parts in GLSL
         [] Tree rebuild
         [] Text geometry generation
-    [] Change to code pretty-printing library with TSX support
-        [] Remove the need for DOM + CSS
+    [x] Change to code pretty-printing library with TSX support
+        [x] Remove the need for DOM + CSS
     [] Rewrite backend away from executing shell commands & sanitize inputs
     [] Backend to WebAssembly sandboxes
         - https://www.fastly.com/blog/announcing-lucet-fastly-native-webassembly-compiler-runtime
