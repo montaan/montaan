@@ -1,4 +1,4 @@
-// src/TARGET/NAME/NAME.test.js
+// src/TARGET/NAME/NAME.test.tsx
 
 import React from 'react';
 import { BrowserRouter as Router } from 'react-router-dom';

@@ -31,7 +31,7 @@ export interface TemplateParameters {
 }
 
 if (!module.parent) {
-	const USAGE = `USAGE: makeComponent [-t TEMPLATE] COMPONENT_NAME [TARGET_DIR]
+	const USAGE = `USAGE: makeComponent [-t TEMPLATE] TARGET_DIR COMPONENT_NAME
 
 	Creates pre-populated component directories based on templates/component or templates/TEMPLATE
 	
@@ -39,23 +39,21 @@ if (!module.parent) {
 	
 	Create component MyComponent in src/Montaan/
 	
-		makeComponent MyComponent
-		OR
-		makeComponent MyComponent Montaan
+		makeComponent Montaan MyComponent
 	
 	Create component Footer in src/containers/
 	
-		makeComponent Footer containers
+		makeComponent containers Footer
 	
 	Create component Home in src/screens/
 	
-		makeComponent Home screens
+		makeComponent screens Home
 	`;
 
 	const args = process.argv.slice(2);
 	const template = args[0] === '-t' ? args.splice(0, 2)[1] : 'component';
+	const target = args.shift();
 	const name = args.shift();
-	const target = args.shift() || 'Montaan';
 
 	if (!name) {
 		console.error(USAGE);

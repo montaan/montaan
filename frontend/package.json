@@ -69,7 +69,9 @@
 		"eject": "react-scripts eject",
 		"type-test": "watch \"yarn tsc --noEmit --p tsconfig.json\" src",
 		"ts-node": "node_modules/.bin/ts-node -O '{\"module\": \"commonjs\"}'",
-		"makeComponent": "yarn ts-node bin/makeComponent.ts"
+		"makeComponent": "yarn ts-node bin/makeComponent.ts Montaan",
+		"makeFilesystem": "yarn ts-node bin/makeComponent.ts -t filesystem Montaan/Filesystems",
+		"makeFileView": "yarn ts-node bin/makeComponent.ts -t fileview Montaan/FileViews"
 	},
 	"eslintConfig": {
 		"extends": "react-app"
@@ -88,10 +90,10 @@
 		},
 		"coverageThreshold": {
 			"global": {
-			  "branches": 15,
-			  "functions": 15,
-			  "lines": 15,
-			  "statements": 15
+				"branches": 15,
+				"functions": 15,
+				"lines": 15,
+				"statements": 15
 			}
 		}
 	},
