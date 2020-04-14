@@ -211,6 +211,17 @@ export class MontaanGitBranchFilesystem extends Filesystem {
 	}
 
 	async readFile(path: string) {
+		if (this.mountPoint) {
+			const fsEntry = getPathEntry(this.mountPoint, path);
+			if (fsEntry && fsEntry.hash) {
+				return this.options.api.postType(
+					'/repo/blob',
+					{ repo: this.repo, hash: fsEntry.hash },
+					{},
+					'arrayBuffer'
+				);
+			}
+		}
 		return this.options.api.postType(
 			'/repo/checkout',
 			{ repo: this.repo, path: path.replace(/^\//, ''), hash: this.ref },
