@@ -319,7 +319,7 @@ export default class ModelBuilder {
 				forceLoads,
 				camera,
 				mesh,
-				4 / viewWidth,
+				2 / viewWidth,
 				tree,
 				fileIndex,
 				geo,

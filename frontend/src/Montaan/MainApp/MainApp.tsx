@@ -19,6 +19,8 @@ import {
 	getAllFilesystemsForPath,
 	mountURL,
 	FSDirEntry,
+	Filesystem,
+	mount,
 } from '../Filesystems';
 
 import styles from './MainApp.module.scss';
@@ -224,7 +226,41 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 			const user = this.props.userInfo.name;
 			mountURL(tree, `montaanUserRepos:///${user}`, `/${user}`, this.props.api);
 		}
+		(window as any).mountFSEntry = this.mountFSEntry;
+		(window as any).mount = this.mount;
+		(window as any).mountURL = this.mountURL;
 	}
+
+	mount = async (parentPath: string, name: string, filesystem: Filesystem) => {
+		const parentEntry = getPathEntry(this.state.fileTree.tree, parentPath);
+		if (!parentEntry) throw new Error('Path not found');
+		const fsEntry = mount(this.state.fileTree.tree, parentPath + '/' + name, filesystem);
+		this.setState({ fileTreeUpdated: this.state.fileTreeUpdated + 1 });
+		return fsEntry;
+	};
+
+	mountURL = async (parentPath: string, name: string, url: string) => {
+		const parentEntry = getPathEntry(this.state.fileTree.tree, parentPath);
+		if (!parentEntry) throw new Error('Path not found');
+		const fsEntry = mountURL(
+			this.state.fileTree.tree,
+			url,
+			parentPath + '/' + name,
+			this.props.api
+		);
+		this.setState({ fileTreeUpdated: this.state.fileTreeUpdated + 1 });
+		return fsEntry;
+	};
+
+	mountFSEntry = async (parentPath: string, name: string, fsEntry: FSEntry) => {
+		const parentEntry = getPathEntry(this.state.fileTree.tree, parentPath);
+		if (!parentEntry) throw new Error('Path not found');
+		fsEntry.name = fsEntry.title = name;
+		parentEntry.entries.set(fsEntry.name, fsEntry);
+		fsEntry.parent = parentEntry;
+		this.setState({ fileTreeUpdated: this.state.fileTreeUpdated + 1 });
+		return fsEntry;
+	};
 
 	componentDidMount() {
 		if (this.props.userInfo) this.updateUserRepos(this.props.userInfo);

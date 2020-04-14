@@ -8,6 +8,10 @@ import './css/main.scss';
 import App from './App';
 import * as serviceWorker from './serviceWorker';
 
+(window as any).Examples = {
+	PortugalCOVIDTree: async () => (await import('./examples/PortugalCOVIDTree')).default,
+};
+
 document.body.classList.add(/mobile/i.test(window.navigator.userAgent) ? 'mobile' : 'desktop');
 
 declare global {
