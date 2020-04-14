@@ -19,14 +19,15 @@
 
 # FIX
 
-    [] Sometimes highlighted lines don't highlight (when doing search with file in view and loaded :?)
+    [] yarn makeComponent
+    [] yarn updateComponent
 
 # Release checklist
 
     [] Clean well-documented path to create a new component & integrate it
         [] Write tour about creating component
-            [] Creating a filesystem
-            [] Creating filesystem components
+            [x] Creating a filesystem
+            [x] Creating filesystem components
             [] yarn makeComponent
             [] yarn updateComponent
     [] Solid repo import path
@@ -439,6 +440,7 @@
     [x] Search results visibility
     [x] CommitInfo commits crop to view
     [x] CommitInfo diffs crop to view
+    [x] Sometimes highlighted lines don't highlight
 
 # Ideas
 

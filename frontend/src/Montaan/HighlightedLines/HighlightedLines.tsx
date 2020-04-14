@@ -95,9 +95,9 @@ export default class HighlightedLines {
 		this.clearSearchHighlights();
 		for (var i = 0; i < results.length; i++) {
 			const res = getFSEntryForURL(tree, results[i].filename);
-			if (!res) return;
+			if (!res) continue;
 			const fsEntry = res.fsEntry;
-			if (fsEntry.index === undefined) return;
+			if (fsEntry.index === undefined) continue;
 			if (fsEntry.isDirectory && results[i].line === 0) {
 				Geometry.setColor(
 					ca.array as Float32Array,
