@@ -85,6 +85,14 @@
 	"jest": {
 		"moduleNameMapper": {
 			"^worker-loader!": "<rootDir>/__mocks__/workerMock.ts"
+		},
+		"coverageThreshold": {
+			"global": {
+			  "branches": 15,
+			  "functions": 15,
+			  "lines": 15,
+			  "statements": 15
+			}
 		}
 	},
 	"lint-staged": {

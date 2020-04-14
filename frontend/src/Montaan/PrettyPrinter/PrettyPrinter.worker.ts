@@ -6,7 +6,7 @@ import he from 'he';
 import hljs from 'highlight.js';
 import * as Comlink from 'comlink';
 
-hljs.registerLanguage('tsx', require('../../lib/highlight-tsx.js'));
+hljs.registerLanguage('tsx', require('./highlight-tsx.js'));
 
 type PrettyPrintResult = {
 	language?: string;

@@ -155,7 +155,7 @@ module.exports = function(hljs) {
 						],
 					},
 					{
-						// JSX
+						// TSX
 						variants: [
 							{ begin: FRAGMENT.begin, end: FRAGMENT.end },
 							{ begin: XML_TAG.begin, end: XML_TAG.end },
