@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { FSEntry } from '../../Filesystems';
 import QFrameAPI from '../../../lib/api';
 import FileView from '../FileView';
+import { BBox } from '../../Geometry/Geometry';
+import NavTarget from '../../NavTarget/NavTarget';
 
 const emptyMaterial = new THREE.MeshBasicMaterial();
 
@@ -59,6 +61,37 @@ export default class ImageFileView extends FileView {
 			this.parent?.remove(this);
 		}
 		this.requestFrame();
+	}
+
+	async goToCoords(coords: number[]): Promise<THREE.Vector3 | undefined> {
+		if (this.mesh.material.map) return this.__goToCoords(coords);
+		else
+			return new Promise((resolve, reject) => {
+				this.loadListeners.push(() => resolve(this.__goToCoords(coords)));
+			});
+	}
+
+	__goToCoords(coords: number[]): THREE.Vector3 | undefined {
+		if (!this.mesh.material.map) return undefined;
+		const image = this.mesh.material.map.image;
+		const { width, height } = image;
+		const [x, y, z] = coords;
+		const targetPoint = new THREE.Vector3(x / width, y / height, 2 / z);
+		this.updateWorldMatrix(true, true);
+		targetPoint.applyMatrix4(this.mesh.matrixWorld);
+		return targetPoint;
+	}
+
+	onclick(ev: MouseEvent, intersection: THREE.Intersection, bbox: BBox, navTarget: NavTarget) {
+		if (bbox.width > 0.2) {
+			if (navTarget.fsEntry === this.fsEntry) {
+				if (navTarget.coords.length > 0 || navTarget.search.length > 0) {
+					return undefined;
+				}
+			}
+			return [0, 0, 1];
+		}
+		return undefined;
 	}
 
 	async load(arrayBufferPromise: Promise<ArrayBuffer | undefined>) {
