@@ -72,6 +72,7 @@ export interface IFilesystem {
 	readDirs(paths: string[]): Promise<(FSEntry | null)[]>;
 	readFile(path: string): Promise<ArrayBuffer>;
 	writeFile(path: string, contents: ArrayBuffer): Promise<boolean>;
+	mkdir(path: string): Promise<boolean>;
 	rm(path: string): Promise<boolean>;
 	rmdir(path: string): Promise<boolean>;
 	getUIComponents(state: any): React.ReactElement;
@@ -127,6 +128,10 @@ export class Namespace implements IFilesystem {
 		return filesystem.readFile(relativePath);
 	}
 
+	async mkdir(path: string) {
+		const { relativePath, filesystem } = this.findFilesystemForPath(path);
+		return filesystem.mkdir(relativePath);
+	}
 	async writeFile(path: string, contents: ArrayBuffer) {
 		const { relativePath, filesystem } = this.findFilesystemForPath(path);
 		return filesystem.writeFile(relativePath, contents);
@@ -166,6 +171,9 @@ export class Filesystem implements IFilesystem {
 	}
 	async readFile(path: string): Promise<ArrayBuffer> {
 		throw new NotImplementedError("Filesystem doesn't support reads");
+	}
+	async mkdir(path: string): Promise<boolean> {
+		throw new NotImplementedError("Filesystem doesn't support writes");
 	}
 	async writeFile(path: string, contents: ArrayBuffer): Promise<boolean> {
 		throw new NotImplementedError("Filesystem doesn't support writes");

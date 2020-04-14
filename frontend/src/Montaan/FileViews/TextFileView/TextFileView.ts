@@ -117,10 +117,6 @@ export default class TextFileView extends FileView {
 		return new ContentBBox(topLeft, topRight, bottomLeft, bottomRight);
 	}
 
-	loaded() {
-		this.loadListeners.splice(0).forEach((f) => f());
-	}
-
 	onclick(ev: MouseEvent, intersection: THREE.Intersection, bbox: BBox, navTarget: NavTarget) {
 		if (bbox.width > 0.2) {
 			if (navTarget.fsEntry === this.fsEntry) {
@@ -191,8 +187,6 @@ export default class TextFileView extends FileView {
 	// 	}
 	// 	return false;
 	// }
-
-	ontick(t: number, dt: number): void {}
 
 	async load(arrayBufferPromise: Promise<ArrayBuffer | undefined>) {
 		const responseBuffer = await arrayBufferPromise;
