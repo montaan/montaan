@@ -16,6 +16,8 @@ import Button from 'react-bootstrap/Button';
 import utils from '../../Montaan/Utils/utils';
 
 class CasesFilesystem extends Filesystem {
+	graphVisible: boolean = false;
+
 	constructor(mountPoint: FSEntry) {
 		super(undefined);
 		this.mountPoint = mountPoint;
@@ -29,11 +31,12 @@ class CasesFilesystem extends Filesystem {
 	navigationTarget = '';
 
 	onClick = () => {
-		const links = PortugalCOVIDCaseLinks.filter((link) =>
-			(link.src as string).startsWith(this.navigationTarget)
-		);
-		console.log(this.navigationTarget, links);
-		this.setLinks(links);
+		this.graphVisible = !this.graphVisible;
+		if (this.graphVisible) {
+			this.setLinks(PortugalCOVIDCaseLinks);
+		} else {
+			this.setLinks([]);
+		}
 	};
 
 	getUIComponents(state: any) {

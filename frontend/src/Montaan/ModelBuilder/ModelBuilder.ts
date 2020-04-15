@@ -64,6 +64,7 @@ export default class ModelBuilder {
 
 		entriesToFetch: FSEntry[];
 		visibleFiles: FSEntry[];
+		thumbnailsToFetch: { fsEntry: FSEntry; z: number }[];
 	} {
 		const fileTree = tree.tree;
 
@@ -125,6 +126,7 @@ export default class ModelBuilder {
 			smallestCovering,
 			entriesToFetch,
 			visibleFiles,
+			thumbnailsToFetch,
 		} = this.createFileTreeQuads(fileTree, 0, camera, mesh, forceLoads);
 
 		const textVertCount = this.ensureLabelGeometryAllocation(labelGeometries);
@@ -160,6 +162,7 @@ export default class ModelBuilder {
 
 			entriesToFetch,
 			visibleFiles,
+			thumbnailsToFetch,
 		};
 	}
 
@@ -288,6 +291,7 @@ export default class ModelBuilder {
 		smallestCovering: FSEntry;
 		entriesToFetch: FSEntry[];
 		visibleFiles: FSEntry[];
+		thumbnailsToFetch: { fsEntry: FSEntry; z: number }[];
 	} {
 		const geo = {
 			verts: this._modelVerts,
@@ -308,6 +312,7 @@ export default class ModelBuilder {
 		buildQueue.add(fileTree);
 		const entriesToFetchQueue = new BinaryHeap<FSEntry>(this.cmpFSEntryDistanceFromCenter);
 		const visibleFiles = [];
+		const thumbnailsToFetchQueue = new BinaryHeap<FSEntry>(this.cmpFSEntryDistanceFromCenter);
 		const viewWidth = window.innerWidth;
 		let centerEntry = fileTree;
 		while (buildQueue.size > 0) {
@@ -325,7 +330,8 @@ export default class ModelBuilder {
 				geo,
 				labelGeometries,
 				fsEntryIndex,
-				vertexIndices
+				vertexIndices,
+				thumbnailsToFetchQueue
 			);
 
 			for (let fsEntry of tree.entries.values()) {
@@ -333,7 +339,7 @@ export default class ModelBuilder {
 
 				const bbox = fsEntry.bbox;
 				const pxWidth = bbox.width * viewWidth * 0.5;
-				const isSmall = pxWidth < (fsEntry.isDirectory ? 15 : 150);
+				const isSmall = pxWidth < (fsEntry.isDirectory ? 15 : 128);
 				fsEntry.distanceFromCenter = Geometry.bboxDistanceToFrustumCenter(
 					bbox,
 					mesh,
@@ -370,6 +376,14 @@ export default class ModelBuilder {
 			// Sort the subdirectories to prioritize model creation at center of screen.
 		}
 		const entriesToFetch = entriesToFetchQueue.heapValues;
+		const thumbnailsToFetch = thumbnailsToFetchQueue.heapValues
+			.filter((fsEntry) => {
+				return /\.(png|jpe?g)$/i.test(fsEntry.name);
+			})
+			.map((fsEntry) => {
+				const z = Math.ceil(Math.log2(fsEntry.bbox.width * viewWidth * 0.5));
+				return { fsEntry, z };
+			});
 		return {
 			verts: geo.verts,
 			colorVerts: geo.colorVerts,
@@ -380,6 +394,7 @@ export default class ModelBuilder {
 			smallestCovering,
 			entriesToFetch,
 			visibleFiles,
+			thumbnailsToFetch,
 		};
 	}
 
@@ -393,7 +408,8 @@ export default class ModelBuilder {
 		geo: { verts: Float32Array; colorVerts: Float32Array },
 		labelGeometries: ExtendedSDFText[],
 		index: FSEntry[],
-		vertexIndices: { vertexIndex: number; textVertexIndex: number }
+		vertexIndices: { vertexIndex: number; textVertexIndex: number },
+		thumbnailsToFetchQueue: BinaryHeap<FSEntry>
 	) {
 		const dirs = [];
 		const files = [];
@@ -565,6 +581,8 @@ export default class ModelBuilder {
 				file.z = filesBox.z + file.scale * 0.2;
 				const bbox = Geometry.getFSEntryBBox(file, mesh, camera);
 				if (!forceLoads.has(file) && (!bbox.onScreen || bbox.width < minWidth)) continue;
+				// File that's small on screen, let's add to thumbnail fetch queue if needed.
+				thumbnailsToFetchQueue.add(file);
 				file.index = fileIndex;
 				file.vertexIndex = vertexIndices.vertexIndex;
 				file.lastIndex = fileIndex;

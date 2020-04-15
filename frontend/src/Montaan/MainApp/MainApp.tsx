@@ -21,6 +21,7 @@ import {
 	FSDirEntry,
 	Filesystem,
 	mount,
+	readThumbnails,
 } from '../Filesystems';
 
 import styles from './MainApp.module.scss';
@@ -176,6 +177,10 @@ const HitType = {
 type LoadDirWorkItem = { tree: FileTree; paths: string[]; dropEntries: FSEntry[] };
 const LoadDirWorkQueue = new WorkQueue<LoadDirWorkItem>();
 let LoadDirWorkQueueLocked = false;
+
+type LoadThumbnailsWorkItem = { tree: FileTree; thumbnails: { path: string; z: number }[] };
+const LoadThumbnailsWorkQueue = new WorkQueue<LoadThumbnailsWorkItem>();
+let LoadThumbnailsWorkQueueLocked = false;
 
 class MainApp extends React.Component<MainAppProps, MainAppState> {
 	emptyState = {
@@ -375,6 +380,23 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		this.setState({ fileTreeUpdated: this.state.fileTreeUpdated + 1 });
 	};
 
+	processThumbnailRequest = async ({ tree, thumbnails }: LoadThumbnailsWorkItem) => {
+		let thumbResults;
+		if (thumbnails.length > 0) {
+			thumbResults = readThumbnails(tree.tree, thumbnails);
+		}
+		if (thumbnails.length > 0) {
+			await thumbResults;
+			thumbnails.forEach((p) => {
+				const entry = getPathEntry(tree.tree, p.path);
+				if (entry) {
+					entry.fetched = true;
+				}
+			});
+		}
+		this.setState({ fileTreeUpdated: this.state.fileTreeUpdated + 1 });
+	};
+
 	requestDirs = async (paths: string[], dropEntries: FSEntry[]) => {
 		if (LoadDirWorkQueueLocked) return;
 		LoadDirWorkQueue.clear();
@@ -385,6 +407,19 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 				tree: this.state.fileTree,
 				paths: paths.slice(i, i + n),
 				dropEntries: i === 0 ? dropEntries : [],
+			});
+		}
+	};
+
+	requestThumbnails = async (thumbnails: { path: string; z: number }[]) => {
+		if (LoadThumbnailsWorkQueueLocked) return;
+		LoadThumbnailsWorkQueue.clear();
+		if (thumbnails.length === 0) return;
+		const n = 32;
+		for (let i = 0; i < thumbnails.length; i += n) {
+			LoadThumbnailsWorkQueue.push(this.processThumbnailRequest, {
+				tree: this.state.fileTree,
+				thumbnails: thumbnails.slice(i, i + n),
 			});
 		}
 	};
@@ -816,6 +851,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 					links={this.state.links}
 					setNavigationTarget={this.setNavigationTarget}
 					requestDirs={this.requestDirs}
+					requestThumbnails={this.requestThumbnails}
 					fileTreeUpdated={this.state.fileTreeUpdated}
 				/>
 			</div>

@@ -214,9 +214,8 @@ export class MontaanGitBranchFilesystem extends Filesystem {
 		if (this.mountPoint) {
 			const fsEntry = getPathEntry(this.mountPoint, path);
 			if (fsEntry && fsEntry.hash) {
-				return this.options.api.postType(
-					'/repo/blob',
-					{ repo: this.repo, hash: fsEntry.hash },
+				return this.options.api.getType(
+					`/repo/blob/${this.repo}/${fsEntry.hash}`,
 					{},
 					'arrayBuffer'
 				);
@@ -228,6 +227,45 @@ export class MontaanGitBranchFilesystem extends Filesystem {
 			{},
 			'arrayBuffer'
 		);
+	}
+
+	async readThumbnails(
+		thumbnails: { path: string; z: number }[]
+	): Promise<(ArrayBuffer | undefined)[]> {
+		const resultArray = new Array(thumbnails.length).fill(undefined);
+		if (this.mountPoint) {
+			const thumbnailsRequest: { hash: string; z: number }[] = [];
+			const thumbnailsIndex = new Map<string, number>();
+			for (let i = 0; i < thumbnails.length; i++) {
+				const thumbnail = thumbnails[i];
+				const fsEntry = getPathEntry(this.mountPoint, thumbnail.path);
+				if (fsEntry && fsEntry.hash) {
+					thumbnailsIndex.set(`${thumbnail.z}:${fsEntry.hash}`, i);
+					thumbnailsRequest.push({ hash: fsEntry.hash, z: thumbnail.z });
+				}
+			}
+			const res = (await this.options.api.postType(
+				`/repo/thumbnail`,
+				{ repo: this.repo, thumbnails: thumbnailsRequest },
+				{},
+				'arrayBuffer'
+			)) as ArrayBuffer;
+			const td = new TextDecoder();
+			const dv = new DataView(res);
+			for (let ptr = 0; ptr < res.byteLength; ) {
+				const len = dv.getUint32(ptr + 0, true);
+				if (len < 48) throw new Error('Invalid thumbnail length');
+				const z = dv.getUint32(ptr + 4, true);
+				const hash = td.decode(res.slice(ptr + 8, ptr + 48));
+				const thumbnail = res.slice(ptr + 48, ptr + len);
+				const index = thumbnailsIndex.get(`${z}:${hash}`);
+				if (index !== undefined) {
+					resultArray[index] = thumbnail;
+				}
+				ptr += len;
+			}
+		}
+		return resultArray;
 	}
 
 	async writeFile(path: string, contents: ArrayBuffer): Promise<boolean> {

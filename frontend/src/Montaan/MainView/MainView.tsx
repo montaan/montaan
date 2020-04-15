@@ -2,18 +2,21 @@ import React from 'react';
 import { withRouter, RouteComponentProps } from 'react-router-dom';
 import './MainView.scss';
 import tabletree from './main';
-import { TreeLink } from '../MainApp';
+import { TreeLink, ActiveCommitData, FileTree, CommitFilter, SearchResult } from '../MainApp';
+import QFrameAPI from '../../lib/api';
+import { CommitData } from '../CommitParser/parse_commits';
 
 interface MainViewProps extends RouteComponentProps {
 	requestDirs(paths: string[], dropEntries: any[]): Promise<void>;
-	api: any;
+	requestThumbnails: (thumbnails: { path: string; z: number }[]) => Promise<void>;
+	api: QFrameAPI;
 	diffsLoaded: number;
-	fileTree: any;
-	commitData: any;
-	activeCommitData: any;
-	commitFilter: any;
+	fileTree: FileTree;
+	commitData?: CommitData;
+	activeCommitData?: ActiveCommitData;
+	commitFilter: CommitFilter;
 	navigationTarget: string;
-	searchResults: any[];
+	searchResults: SearchResult[];
 	searchQuery: string;
 	searchLinesRequest: number;
 	addLinks(links: TreeLink[]): void;
@@ -29,6 +32,7 @@ interface MainViewProps extends RouteComponentProps {
 class MainView extends React.Component<MainViewProps, {}> {
 	constructor(props: MainViewProps) {
 		tabletree.requestDirs = props.requestDirs;
+		tabletree.requestThumbnails = props.requestThumbnails;
 		tabletree.setNavigationTarget = props.setNavigationTarget;
 		tabletree.init(props.api, props.history);
 		super(props);

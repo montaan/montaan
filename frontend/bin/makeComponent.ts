@@ -55,7 +55,7 @@ if (!module.parent) {
 	const target = args.shift();
 	const name = args.shift();
 
-	if (!name) {
+	if (!name || !target) {
 		console.error(USAGE);
 		process.exit(1);
 	}
@@ -90,6 +90,7 @@ export function readTemplateParameters(
 	name: string,
 	authorString: string
 ): TemplateParameters {
+	console.log(``);
 	console.log(`Creating ${target}/${name} with author ${authorString}`);
 	console.log(``);
 	console.log('Documentation time! Fill in the blanks, hitting enter after each blank.');

@@ -94,19 +94,23 @@ export default class ImageFileView extends FileView {
 		return undefined;
 	}
 
-	async load(arrayBufferPromise: Promise<ArrayBuffer | undefined>) {
+	async load(arrayBufferPromise: Promise<ArrayBuffer | HTMLImageElement | undefined>) {
 		const buf = await arrayBufferPromise;
 		if (buf === undefined) return;
-		const img = new Image();
+		const img = buf instanceof HTMLImageElement ? buf : new Image();
 		img.decoding = 'async';
-		let mimetype = undefined;
-		if (/\.svg(z|\.gz)?$/i.test(this.path)) mimetype = 'image/svg+xml';
-		else if (/\.png$/i.test(this.path)) mimetype = 'image/png';
-		else if (/\.jpe?g$/i.test(this.path)) mimetype = 'image/jpeg';
-		const url = URL.createObjectURL(new Blob([buf], { type: mimetype }));
-		img.src = url;
-		await img.decode();
-		URL.revokeObjectURL(url);
+		if (buf instanceof HTMLImageElement) {
+			await img.decode();
+		} else {
+			let type = undefined;
+			if (/\.svg(z|\.gz)?$/i.test(this.path)) type = 'image/svg+xml';
+			else if (/\.png$/i.test(this.path)) type = 'image/png';
+			else if (/\.jpe?g$/i.test(this.path)) type = 'image/jpeg';
+			const url = URL.createObjectURL(new Blob([buf], { type }));
+			img.src = url;
+			await img.decode();
+			URL.revokeObjectURL(url);
+		}
 		if (!this.parent) return;
 		var maxD = Math.max(img.width, img.height);
 		this.mesh.scale.x *= img.width / maxD;

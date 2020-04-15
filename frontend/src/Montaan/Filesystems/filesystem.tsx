@@ -53,6 +53,7 @@ export class FSEntry {
 	action?: string;
 	bbox: BBox = new BBox();
 	nameIndex?: Map<string, FSEntry[]>;
+	thumbnails: Map<number, HTMLImageElement | undefined> = new Map();
 
 	constructor(name: string = '') {
 		this.name = name;
@@ -71,6 +72,7 @@ export interface IFilesystem {
 	readDir(path: string): Promise<FSEntry | null>;
 	readDirs(paths: string[]): Promise<(FSEntry | null)[]>;
 	readFile(path: string): Promise<ArrayBuffer>;
+	readThumbnails(thumbnails: { path: string; z: number }[]): Promise<(ArrayBuffer | undefined)[]>;
 	writeFile(path: string, contents: ArrayBuffer): Promise<boolean>;
 	mkdir(path: string): Promise<boolean>;
 	rm(path: string): Promise<boolean>;
@@ -128,6 +130,11 @@ export class Namespace implements IFilesystem {
 		return filesystem.readFile(relativePath);
 	}
 
+	async readThumbnails(
+		thumbnails: { path: string; z: number }[]
+	): Promise<(ArrayBuffer | undefined)[]> {
+		return new Array(thumbnails.length).fill(undefined);
+	}
 	async mkdir(path: string) {
 		const { relativePath, filesystem } = this.findFilesystemForPath(path);
 		return filesystem.mkdir(relativePath);
@@ -171,6 +178,11 @@ export class Filesystem implements IFilesystem {
 	}
 	async readFile(path: string): Promise<ArrayBuffer> {
 		throw new NotImplementedError("Filesystem doesn't support reads");
+	}
+	async readThumbnails(
+		thumbnails: { path: string; z: number }[]
+	): Promise<(ArrayBuffer | undefined)[]> {
+		return new Array(thumbnails.length).fill(undefined);
 	}
 	async mkdir(path: string): Promise<boolean> {
 		throw new NotImplementedError("Filesystem doesn't support writes");
@@ -399,6 +411,62 @@ export async function readDirs(tree: FSEntry, paths: string[]): Promise<void> {
 						if (dir) applyDir(fsEntry, dir, relativePaths[i]);
 					})
 				)
+			);
+		}
+	});
+	await Promise.all(promises);
+}
+
+export async function readThumbnails(
+	tree: FSEntry,
+	thumbnails: { path: string; z: number }[]
+): Promise<void> {
+	const filesystems = new Map<FSEntry, { path: string; relativePath: string; z: number }[]>();
+	const pathEntries = new Map<string, FSEntry | null>();
+	thumbnails.forEach(({ path, z }) => {
+		const fsPath = getFilesystemForPath(tree, path);
+		if (!fsPath) return null;
+		const { filesystem, relativePath } = fsPath;
+		let fs = filesystems.get(filesystem);
+		if (!fs) {
+			fs = [];
+			filesystems.set(filesystem, fs);
+		}
+		fs.push({ path, relativePath, z });
+		pathEntries.set(path, null);
+	});
+	const promises: Promise<void>[] = [];
+	Array.from(filesystems.entries()).forEach((entry) => {
+		const fsEntry = entry[0];
+		const pathObjects = entry[1];
+		if (fsEntry.filesystem) {
+			const relativePaths: { path: string; z: number }[] = [];
+			const paths: string[] = [];
+			pathObjects.forEach(({ path, relativePath, z }) => {
+				paths.push(path);
+				relativePaths.push({ path: relativePath, z });
+			});
+			promises.push(
+				fsEntry.filesystem.readThumbnails(relativePaths).then((thumbnailArray) => {
+					thumbnailArray.forEach((tn, i) => {
+						const { path, z } = relativePaths[i];
+						const entry = getPathEntry(fsEntry, path);
+						let img = undefined;
+						if (entry) {
+							if (tn) {
+								img = new Image();
+								const src = URL.createObjectURL(
+									new Blob([tn], { type: 'image/webp' })
+								);
+								img.src = src;
+								img.onload = function() {
+									URL.revokeObjectURL(src);
+								};
+							}
+							entry.thumbnails.set(z, img);
+						}
+					});
+				})
 			);
 		}
 	});

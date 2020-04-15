@@ -131,6 +131,9 @@ export class Tabletree {
 	// modelBuilderWorker: ModelBuilderWorker = Comlink.wrap(new ModelBuilderWorker());
 
 	requestDirs: (paths: string[], discard: string[]) => Promise<void> = async () => {};
+	requestThumbnails: (
+		thumbnails: { path: string; z: number }[]
+	) => Promise<void> = async () => {};
 	setNavigationTarget: (target: string) => void = () => {};
 
 	api: QFrameAPI = QFrameAPI.mock;
@@ -167,6 +170,8 @@ export class Tabletree {
 	highlightedLines: HighlightedLines;
 	searchLandmarks: SearchLandmarks;
 	linksModel: LinksModel;
+
+	thumbnails: VisibleFiles = new VisibleFiles();
 
 	treeVersion: number = 0;
 	treeBuildVersion: number = -1;
@@ -407,6 +412,7 @@ export class Tabletree {
 			textVertexCount,
 			boundingBox,
 			boundingSphere,
+			thumbnailsToFetch,
 		} = this.modelBuilder.buildModel(tree, this.camera, this.model, forceLoads);
 		this.zoomedInPath = getFullPath(smallestCovering);
 		this.fsIndex = fsEntryIndex;
@@ -441,6 +447,7 @@ export class Tabletree {
 
 			this.model.add(textMesh);
 			this.model.add(this.visibleFiles);
+			this.model.add(this.thumbnails);
 		}
 		this.updateAttribute(this.model.geometry, 'position', verts, 3, vertexCount);
 		this.updateAttribute(this.model.geometry, 'color', colorVerts, 3, vertexCount);
@@ -450,6 +457,7 @@ export class Tabletree {
 		this.textGeometry.drawRange.count = textVertexCount;
 		this.model.geometry.boundingBox = boundingBox;
 		this.model.geometry.boundingSphere = boundingSphere;
+
 		const currentlyVisible = new Set<string>();
 		if (nearestFSEntryToNavUrl && !nearestFSEntryToNavUrl.fsEntry.isDirectory) {
 			visibleFiles.push(nearestFSEntryToNavUrl.fsEntry);
@@ -470,6 +478,35 @@ export class Tabletree {
 				const fileView = this.visibleFiles.visibleSet.get(path);
 				if (fileView) fileView.dispose();
 				this.visibleFiles.visibleSet.delete(path);
+			}
+		}
+
+		if (thumbnailsToFetch.length > 0) {
+			const currentlyVisible = new Set<string>();
+			const toFetch = [];
+			for (let i = 0; i < thumbnailsToFetch.length; i++) {
+				const thumb = thumbnailsToFetch[i];
+				const image = thumb.fsEntry.thumbnails.get(thumb.z);
+				if (image) {
+					this.addThumbnail(thumb.fsEntry, image);
+					currentlyVisible.add(getFullPath(thumb.fsEntry));
+				} else {
+					toFetch.push({ path: getFullPath(thumb.fsEntry), z: thumb.z });
+				}
+			}
+			this.requestThumbnails(toFetch);
+			this.thumbnails.children.forEach((child) => {
+				const fileView = child as FileView;
+				fileView.position.set(fileView.fsEntry.x, fileView.fsEntry.y, fileView.fsEntry.z);
+				const scale = fileView.fsEntry.scale;
+				fileView.scale.set(scale, scale, scale);
+			});
+			for (let path of this.thumbnails.visibleSet.keys()) {
+				if (!currentlyVisible.has(path)) {
+					const fileView = this.thumbnails.visibleSet.get(path);
+					if (fileView) fileView.dispose();
+					this.thumbnails.visibleSet.delete(path);
+				}
 			}
 		}
 
@@ -522,6 +559,14 @@ export class Tabletree {
 			(b.scale - a.scale) / (b.scale + a.scale) +
 			0.1 * (a.distanceFromCenter - b.distanceFromCenter)
 		);
+	}
+
+	addThumbnail(fsEntry: FSEntry, image: HTMLImageElement) {
+		if (this.thumbnails.visibleSet.has(getFullPath(fsEntry)) || !this.fileTree) return;
+		const thumb = new ImageFileView(fsEntry, this.model, '', this.api, this.requestFrame);
+		thumb.load(image.decode().then(() => image));
+		this.thumbnails.visibleSet.set(getFullPath(fsEntry), thumb);
+		this.thumbnails.add(thumb);
 	}
 
 	addFileView(visibleFiles: VisibleFiles, fullPath: string, fsEntry: FSEntry) {
