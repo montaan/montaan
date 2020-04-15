@@ -37,6 +37,7 @@ global.isRegExp = (re) => o => isString(o) && re.test(o);                       
 global.isEvery = (...validators) => o => validators.every(p => p(o));                                    // Create a validator that matches all the given validators.
 global.isSome = (...validators) => o => validators.some(p => p(o));                                   // Create a validator that matches some of the given validators.
 global.isArray = (validator) => o => o instanceof Array && o.every(validator);                         // Test that o is an array of objects that pass the given validator.
+global.isShape = shape => o => assertShape(shape, o);
 
 const config = {
     port: 8000, root: 'public', workerCount: numCPUs / 2, saltRounds: 10, // Default config.

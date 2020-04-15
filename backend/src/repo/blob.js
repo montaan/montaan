@@ -1,11 +1,11 @@
 const { Path, Exec, assertRepoDir, escapeArg } = require('./lib');
 
-module.exports = async function(req, res) {
-	var [error, { repo, hash }] = assertShape(
-		{ repo: isString, hash: isRegExp(/^[a-zA-Z0-9._/-]+$/) },
-		await bodyAsJson(req)
-	);
-	if (error) return error;
+module.exports = async function(req, res, repoAndHash) {
+	const lastSlash = repoAndHash.lastIndexOf('/');
+	const repo = repoAndHash.slice(0, lastSlash);
+	const hash = repoAndHash.slice(lastSlash + 1);
+	console.log(repoAndHash, repo, hash);
+	if (!/^[a-f0-9]{40}$/.test(hash)) return '404: Hash not found';
 	var [error, { filePath }] = assertRepoDir(Path.join(repo, 'repo'));
 	if (error) return error;
 	await new Promise((resolve, reject) => {
