@@ -97,11 +97,12 @@ export interface CommitFilter {
 	date?: string;
 }
 
-export interface ActiveCommitData {
-	commits: Commit[];
-	authors: string[];
-	authorCommitCounts: { [author: string]: number };
-	files: any[];
+export class ActiveCommitData {
+	static mock = new ActiveCommitData();
+	commits: Commit[] = [];
+	authors: string[] = [];
+	authorCommitCounts: { [author: string]: number } = {};
+	files: any[] = [];
 }
 
 interface MainAppState {

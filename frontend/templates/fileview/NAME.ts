@@ -1,13 +1,13 @@
 // src/TARGET/NAME/NAME.ts
 
-import  { ContentBBox, EmptyContentBBox }, FileView from '../FileView';
+import FileView, { ContentBBox, EmptyContentBBox } from '../FileView';
 import { FSEntry } from '../../Filesystems';
 import QFrameAPI from '../../../lib/api';
 import { BBox } from '../../Geometry/Geometry';
 import NavTarget from '../../NavTarget/NavTarget';
 
 export default class NAME extends FileView {
-	MAX_SIZE:number = 1000000;
+	MAX_SIZE: number = 1000000;
 
 	constructor(
 		fsEntry: FSEntry,
@@ -25,7 +25,6 @@ export default class NAME extends FileView {
 		if (!this.parent) return;
 		if (responseBuffer.byteLength > this.MAX_SIZE || responseBuffer.byteLength === 0) return;
 	}
-
 
 	async goToCoords(coords: number[]): Promise<THREE.Vector3 | undefined> {
 		return undefined;
@@ -47,7 +46,4 @@ export default class NAME extends FileView {
 	): number[] | undefined {
 		return undefined;
 	}
-
-	async load(arrayBufferPromise: Promise<ArrayBuffer | undefined>): Promise<void> {}
-
 }

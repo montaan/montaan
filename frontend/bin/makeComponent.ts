@@ -31,7 +31,7 @@ export interface TemplateParameters {
 }
 
 if (!module.parent) {
-	const USAGE = `USAGE: makeComponent [-t TEMPLATE] TARGET_DIR COMPONENT_NAME
+	const USAGE = `USAGE: makeComponent [-t TEMPLATE] TARGET_DIR [COMPONENT_NAME]
 
 	Creates pre-populated component directories based on templates/component or templates/TEMPLATE
 	
@@ -53,11 +53,20 @@ if (!module.parent) {
 	const args = process.argv.slice(2);
 	const template = args[0] === '-t' ? args.splice(0, 2)[1] : 'component';
 	const target = args.shift();
-	const name = args.shift();
+	let name = args.shift();
 
-	if (!name || !target) {
+	if (!target) {
 		console.error(USAGE);
 		process.exit(1);
+	}
+	if (!name) {
+		console.log(``);
+		console.log(`Let's do it! What's the name of your component?`);
+		name = rl.prompt();
+		if (!name) {
+			console.error(USAGE);
+			process.exit(1);
+		}
 	}
 
 	const targetPath = path.join('src', target, name);
@@ -72,6 +81,14 @@ if (!module.parent) {
 	const templateParams = readTemplateParameters(target, name, authorString);
 	const files = glob.sync(path.join(targetPath, '**/*.*'));
 	files.forEach((file) => applyTemplate(file, templateParams));
+
+	const entryPoint = files.find((file) => /\/NAME\.([tj]sx?)$/.test(file));
+	if (entryPoint) {
+		console.log(
+			`Your component is at: ${entryPoint.replace(/(\/[^/]*)NAME([^/]*)$/, `$1${name}$2`)}`
+		);
+		console.log(``);
+	}
 }
 
 export function getGitAuthor() {
@@ -96,6 +113,8 @@ export function readTemplateParameters(
 	console.log('Documentation time! Fill in the blanks, hitting enter after each blank.');
 	console.log(`${name} component is ____ <WHAT DOES IT DO?> for ____ <WHY DOES IT EXIST?>`);
 	console.log(``);
+	console.log('First, what does this component do?');
+	console.log(``);
 	const whatIsIt = rl.prompt();
 
 	console.log(``);
@@ -113,12 +132,16 @@ export function readTemplateParameters(
 	console.log(``);
 	console.log('Superior job old bean! Almost there now!');
 	console.log(``);
-	console.log('Enter an initial prop interface, e.g. foo:string; bar:boolean;');
+	console.log(
+		'Enter an initial props or constructor interface, e.g. foo:string; bar:boolean; OR count:number, array:boolean[]'
+	);
 	console.log(``);
 	const props = rl.prompt();
 
 	console.log(``);
-	console.log("Enter a props use example, e.g. foo='fizzle' bar={false}");
+	console.log(
+		"Enter a props or constructor use example, e.g. foo='fizzle' bar={false} OR 3, [true, true, false]"
+	);
 	console.log(``);
 	const propsUse = rl.prompt();
 

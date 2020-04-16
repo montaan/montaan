@@ -19,8 +19,7 @@
 
 # FIX
 
-    [] yarn makeComponent
-    [] yarn updateComponent
+    [] yarn update-component
 
 # Release checklist
 
@@ -79,6 +78,8 @@
     - Display directory of photos organized into calendar and events
     [] Fetch plugins from GitHub
         [] Sandbox plugins
+    [] yarn create-worker
+    [] yarn create-spirv-worker
 
 ## Faster commit flow
 
@@ -441,6 +442,9 @@
     [x] CommitInfo commits crop to view
     [x] CommitInfo diffs crop to view
     [x] Sometimes highlighted lines don't highlight
+    [x] yarn create-component
+        [x] yarn create-filesystem
+        [x] yarn create-fileview
 
 # Ideas
 

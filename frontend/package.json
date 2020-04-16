@@ -69,9 +69,9 @@
 		"eject": "react-scripts eject",
 		"type-test": "watch \"yarn tsc --noEmit --p tsconfig.json\" src",
 		"ts-node": "node_modules/.bin/ts-node -O \"{\\\"module\\\": \\\"commonjs\\\"}\"",
-		"makeComponent": "yarn ts-node bin/makeComponent.ts Montaan",
-		"makeFilesystem": "yarn ts-node bin/makeComponent.ts -t filesystem Montaan/Filesystems",
-		"makeFileView": "yarn ts-node bin/makeComponent.ts -t fileview Montaan/FileViews"
+		"create-component": "yarn ts-node bin/makeComponent.ts Montaan",
+		"create-filesystem": "yarn ts-node bin/makeComponent.ts -t filesystem Montaan/Filesystems",
+		"create-fileview": "yarn ts-node bin/makeComponent.ts -t fileview Montaan/FileViews"
 	},
 	"eslintConfig": {
 		"extends": "react-app"

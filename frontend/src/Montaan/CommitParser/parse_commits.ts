@@ -7,11 +7,13 @@ export interface AuthorIndex {
 	[author: string]: Commit[];
 }
 
-export interface CommitData {
-	commits: Commit[];
-	commitIndex: CommitIndex;
-	authors: AuthorIndex;
-	commitCount: number;
+export class CommitData {
+	static mock = new CommitData();
+
+	commits: Commit[] = [];
+	commitIndex: CommitIndex = {};
+	authors: AuthorIndex = {};
+	commitCount: number = 0;
 }
 
 export interface RawCommitData {
