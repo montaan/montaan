@@ -24,17 +24,10 @@ async function createThumbnail(repo, hash, targetZ) {
 	const thumbnailsPath = Path.join(repo, 'thumbnails');
 	const hashDir = `${hash.slice(0, 2)}/${hash.slice(2, 4)}`;
 	const hashSuffix = `${hashDir}/${hash.slice(4)}`;
-	if (await exists(Path.join(thumbnailsPath, '0', hashSuffix))) {
-		return '404: No thumbnail for z level';
-	}
 	const blob = await readBlob(repoPath, hash);
 	const image = sharp(blob);
 	const metadata = await image.metadata();
-	for (
-		let z = Math.min(10, Math.ceil(Math.log2(Math.max(metadata.width, metadata.height))));
-		z >= 0;
-		z--
-	) {
+	for (let z = 8; z >= 0; z--) {
 		await mkdir(Path.join(thumbnailsPath, z.toString(), hashDir), { recursive: true });
 		await image
 			.resize(Math.pow(2, z), Math.pow(2, z), {
@@ -52,7 +45,7 @@ module.exports = async function(req, res) {
 			repo: isString,
 			thumbnails: isArray(
 				isShape({
-					z: (z) => isNumber(z) && z >= 0,
+					z: (z) => isNumber(z) && z >= 0 && z <= 8,
 					hash: isRegExp(/^[a-f0-9]{40}$/),
 				})
 			),
