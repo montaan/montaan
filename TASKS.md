@@ -19,8 +19,6 @@
 
 # FIX
 
-    [] yarn update-component
-
 # Release checklist
 
     [] Clean well-documented path to create a new component & integrate it
@@ -37,6 +35,7 @@
 
 # KEY FEATURES
 
+    [] Documentation makes users and developers do things. They should be written like programs that run on the person.
     [] Thumbnail mip pyramid server
         [] Copy from Muryu?
     [] Custom layouts
@@ -445,6 +444,7 @@
     [x] yarn create-component
         [x] yarn create-filesystem
         [x] yarn create-fileview
+    [x] yarn update-component
 
 # Ideas
 

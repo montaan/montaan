@@ -8,13 +8,13 @@ The primary reviewer for CommitInfo is Ilmari Heikkinen <hei@heichen.hk>.
 
 ## Usage
 
-```jsx
+```tsx
 <CommitInfo propA={} />
 ```
 
 ## Props
 
-```js
+```ts
 propA: PropTypes.string, // propA
 ```
 
@@ -39,7 +39,7 @@ Example of using the stylesheet:
 }
 ```
 
-```jsx
+```tsx
 render() {
     return (
         <div className={this.styles.CommitInfo}>
@@ -50,18 +50,115 @@ render() {
 }
 ```
 
-## Assets
+## API
 
-Any assets (images, fonts, 3D models, static files, etc.) used by the component are in [assets/]. Import the asset into your script file to get the post-build URL.
+### Exports
 
-```jsx
-import myImage from './assets/myImage.svg';
-// ...
-render() {
-    return (<img src={myImage}>);
+```tsx
+export interface CommitInfoProps
+export class CommitInfo
+```
+
+### Props
+
+```tsx
+export interface CommitInfoProps {
+	loadFileDiff(
+		repo: string,
+		sha: string,
+		previousSha: string,
+		path: string,
+		el?: HTMLElement
+	): void;
+	loadFile(repo: string, sha: string, path: string, el: HTMLElement): void;
+
+	searchQuery: string;
+
+	diffsLoaded: number;
+
+	addLinks(links: TreeLink[]): void;
+	setLinks(links: TreeLink[]): void;
+	links: TreeLink[];
+
+	commitFilter: CommitFilter;
+	setCommitFilter(repo: string, commitFilter: CommitFilter): void;
+
+	navigationTarget: string;
+	repoPrefix: string;
+	branch: string;
+
+	closeFile(): void;
+	loadDiff(repo: string, commit: Commit): Promise<void>;
+
+	activeCommitData?: ActiveCommitData;
+
+	commitData?: CommitData;
+
+	fileContents?: FileContents;
+
+	commitsVisible: boolean;
+	setCommitsVisible: (visible: boolean) => void;
+
+	path: string;
 }
 ```
 
-## Authors
+### Interfaces
 
-Ilmari Heikkinen <hei@heichen.hk>
+```tsx
+export interface CommitInfoProps {
+	loadFileDiff(
+		repo: string,
+		sha: string,
+		previousSha: string,
+		path: string,
+		el?: HTMLElement
+	): void;
+	loadFile(repo: string, sha: string, path: string, el: HTMLElement): void;
+
+	searchQuery: string;
+
+	diffsLoaded: number;
+
+	addLinks(links: TreeLink[]): void;
+	setLinks(links: TreeLink[]): void;
+	links: TreeLink[];
+
+	commitFilter: CommitFilter;
+	setCommitFilter(repo: string, commitFilter: CommitFilter): void;
+
+	navigationTarget: string;
+	repoPrefix: string;
+	branch: string;
+
+	closeFile(): void;
+	loadDiff(repo: string, commit: Commit): Promise<void>;
+
+	activeCommitData?: ActiveCommitData;
+
+	commitData?: CommitData;
+
+	fileContents?: FileContents;
+
+	commitsVisible: boolean;
+	setCommitsVisible: (visible: boolean) => void;
+
+	path: string;
+}
+interface CommitInfoState {
+	authorSort: string;
+	commitFilter?: CommitFilter;
+	diffEditor: any;
+	editor: any;
+}
+```
+
+### Declares
+
+```tsx
+declare global {
+	interface Window {
+		monaco: Monaco;
+	}
+}
+```

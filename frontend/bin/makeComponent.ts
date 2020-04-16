@@ -130,7 +130,7 @@ export function readTemplateParameters(
 	const usedBy = rl.prompt();
 
 	console.log(``);
-	console.log('Superior job old bean! Almost there now!');
+	console.log('Superior effort old bean! Almost there now!');
 	console.log(``);
 	console.log(
 		'Enter an initial props or constructor interface, e.g. foo:string; bar:boolean; OR count:number, array:boolean[]'

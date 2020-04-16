@@ -69,6 +69,7 @@
 		"eject": "react-scripts eject",
 		"type-test": "watch \"yarn tsc --noEmit --p tsconfig.json\" src",
 		"ts-node": "node_modules/.bin/ts-node -O \"{\\\"module\\\": \\\"commonjs\\\"}\"",
+		"update-components": "yarn ts-node bin/updateComponents.ts",
 		"create-component": "yarn ts-node bin/makeComponent.ts Montaan",
 		"create-filesystem": "yarn ts-node bin/makeComponent.ts -t filesystem Montaan/Filesystems",
 		"create-fileview": "yarn ts-node bin/makeComponent.ts -t fileview Montaan/FileViews"
@@ -99,7 +100,8 @@
 	},
 	"lint-staged": {
 		"src/**/*.{js,jsx,ts,tsx,json}": [
-			"eslint --fix"
+			"eslint --fix",
+			"yarn update-components"
 		],
 		"src/**/*.{js,jsx,ts,tsx,json,css,scss,md}": [
 			"prettier --write"
