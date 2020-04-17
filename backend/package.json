@@ -33,18 +33,7 @@
 	"devDependencies": {
 		"@typescript-eslint/eslint-plugin": "^2.17.0",
 		"@typescript-eslint/parser": "^2.17.0",
-		"husky": ">=4",
-		"lint-staged": ">=10",
 		"nodemon": "^2.0.2",
 		"prettier": "1.19.1"
-	},
-	"husky": {
-		"hooks": {
-			"pre-commit": "lint-staged"
-		}
-	},
-	"lint-staged": {
-		"*.{ts,js}": "eslint --cache --fix",
-		"*.{ts,js,css,md,scss}": "prettier --write"
 	}
 }
