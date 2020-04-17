@@ -15,9 +15,14 @@ export function updateComponents(files: string[]): void {
 		components.add(dir);
 	});
 	for (let dir of components.keys()) {
-		const segments = dir.split(path.sep);
-		const target = segments[segments.length - 2];
-		const name = segments[segments.length - 1];
-		updateComponent(target, name);
+		const segments = dir.split(/[\/\\]/);
+		const srcIndex = segments.lastIndexOf('src');
+		if (srcIndex >= 0) {
+			const target = segments.slice(srcIndex + 1, segments.length - 1).join(path.sep);
+			const name = segments[segments.length - 1];
+			if (target && name) {
+				updateComponent(target, name);
+			}
+		}
 	}
 }
