@@ -1,19 +1,50 @@
 # Montaan
 
+## Start app in dev mode
+
+```bash
+git clone https://github.com/montaan/montaan
+cd montaan
+yarn start-dev # Install Docker before this
+cd frontend
+yarn
+yarn start
+```
+
+Register an account (the accounts are local, there's no global server.)
+Click on "Your Repositories", "Create New", paste https://github.com/montaan/montaan to "Import URL" and press "Create Repo".
+
+Wait a minute and reload the page. Hooray!
+
+## Test runner
+
+```bash
+cd frontend
+yarn test
+yarn type-test # In new terminal
+```
+
+## Ok, sure, but what's in it do for me?
+
 Montaan is an in-browser git repo visualizer.
 
 -   Understand a new project quickly (even old projects are new after a while - you forget how they work)
--   See who is working on what
+-   See project structure
 -   See what is new and what has changed
+-   See who is working on what
 -   See what is related to what
 
 Montaan displays the git repo as an easy-to-understand 2D hierarchy, with folders surrounding their contents.
 
+### Features
+
+Projects in supported languages (read: JavaScript & TypeScript) also have dependency graphs using depcruise to show the dependencies of source files.
+
+There's code search that splits the results into Definition, Documentation, Uses and Tests, making it quick to things in the tree. The search results are overlaid on top of the tree with little pins, making huge result sets navigable.
+
 ## Install
 
 The recommended way to develop and deploy the app is through Docker.
-
-If you don't want to use Docker, look below for [Manual installation](#Manual_installation) instructions.
 
 The next steps require Docker and `docker-compose`.
 
@@ -21,15 +52,17 @@ The next steps require Docker and `docker-compose`.
 
 ```bash
 yarn start-dev
+cd frontend
+yarn start
 ```
-
-Open [http://localhost:3000](http://localhost:3000) and once the frontend build finishes, you should see what's up.
 
 The dev server mounts the local `backend` and `frontend` in server containers with file watchers. When you change backend or frontend files, the servers reload.
 
 To stop the development server, run `yarn stop-dev`
 
 ### Production
+
+The production server does a frontend build and serves it through the backend server.
 
 ```bash
 yarn start-production
@@ -39,98 +72,66 @@ Open [http://localhost:8888](http://localhost:8888).
 
 To stop the production server, run `yarn stop-production`
 
-## Features
+## Development
 
-Projects in supported languages (read: JavaScript & TypeScript) also have dependency graphs using depcruise to show the dependencies of source files.
+### VS Code setup
 
-There's code search that splits the results into Definition, Documentation, Uses and Tests, making it quick to things in the tree. The search results are overlaid on top of the tree with little pins, making huge result sets navigable.
+The recommended VSCode setup is Prettier, Code Spell Checker, and the TypeScript & ESLint plugins.
 
-To use https://www.montaan.com, you need Montaan Gems. You can get enough gems for a month of use by sending a PR with one commit. If your PR passes quick review and the Bors bot's CI run, your GitHub account is credited with Montaan Gems. If you commit more often, you can either save the gems or sell them on the market at the current prevailing price.
+Prettier keeps the formatting out of the way. Code Spell Checker makes the code more readable.
 
-## Make it evolve
+### Component creation
 
-New features should be initially implemented as components. To create a component, run `yarn makeComponent` in `frontend`.
-
-The components are split into two categories, `qframe` and `Montaan`. Qframe components deal with framework-level stuff like user login, registration, activation etc. Montaan components make up the tree visualizer.
+New features should be initially implemented as components. To create a component, run `yarn create-component` in `frontend`.
 
 ```sh
 cd frontend
-yarn makeComponent MyShinyComponent
+yarn create-component
 # Fill in the questionnaire
-open src/components/MyShinyComponent/MyShinyComponent.tsx
-# Add your component to src/Montaan/index.jsx render() for top-level components
-# or under one of the sub-components in src/Montaan.
+# open src/components/MyShinyComponent/MyShinyComponent.tsx
 ```
 
-The created component has a filled-in README.md for documentation, Jest+Fast-check tests and Storybook story. The project pre-commit hook tries to keep these up-to-date. If your changes break the auto-generated files, either make the auto-generator work with your changes or make your changes conform to the auto-generator. Disabling the auto-generator will break CI and make your commit impossible to merge.
+The created component has a filled-in README.md, Jest tests, and a SCSS module. The project pre-commit hook tries to keep the README up-to-date with code changes. If your changes break the auto-generated files, either make your changes work with the auto-generator or make the auto-generator work with your changes.
 
-It's recommended to install the Code Spell Check VSCode plugin to maintain the translatability of the codebase. To work on the code in your native language, check if the translation system has it already, or create a new one through the auto-translate script. The token names in translated code map to the non-lingual AST, so when you rename a component, the translations will be updated as well.
+There are component creators for Filesystems and FileViews as well. Filesystems read dirs and files to create the tree. FileViews are in-tree file previews (e.g. you zoom in and the contents of a text file appear: that's a TextFileView in action).
 
-When writing functions, try to keep their domains as tight as possible. If the domain is tight enough, we can run an exhaustive test on the function and verify its operation and performance. For large domains, we do a partial domain exhaustive test and a random sampling of the rest of the domain. These tests are run as part of the in-editor lint runs, so you'll get immediate feedback on the any inputs that throw exceptions, and the performance of your function.
-
-If your code matches one of the earlier encountered shapes, we suggest auto-completion or optimized variants. This often saves a ton of time and converts O(n^2) nested loops into O(n lg n).
-
-## Manual installation
-
-### Production
-
-Build the frontend for deployment and start the backend server.
-
-```bash
-yarn build
-yarn start
+```sh
+yarn create-filesystem
+yarn create-fileview
 ```
 
-Open `http://localhost:8008`
+See the [src/examples](src/examples) directory for a sample on how to create a new filesystem and add a custom UI component to it.
 
-### Development
+Run the following in the browser console to see an example of a dynamically generated tree and custom UI. It has a file for every person in Portugal, and shows the regional progression of the COVID-19 epidemic:
 
-#### Install dependencies
-
-First, install the dependencies.
-
-```bash
-yarn install-deps
+```tsx
+mountFSEntry('/', 'NUTS', await Examples.PortugalCOVIDTree());
 ```
 
-#### Set up database
+We're planning to do plugins. They'd be custom filesystems, views and components that you could load at runtime to customize the tree and UI. They'd work something like:
 
-Set up the PostgreSQL database.
-
-```bash
-# Create user montaan. When prompted for password, type montaan
-createuser --superuser --password montaan
-# Create database.
-createdb -O montaan montaan
-# Update backend/.env if you used a different password
+```tsx
+loadPlugin(urlToPlugin);
 ```
 
-#### Start server
+Which would load the plugin either with a script tag or CORS fetch, then have hooks to add functionality & expose plugin configuration. Like, yeah, VSCode is probably a good thing to copy here.
 
-Finally, start the servers. There's the backend API server and the frontend Create React App server.
+### The meaning of life
 
-##### Development
+The project structure is for increasing the amount of change over time while maintaining quality.
 
-Start server in development mode. Starts the backend server on port 8008 and the frontend Webpack development server on port 3000.
+Each commit should punch above its weight.
 
-```bash
-yarn watch
-```
+The reason why you get several commits to a single piece of code is that it wasn't complete, or that it had to adapt to a change.
 
-Open `http://localhost:3000/`
+We should make each commit as complete as possible. Incomplete code has errors. We try to minimize errors through types, tests, documentation, snippets, libraries and benchmarks. Make these effortless or automatically generated. Low performance is an error as well, and can be minimized through architecture, high-performance libraries and language choice.
 
-You can also start the servers separately:
+Documentation, types, well-specified APIs and tests aid in adapting code to a changing environment.
 
-###### Backend
+Merges should be cheap, causing minimal or zero amount of work for other people on the project. If a PR passes the tests, it can be automatically merged.
 
-```bash
-cd backend
-yarn watch
-```
+This is not the end of the README. This is the beginning of a new you.
 
-###### Frontend
+## License
 
-```bash
-cd frontend
-yarn start
-```
+Apache License 2.0
