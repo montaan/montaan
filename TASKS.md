@@ -19,14 +19,17 @@
 
 # FIX
 
+    [] Thumbnails reload on zoom
+    [] Thumbnails stick around for too long in the wrong place
+
 # Release checklist
 
     [] Clean well-documented path to create a new component & integrate it
         [] Write tour about creating component
             [x] Creating a filesystem
             [x] Creating filesystem components
-            [] yarn makeComponent
-            [] yarn updateComponent
+            [x] yarn makeComponent
+            [x] yarn updateComponent
     [] Solid repo import path
         [] Import Github repo
         [] In-progress spinner
@@ -445,6 +448,7 @@
         [x] yarn create-filesystem
         [x] yarn create-fileview
     [x] yarn update-component
+    [x] Right-clicking inputs shouldn't take you to component source
 
 # Ideas
 
@@ -461,6 +465,43 @@
     [] Migrate from git-like model to Wikipedia-like model
     [] BERT for question-answering about code
     [] AI code review (train best practices)
+    [] Absorb 1M commits per day
+        [] Absorb 30k commits per day
+        [] Absorb 1000 commits per day
+        - no-conflict repo structure
+        - no human verification (would need 10k reviewers @ 100 reviews per day)
+        - automatic task allocation from issues (reduce time to commit)
+        - independent work units (think: pixel shaders)
+        - very fast CI tests (12 runs per second)
+            - highly parallel tests on commit level
+            - batch commits so that master CI operates at 12 commits / second (e.g. CI takes 10 seconds => merge batch of 120 commits => 12 commits / second CI throughput)
+        - tests to maintain quality metrics
+        - fast reverts
+        - rewards for commits
+        - losses for lack of commits
+        - handover strategy when someone dies (with million authors, avg. 1 every 4 days)
+
+    When writing functions, try to keep their domains as tight as possible. If the domain is tight enough, we can run an exhaustive test on the function and verify its operation and performance. For large domains, we do a partial domain exhaustive test and a random sampling of the rest of the domain. These tests are run as part of the in-editor lint runs, so you'll get immediate feedback on the any inputs that throw exceptions, and the performance of your function.
+
+    If your code matches one of the earlier encountered shapes, we suggest auto-completion or optimized variants. This often saves a ton of time and converts O(n^2) nested loops into O(n lg n).
+
+    ```tsx
+    const results = [];
+    myArray.forEach(elem => {
+        if (!results.includes(elem)) {
+            results.push(elem);
+        }
+    });
+
+    // Becomes
+
+    const results = [];
+    {
+        const _tmp = new Set();
+        for (let i = 0; i < myArray.length; i++) _tmp.set(myArray[i]);
+        for (let i of _tmp.keys()) results.push(i);
+    }
+    ```
 
 # Future alignment
 
