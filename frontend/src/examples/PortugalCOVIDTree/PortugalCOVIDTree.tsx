@@ -125,6 +125,7 @@ function convertCaseListToLinks(caseList: string[]): TreeLink[] {
 	return links;
 }
 
+const dayCases = PortugalCOVIDCases.get('2020-4-17');
 const caseList: string[] = [];
 const tree = new FSDirEntry('');
 tree.filesystem = new CasesFilesystem(tree);
@@ -148,16 +149,15 @@ PortugalLAUs.forEach(
 		const countryEntry = getOrCreateDir(tree, getNUTSName(nuts, 0));
 		const nuts1Entry = getOrCreateDir(countryEntry, getNUTSName(nuts, 1));
 		const nuts2Entry = getOrCreateDir(nuts1Entry, getNUTSName(nuts, 2));
-		let covidCount =
-			PortugalCOVIDCases.get(lauName) || PortugalCOVIDCases.get(getNUTSName(nuts, 3)) || 0;
+		let covidCount = dayCases.get(lauName) || dayCases.get(getNUTSName(nuts, 3)) || 0;
 		if (covidCount > population) {
 			covidCount = 0;
 		}
 		if (covidCount > 0) {
-			if (PortugalCOVIDCases.get(lauName)) {
-				PortugalCOVIDCases.delete(lauName);
+			if (dayCases.get(lauName)) {
+				dayCases.delete(lauName);
 			} else {
-				PortugalCOVIDCases.delete(getNUTSName(nuts, 3));
+				dayCases.delete(getNUTSName(nuts, 3));
 			}
 		}
 		const nuts3Entry = getOrCreateDir(nuts2Entry, getNUTSName(nuts, 3));
