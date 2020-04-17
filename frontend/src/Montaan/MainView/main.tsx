@@ -180,6 +180,9 @@ export class Tabletree {
 
 	constructor() {
 		try {
+			if (!WebGLRenderingContext || !document.createElement('canvas').getContext('webgl')) {
+				throw new Error('WebGL not supported');
+			}
 			this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
 		} catch (e) {
 			this.renderer = ({
