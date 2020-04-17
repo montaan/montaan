@@ -10,3 +10,20 @@ The primary reviewer for ModelBuilder is Ilmari Heikkinen <hei@heichen.hk>.
 
 The ModelBuilder returns geometries, a list of directories that should be loaded from
 the server, and a list of files that are large enough to be loaded in detailed view.
+
+## API
+
+### Exports
+
+```tsx
+export default class ModelBuilder
+```
+
+### Interfaces
+
+```tsx
+interface ExtendedSDFText extends SDFText {
+	xScale: number;
+	fsEntry: FSEntry;
+}
+```

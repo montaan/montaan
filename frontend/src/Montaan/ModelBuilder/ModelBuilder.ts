@@ -381,7 +381,10 @@ export default class ModelBuilder {
 				return /\.(png|jpe?g)$/i.test(fsEntry.name);
 			})
 			.map((fsEntry) => {
-				const z = Math.min(8, Math.ceil(Math.log2(fsEntry.bbox.width * viewWidth * 0.5)));
+				const z = Math.max(
+					0,
+					Math.min(8, Math.ceil(Math.log2(fsEntry.bbox.width * viewWidth * 0.5)))
+				);
 				return { fsEntry, z };
 			});
 		return {
