@@ -8,3 +8,11 @@ See TextFileView and ImageFileView for details.
 The primary reviewer for FileView is Ilmari Heikkinen <hei@heichen.hk>.
 
 ## API
+
+### Exports
+
+```tsx
+export class ContentBBox
+export const EmptyContentBBox = new ContentBBox(
+export default class FileView
+```
