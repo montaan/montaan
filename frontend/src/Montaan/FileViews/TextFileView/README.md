@@ -5,3 +5,11 @@ The TextFileView component is a 3D model of a text file, shown when zoomed in cl
 The TextFileView component is used by MainView/main.tsx.
 
 The primary reviewer for TextFileView is Ilmari Heikkinen <hei@heichen.hk>.
+
+## API
+
+### Exports
+
+```tsx
+export default class TextFileView
+```

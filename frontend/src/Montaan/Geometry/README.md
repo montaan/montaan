@@ -5,3 +5,20 @@ The Geometry library contains utility functions for dealing with bounding-box to
 The Geometry library is used by ModelBuilder and others.
 
 The primary reviewer for Geometry is Ilmari Heikkinen <hei@heichen.hk>.
+
+## API
+
+### Exports
+
+```tsx
+export interface IBufferGeometryWithFileCount
+export class BBox
+```
+
+### Interfaces
+
+```tsx
+export interface IBufferGeometryWithFileCount extends THREE.BufferGeometry {
+	maxFileCount: number;
+}
+```

@@ -103,6 +103,9 @@
 			"eslint --fix",
 			"yarn update-components"
 		],
+		"src/**/README.md": [
+			"yarn update-components"
+		],
 		"src/**/*.{js,jsx,ts,tsx,json,css,scss,md}": [
 			"prettier --write"
 		]

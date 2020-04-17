@@ -5,3 +5,11 @@ The PrettyPrinter is a Web Worker that creates colored text geometries for text 
 The PrettyPrinter is used by TextFileView.
 
 The primary reviewer for PrettyPrinter is Ilmari Heikkinen <hei@heichen.hk>.
+
+## API
+
+### Exports
+
+```tsx
+export class PrettyPrinter
+```

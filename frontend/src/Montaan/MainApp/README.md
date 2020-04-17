@@ -8,7 +8,7 @@ The primary reviewer for MainApp is Ilmari Heikkinen <hei@heichen.hk>.
 ## Usage
 
 ```tsx
-<MainApp propA={} />
+<MainApp userInfo={UserInfo.mock} api={QFrameAPI.mock} apiPrefix="" />
 ```
 
 ## Props
@@ -18,8 +18,8 @@ This is the description of the MainApp component's MainAppProps interface.
 ```tsx
 export interface MainAppProps extends RouteComponentProps {
 	match: any;
-	userInfo: any;
-	api: any;
+	userInfo: UserInfo;
+	api: QFrameAPI;
 	apiPrefix: string;
 }
 ```
@@ -65,6 +65,22 @@ import myImage from './assets/myImage.svg';
 
 ## API
 
+### Exports
+
+```tsx
+export interface MainAppProps
+export type TreeLinkKey = Element | FSEntry | string;
+export interface TreeLink
+export interface SearchResult
+export class UserInfo
+export interface FileTree
+export interface GoToTarget
+export interface FileContents
+export interface CommitFilter
+export class ActiveCommitData
+export interface FSState
+```
+
 ### Props
 
 ```tsx
@@ -88,10 +104,11 @@ export interface MainAppProps extends RouteComponentProps {
 export interface TreeLink {
 	src: TreeLinkKey;
 	dst: TreeLinkKey;
+	srcPoint?: number[];
+	dstPoint?: number[];
 	color: { r: number; g: number; b: number };
 }
 export interface SearchResult {
-	fsEntry: FSEntry;
 	filename: string;
 	line: number;
 	snippet?: string;
@@ -99,7 +116,7 @@ export interface SearchResult {
 }
 export interface FileTree {
 	count: number;
-	tree: FSEntry;
+	tree: FSDirEntry;
 }
 export interface GoToTarget {
 	fsEntry: FSEntry;
@@ -107,10 +124,10 @@ export interface GoToTarget {
 	col?: number;
 }
 export interface FileContents {
-	content: string;
+	content: ArrayBuffer;
 	path: string;
 	hash: string;
-	original?: string;
+	original?: ArrayBuffer;
 }
 export interface CommitFilter {
 	path?: string;
@@ -119,43 +136,52 @@ export interface CommitFilter {
 	search?: string;
 	date?: string;
 }
-export interface ActiveCommitData {
-	commits: Commit[];
-	authors: string[];
-	authorCommitCounts: { [author: string]: number };
-	files: any[];
-}
 interface MainAppState {
-	repoPrefix: string;
 	commitFilter: CommitFilter;
 	searchQuery: string;
-	commits: Commit[];
-	activeCommitData: null | ActiveCommitData;
+	activeCommitData?: ActiveCommitData;
 	fileTree: FileTree;
 	commitLog: string;
 	commitChanges: string;
 	files: string;
 	searchResults: SearchResult[];
 	navigationTarget: string;
-	goToTarget: null | GoToTarget;
+	goToTarget?: GoToTarget;
 	frameRequestTime: number;
 	searchLinesRequest: number;
 	diffsLoaded: number;
-	fileContents: null | FileContents;
+	fileContents?: FileContents;
 	links: TreeLink[];
 	dependencies: TreeLink[];
 	dependencySrcIndex: TreeLinkIndex;
 	dependencyDstIndex: TreeLinkIndex;
-	repos: RepoInfo[];
 	repoError: any;
-	processing: boolean;
-	processingCommits: boolean;
-	commitData: null | CommitData;
+	commitData?: CommitData;
 	navUrl: string;
-	ref: string;
 	searchHover?: any;
 	treeLoaded: boolean;
 	fileTreeUpdated: number;
+	commitsVisible: boolean;
+}
+export interface FSState extends MainAppState {
+	setCommitData: (commitData?: CommitData) => void;
+	setDependencies: (dependencies: TreeLink[]) => void;
+	setCommitFilter: (repo: string, commitFilter: CommitFilter) => void;
+	loadDiff: (repo: string, commit: Commit) => Promise<void>;
+	loadFile: (repo: string, hash: string, path: string) => Promise<void>;
+	loadFileDiff: (repo: string, hash: string, previousHash: string, path: string) => Promise<void>;
+	closeFile: () => void;
+	setCommitsVisible: (commitsVisible: boolean) => void;
+	setLinks: (links: TreeLink[]) => void;
+	addLinks: (links: TreeLink[]) => void;
+	setSearchQuery: (repo: string, branch: string, query: string) => void;
+	updateSearchLines: () => void;
+	setSearchHover: (el: HTMLElement, url: string) => void;
+	clearSearchHover: (el: HTMLElement) => void;
+	createRepo: (name: string, url?: string) => Promise<RepoInfo>;
+	renameRepo: (repo: RepoInfo, newName: string) => Promise<void>;
+	addTreeListener: (pattern: RegExp, callback: (fsEntry: FSEntry) => void) => void;
+	removeTreeListener: (pattern: RegExp, callback: (fsEntry: FSEntry) => void) => void;
 }
 ```
 

@@ -5,3 +5,12 @@ The MontaanGitFilesystem is a filesystem that mounts a git repository using the 
 The MontaanGitFilesystem is used by MontaanUserReposFilesystem and loaded by MainApp.
 
 The primary reviewer for MontaanGitFilesystem is Ilmari Heikkinen <hei@heichen.hk>.
+
+## API
+
+### Exports
+
+```tsx
+export class MontaanGitBranchFilesystem
+export class MontaanGitFilesystem
+```

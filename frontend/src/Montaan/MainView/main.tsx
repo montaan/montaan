@@ -30,7 +30,7 @@ import HighlightedLines from '../HighlightedLines/HighlightedLines';
 import SearchLandmarks from '../SearchLandmarks/SearchLandmarks';
 import LinksModel from '../LinksModel/LinksModel';
 import { RouteComponentProps } from 'react-router-dom';
-import FileView from '../FileViews/FileView';
+import FileView from '../FileViews';
 // import * as Comlink from 'comlink';
 
 // /* eslint-disable import/no-webpack-loader-syntax */

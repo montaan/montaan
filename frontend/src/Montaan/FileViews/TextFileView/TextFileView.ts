@@ -5,7 +5,7 @@ import QFrameAPI from '../../../lib/api';
 import Text, { SDFTextMesh } from '../../Text/Text';
 import { BBox } from '../../Geometry/Geometry';
 import NavTarget from '../../NavTarget/NavTarget';
-import FileView, { ContentBBox, EmptyContentBBox } from '../FileView';
+import FileView, { ContentBBox, EmptyContentBBox } from '..';
 import { BufferGeometry } from 'three';
 import { SDFTextGeometry } from '../../Text/third_party/three-bmfont-text-modified';
 

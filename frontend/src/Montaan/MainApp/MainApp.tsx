@@ -761,7 +761,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 
 	goToSelf = (ev: React.MouseEvent) => {
 		let target: HTMLElement | null = ev.target as HTMLElement;
-		while (target) {
+		while (target && target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA') {
 			if (target.dataset.filename) {
 				this.props.history.push(
 					'/ilmari/montaan/master/' + target.dataset['filename'] + '#0'

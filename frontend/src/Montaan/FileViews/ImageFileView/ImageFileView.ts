@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { FSEntry } from '../../Filesystems';
 import QFrameAPI from '../../../lib/api';
-import FileView from '../FileView';
+import FileView from '..';
 import { BBox } from '../../Geometry/Geometry';
 import NavTarget from '../../NavTarget/NavTarget';
 

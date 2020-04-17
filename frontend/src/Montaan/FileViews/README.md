@@ -6,3 +6,5 @@ It's a 3D model of a file that handles click events to the view and disposes its
 See TextFileView and ImageFileView for details.
 
 The primary reviewer for FileView is Ilmari Heikkinen <hei@heichen.hk>.
+
+## API

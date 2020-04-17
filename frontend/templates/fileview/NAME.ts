@@ -1,6 +1,6 @@
 // src/TARGET/NAME/NAME.ts
 
-import FileView, { ContentBBox, EmptyContentBBox } from '../FileView';
+import FileView, { ContentBBox, EmptyContentBBox } from '..';
 import { FSEntry } from '../../Filesystems';
 import QFrameAPI from '../../../lib/api';
 import { BBox } from '../../Geometry/Geometry';
