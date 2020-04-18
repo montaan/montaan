@@ -763,7 +763,7 @@ Vizela 5
 Alvaiázere 4
 Anadia 4
 Baião 4
-Calheta 4
+Calheta (Açores) 4
 Coruche 4
 Horta 4
 Lamego 4
@@ -927,7 +927,7 @@ CONCELHO NÚMERO DE
 CASOS
 Alvaiázere 4
 Baião 4
-Calheta 4
+Calheta (Açores) 4
 Guarda 4
 Lamego 4
 Lousã 4
@@ -1065,7 +1065,7 @@ Santiago do Cacém 6
 Câmara de Lobos 6
 Silves 6
 Leiria 6
-Calheta 5
+Calheta (Açores) 5
 Velas 5
 Ponta do Sol 5
 Penacova 5
@@ -1221,7 +1221,7 @@ Alcochete 5
 Alenquer 5
 Alvaiázere 5
 Anadia 5
-Calheta 5
+Calheta (Açores) 5
 Mealhada 5
 Melgaço 5
 Miranda do Corvo 5
@@ -1383,7 +1383,7 @@ Vieira do Minho 6
 Alcochete 5
 Alvaiázere 5
 Anadia 5
-Calheta 5
+Calheta (Açores) 5
 Castro Daire 5
 Mealhada 5
 Melgaço 5
@@ -1550,7 +1550,7 @@ Santiago do Cacém 6
 Vieira do Minho 6
 Alcochete 5
 Baião 5
-Calheta 5
+Calheta (Açores) 5
 Castro Daire 5
 Monção 5
 Peniche 5
@@ -1733,7 +1733,7 @@ Velas 5
 Vinhais 5
 Batalha 4
 Cabeceiras de Basto 4
-Calheta 4
+Calheta (Açores) 4
 Celorico de Basto 4
 Góis 4
 Guarda 4
@@ -4399,6 +4399,8 @@ Vouzela 4
 `,
 };
 
+const lauMappings: { [name: string]: string } = {};
+
 function parseCases(cases: Map<string, number> | string): Map<string, number> {
 	if (typeof cases !== 'string') return cases;
 	const caseMap = new Map<string, number>();
@@ -4411,7 +4413,9 @@ function parseCases(cases: Map<string, number> | string): Map<string, number> {
 		const match = line.match(/\d+$/);
 		if (match) {
 			const number = parseInt(match[0]);
-			caseMap.set(name + line.slice(0, -match[0].length - 1), number);
+			name = name + line.slice(0, -match[0].length - 1);
+			name = lauMappings[name] ?? name;
+			caseMap.set(name, (caseMap.get(name) ?? 0) + number);
 			name = '';
 		} else {
 			name += line + ' ';

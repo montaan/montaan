@@ -9,11 +9,11 @@ import {
 	FSEntry,
 } from '../../Montaan/Filesystems';
 import { PortugalCOVIDCases } from './PortugalCOVIDCases';
-import { PortugalLAUs } from './PortugalLAUs';
 import { getNUTSName } from './NUTS';
 import { TreeLink } from '../../Montaan/MainApp';
 import Button from 'react-bootstrap/Button';
 import utils from '../../Montaan/Utils/utils';
+import { PortugalConcelhos } from './PortugalConcelhos';
 
 class CasesFilesystem extends Filesystem {
 	graphVisible: boolean = false;
@@ -125,72 +125,62 @@ function convertCaseListToLinks(caseList: string[]): TreeLink[] {
 	return links;
 }
 
-const dayCases = PortugalCOVIDCases.get('2020-4-17');
+const dayCases = new Map<string, number>(PortugalCOVIDCases.get('2020-4-17').entries());
 const caseList: string[] = [];
 const tree = new FSDirEntry('');
 tree.filesystem = new CasesFilesystem(tree);
 tree.fetched = true;
 let populationCounter = 0;
-PortugalLAUs.forEach(
-	([
-		nuts,
-		lau,
-		lauName,
-		lauNameLatin,
-		change,
-		populationString,
-		totalArea,
-		degurba,
-		degChange,
-		coastal,
-		coastChange,
-	]) => {
-		const population = parseInt(populationString);
-		const countryEntry = getOrCreateDir(tree, getNUTSName(nuts, 0));
-		const nuts1Entry = getOrCreateDir(countryEntry, getNUTSName(nuts, 1));
-		const nuts2Entry = getOrCreateDir(nuts1Entry, getNUTSName(nuts, 2));
-		let covidCount = dayCases.get(lauName) || dayCases.get(getNUTSName(nuts, 3)) || 0;
-		if (covidCount > population) {
-			covidCount = 0;
-		}
-		if (covidCount > 0) {
-			if (dayCases.get(lauName)) {
-				dayCases.delete(lauName);
-			} else {
-				dayCases.delete(getNUTSName(nuts, 3));
-			}
-		}
-		const nuts3Entry = getOrCreateDir(nuts2Entry, getNUTSName(nuts, 3));
-		const lauEntry = createDir(nuts3Entry, lauName.replace(/\//g, '|'));
-		lauEntry.lastIndex += covidCount;
-		nuts3Entry.lastIndex += covidCount;
-		lauEntry.color = [Math.min(0.4, lauEntry.lastIndex / 500), 0.0, 0.0];
-		nuts3Entry.color = [
-			Math.min(0.4, nuts3Entry.lastIndex / 1000),
-			Math.min(0.3, nuts3Entry.lastIndex / 1000),
-			0,
-		];
-		for (let i = 0; i < population; i += 150) {
-			const populationEntry = createDir(lauEntry, i.toString());
-			populationEntry.color = [0.15 + 0.5 * Math.min(150, covidCount) * 0.01, 0.1, 0.1];
-			populationEntry.filesystem = new PeopleFilesystem(
-				populationCounter,
-				Math.min(150, population - i),
-				covidCount
-			);
-			addCasesToCaseList(
-				caseList,
-				getFullPath(populationEntry),
-				populationCounter,
-				Math.min(150, covidCount)
-			);
-			covidCount -= 150;
-			covidCount = Math.max(0, covidCount);
-
-			populationCounter += Math.min(150, population - i);
-		}
+PortugalConcelhos.forEach(([nuts, lau, lauName, lauNameLatin, change, populationString]) => {
+	const population = parseInt(populationString);
+	const countryEntry = getOrCreateDir(tree, getNUTSName(nuts, 0));
+	const nuts1Entry = getOrCreateDir(countryEntry, getNUTSName(nuts, 1));
+	const nuts2Entry = getOrCreateDir(nuts1Entry, getNUTSName(nuts, 2));
+	let covidCount = dayCases.get(lauName) ?? 0;
+	if (covidCount > population) {
+		throw new Error('More cases than people');
 	}
-);
+	if (covidCount > 0) {
+		dayCases.delete(lauName);
+	}
+	const nuts3Entry = getOrCreateDir(nuts2Entry, getNUTSName(nuts, 3));
+	const lauEntry = createDir(nuts3Entry, lauName.replace(/\//g, '|'));
+	lauEntry.lastIndex += covidCount;
+	nuts3Entry.lastIndex += covidCount;
+	lauEntry.color = [
+		(lauEntry.lastIndex > 0 ? 0.1 : 0) + Math.min(0.4, lauEntry.lastIndex / 500),
+		lauEntry.lastIndex <= 0 ? 0.2 : 0,
+		0.0,
+	];
+	nuts3Entry.color = [
+		Math.min(0.4, nuts3Entry.lastIndex / 1000),
+		Math.min(0.25, nuts3Entry.lastIndex / 1000),
+		0,
+	];
+	for (let i = 0; i < population; i += 150) {
+		const populationEntry = createDir(lauEntry, i.toString());
+		populationEntry.color = [
+			(covidCount > 0 ? 0.2 : 0) + 0.5 * Math.min(150, covidCount) * 0.01,
+			0.0,
+			0.0,
+		];
+		populationEntry.filesystem = new PeopleFilesystem(
+			populationCounter,
+			Math.min(150, population - i),
+			covidCount
+		);
+		addCasesToCaseList(
+			caseList,
+			getFullPath(populationEntry),
+			populationCounter,
+			Math.min(150, covidCount)
+		);
+		covidCount -= 150;
+		covidCount = Math.max(0, covidCount);
+
+		populationCounter += Math.min(150, population - i);
+	}
+});
 utils.traverseFSEntry(tree, (fsEntry) => (fsEntry.fetched = fsEntry.filesystem === undefined), '');
 export const PortugalCOVIDCaseLinks = convertCaseListToLinks(caseList);
 export const PortugalCOVIDTree = tree;

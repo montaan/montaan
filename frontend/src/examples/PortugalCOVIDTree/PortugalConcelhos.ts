@@ -1,0 +1,326 @@
+import { PortugalLAUs } from './PortugalLAUs';
+
+const rawConcelhos = `PT111 Minho-Lima 1601 Arcos de Valdevez 1780 881 899 1801 1079 722
+PT111 Minho-Lima 1602 Caminha 1197 698 499 2667 1484 1183
+PT111 Minho-Lima 1603 Melgaço 426 235 191 735 452 283
+PT111 Minho-Lima 1604 Monção 752 460 292 1979 1136 843
+PT111 Minho-Lima 1605 Paredes de Coura 431 217 214 1322 800 522
+PT111 Minho-Lima 1606 Ponte da Barca 837 483 354 1729 914 815
+PT111 Minho-Lima 1607 Ponte de Lima 2741 1452 1289 6344 4023 2321
+PT111 Minho-Lima 1608 Valença 1929 1069 860 1993 1084 909
+PT111 Minho-Lima 1609 Viana do Castelo 8989 5071 3918 9311 5661 3650
+PT111 Minho-Lima 1610 Vila Nova de Cerveira 2104 1044 1060 1308 778 530
+PT112 Cávado 0301 Amares 1378 808 570 4348 2358 1990
+PT112 Cávado 0302 Barcelos 9971 5009 4962 16745 10572 6173
+PT112 Cávado 0303 Braga 28347 15867 12480 20309 11362 8947
+PT112 Cávado 0306 Esposende 2871 1649 1222 6761 3914 2847
+PT112 Cávado 0310 Terras de Bouro 456 248 208 892 535 357
+PT112 Cávado 0313 Vila Verde 3152 1626 1526 9253 5353 3900
+PT113 Ave 0307 Fafe 2520 1232 1288 6571 3971 2600
+PT113 Ave 0308 Guimarães 17590 10283 7307 18383 10275 8108
+PT113 Ave 0309 Póvoa de Lanhoso 2521 1145 1376 3411 2063 1348
+PT113 Ave 0311 Vieira do Minho 697 422 275 1669 1048 621
+PT113 Ave 0312 Vila Nova de Famalicão 16229 9226 7003 20398 11477 8921
+PT113 Ave 0314 Vizela 3187 1552 1635 5001 3102 1899
+PT11A Área Metropolitana do Porto 1314 Santo Tirso 10016 5438 4578 12192 7179 5013
+PT11A Área Metropolitana do Porto 1318 Trofa 8105 5121 2984 8984 5026 3958
+PT11A Área Metropolitana do Porto 0104 Arouca 1346 803 543 3568 2113 1455
+PT11A Área Metropolitana do Porto 0109 Santa Maria da Feira 12920 7528 5392 26198 14224 11974
+PT11A Área Metropolitana do Porto 0113 Oliveira de Azeméis 8685 5229 3456 11926 6227 5699
+PT11A Área Metropolitana do Porto 0116 São João da Madeira 12871 6082 6789 4743 2659 2084
+PT11A Área Metropolitana do Porto 0119 Vale de Cambra 2650 1686 964 3201 1758 1443
+PT11A Área Metropolitana do Porto 0107 Espinho 6738 3362 3376 7220 4116 3104
+PT11A Área Metropolitana do Porto 1304 Gondomar 9727 5305 4422 49555 26355 23200
+PT11A Área Metropolitana do Porto 1306 Maia 37300 23554 13746 40666 21262 19404
+PT11A Área Metropolitana do Porto 1308 Matosinhos 34785 19537 15248 43893 23532 20361
+PT11A Área Metropolitana do Porto 1312 Porto 171738 85734 86004 28899 16556 12343
+PT11A Área Metropolitana do Porto 1313 Póvoa de Varzim 8416 4561 3855 11285 6673 4612
+PT11A Área Metropolitana do Porto 1315 Valongo 10826 5963 4863 28678 15453 13225
+PT11A Área Metropolitana do Porto 1316 Vila do Conde 11512 6904 4608 17482 10204 7278
+PT11A Área Metropolitana do Porto 1317 Vila Nova de Gaia 27186 15447 11739 62050 33471 28579
+PT11A Área Metropolitana do Porto 1310 Paredes 9679 5234 4445 17488 9549 7939
+PT115 Tâmega 0106 Castelo de Paiva 1079 540 539 3015 2232 783
+PT115 Tâmega 0304 Cabeceiras de Basto 658 380 278 1980 1313 667
+PT115 Tâmega 0305 Celorico de Basto 905 493 412 3866 2388 1478
+PT115 Tâmega 1301 Amarante 4698 2912 1786 8877 5411 3466
+PT115 Tâmega 1302 Baião 838 438 400 3688 2733 955
+PT115 Tâmega 1303 Felgueiras 8037 4200 3837 6258 3697 2561
+PT115 Tâmega 1305 Lousada 4996 2398 2598 9957 6312 3645
+PT115 Tâmega 1307 Marco de Canaveses 2960 1721 1239 8865 6562 2303
+PT115 Tâmega 1309 Paços de Ferreira 6399 3530 2869 7193 3985 3208
+PT115 Tâmega 1311 Penafiel 7865 3900 3965 13402 8989 4413
+PT115 Tâmega 1705 Mondim de Basto 488 266 222 912 532 380
+PT115 Tâmega 1709 Ribeira de Pena 384 228 156 540 324 216
+PT115 Tâmega 1804 Cinfães 709 383 326 3136 2394 742
+PT115 Tâmega 1813 Resende 467 222 245 1173 836 337
+PT117 Douro 0403 Carrazeda de Ansiães 328 210 118 410 224 186
+PT117 Douro 0404 Freixo de Espada à Cinta 167 110 57 237 135 102
+PT117 Douro 0409 Torre de Moncorvo 674 524 150 623 353 270
+PT117 Douro 0410 Vila Flor 578 428 150 624 368 256
+PT117 Douro 0914 Vila Nova de Foz Côa 438 290 148 563 319 244
+PT117 Douro 1701 Alijó 804 510 294 1007 610 397
+PT117 Douro 1704 Mesão Frio 538 277 261 710 487 223
+PT117 Douro 1708 Peso da Régua 2317 1332 985 2206 1356 850
+PT117 Douro 1710 Sabrosa 517 261 256 828 504 324
+PT117 Douro 1711 Santa Marta de Penaguião 365 185 180 1399 807 592
+PT117 Douro 1714 Vila Real 9496 5308 4188 4467 2463 2004
+PT117 Douro 1801 Armamar 418 239 179 849 483 366
+PT117 Douro 1805 Lamego 2485 1454 1031 3516 2138 1378
+PT117 Douro 1807 Moimenta da Beira 818 445 373 1095 627 468
+PT117 Douro 1812 Penedono 192 120 72 393 251 142
+PT117 Douro 1815 São João da Pesqueira 443 231 212 633 394 239
+PT117 Douro 1818 Sernancelhe 362 217 145 840 463 377
+PT117 Douro 1819 Tabuaço 266 160 106 810 523 287
+PT117 Douro 1820 Tarouca 504 275 229 1542 916 626
+PT118 Alto Trás-os-Montes 0401 Alfândega da Fé 284 208 76 455 273 182
+PT118 Alto Trás-os-Montes 0402 Bragança 5531 2878 2653 2279 1159 1120
+PT118 Alto Trás-os-Montes 0405 Macedo de Cavaleiros 905 466 439 1615 862 753
+PT118 Alto Trás-os-Montes 0406 Miranda do Douro 384 270 114 534 299 235
+PT118 Alto Trás-os-Montes 0407 Mirandela 2123 1219 904 1910 1034 876
+PT118 Alto Trás-os-Montes 0408 Mogadouro 384 277 107 753 407 346
+PT118 Alto Trás-os-Montes 0411 Vimioso 152 82 70 457 243 214
+PT118 Alto Trás-os-Montes 0412 Vinhais 205 89 116 716 404 312
+PT118 Alto Trás-os-Montes 1702 Boticas 250 139 111 495 251 244
+PT118 Alto Trás-os-Montes 1703 Chaves 1714 948 766 2883 1599 1284
+PT118 Alto Trás-os-Montes 1706 Montalegre 527 349 178 695 393 302
+PT118 Alto Trás-os-Montes 1707 Murça 351 203 148 541 315 226
+PT118 Alto Trás-os-Montes 1712 Valpaços 460 234 226 1216 638 578
+PT118 Alto Trás-os-Montes 1713 Vila Pouca de Aguiar 635 380 255 1239 680 559
+PT161 Baixo Vouga 0101 Águeda 6347 3686 2661 5599 3181 2418
+PT161 Baixo Vouga 0102 Albergaria-a-Velha 3494 2212 1282 4950 2725 2225
+PT161 Baixo Vouga 0103 Anadia 3329 1877 1452 5105 2893 2212
+PT161 Baixo Vouga 0105 Aveiro 27923 15701 12222 9560 5320 4240
+PT161 Baixo Vouga 0108 Estarreja 3484 2224 1260 5651 3094 2557
+PT161 Baixo Vouga 0110 Ílhavo 3741 2020 1721 9215 4991 4224
+PT161 Baixo Vouga 0111 Mealhada 2641 1688 953 5330 2829 2501
+PT161 Baixo Vouga 0112 Murtosa 889 435 454 2266 1417 849
+PT161 Baixo Vouga 0114 Oliveira do Bairro 3956 2259 1697 5089 2838 2251
+PT161 Baixo Vouga 0115 Ovar 7290 3925 3365 10397 5948 4449
+PT161 Baixo Vouga 0117 Sever do Vouga 816 556 260 1901 1048 853
+PT161 Baixo Vouga 0118 Vagos 2221 1257 964 5225 2895 2330
+PT162 Baixo Mondego 0602 Cantanhede 4496 2544 1952 6385 3537 2848
+PT162 Baixo Mondego 0603 Coimbra 47380 22924 24456 12199 7166 5033
+PT162 Baixo Mondego 0604 Condeixa-a-Nova 1432 815 617 5847 3138 2709
+PT162 Baixo Mondego 0605 Figueira da Foz 4892 3180 1712 7551 4650 2901
+PT162 Baixo Mondego 0608 Mira 900 499 401 2339 1319 1020
+PT162 Baixo Mondego 0610 Montemor-o-Velho 1718 966 752 7694 4313 3381
+PT162 Baixo Mondego 0613 Penacova 763 426 337 4041 2073 1968
+PT162 Baixo Mondego 0615 Soure 1121 568 553 4735 2779 1956
+PT163 Pinhal Litoral 1004 Batalha 3558 1971 1587 3950 2104 1846
+PT163 Pinhal Litoral 1009 Leiria 17882 10364 7518 14807 8423 6384
+PT163 Pinhal Litoral 1010 Marinha Grande 4834 2998 1836 5138 2703 2435
+PT163 Pinhal Litoral 1015 Pombal 5266 3243 2023 7043 4285 2758
+PT163 Pinhal Litoral 1016 Porto de Mós 2354 1339 1015 4830 2650 2180
+PT164 Pinhal Interior Norte 0601 Arganil 1055 524 531 1097 695 402
+PT164 Pinhal Interior Norte 0606 Góis 301 159 142 493 300 193
+PT164 Pinhal Interior Norte 0607 Lousã 1243 718 525 3560 1928 1632
+PT164 Pinhal Interior Norte 0609 Miranda do Corvo 766 391 375 3802 1936 1866
+PT164 Pinhal Interior Norte 0611 Oliveira do Hospital 1630 822 808 2135 1287 848
+PT164 Pinhal Interior Norte 0612 Pampilhosa da Serra 334 221 113 413 288 125
+PT164 Pinhal Interior Norte 0614 Penela 700 413 287 1180 638 542
+PT164 Pinhal Interior Norte 0616 Tábua 1199 561 638 1626 970 656
+PT164 Pinhal Interior Norte 0617 Vila Nova de Poiares 755 414 341 1340 761 579
+PT164 Pinhal Interior Norte 1002 Alvaiázere 606 379 227 1063 617 446
+PT164 Pinhal Interior Norte 1003 Ansião 1240 684 556 2096 1247 849
+PT164 Pinhal Interior Norte 1007 Castanheira de Pêra 259 137 122 381 249 132
+PT164 Pinhal Interior Norte 1008 Figueiró dos Vinhos 523 273 250 940 578 362
+PT164 Pinhal Interior Norte 1013 Pedrógão Grande 437 264 173 485 283 202
+PT165 Dão-Lafões 0901 Aguiar da Beira 408 229 179 560 295 265
+PT165 Dão-Lafões 1802 Carregal do Sal 793 397 396 1320 852 468
+PT165 Dão-Lafões 1803 Castro Daire 648 387 261 1419 890 529
+PT165 Dão-Lafões 1806 Mangualde 2811 1985 826 2512 1456 1056
+PT165 Dão-Lafões 1808 Mortágua 752 428 324 1237 736 501
+PT165 Dão-Lafões 1809 Nelas 1343 819 524 2092 1235 857
+PT165 Dão-Lafões 1810 Oliveira de Frades 2398 1622 776 1542 854 688
+PT165 Dão-Lafões 1811 Penalva do Castelo 428 233 195 1383 832 551
+PT165 Dão-Lafões 1814 Santa Comba Dão 778 448 330 2039 1181 858
+PT165 Dão-Lafões 1816 São Pedro do Sul 906 429 477 2131 1314 817
+PT165 Dão-Lafões 1817 Sátão 539 299 240 1973 1167 806
+PT165 Dão-Lafões 1821 Tondela 1996 1105 891 3542 2089 1453
+PT165 Dão-Lafões 1822 Vila Nova de Paiva 448 242 206 791 494 297
+PT165 Dão-Lafões 1823 Viseu 10727 6044 4683 9314 5343 3971
+PT165 Dão-Lafões 1824 Vouzela 1482 606 876 2065 1210 855
+PT166 Pinhal Interior Sul 0506 Oleiros 386 231 155 563 347 216
+PT166 Pinhal Interior Sul 0508 Proença-a-Nova 295 161 134 1035 615 420
+PT166 Pinhal Interior Sul 0509 Sertã 794 438 356 1340 772 568
+PT166 Pinhal Interior Sul 0510 Vila de Rei 256 114 142 355 230 125
+PT166 Pinhal Interior Sul 1413 Mação 528 292 236 693 429 264
+PT167 Serra da Estrela 0905 Fornos de Algodres 441 259 182 677 416 261
+PT167 Serra da Estrela 0906 Gouveia 747 408 339 1554 827 727
+PT167 Serra da Estrela 0912 Seia 1531 748 783 2499 1542 957
+PT168 Beira Interior Norte 0902 Almeida 1244 843 401 686 422 264
+PT168 Beira Interior Norte 0903 Celorico da Beira 478 225 253 1012 633 379
+PT168 Beira Interior Norte 0904 Figueira de Castelo Rodrigo 192 104 88 467 283 184
+PT168 Beira Interior Norte 0907 Guarda 4640 2761 1879 3807 1965 1842
+PT168 Beira Interior Norte 0908 Manteigas 186 101 85 318 178 140
+PT168 Beira Interior Norte 0909 Meda 261 173 88 443 273 170
+PT168 Beira Interior Norte 0910 Pinhel 369 223 146 1133 630 503
+PT168 Beira Interior Norte 0911 Sabugal 517 256 261 931 539 392
+PT168 Beira Interior Norte 0913 Trancoso 861 549 312 950 530 420
+PT169 Beira Interior Sul 0502 Castelo Branco 4827 2493 2334 3751 2222 1529
+PT169 Beira Interior Sul 0505 Idanha-a-Nova 775 399 376 484 301 183
+PT169 Beira Interior Sul 0507 Penamacor 258 153 105 415 238 177
+PT169 Beira Interior Sul 0511 Vila Velha de Ródão 422 281 141 355 176 179
+PT16A Cova da Beira 0501 Belmonte 983 379 604 1059 637 422
+PT16A Cova da Beira 0503 Covilhã 6495 3378 3117 4320 2458 1862
+PT16A Cova da Beira 0504 Fundão 1955 1198 757 3154 1822 1332
+PT16B Oeste 1001 Alcobaça 4876 2620 2256 8080 4607 3473
+PT16B Oeste 1005 Bombarral 1263 656 607 2259 1295 964
+PT16B Oeste 1006 Caldas da Rainha 7293 3699 3594 7105 4042 3063
+PT16B Oeste 1011 Nazaré 1335 753 582 2738 1541 1197
+PT16B Oeste 1012 Óbidos 2289 1236 1053 2861 1526 1335
+PT16B Oeste 1014 Peniche 2306 1224 1082 2849 1701 1148
+PT16B Oeste 1101 Alenquer 5611 3730 1881 9114 5059 4055
+PT16B Oeste 1102 Arruda dos Vinhos 2233 1325 908 3986 2206 1780
+PT16B Oeste 1104 Cadaval 950 492 458 2486 1407 1079
+PT16B Oeste 1108 Lourinhã 1630 821 809 4589 2675 1914
+PT16B Oeste 1112 Sobral de Monte Agraço 1163 598 565 3202 1783 1419
+PT16B Oeste 1113 Torres Vedras 7110 3830 3280 10505 6298 4207
+PT16C Médio Tejo 1401 Abrantes 3217 2014 1203 4642 2895 1747
+PT16C Médio Tejo 1402 Alcanena 2748 1545 1203 2249 1199 1050
+PT16C Médio Tejo 1408 Constância 1891 1309 582 905 480 425
+PT16C Médio Tejo 1410 Entroncamento 3978 2482 1496 5932 3259 2673
+PT16C Médio Tejo 1411 Ferreira do Zêzere 668 368 300 1146 681 465
+PT16C Médio Tejo 1417 Sardoal 404 192 212 759 458 301
+PT16C Médio Tejo 1418 Tomar 4680 2514 2166 4765 2951 1814
+PT16C Médio Tejo 1419 Torres Novas 5872 3493 2379 6514 3693 2821
+PT16C Médio Tejo 1420 Vila Nova da Barquinha 1143 764 379 2240 1270 970
+PT16C Médio Tejo 1421 Ourém 5049 2812 2237 5763 3345 2418
+PT170 Grande Lisboa 1105 Cascais 24401 12412 11989 50528 27028 23500
+PT170 Grande Lisboa 1106 Lisboa 425747 210630 215117 47521 27574 19947
+PT170 Grande Lisboa 1107 Loures 33839 20389 13450 62627 31149 31478
+PT170 Grande Lisboa 1109 Mafra 6544 4135 2409 19823 11001 8822
+PT170 Grande Lisboa 1110 Oeiras 59104 31428 27676 54508 27607 26901
+PT170 Grande Lisboa 1111 Sintra 31825 19351 12474 110107 55234 54873
+PT170 Grande Lisboa 1114 Vila Franca de Xira 14286 8841 5445 42030 22212 19818
+PT170 Grande Lisboa 1115 Amadora 30432 15567 14865 57484 28654 28830
+PT170 Grande Lisboa 1116 Odivelas 13101 6907 6194 51052 25771 25281
+PT170 Península de Setúbal 1502 Alcochete 4275 2351 1924 5684 2998 2686
+PT170 Península de Setúbal 1503 Almada 29081 16240 12841 42090 22148 19942
+PT170 Península de Setúbal 1504 Barreiro 10156 5172 4984 20418 10992 9426
+PT170 Península de Setúbal 1506 Moita 4398 2326 2072 19999 10647 9352
+PT170 Península de Setúbal 1507 Montijo 7572 4099 3473 13156 7292 5864
+PT170 Península de Setúbal 1508 Palmela 15104 9974 5130 15901 8503 7398
+PT170 Península de Setúbal 1510 Seixal 11252 6097 5155 49291 25473 23818
+PT170 Península de Setúbal 1511 Sesimbra 2989 1657 1332 13586 7508 6078
+PT170 Península de Setúbal 1512 Setúbal 16409 9740 6669 19173 11198 7975
+PT181 Alentejo Litoral 0211 Odemira 840 435 405 2031 1421 610
+PT181 Alentejo Litoral 1501 Alcácer do Sal 692 420 272 1424 846 578
+PT181 Alentejo Litoral 1505 Grândola 1305 775 530 1486 986 500
+PT181 Alentejo Litoral 1509 Santiago do Cacém 1518 818 700 5103 3514 1589
+PT181 Alentejo Litoral 1513 Sines 6674 5547 1127 975 484 491
+PT182 Alto Alentejo 0707 Mora 323 181 142 504 329 175
+PT182 Alto Alentejo 1201 Alter do Chão 405 250 155 363 213 150
+PT182 Alto Alentejo 1202 Arronches 153 77 76 415 257 158
+PT182 Alto Alentejo 1203 Avis 410 231 179 461 270 191
+PT182 Alto Alentejo 1204 Campo Maior 506 281 225 576 372 204
+PT182 Alto Alentejo 1205 Castelo de Vide 243 137 106 420 231 189
+PT182 Alto Alentejo 1206 Crato 211 130 81 459 266 193
+PT182 Alto Alentejo 1207 Elvas 1093 613 480 1980 1242 738
+PT182 Alto Alentejo 1208 Fronteira 253 159 94 487 283 204
+PT182 Alto Alentejo 1209 Gavião 223 124 99 424 271 153
+PT182 Alto Alentejo 1210 Marvão 206 105 101 551 302 249
+PT182 Alto Alentejo 1211 Monforte 278 148 130 398 204 194
+PT182 Alto Alentejo 1212 Nisa 416 241 175 744 440 304
+PT182 Alto Alentejo 1213 Ponte de Sor 828 504 324 1442 899 543
+PT182 Alto Alentejo 1214 Portalegre 3775 2049 1726 1799 1011 788
+PT183 Alentejo Central 0701 Alandroal 338 153 185 967 601 366
+PT183 Alentejo Central 0702 Arraiolos 481 266 215 1320 702 618
+PT183 Alentejo Central 0703 Borba 599 345 254 1335 804 531
+PT183 Alentejo Central 0704 Estremoz 1576 890 686 1578 930 648
+PT183 Alentejo Central 0705 Évora 9869 5238 4631 3394 1899 1495
+PT183 Alentejo Central 0706 Montemor-o-Novo 967 583 384 2168 1228 940
+PT183 Alentejo Central 0708 Mourão 150 76 74 292 172 120
+PT183 Alentejo Central 0709 Portel 677 392 285 1039 568 471
+PT183 Alentejo Central 0710 Redondo 338 176 162 927 493 434
+PT183 Alentejo Central 0711 Reguengos de Monsaraz 727 383 344 1092 639 453
+PT183 Alentejo Central 0712 Vendas Novas 1413 856 557 1637 1001 636
+PT183 Alentejo Central 0713 Viana do Alentejo 385 207 178 1037 571 466
+PT183 Alentejo Central 0714 Vila Viçosa 1110 761 349 1197 656 541
+PT183 Alentejo Central 1215 Sousel 284 168 116 619 325 294
+PT184 Baixo Alentejo 0201 Aljustrel 542 371 171 1210 764 446
+PT184 Baixo Alentejo 0202 Almodôvar 475 323 152 991 717 274
+PT184 Baixo Alentejo 0203 Alvito 313 173 140 414 212 202
+PT184 Baixo Alentejo 0204 Barrancos 102 70 32 168 99 69
+PT184 Baixo Alentejo 0205 Beja 5548 3010 2538 2387 1422 965
+PT184 Baixo Alentejo 0206 Castro Verde 1471 1238 233 727 382 345
+PT184 Baixo Alentejo 0207 Cuba 318 174 144 970 502 468
+PT184 Baixo Alentejo 0208 Ferreira do Alentejo 616 371 245 1024 565 459
+PT184 Baixo Alentejo 0209 Mértola 339 193 146 546 363 183
+PT184 Baixo Alentejo 0210 Moura 686 394 292 969 621 348
+PT184 Baixo Alentejo 0212 Ourique 422 260 162 531 354 177
+PT184 Baixo Alentejo 0213 Serpa 495 293 202 1456 836 620
+PT184 Baixo Alentejo 0214 Vidigueira 332 201 131 934 513 421
+PT185 Lezíria do Tejo 1103 Azambuja 5799 3411 2388 4185 2375 1810
+PT185 Lezíria do Tejo 1403 Almeirim 1849 937 912 4030 2239 1791
+PT185 Lezíria do Tejo 1404 Alpiarça 512 258 254 1791 966 825
+PT185 Lezíria do Tejo 1405 Benavente 3696 2158 1538 5707 3414 2293
+PT185 Lezíria do Tejo 1406 Cartaxo 1802 1023 779 5672 3201 2471
+PT185 Lezíria do Tejo 1407 Chamusca 712 367 345 1719 955 764
+PT185 Lezíria do Tejo 1409 Coruche 1129 760 369 2498 1437 1061
+PT185 Lezíria do Tejo 1412 Golegã 591 303 288 1268 734 534
+PT185 Lezíria do Tejo 1414 Rio Maior 2628 1550 1078 2918 1721 1197
+PT185 Lezíria do Tejo 1415 Salvaterra de Magos 1395 751 644 4091 2388 1703
+PT185 Lezíria do Tejo 1416 Santarém 10559 5296 5263 7567 4534 3033
+PT150 Algarve 0801 Albufeira 7357 4030 3327 3654 2101 1553
+PT150 Algarve 0802 Alcoutim 194 105 89 220 140 80
+PT150 Algarve 0803 Aljezur 308 214 94 559 308 251
+PT150 Algarve 0804 Castro Marim 693 364 329 1431 795 636
+PT150 Algarve 0805 Faro 16811 8455 8356 6784 3928 2856
+PT150 Algarve 0806 Lagoa (Faro) 3006 1635 1371 4802 2487 2315
+PT150 Algarve 0807 Lagos 2095 1175 920 2682 1573 1109
+PT150 Algarve 0808 Loulé 7343 4512 2831 6612 3530 3082
+PT150 Algarve 0809 Monchique 320 193 127 801 479 322
+PT150 Algarve 0810 Olhão 2212 1281 931 8733 4494 4239
+PT150 Algarve 0811 Portimão 6742 3825 2917 5454 3192 2262
+PT150 Algarve 0812 São Brás de Alportel 690 385 305 2221 1191 1030
+PT150 Algarve 0813 Silves 2610 1474 1136 7036 3684 3352
+PT150 Algarve 0814 Tavira 1780 995 785 3072 1761 1311
+PT150 Algarve 0815 Vila do Bispo 609 344 265 625 310 315
+PT150 Algarve 0816 Vila Real de Santo António 1583 892 691 1929 1017 912
+PT200 Região Autónoma dos Açores 4101 Vila do Porto 65 32 33 183 96 87
+PT200 Região Autónoma dos Açores 4201 Lagoa (Açores) 1243 728 515 3554 1866 1688
+PT200 Região Autónoma dos Açores 4202 Nordeste 224 165 59 343 204 139
+PT200 Região Autónoma dos Açores 4203 Ponta Delgada 9250 4916 4334 3712 2146 1566
+PT200 Região Autónoma dos Açores 4204 Povoação 205 128 77 418 248 170
+PT200 Região Autónoma dos Açores 4205 Ribeira Grande 2152 1397 755 5187 2850 2337
+PT200 Região Autónoma dos Açores 4206 Vila Franca do Campo 412 218 194 1323 829 494
+PT200 Região Autónoma dos Açores 4301 Angra do Heroísmo 2893 1629 1264 1771 999 772
+PT200 Região Autónoma dos Açores 4302 Vila da Praia da Vitória 1055 652 403 2725 1504 1221
+PT200 Região Autónoma dos Açores 4401 Santa Cruz da Graciosa (Açores) 30 19 11 121 73 48
+PT200 Região Autónoma dos Açores 4501 Calheta (Açores) 379 221 158 265 132 133
+PT200 Região Autónoma dos Açores 4502 Velas 224 134 90 253 116 137
+PT200 Região Autónoma dos Açores 4601 Lajes do Pico 139 66 73 423 237 186
+PT200 Região Autónoma dos Açores 4602 Madalena 459 246 213 408 208 200
+PT200 Região Autónoma dos Açores 4603 São Roque do Pico 323 203 120 302 140 162
+PT200 Região Autónoma dos Açores 4701 Horta 216 130 86 412 213 199
+PT200 Região Autónoma dos Açores 4801 Lajes das Flores 55 46 9 204 108 96
+PT200 Região Autónoma dos Açores 4802 Santa Cruz das Flores 176 103 73 79 38 41
+PT200 Região Autónoma dos Açores 4901 Corvo 19 12 7 10 4 6
+PT300 Região Autónoma da Madeira 3101 Calheta (Madeira) 319 186 133 1315 769 546
+PT300 Região Autónoma da Madeira 3102 Câmara de Lobos 2375 1430 945 9730 4661 5069
+PT300 Região Autónoma da Madeira 3103 Funchal 27366 13247 14119 7335 4176 3159
+PT300 Região Autónoma da Madeira 3104 Machico 1606 932 674 3969 2193 1776
+PT300 Região Autónoma da Madeira 3105 Ponta do Sol 624 319 305 1370 688 682
+PT300 Região Autónoma da Madeira 3106 Porto Moniz 216 122 94 265 168 97
+PT300 Região Autónoma da Madeira 3107 Ribeira Brava 1300 643 657 2621 1413 1208
+PT300 Região Autónoma da Madeira 3108 Santa Cruz 3825 2379 1446 15375 7469 7906
+PT300 Região Autónoma da Madeira 3109 Santana 488 283 205 921 530 391
+PT300 Região Autónoma da Madeira 3110 São Vicente 494 294 200 619 338 281
+PT300 Região Autónoma da Madeira 3201 Porto Santo 114 80 34 184 95 89`;
+
+export const PortugalConcelhos = rawConcelhos
+	.split('\n')
+	.map((line) => {
+		const match = line.match(/^(\S+) (.+) (\d{4}) (.+) (\d+) (\d+) (\d+) (\d+) (\d+) (\d+)$/);
+		if (match) {
+			const cod = match[3];
+			const concelho = match[4];
+			const LAUs = PortugalLAUs.filter((lau) => lau[1].startsWith(cod));
+			const nuts3 = LAUs[0][0];
+			const population = LAUs.reduce((s, lau) => s + parseInt(lau[5]), 0);
+			return [nuts3, cod, concelho, '', '', population.toString()];
+		}
+		return undefined;
+	})
+	.filter((s) => s !== undefined) as string[][];
