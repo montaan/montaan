@@ -58,6 +58,8 @@
     [] Dynamic commit loading
         [] 10k commits at a time
         [] Calendar data from server
+    [] Documentation that makes people achieve things
+    [] Documentation that increases commit volume
 
 # Features
 
