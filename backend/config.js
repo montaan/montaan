@@ -1,12 +1,17 @@
 const numCPUs = require('os').cpus().length;
 const fs = require('fs');
 const path = require('path');
+const child_process = require('child_process');
 require('dotenv').config();
 
 const config = {
 	port: 8008,
 	// fallbackRoute: () => {},
-	pg: { user: process.env.PGUSER, database: process.env.PGDATABASE, password: process.env.PGPASSWORD },
+	pg: {
+		user: process.env.PGUSER,
+		database: process.env.PGDATABASE,
+		password: process.env.PGPASSWORD,
+	},
 	root: path.join(process.cwd(), '../frontend/build'),
 	pathFor404: '/index.html',
 	saltRounds: 10,
@@ -42,5 +47,13 @@ config.api = {
 };
 
 config.replaceMigrations = require('./src/migrations');
+
+function fetchTick() {
+	child_process.exec('bin/update_all_trees', function() {
+		setTimeout(fetchTick, 30 * 60 * 1000);
+	});
+}
+
+setTimeout(fetchTick, 10000);
 
 module.exports = config;
