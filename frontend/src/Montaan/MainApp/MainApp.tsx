@@ -229,7 +229,7 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		this.repoTimeout = 0;
 		this.commitIndex = 0;
 		this.animatedFiles = 0;
-		if (this.props.userInfo) {
+		if (this.props.userInfo && this.props.userInfo.name !== undefined) {
 			const tree = this.state.fileTree.tree;
 			const user = this.props.userInfo.name;
 			mountURL(tree, `montaanUserRepos:///${user}`, `/${user}`, this.props.api);
@@ -272,11 +272,13 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 	};
 
 	componentDidMount() {
-		if (this.props.userInfo) this.updateUserRepos(this.props.userInfo);
+		if (this.props.userInfo && this.props.userInfo.name !== undefined) {
+			this.updateUserRepos(this.props.userInfo);
+		}
 	}
 
 	async updateUserRepos(userInfo: UserInfo) {
-		if (!userInfo) return;
+		if (!userInfo || userInfo.name === undefined) return;
 		const tree = this.state.fileTree.tree;
 		if (!tree.isDirectory) return;
 
