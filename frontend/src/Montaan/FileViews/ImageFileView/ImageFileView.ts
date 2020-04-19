@@ -29,8 +29,8 @@ export default class ImageFileView extends FileView {
 		const image = new THREE.Mesh(geometry, material) as ImageMesh;
 		this.mesh = image;
 		this.add(this.mesh);
-		this.mesh.scale.multiplyScalar(0.7);
-		this.mesh.position.set(0.5, 0.65, 0);
+		this.mesh.scale.multiplyScalar(1);
+		this.mesh.position.set(0.5, 0.5, 0);
 		this.scale.multiplyScalar(fsEntry.scale);
 		this.position.copy((fsEntry as unknown) as THREE.Vector3);
 	}
