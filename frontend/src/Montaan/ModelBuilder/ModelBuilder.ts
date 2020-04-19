@@ -339,7 +339,13 @@ export default class ModelBuilder {
 
 				const bbox = fsEntry.bbox;
 				const pxWidth = bbox.width * viewWidth * 0.5;
-				const isSmall = pxWidth < (fsEntry.isDirectory ? 15 : 128);
+				let isSmall = pxWidth < 15;
+				if (!isSmall && !fsEntry.isDirectory) {
+					isSmall = pxWidth < 128;
+					if (!isSmall && /\.(jpe?g|png)$/i.test(fsEntry.title)) {
+						isSmall = pxWidth < 256;
+					}
+				}
 				fsEntry.distanceFromCenter = Geometry.bboxDistanceToFrustumCenter(
 					bbox,
 					mesh,
@@ -514,7 +520,7 @@ export default class ModelBuilder {
 			const dir = dirs[off];
 			const yOff = 1 - (0.5 * y + 1) * (1 / dirSquareSide);
 			const xOff = 0.9 * x * (1 / dirSquareSide);
-			const subX = xOff + 0.1 / dirSquareSide;
+			const subX = xOff + 0.05 / dirSquareSide;
 			const subY = yOff + 0.125 / dirSquareSide;
 			if (dir.relativeScale > 0) {
 				dir.x = fileTree.x + dir.rx * fileTree.scale;

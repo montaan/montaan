@@ -21,7 +21,7 @@ export class BBox {
 	d: THREE.Vector3 = new THREE.Vector3();
 }
 
-export default {
+export const Geometry = {
 	quadCount: 2,
 
 	vertsPerFile: 6 * 2,
@@ -138,7 +138,7 @@ export default {
 		const xOff = 0;
 		const yOff = fsEntry.scale * (fsEntry.isDirectory ? 0.5 : 0);
 		const xScale = fsEntry.scale * (fsEntry.isDirectory ? 1 : 1);
-		const yScale = fsEntry.scale * (fsEntry.isDirectory ? 0.7 : 1);
+		const yScale = fsEntry.scale * (fsEntry.isDirectory ? 0.585 : 1);
 		a.set(fsEntry.x + xOff, fsEntry.y + yOff, fsEntry.z);
 		b.set(fsEntry.x + xOff + xScale, fsEntry.y + yOff, fsEntry.z);
 		c.set(fsEntry.x + xOff + xScale, fsEntry.y + yOff + yScale, fsEntry.z);
@@ -496,3 +496,5 @@ export default {
 		return i / 3;
 	},
 };
+
+export default Geometry;
