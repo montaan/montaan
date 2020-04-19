@@ -31,14 +31,13 @@
             [x] yarn makeComponent
             [x] yarn updateComponent
     [] Solid repo import path
-        [] Import Github repo
+        [x] Import Github repo
         [] In-progress spinner
         [] Import local repo
-    [] Repo auto-pull & update
+    [x] Repo auto-pull & update
 
 # KEY FEATURES
 
-    [] Documentation makes users and developers do things. They should be written like programs that run on the person.
     [] Thumbnail mip pyramid server
         [] Copy from Muryu?
     [] Custom layouts
@@ -55,7 +54,7 @@
     [] Path tracer as renderer
         - For easy instanced rendering of complex scenes
         - For high visual quality
-        - Target machine is 3x 2080 Ti
+        - Target machine is 3x 2080 Ti @ around 2030
     [] Dynamic commit loading
         [] 10k commits at a time
         [] Calendar data from server
