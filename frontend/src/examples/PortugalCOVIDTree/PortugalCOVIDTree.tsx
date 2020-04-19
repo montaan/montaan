@@ -262,7 +262,7 @@ class PeopleFilesystem extends Filesystem {
 		});
 	}
 
-	okResponses = ['o_o', 'O_o', '~_^', '@_@', '>_>', '<_<', ';_;', '>_<', '^.^'];
+	okResponses = ['o_o', '^_^', '~_^', '@_@', 'o_~', '~_o', 'T_T', '>_<', '^.^'];
 	caseResponses = ['=_=', '-,-', 'U_U', '-_-', '._.', '+_+', 'o.o', '\\o/'];
 	async readFile(path: string) {
 		return new Promise<ArrayBuffer>((resolve, reject) => {
