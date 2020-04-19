@@ -148,7 +148,7 @@ class App extends React.Component<AppProps, AppState> {
 			return <main />;
 		}
 		return (
-			<Router>
+			<Router basename={process.env.PUBLIC_URL}>
 				<div className="App">
 					<Switch>
 						<Route
