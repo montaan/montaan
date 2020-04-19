@@ -1115,6 +1115,8 @@ export class Tabletree {
 	}
 
 	// Rendering ////////////////////////////////////////////////////////////////////////////////
+	overlayCanvas: any = null;
+	displayBoundingBoxes: boolean = false;
 
 	render() {
 		const { scene, camera, renderer } = this;
@@ -1144,6 +1146,34 @@ export class Tabletree {
 		(scene as any).tick(t, t - this.lastFrameTime);
 		this.lastFrameTime = t;
 		renderer.render(scene, camera);
+		if (this.displayBoundingBoxes) {
+			if (!this.overlayCanvas) {
+				this.overlayCanvas = document.createElement('canvas');
+				this.overlayCanvas.style.position = 'absolute';
+				this.overlayCanvas.style.left = '0px';
+				this.overlayCanvas.style.top = '0px';
+				this.overlayCanvas.style.width = '100%';
+				this.overlayCanvas.style.height = '100%';
+				this.overlayCanvas.style.pointerEvents = 'none';
+				document.body.appendChild(this.overlayCanvas);
+			}
+			const ctx = this.overlayCanvas.getContext('2d');
+			this.overlayCanvas.width = this.renderer.domElement.width;
+			this.overlayCanvas.height = this.renderer.domElement.height;
+			ctx.strokeStyle = 'limegreen';
+			for (let i = 0; i < this.fsIndex.length; i++) {
+				const fsEntry = this.fsIndex[i];
+				if (fsEntry) {
+					const bbox = fsEntry.bbox;
+					ctx.strokeRect(
+						this.overlayCanvas.width * 0.5 * (bbox.minX + 1),
+						this.overlayCanvas.height * (1 - 0.5 * (bbox.maxY + 1)),
+						this.overlayCanvas.width * 0.5 * (bbox.maxX - bbox.minX),
+						this.overlayCanvas.height * 0.5 * (bbox.maxY - bbox.minY)
+					);
+				}
+			}
+		}
 	}
 
 	tick = () => {
