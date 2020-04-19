@@ -7,7 +7,6 @@ import {
 	Filesystem,
 	getFullPath,
 	FSEntry,
-	getPathEntry,
 } from '../../Montaan/Filesystems';
 import { PortugalCOVIDCases } from './PortugalCOVIDCases';
 import { getNUTSName } from './NUTS';
@@ -20,6 +19,7 @@ import Form from 'react-bootstrap/Form';
 class CasesFilesystem extends Filesystem {
 	graphVisible: boolean = false;
 	currentDate: string;
+	// currentDateEntry: FSDirEntry;
 	dates: string[];
 	trees: Map<string, FSDirEntry>;
 
@@ -29,8 +29,14 @@ class CasesFilesystem extends Filesystem {
 		this.dates = Array.from(PortugalCOVIDCases.keys());
 		this.currentDate = this.dates[this.dates.length - 1];
 		this.trees = new Map();
-		// this.dates.forEach((d) => this.trees.set(d, this.getDayTree(d)));
-		this.useDayTree(this.currentDate);
+		this.dates.forEach((d) => {
+			const tree = this.getDayTree(d);
+			this.trees.set(d, tree);
+			mountPoint.entries.set(d, tree);
+		});
+		// this.currentDateEntry = new FSDirEntry('Current Date');
+		// this.mountPoint.entries.set('Current Date', this.currentDateEntry);
+		// this.useDayTree(this.currentDate);
 	}
 
 	async readDir(path: string) {
@@ -52,11 +58,10 @@ class CasesFilesystem extends Filesystem {
 	requestFrame() {}
 
 	getDayTree(date: string) {
-		const tree = new FSDirEntry('');
+		const tree = new FSDirEntry(date);
 		const dayCases = new Map<string, number>(PortugalCOVIDCases.get(date).entries());
 		const caseList: string[] = [];
 		let populationCounter = 0;
-		const populationBlockSize = 1000;
 		PortugalConcelhos.forEach(
 			([nuts, lau, lauName, lauNameLatin, change, populationString]) => {
 				const population = parseInt(populationString);
@@ -84,30 +89,28 @@ class CasesFilesystem extends Filesystem {
 					Math.min(0.25, nuts3Entry.lastIndex / 1000),
 					0,
 				];
-				for (let i = 0; i < population; i += populationBlockSize) {
+				for (let i = 0; i < population; i += 150) {
 					const populationEntry = createDir(lauEntry, i.toString());
 					populationEntry.color = [
-						(covidCount > 0 ? 0.2 : 0) +
-							0.5 * Math.min(populationBlockSize, covidCount) * 0.01,
+						(covidCount > 0 ? 0.2 : 0) + 0.5 * Math.min(150, covidCount) * 0.01,
 						0.0,
 						0.0,
 					];
 					populationEntry.filesystem = new PeopleFilesystem(
 						populationCounter,
-						Math.min(populationBlockSize, population - i),
+						Math.min(150, population - i),
 						covidCount
 					);
-					populationEntry.filesystem.mountPoint = populationEntry;
 					// addCasesToCaseList(
 					// 	caseList,
 					// 	getFullPath(populationEntry),
 					// 	populationCounter,
-					// 	Math.min(populationBlockSize, covidCount)
+					// 	Math.min(150, covidCount)
 					// );
-					covidCount -= populationBlockSize;
+					covidCount -= 150;
 					covidCount = Math.max(0, covidCount);
 
-					populationCounter += Math.min(populationBlockSize, population - i);
+					populationCounter += Math.min(150, population - i);
 				}
 			}
 		);
@@ -125,19 +128,15 @@ class CasesFilesystem extends Filesystem {
 	}
 
 	useDayTree(date: string) {
-		let dayTree = this.trees.get(date);
-		if (!dayTree) {
-			dayTree = this.getDayTree(date);
-			this.trees.set(date, dayTree);
-		}
-		if (this.mountPoint) {
-			this.mountPoint.entries = dayTree.entries;
+		const dayTree = this.trees.get(date);
+		if (dayTree) {
+			// this.currentDateEntry.entries = dayTree.entries;
 		}
 	}
 
 	setDate = (date: string) => {
 		this.currentDate = date;
-		this.useDayTree(date);
+		// this.useDayTree(date);
 		this.requestFrame();
 	};
 
@@ -150,7 +149,7 @@ class CasesFilesystem extends Filesystem {
 				style={{ position: 'fixed', top: '80px', left: '10px', zIndex: 10000 }}
 				key={this.mountPoint ? getFullPath(this.mountPoint) : 'cases'}
 			>
-				{/* <Button onClick={this.onClick}>Show graph</Button> */}
+				<Button onClick={this.onClick}>Show graph</Button>
 				<DateSlider
 					dates={this.dates}
 					currentDate={this.currentDate}
@@ -230,55 +229,27 @@ class PeopleFilesystem extends Filesystem {
 		return new Promise((resolve, reject) => {
 			setTimeout(() => {
 				const tree = new FSDirEntry();
-				const segments = path.split('/');
-				if (segments.length === 1) {
-					for (
-						let i = this.startIndex, l = this.startIndex + this.count, j = 0;
-						i < l;
-						i += 10, j += 10
-					) {
-						const tenEntry = createDir(tree, i.toString());
-						tenEntry.color = j < this.covidCount ? [0.5, 0, 0] : [0, 0, 0];
-					}
-				} else if (segments.length === 2) {
-					for (
-						let i = parseInt(segments[1]),
-							l = this.startIndex + this.count,
-							j = i - this.startIndex,
-							k = 0;
-						i < l && k < 10;
-						i++, j++, k++
-					) {
-						const personEntry = createFile(tree, i.toString());
-						personEntry.color = j < this.covidCount ? [0.75, 0, 0] : [0, 0, 0];
-						// 		0.65 + 0.35 * Math.sin(i * 0.2),
-						// 		0.65 + 0.35 * Math.cos(i * 0.17418),
-						// 		0.65 + 0.35 * Math.sin(i * 0.041),
-						//   ];
-					}
+				for (
+					let i = this.startIndex, l = this.startIndex + this.count, j = 0;
+					i < l;
+					i++, j++
+				) {
+					const personEntry = createFile(tree, i.toString());
+					personEntry.color = j < this.covidCount ? [0.5, 0, 0] : [0, 0, 0];
+					// 		0.65 + 0.35 * Math.sin(i * 0.2),
+					// 		0.65 + 0.35 * Math.cos(i * 0.17418),
+					// 		0.65 + 0.35 * Math.sin(i * 0.041),
+					//   ];
 				}
 				resolve(tree);
-			}, 5 + 10 * Math.random());
+			}, 10);
 		});
 	}
 
-	okResponses = ['o_o', 'O_o', '~_^', '@_@', '>_>', '<_<', ';_;', '>_<', '^.^'];
-	caseResponses = ['=_=', '-,-', 'U_U', '-_-', '._.', '+_+', 'o.o', '\\o/'];
 	async readFile(path: string) {
 		return new Promise<ArrayBuffer>((resolve, reject) => {
 			setTimeout(() => {
-				let response = this.okResponses[
-					Math.floor(Math.random() * this.okResponses.length)
-				];
-				if (this.mountPoint) {
-					const fsEntry = getPathEntry(this.mountPoint, path);
-					if (fsEntry && fsEntry.color && fsEntry.color[0] > 0) {
-						response = this.caseResponses[
-							Math.floor(Math.random() * this.caseResponses.length)
-						];
-					}
-				}
-				resolve(new TextEncoder().encode(response).buffer);
+				resolve(new TextEncoder().encode(path).buffer);
 			}, 10);
 		});
 	}
