@@ -4,7 +4,6 @@ module.exports = async function(req, res, repoAndHash) {
 	const lastSlash = repoAndHash.lastIndexOf('/');
 	const repo = repoAndHash.slice(0, lastSlash);
 	const hash = repoAndHash.slice(lastSlash + 1);
-	console.log(repoAndHash, repo, hash);
 	if (!/^[a-f0-9]{40}$/.test(hash)) return '404: Hash not found';
 	var [error, { filePath }] = assertRepoDir(Path.join(repo, 'repo'));
 	if (error) return error;
