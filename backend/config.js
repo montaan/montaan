@@ -1,4 +1,5 @@
 const numCPUs = require('os').cpus().length;
+const cluster = require('cluster');
 const fs = require('fs');
 const path = require('path');
 const child_process = require('child_process');
@@ -48,12 +49,14 @@ config.api = {
 
 config.replaceMigrations = require('./src/migrations');
 
-function fetchTick() {
-	child_process.exec('bin/update_all_trees', function() {
-		setTimeout(fetchTick, 30 * 60 * 1000);
-	});
-}
+if (cluster.isMaster) {
+	function fetchTick() {
+		child_process.exec('bin/update_all_trees', function() {
+			setTimeout(fetchTick, 30 * 60 * 1000);
+		});
+	}
 
-setTimeout(fetchTick, 10000);
+	setTimeout(fetchTick, 10000);
+}
 
 module.exports = config;
