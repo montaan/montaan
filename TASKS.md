@@ -114,6 +114,8 @@
     [] Better dashboard view
         [] Recent activity (commits, issues)
     [] Navigate to coords in image
+    [] Type-ahead navigation of the tree
+        - type /f/b/b/q/ to navigate to /foo/bar/baz/qux/
 
 ## Performance
 
