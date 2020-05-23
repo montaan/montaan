@@ -32,6 +32,29 @@ interface ExtendedSDFText extends SDFText {
 	fsEntry: FSEntry;
 }
 
+export interface ModelBuilderResult {
+	verts: Float32Array;
+	colorVerts: Float32Array;
+	labelVerts: Float32Array;
+	labelUVs: Float32Array;
+
+	vertexCount: number;
+	textVertexCount: number;
+
+	boundingBox: THREE.Box3;
+	boundingSphere: THREE.Sphere;
+
+	fileIndex: number;
+	fsEntryIndex: FSEntry[];
+
+	centerEntry: FSEntry;
+	smallestCovering: FSEntry;
+
+	entriesToFetch: FSEntry[];
+	visibleFiles: FSEntry[];
+	thumbnailsToFetch: { fsEntry: FSEntry; z: number }[];
+}
+
 export default class ModelBuilder {
 	smallestCovering?: FSEntry;
 	_modelVerts = new Float32Array(36 * 1000);
@@ -44,28 +67,7 @@ export default class ModelBuilder {
 		camera: NavCamera,
 		mesh: THREE.Mesh,
 		forceLoads: Set<FSEntry>
-	): {
-		verts: Float32Array;
-		colorVerts: Float32Array;
-		labelVerts: Float32Array;
-		labelUVs: Float32Array;
-
-		vertexCount: number;
-		textVertexCount: number;
-
-		boundingBox: THREE.Box3;
-		boundingSphere: THREE.Sphere;
-
-		fileIndex: number;
-		fsEntryIndex: FSEntry[];
-
-		centerEntry: FSEntry;
-		smallestCovering: FSEntry;
-
-		entriesToFetch: FSEntry[];
-		visibleFiles: FSEntry[];
-		thumbnailsToFetch: { fsEntry: FSEntry; z: number }[];
-	} {
+	): ModelBuilderResult {
 		const fileTree = tree.tree;
 
 		let viewRoot = this.smallestCovering;
@@ -319,7 +321,7 @@ export default class ModelBuilder {
 			const tree = buildQueue.take();
 			if (!tree || !tree.isDirectory) continue;
 			const forceLoadTree = forceLoads.has(tree);
-			if (fileIndex > 2500 && !forceLoadTree && tree !== centerEntry) continue;
+			if (fileIndex > 5000 && !forceLoadTree && tree !== centerEntry) continue;
 			fileIndex = this.layoutDir(
 				forceLoads,
 				camera,
@@ -339,7 +341,7 @@ export default class ModelBuilder {
 
 				const bbox = fsEntry.bbox;
 				const pxWidth = bbox.width * viewWidth * 0.5;
-				let isSmall = pxWidth < 15;
+				let isSmall = pxWidth < 5;
 				if (!isSmall && !fsEntry.isDirectory) {
 					isSmall = pxWidth < 128;
 					if (!isSmall && /\.(jpe?g|png)$/i.test(fsEntry.title)) {
@@ -360,7 +362,7 @@ export default class ModelBuilder {
 					// Descend into directories.
 					buildQueue.add(fsEntry);
 					// Fetch directories that haven't been fetched yet.
-					if ((forceLoadFSEntry || pxWidth > 15) && !fsEntry.fetched) {
+					if ((forceLoadFSEntry || pxWidth > 5) && !fsEntry.fetched) {
 						entriesToFetchQueue.add(fsEntry);
 					}
 				} else if (!isSmall) {

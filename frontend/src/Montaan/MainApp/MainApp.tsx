@@ -31,7 +31,6 @@ import WorkQueue from '../../lib/WorkQueue';
 
 import { MontaanGitFilesystem } from '../Filesystems/MontaanGitFilesystem';
 import { MontaanUserReposFilesystem, RepoInfo } from '../Filesystems/MontaanUserReposFilesystem';
-import PortugalCOVIDTree from '../../examples/PortugalCOVIDTree';
 
 registerFileSystem('montaanGit', MontaanGitFilesystem);
 registerFileSystem('montaanUserRepos', MontaanUserReposFilesystem);
@@ -237,7 +236,6 @@ class MainApp extends React.Component<MainAppProps, MainAppState> {
 		(window as any).mountFSEntry = this.mountFSEntry;
 		(window as any).mount = this.mount;
 		(window as any).mountURL = this.mountURL;
-		this.mountFSEntry('/', 'NUTS', PortugalCOVIDTree);
 	}
 
 	mount = async (parentPath: string, name: string, filesystem: Filesystem) => {

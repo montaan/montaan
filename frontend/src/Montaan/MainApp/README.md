@@ -164,6 +164,7 @@ interface MainAppState {
 	commitsVisible: boolean;
 }
 export interface FSState extends MainAppState {
+	requestFrame: () => void;
 	setCommitData: (commitData?: CommitData) => void;
 	setDependencies: (dependencies: TreeLink[]) => void;
 	setCommitFilter: (repo: string, commitFilter: CommitFilter) => void;

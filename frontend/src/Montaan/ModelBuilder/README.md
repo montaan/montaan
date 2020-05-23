@@ -16,6 +16,7 @@ the server, and a list of files that are large enough to be loaded in detailed v
 ### Exports
 
 ```tsx
+export interface ModelBuilderResult
 export default class ModelBuilder
 ```
 
@@ -25,5 +26,27 @@ export default class ModelBuilder
 interface ExtendedSDFText extends SDFText {
 	xScale: number;
 	fsEntry: FSEntry;
+}
+export interface ModelBuilderResult {
+	verts: Float32Array;
+	colorVerts: Float32Array;
+	labelVerts: Float32Array;
+	labelUVs: Float32Array;
+
+	vertexCount: number;
+	textVertexCount: number;
+
+	boundingBox: THREE.Box3;
+	boundingSphere: THREE.Sphere;
+
+	fileIndex: number;
+	fsEntryIndex: FSEntry[];
+
+	centerEntry: FSEntry;
+	smallestCovering: FSEntry;
+
+	entriesToFetch: FSEntry[];
+	visibleFiles: FSEntry[];
+	thumbnailsToFetch: { fsEntry: FSEntry; z: number }[];
 }
 ```
