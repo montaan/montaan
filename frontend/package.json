@@ -51,7 +51,7 @@
 		"react-three-fiber": "^4.0.12",
 		"reactour": "^1.15.0",
 		"styled-components": "^4.0.0",
-		"three": "0.113.0",
+		"three": "0.137.0",
 		"typescript": "~3.7.2",
 		"uncontrollable": "^7.0.0",
 		"worker-loader": "^2.0.0",
